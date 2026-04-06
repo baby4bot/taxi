@@ -37,22 +37,23 @@
         
         .flex-center { display: flex; align-items: center; justify-content: center; }
         
-        /* Toast Notification */
+        /* Toast Notification แบบรองรับรูปภาพ */
         #toastBox {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
             background: rgba(22, 24, 35, 0.95); border: 1px solid var(--border-glass);
             color: white; padding: 12px 25px; border-radius: 50px; z-index: 100000;
             display: none; align-items: center; gap: 10px; font-size: 14px; font-weight: 500;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8); backdrop-filter: blur(10px);
-            animation: toastFade 0.3s ease forwards;
+            animation: toastFade 0.3s ease forwards; white-space: nowrap;
         }
         @keyframes toastFade { 
             from { opacity: 0; transform: translate(-50%, 20px); } 
             to { opacity: 1; transform: translate(-50%, 0); } 
         }
+        .toast-img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; display: none; border: 1px solid rgba(255,255,255,0.2); }
 
         /* ----------------------------------------------------------------- */
-        /* Hamburger & Side Menu Styles (โครงสร้างใหม่) */
+        /* Hamburger & Side Menu Styles */
         /* ----------------------------------------------------------------- */
         .hamburger-btn {
             background: var(--card-glass); border: 1px solid var(--border-glass); border-radius: 12px; 
@@ -223,7 +224,7 @@
         .tz-time-box { display: flex; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; border: 1px solid var(--border-glass); margin-top: 10px; }
         .tz-time-val { font-size: 24px; font-weight: 600; color: white; }
 
-        .admin-user-card { background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 15px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; text-align: left; }
+        .admin-user-card { background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 15px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; text-align: left; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .status-online { background-color: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
         .status-offline { background-color: #666; }
@@ -241,6 +242,7 @@
 </div>
 
 <div id="toastBox">
+    <img id="toastImg" class="toast-img" src="" alt="profile">
     <span class="material-symbols-outlined" id="toastIcon">check_circle</span>
     <span id="toastMsg">บันทึกข้อมูลสำเร็จ</span>
 </div>
@@ -639,19 +641,35 @@
     let currentUserRole = "User";
     let isBannedState = false;
 
-    // เสียงแจ้งเตือน
+    // เสียงแจ้งเตือนเข้าออกแบบมาตรฐาน
     const onlineAudio = new Audio('https://actions.google.com/sounds/v1/ui/bell_ping.ogg');
     const offlineAudio = new Audio('https://actions.google.com/sounds/v1/ui/pop.ogg');
     let globalUsersUnsub = null;
     let userOnlineStates = {};
     let isInitialUserLoad = true;
 
-    window.showToast = (msg, isError = false) => {
+    window.currentAdminUsers = [];
+
+    // อัปเดต Toast ให้โชว์รูปภาพโปรไฟล์ได้
+    window.showToast = (msg, isError = false, imgUrl = null) => {
         const toast = document.getElementById('toastBox');
-        document.getElementById('toastMsg').innerText = msg;
         const icon = document.getElementById('toastIcon');
-        if(isError) { icon.innerText = 'error'; icon.style.color = 'var(--accent-red)'; toast.style.borderColor = 'var(--accent-red)'; } 
-        else { icon.innerText = 'notifications_active'; icon.style.color = 'var(--neon-green)'; toast.style.borderColor = 'var(--neon-green)'; }
+        const img = document.getElementById('toastImg');
+
+        document.getElementById('toastMsg').innerText = msg;
+        
+        if (imgUrl && imgUrl.length > 10) {
+            img.src = imgUrl;
+            img.style.display = 'block';
+            icon.style.display = 'none';
+        } else {
+            img.style.display = 'none';
+            icon.style.display = 'block';
+            if(isError) { icon.innerText = 'error'; icon.style.color = 'var(--accent-red)'; toast.style.borderColor = 'var(--accent-red)'; } 
+            else { icon.innerText = 'notifications_active'; icon.style.color = 'var(--neon-green)'; toast.style.borderColor = 'var(--neon-green)'; }
+        }
+        
+        toast.style.borderColor = isError ? 'var(--accent-red)' : 'var(--neon-green)';
         toast.style.display = 'flex';
         setTimeout(() => { toast.style.display = 'none'; }, 4000);
     };
@@ -691,7 +709,7 @@
         } catch(e) { console.log("Log error", e); }
     };
 
-    // Global Listener สำหรับเช็กคนออนไลน์/ออฟไลน์ ให้มีเสียงและเด้งเตือน
+    // Global Listener สำหรับเช็กคนออนไลน์/ออฟไลน์ พร้อมโชว์รูปและเสียง
     function startGlobalUserListener() {
         if(globalUsersUnsub) return;
         globalUsersUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
@@ -707,10 +725,10 @@
                     
                     if (change.doc.id !== loggedInUserId && oldState !== undefined) {
                         if (data.isOnline && !oldState) {
-                            window.showToast(`${data.displayName || data.username} เข้าสู่ระบบแล้ว`, false);
+                            window.showToast(`${data.displayName || data.username} เข้าสู่ระบบ`, false, data.photoURL);
                             onlineAudio.play().catch(e=>{});
                         } else if (!data.isOnline && oldState) {
-                            window.showToast(`${data.displayName || data.username} ออฟไลน์`, true);
+                            window.showToast(`${data.displayName || data.username} ออกจากระบบ`, true, data.photoURL);
                             offlineAudio.play().catch(e=>{});
                         }
                     }
@@ -749,7 +767,7 @@
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 
-                // ตรวจสอบระบบแบน (ถ้าโดนแบน ให้เด้งออก)
+                // ตรวจสอบระบบแบน
                 if(data.isBanned) {
                     window.showToast("บัญชีนี้ถูกระงับการใช้งาน", true);
                     window.logoutApp(true);
@@ -759,12 +777,11 @@
                 document.getElementById('appLoader').style.display = 'none';
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'flex';
-                document.getElementById('userMenu').style.display = 'block'; // แสดงปุ่มแฮมเบอร์เกอร์
+                document.getElementById('userMenu').style.display = 'block'; 
                 
                 currentUserRole = data.role || "User";
                 document.getElementById('displayUserName').innerText = data.displayName || data.username;
                 
-                // แปลง Role เป็นภาษาไทยให้ตรงกับตัวอย่าง
                 let displayRoleTH = currentUserRole;
                 if(currentUserRole === "Admin") displayRoleTH = "ผู้ดูแลระบบ";
                 else if(currentUserRole === "Manager") displayRoleTH = "ผู้จัดการ";
@@ -779,14 +796,14 @@
                 }
 
                 if(currentUserRole === "Admin" || currentUserRole === "Manager") {
-                    document.getElementById('adminMenuBtn').style.display = 'flex'; // แสดงปุ่มจัดการ
+                    document.getElementById('adminMenuBtn').style.display = 'flex';
                     document.getElementById('adminAddUserBtn').style.display = currentUserRole === "Admin" ? 'flex' : 'none';
                     document.getElementById('adminRoleNotice').style.display = currentUserRole === "Manager" ? 'block' : 'none';
                 } else {
-                    document.getElementById('adminMenuBtn').style.display = 'none'; // ซ่อนปุ่มจัดการ
+                    document.getElementById('adminMenuBtn').style.display = 'none';
                 }
                 
-                startGlobalUserListener(); // เริ่มฟังแจ้งเตือนคนเข้าออก
+                startGlobalUserListener(); 
             } else {
                 window.logoutApp(true);
             }
@@ -827,7 +844,8 @@
                         photoURL: "",
                         isOnline: true,
                         isBanned: false,
-                        lastLoginAt: Date.now()
+                        lastLoginAt: Date.now(),
+                        order: Date.now()
                     });
                     adminId = docRef.id;
                 } else {
@@ -913,7 +931,8 @@
                 photoURL: finalPhotoURL,
                 isOnline: true,
                 isBanned: false,
-                lastLoginAt: Date.now()
+                lastLoginAt: Date.now(),
+                order: Date.now()
             });
             
             loggedInUserId = docRef.id;
@@ -964,7 +983,6 @@
         }
     };
 
-    // บันทึกเฉพาะข้อมูลโปรไฟล์
     window.saveProfileInfo = async () => {
         if(!loggedInUserId) return window.showToast("กรุณาล็อกอินใหม่", true);
         const saveBtn = document.getElementById('saveProfileBtn');
@@ -1004,7 +1022,6 @@
         } finally { saveBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกข้อมูล`; saveBtn.disabled = false; }
     };
 
-    // บันทึกเฉพาะพาสเวิร์ด (Pop-up แยก)
     window.savePasswordChange = async () => {
         if(!loggedInUserId) return window.showToast("กรุณาล็อกอินใหม่", true);
         
@@ -1044,8 +1061,6 @@
         }
     };
 
-    let adminSnapshotUnsub = null;
-
     const formatDate = (timestamp) => {
         if(!timestamp) return "-";
         const d = new Date(timestamp);
@@ -1055,11 +1070,20 @@
     window.handleAdminModalState = (isOpen) => {
         if(isOpen) {
             adminSnapshotUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
-                let html = '';
+                window.currentAdminUsers = [];
                 snapshot.forEach((doc) => {
-                    let u = doc.data();
-                    let uid = doc.id;
-                    
+                    let d = doc.data();
+                    d.uid = doc.id;
+                    if(d.order === undefined) d.order = Date.now(); // สำรองข้อมูลเก่า
+                    window.currentAdminUsers.push(d);
+                });
+                
+                // เรียงลำดับจาก order
+                window.currentAdminUsers.sort((a,b) => a.order - b.order);
+
+                let html = '';
+                window.currentAdminUsers.forEach((u) => {
+                    let uid = u.uid;
                     let statusHtml = '';
                     if(u.isBanned) { statusHtml = '<span class="status-dot status-banned"></span><span style="color:var(--accent-red)">ถูกระงับ (Ban)</span>'; }
                     else if(u.isOnline) { statusHtml = '<span class="status-dot status-online"></span><span style="color:var(--neon-green)">ออนไลน์</span>'; }
@@ -1072,21 +1096,41 @@
                     let safeUsername = u.username || '';
                     let safePassword = u.password || '';
 
+                    // ปุ่มจัดเรียง
+                    let moveBtnsHtml = '';
+                    if(currentUserRole === "Admin" || currentUserRole === "Manager") {
+                        moveBtnsHtml = `
+                            <div style="display:flex; flex-direction:column; gap:5px; margin-right:5px;">
+                                <button onclick="moveUser('${uid}', -1)" style="border:none; background:rgba(255,255,255,0.1); color:white; width:22px; height:22px; border-radius:5px; cursor:pointer; display:flex; justify-content:center; align-items:center;">▲</button>
+                                <button onclick="moveUser('${uid}', 1)" style="border:none; background:rgba(255,255,255,0.1); color:white; width:22px; height:22px; border-radius:5px; cursor:pointer; display:flex; justify-content:center; align-items:center;">▼</button>
+                            </div>
+                        `;
+                    }
+
+                    // ปุ่ม Ban / Unban รวดเร็ว และ ปุ่ม Edit
+                    let quickBanBtn = '';
                     let editBtnHtml = '';
                     if(currentUserRole === "Admin" || (currentUserRole === "Manager" && safeRole !== "Admin")) {
-                        editBtnHtml = `<button onclick="openAdminEditUser('${uid}', '${safeUsername}', '${safeName}', '${safePhoto}', '${safeRole}', '${safePassword}', ${u.isBanned || false})" style="background:rgba(52, 152, 219, 0.1); border:1px solid rgba(52, 152, 219, 0.3); color:#3498db; width: 40px; height: 40px; border-radius:10px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="แก้ไข"><span class="material-symbols-outlined">edit</span></button>`;
+                        if(u.isBanned) {
+                            quickBanBtn = `<button onclick="quickBanToggle('${uid}', false, '${safeName}')" style="background:rgba(46, 204, 113, 0.1); border:1px solid rgba(46, 204, 113, 0.3); color:var(--neon-green); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ปลดแบน"><span class="material-symbols-outlined" style="font-size:18px;">check_circle</span></button>`;
+                        } else {
+                            quickBanBtn = `<button onclick="quickBanToggle('${uid}', true, '${safeName}')" style="background:rgba(255, 71, 87, 0.1); border:1px solid rgba(255, 71, 87, 0.3); color:var(--accent-red); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="แบน"><span class="material-symbols-outlined" style="font-size:18px;">block</span></button>`;
+                        }
+                        editBtnHtml = `<button onclick="openAdminEditUser('${uid}', '${safeUsername}', '${safeName}', '${safePhoto}', '${safeRole}', '${safePassword}', ${u.isBanned || false})" style="background:rgba(52, 152, 219, 0.1); border:1px solid rgba(52, 152, 219, 0.3); color:#3498db; width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="แก้ไข"><span class="material-symbols-outlined" style="font-size:18px;">edit</span></button>`;
                     }
 
                     html += `<div class="admin-user-card">
+                        ${moveBtnsHtml}
                         <img src="${safePhoto}" style="width:45px;height:45px;border-radius:50%;object-fit:cover;border:1px solid #fff;">
-                        <div style="flex:1;">
-                            <div style="color:white; font-size:15px; font-weight:500;">${safeName} <span style="font-size:11px; color:var(--neon-yellow);">[${safeRole}]</span></div>
-                            <div style="font-size:12px; color: #a0a5b5; margin-top:2px;">User: <span style="color:white;">${safeUsername}</span> | Pass: <span style="color:white;">${safePassword}</span></div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="color:white; font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeName} <span style="font-size:11px; color:var(--neon-yellow);">[${safeRole}]</span></div>
+                            <div style="font-size:11px; color: #a0a5b5; margin-top:2px;">User: <span style="color:white;">${safeUsername}</span></div>
                             <div style="font-size:11px; margin-top:4px;">${statusHtml} ${lastLoginTxt}</div>
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:5px;">
+                        <div style="display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end;">
+                            ${quickBanBtn}
                             ${editBtnHtml}
-                            <button onclick="viewUserLogs('${uid}', '${safeName}')" style="background:rgba(241, 196, 15, 0.1); border:1px solid rgba(241, 196, 15, 0.3); color:var(--neon-yellow); width: 40px; height: 40px; border-radius:10px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ประวัติ"><span class="material-symbols-outlined">history</span></button>
+                            <button onclick="viewUserLogs('${uid}', '${safeName}')" style="background:rgba(241, 196, 15, 0.1); border:1px solid rgba(241, 196, 15, 0.3); color:var(--neon-yellow); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ประวัติ"><span class="material-symbols-outlined" style="font-size:18px;">history</span></button>
                         </div>
                     </div>`;
                 });
@@ -1094,6 +1138,45 @@
             });
         } else {
             if(adminSnapshotUnsub) adminSnapshotUnsub();
+        }
+    };
+
+    // ฟังก์ชันสลับลำดับ User
+    window.moveUser = async (uid, direction) => {
+        let list = window.currentAdminUsers;
+        let idx = list.findIndex(u => u.uid === uid);
+        if(idx < 0) return;
+        let swapIdx = idx + direction;
+        if(swapIdx < 0 || swapIdx >= list.length) return; // ติดขอบบน/ล่าง
+
+        let currentOrder = list[idx].order;
+        let swapOrder = list[swapIdx].order;
+
+        if(currentOrder === swapOrder) {
+            currentOrder = Date.now();
+            swapOrder = currentOrder + (direction * 1000);
+        }
+
+        try {
+            await updateDoc(doc(db, "users", list[idx].uid), { order: swapOrder });
+            await updateDoc(doc(db, "users", list[swapIdx].uid), { order: currentOrder });
+        } catch(e) {
+            window.showToast("สลับตำแหน่งล้มเหลว", true);
+        }
+    };
+
+    // ฟังก์ชันแบนด่วน
+    window.quickBanToggle = async (uid, isBan, userName) => {
+        if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true);
+        
+        if(confirm(`ยืนยันการ '${isBan ? 'ระงับ' : 'ปลดระงับ'}' บัญชี ${userName} ใช่หรือไม่?`)) {
+            try {
+                await updateDoc(doc(db, "users", uid), { isBanned: isBan });
+                await recordActivityLog(uid, isBan ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`);
+                window.showToast(isBan ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย");
+            } catch(e) {
+                window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true);
+            }
         }
     };
 
@@ -1148,7 +1231,6 @@
             document.getElementById('deleteUserBtn').style.display = 'flex';
             document.getElementById('banUserBtn').style.display = 'flex';
             
-            // ปรับปุ่มแบน
             const banBtn = document.getElementById('banUserBtn');
             const banIcon = document.getElementById('banIcon');
             const banText = document.getElementById('banText');
@@ -1166,7 +1248,6 @@
         window.toggleModal('adminEditUserModal', true);
     };
 
-    // ฟังก์ชันสั่ง แบน/ปลดแบน ทันที
     window.toggleBanUser = async () => {
         const uid = currentEditUid;
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true);
@@ -1230,7 +1311,8 @@
                     photoURL: photoUpdate,
                     isOnline: false,
                     isBanned: false,
-                    lastLoginAt: null
+                    lastLoginAt: null,
+                    order: Date.now()
                 });
 
                 await recordActivityLog(loggedInUserId, "เพิ่มผู้ใช้งานใหม่", `ชื่อ: ${newName}, สิทธิ์: ${newRole}`);
