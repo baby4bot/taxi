@@ -185,7 +185,7 @@
         .drag-handle:active { cursor: grabbing !important; }
 
         /* ======================================================== */
-        /* สไตล์ใหม่สำหรับ Service Portal Theme Cyberpunk */
+        /* สไตล์ใหม่สำหรับ Service Portal - จัดสีตาม Category */
         /* ======================================================== */
         .sp-modal-box {
             background: #0f111a;
@@ -205,47 +205,71 @@
         }
         @keyframes spLightRun { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
         
-        .sp-logo { height: 28px; object-fit: contain; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+        /* โลโก้ CSS แท้ๆ */
+        .sp-logo-text {
+            font-family: 'Arial', Helvetica, sans-serif; font-size: 26px; font-weight: 900; letter-spacing: -0.5px;
+            margin-bottom: 15px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+        }
+        .sp-logo-text .h-box {
+            background: linear-gradient(135deg, #333, #000); color: white; font-size: 18px; padding: 2px 7px;
+            margin-left: 5px; border-radius: 6px; border: 1px solid #555; line-height: 1; box-shadow: inset 0 1px 3px rgba(255,255,255,0.3), 0 0 8px rgba(255,255,255,0.2);
+        }
+        
         .sp-title { font-family: 'Kanit', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: #fff; text-transform: uppercase; }
         
-        .sp-cat-title { color: #00bcd4; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; margin: 25px 0 15px 0; text-shadow: 0 0 8px rgba(0, 188, 212, 0.4); }
-        .sp-cat-title .material-symbols-outlined { font-size: 18px; margin-right: 5px; color: #00bcd4; }
+        /* ขยายขนาดฟอนต์ ให้มองเห็นชัดในมือถือ */
+        .sp-cat-title { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; margin: 25px 0 15px 0; }
+        .sp-cat-title .material-symbols-outlined { font-size: 20px; margin-right: 5px; }
         
         .sp-card { 
-            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; 
-            padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; 
-            text-align: left; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+            border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; 
+            justify-content: space-between; text-align: left; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
         }
         .sp-card:active { transform: scale(0.98); }
         .sp-info { flex: 1; min-width: 0; padding-right: 10px; }
-        .sp-item-title { font-size: 14px; font-weight: 600; color: white; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.5px; }
-        .sp-code { display: inline-block; padding: 4px 12px; border-radius: 6px; font-family: monospace; font-size: 15px; font-weight: bold; border: 1px solid; letter-spacing: 1px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.3); }
-        .sp-icon-box { width: 45px; height: 45px; background: rgba(0,0,0,0.4); border-radius: 12px; display: flex; justify-content: center; align-items: center; border: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
         
-        /* THEME: GREEN (Validity) */
-        .sp-theme-green { border-color: rgba(46, 204, 113, 0.5); background: rgba(46, 204, 113, 0.05); }
-        .sp-theme-green .sp-code { color: #2ecc71; border-color: #2ecc71; background: rgba(46, 204, 113, 0.15); text-shadow: 0 0 5px rgba(46, 204, 113, 0.4); }
-        .sp-theme-green .sp-icon-box .material-symbols-outlined { color: #2ecc71; filter: drop-shadow(0 0 5px rgba(46, 204, 113, 0.5)); }
+        /* ขยายฟอนต์เนื้อหา */
+        .sp-item-title { font-size: 16px; font-weight: 600; color: white; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.5px; }
+        .sp-code { display: inline-block; padding: 6px 14px; border-radius: 8px; font-family: monospace; font-size: 18px; font-weight: bold; border: 1px solid; letter-spacing: 1.5px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.3); }
+        .sp-icon-box { width: 50px; height: 50px; border-radius: 12px; display: flex; justify-content: center; align-items: center; flex-shrink: 0; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
+        .sp-icon-box .material-symbols-outlined { font-size: 28px; }
+
+        /* THEMES per category (บังคับสีเดียวกันทั้งกลุ่ม) */
+        .theme-cat-0 { background: rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.4); border-left: 5px solid #2ecc71; }
+        .theme-cat-0 .sp-code { color: #2ecc71; border-color: #2ecc71; background: rgba(0,0,0,0.5); }
+        .theme-cat-0 .sp-icon-box { background: rgba(46, 204, 113, 0.2); border: 1px solid rgba(46, 204, 113, 0.3); }
+        .theme-cat-0 .sp-icon-box .material-symbols-outlined { color: #2ecc71; filter: drop-shadow(0 0 5px rgba(46, 204, 113, 0.5)); }
+        .title-theme-0 { color: #2ecc71; text-shadow: 0 0 8px rgba(46, 204, 113, 0.4); }
+
+        .theme-cat-1 { background: rgba(255, 152, 0, 0.15); border: 1px solid rgba(255, 152, 0, 0.4); border-left: 5px solid #ff9800; }
+        .theme-cat-1 .sp-code { color: #ff9800; border-color: #ff9800; background: rgba(0,0,0,0.5); }
+        .theme-cat-1 .sp-icon-box { background: rgba(255, 152, 0, 0.2); border: 1px solid rgba(255, 152, 0, 0.3); }
+        .theme-cat-1 .sp-icon-box .material-symbols-outlined { color: #ff9800; filter: drop-shadow(0 0 5px rgba(255, 152, 0, 0.5)); }
+        .title-theme-1 { color: #ff9800; text-shadow: 0 0 8px rgba(255, 152, 0, 0.4); }
+
+        .theme-cat-2 { background: rgba(255, 71, 87, 0.15); border: 1px solid rgba(255, 71, 87, 0.4); border-left: 5px solid #ff4757; }
+        .theme-cat-2 .sp-code { color: #ff4757; border-color: #ff4757; background: rgba(0,0,0,0.5); }
+        .theme-cat-2 .sp-icon-box { background: rgba(255, 71, 87, 0.2); border: 1px solid rgba(255, 71, 87, 0.3); }
+        .theme-cat-2 .sp-icon-box .material-symbols-outlined { color: #ff4757; filter: drop-shadow(0 0 5px rgba(255, 71, 87, 0.5)); }
+        .title-theme-2 { color: #ff4757; text-shadow: 0 0 8px rgba(255, 71, 87, 0.4); }
+
+        .theme-cat-3 { background: rgba(0, 188, 212, 0.15); border: 1px solid rgba(0, 188, 212, 0.4); border-left: 5px solid #00bcd4; }
+        .theme-cat-3 .sp-code { color: #00bcd4; border-color: #00bcd4; background: rgba(0,0,0,0.5); }
+        .theme-cat-3 .sp-icon-box { background: rgba(0, 188, 212, 0.2); border: 1px solid rgba(0, 188, 212, 0.3); }
+        .theme-cat-3 .sp-icon-box .material-symbols-outlined { color: #00bcd4; filter: drop-shadow(0 0 5px rgba(0, 188, 212, 0.5)); }
+        .title-theme-3 { color: #00bcd4; text-shadow: 0 0 8px rgba(0, 188, 212, 0.4); }
         
-        /* THEME: ORANGE (Bonus & Voice) */
-        .sp-theme-orange { border-color: rgba(255, 152, 0, 0.5); background: rgba(255, 152, 0, 0.05); }
-        .sp-theme-orange .sp-code { color: #ff9800; border-color: #ff9800; background: rgba(255, 152, 0, 0.15); text-shadow: 0 0 5px rgba(255, 152, 0, 0.4); }
-        .sp-theme-orange .sp-icon-box .material-symbols-outlined { color: #ff9800; filter: drop-shadow(0 0 5px rgba(255, 152, 0, 0.5)); }
+        .theme-cat-4 { background: rgba(156, 39, 176, 0.15); border: 1px solid rgba(156, 39, 176, 0.4); border-left: 5px solid #9c27b0; }
+        .theme-cat-4 .sp-code { color: #e040fb; border-color: #e040fb; background: rgba(0,0,0,0.5); }
+        .theme-cat-4 .sp-icon-box { background: rgba(156, 39, 176, 0.2); border: 1px solid rgba(156, 39, 176, 0.3); }
+        .theme-cat-4 .sp-icon-box .material-symbols-outlined { color: #e040fb; filter: drop-shadow(0 0 5px rgba(156, 39, 176, 0.5)); }
+        .title-theme-4 { color: #e040fb; text-shadow: 0 0 8px rgba(156, 39, 176, 0.4); }
         
-        /* THEME: RED (Promotions / Topup / Cancel) */
-        .sp-theme-red { border-color: rgba(255, 71, 87, 0.5); background: rgba(255, 71, 87, 0.05); }
-        .sp-theme-red .sp-code { color: #ff4757; border-color: #ff4757; background: rgba(255, 71, 87, 0.15); text-shadow: 0 0 5px rgba(255, 71, 87, 0.4); }
-        .sp-theme-red .sp-icon-box .material-symbols-outlined { color: #ff4757; filter: drop-shadow(0 0 5px rgba(255, 71, 87, 0.5)); }
-        
-        /* THEME: CYAN (Identity & Status & Wifi) */
-        .sp-theme-cyan { border-color: rgba(0, 188, 212, 0.5); background: rgba(0, 188, 212, 0.05); }
-        .sp-theme-cyan .sp-code { color: #00bcd4; border-color: #00bcd4; background: rgba(0, 188, 212, 0.15); text-shadow: 0 0 5px rgba(0, 188, 212, 0.4); }
-        .sp-theme-cyan .sp-icon-box .material-symbols-outlined { color: #00bcd4; filter: drop-shadow(0 0 5px rgba(0, 188, 212, 0.5)); }
-        
-        /* THEME: GRAY (Fallback) */
-        .sp-theme-gray { border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.02); }
-        .sp-theme-gray .sp-code { color: #a0a5b5; border-color: #a0a5b5; background: rgba(255, 255, 255, 0.05); }
-        .sp-theme-gray .sp-icon-box .material-symbols-outlined { color: #a0a5b5; }
+        .theme-cat-5 { background: rgba(33, 150, 243, 0.15); border: 1px solid rgba(33, 150, 243, 0.4); border-left: 5px solid #2196f3; }
+        .theme-cat-5 .sp-code { color: #64b5f6; border-color: #64b5f6; background: rgba(0,0,0,0.5); }
+        .theme-cat-5 .sp-icon-box { background: rgba(33, 150, 243, 0.2); border: 1px solid rgba(33, 150, 243, 0.3); }
+        .theme-cat-5 .sp-icon-box .material-symbols-outlined { color: #64b5f6; filter: drop-shadow(0 0 5px rgba(33, 150, 243, 0.5)); }
+        .title-theme-5 { color: #64b5f6; text-shadow: 0 0 8px rgba(33, 150, 243, 0.4); }
     </style>
 </head>
 <body>
@@ -380,7 +404,7 @@
                 <span class="material-symbols-outlined">admin_panel_settings</span><span>ตั้งค่าสิทธิ์การใช้งาน</span>
             </div>
             <div id="serviceMenuBtn" class="side-menu-item" onclick="toggleSideMenu(false); setTimeout(() => { openServicePortal(true); }, 300);" style="display: none;">
-                <span class="material-symbols-outlined" style="color: #00bcd4;">app_shortcut</span><span style="color: #00bcd4;">จัดการ Service Portal</span>
+                <span class="material-symbols-outlined" style="color: #00bcd4;">settings_applications</span><span style="color: #00bcd4;">จัดการ Service Portal</span>
             </div>
         </div>
         <hr class="side-divider">
@@ -578,7 +602,10 @@
     <div class="modal-box flex-col-box sp-modal-box" onclick="event.stopPropagation()">
         <div class="sp-header">
             <div class="sp-neon-line"></div>
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/TrueMove_H_logo.svg/800px-TrueMove_H_logo.svg.png" class="sp-logo" alt="TrueMove H">
+            <div class="sp-logo-text">
+                <span style="color: #ef2f2c;">true</span><span style="color: #f7931e;">move</span>
+                <span class="h-box">H</span>
+            </div>
             <div class="sp-title" id="serviceModalTitle">SERVICE PORTAL</div>
             <button class="btn-close-floating" onclick="toggleModal('servicePortalModal', false)"><span class="material-symbols-outlined">close</span></button>
         </div>
@@ -594,9 +621,15 @@
             </div>
             <input type="text" id="newServiceTitle" placeholder="ชื่อรายการ (เช่น เพิ่มวัน 30 วัน)" style="margin-bottom: 10px; font-size: 14px; padding: 12px;">
             <input type="text" id="newServiceCode" placeholder="รหัส USSD / เบอร์โทร (เช่น *934*30#)" style="margin-bottom: 10px; font-size: 14px; padding: 12px; font-family: monospace;">
-            <button onclick="addNewServiceCode()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; padding: 12px;">
-                <span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span> เพิ่มรายการเข้าสู่ระบบ
-            </button>
+            
+            <div style="display: flex; gap: 10px;">
+                <button id="addServiceBtn" onclick="addNewServiceCode()" class="manual-timer-btn" style="background: var(--neon-green); flex: 1; justify-content: center; padding: 12px;">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span> เพิ่มรายการเข้าสู่ระบบ
+                </button>
+                <button id="cancelEditBtn" onclick="cancelEditService()" class="manual-timer-btn" style="background: var(--accent-red); width: 50px; display: none; flex: none; justify-content: center; padding: 12px;">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">close</span>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -797,7 +830,6 @@
         document.getElementById('profilePicHint').style.display = myPerms.canEditOwn !== false ? 'block' : 'none';
         document.getElementById('qrPicHint').style.display = myPerms.canEditOwn !== false ? 'block' : 'none';
         
-        // แสดงเมนู จัดการ Service Portal เฉพาะคนที่มีสิทธิ์
         document.getElementById('serviceMenuBtn').style.display = myPerms.canManageService ? 'flex' : 'none';
 
         if(document.getElementById('adminMenuModal').style.display === 'flex') { if(window.handleAdminModalState) window.handleAdminModalState(true); }
@@ -1074,103 +1106,84 @@
     };
 
     // =========================================================================
-    // โค้ดส่วนจัดการระบบ Service Portal รูปแบบใหม่ 
+    // โค้ดส่วนจัดการระบบ Service Portal
     // =========================================================================
-    const getSmartStyle = (title) => {
+    
+    let editingServiceCatId = null;
+    let editingServiceItemId = null;
+
+    // อัปเดตไอคอนมาตรฐาน (Standard Material Symbols)
+    const getSmartIcon = (title) => {
         const t = title.toLowerCase();
-        let icon = 'settings_cell';
-        let theme = 'sp-theme-gray';
-        
-        if(t.includes('วัน')) { icon = 'calendar_add_on'; theme = 'sp-theme-green'; }
-        else if(t.includes('เน็ต') || t.includes('wifi') || t.includes('เนต')) { icon = 'wifi'; theme = 'sp-theme-cyan'; }
-        else if(t.includes('เติม') || t.includes('พิเศษ')) { icon = 'volunteer_activism'; theme = 'sp-theme-red'; }
-        else if(t.includes('โทรฟรี') || t.includes('โทร') || t.includes('นาที')) { icon = 'perm_phone_msg'; theme = 'sp-theme-orange'; }
-        else if(t.includes('โบนัส') || t.includes('เงิน') || t.includes('บาท')) { icon = 'redeem'; theme = 'sp-theme-orange'; }
-        else if(t.includes('เจ้าของ') || t.includes('ปชช') || t.includes('บัตร')) { icon = 'badge'; theme = 'sp-theme-cyan'; }
-        else if(t.includes('ข้อความ') || t.includes('sms')) { icon = 'sms'; theme = 'sp-theme-gray'; }
-        else if(t.includes('ยกเลิก')) { icon = 'cancel'; theme = 'sp-theme-red'; }
-        
-        return { icon, theme };
+        if(t.includes('วัน')) return 'calendar_today';
+        if(t.includes('เน็ต') || t.includes('wifi') || t.includes('เนต')) return 'wifi';
+        if(t.includes('โทร') || t.includes('นาที')) return 'phone';
+        if(t.includes('โบนัส') || t.includes('เงิน') || t.includes('บาท')) return 'card_giftcard';
+        if(t.includes('เติม') || t.includes('พิเศษ')) return 'favorite';
+        if(t.includes('เจ้าของ') || t.includes('ปชช') || t.includes('บัตร')) return 'person';
+        if(t.includes('ข้อความ') || t.includes('sms')) return 'message';
+        if(t.includes('ยกเลิก')) return 'block';
+        return 'smartphone'; 
     };
 
-    let serviceDataUnsub = null;
-    window.currentServiceData = [];
-    window.currentServiceModeManage = false;
-    let categorySortable = null;
-    let itemSortables = [];
+    let serviceDataUnsub = null; window.currentServiceData = []; window.currentServiceModeManage = false;
+    let categorySortable = null; let itemSortables = [];
 
     window.openServicePortal = (isManageMode = false) => {
-        window.currentServiceModeManage = isManageMode;
-        toggleModal('servicePortalModal', true);
-        
+        window.currentServiceModeManage = isManageMode; toggleModal('servicePortalModal', true);
         let myPerms = (currentUserRole === "Admin") ? {canManageService: true} : (globalPermissions[currentUserRole] || {});
         document.getElementById('serviceModalTitle').innerText = isManageMode ? "จัดการ SERVICE PORTAL" : "SERVICE PORTAL";
         document.getElementById('adminServiceAddSection').style.display = (isManageMode && myPerms.canManageService) ? 'block' : 'none';
 
         if(!serviceDataUnsub) {
             serviceDataUnsub = onSnapshot(doc(db, "system", "service_data"), (docSnap) => {
-                if(docSnap.exists()) { window.currentServiceData = docSnap.data().categories || []; } 
-                else { window.currentServiceData = []; }
+                if(docSnap.exists()) { window.currentServiceData = docSnap.data().categories || []; } else { window.currentServiceData = []; }
                 renderServicePortalUI();
             });
-        } else {
-            renderServicePortalUI(); 
-        }
+        } else { renderServicePortalUI(); }
     };
 
     window.renderServicePortalUI = () => {
-        let isManageMode = window.currentServiceModeManage;
-        let html = ''; let datalistHtml = '';
-        
-        if (window.currentServiceData.length === 0) {
-            html = '<div style="text-align:center; color:gray; padding:20px;">ยังไม่มีรายการในระบบ</div>';
-        } else {
-            window.currentServiceData.forEach((cat) => {
+        let isManageMode = window.currentServiceModeManage; let html = ''; let datalistHtml = '';
+        if (window.currentServiceData.length === 0) { html = '<div style="text-align:center; color:gray; padding:20px;">ยังไม่มีรายการในระบบ</div>'; } 
+        else {
+            window.currentServiceData.forEach((cat, index) => {
                 datalistHtml += `<option value="${cat.name}">`;
-                let catDragHandle = isManageMode ? `<span class="material-symbols-outlined drag-handle" style="cursor:grab; padding-right:8px; color:rgba(255,255,255,0.4); font-size:22px;">drag_indicator</span>` : `<span class="material-symbols-outlined">play_arrow</span>`;
+                let catDragHandle = isManageMode ? `<span class="material-symbols-outlined drag-handle" style="cursor:grab; padding-right:8px; color:rgba(255,255,255,0.4); font-size:24px;">drag_indicator</span>` : `<span class="material-symbols-outlined">play_arrow</span>`;
                 
-                html += `<div class="category-block" data-id="${cat.id}" data-name="${cat.name}">
-                            <div class="sp-cat-title">${catDragHandle} ${cat.name}</div>
-                            <div class="category-items-container" data-cat="${cat.id}" style="min-height: 20px;">`; 
+                // สุ่มสีธีมให้แต่ละ Category แบบตายตัวตาม Index
+                let themeClass = `theme-cat-${index % 6}`;
 
+                html += `<div class="category-block" data-id="${cat.id}" data-name="${cat.name}"><div class="sp-cat-title title-${themeClass}">${catDragHandle} ${cat.name}</div><div class="category-items-container" data-cat="${cat.id}" style="min-height: 20px;">`; 
+                
                 cat.items.forEach((d) => {
-                    let styleData = getSmartStyle(d.title); 
-                    
                     let itemDragHandle = isManageMode ? `<div class="drag-handle" style="display:flex; align-items:center; cursor:grab; padding-right:10px; touch-action:none;"><span class="material-symbols-outlined" style="color: rgba(255,255,255,0.3); font-size: 26px;">drag_indicator</span></div>` : '';
-                    let delBtn = isManageMode ? `<button onclick="deleteServiceItem('${cat.id}', '${d.id}', event)" style="background:none; border:none; color:var(--accent-red); margin-left:10px; padding:5px; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:20px;">delete</span></button>` : '';
+                    
+                    // ปุ่ม Edit (ดินสอ)
+                    let editBtn = isManageMode ? `<button onclick="editServiceItem('${cat.id}', '${d.id}', '${cat.name}', '${d.title}', '${d.code}', event)" style="background:none; border:none; color:var(--neon-yellow); margin-left:5px; padding:5px; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:24px;">edit</span></button>` : '';
+                    let delBtn = isManageMode ? `<button onclick="deleteServiceItem('${cat.id}', '${d.id}', event)" style="background:none; border:none; color:var(--accent-red); margin-left:5px; padding:5px; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:24px;">delete</span></button>` : '';
+                    
                     let clickAction = isManageMode ? '' : `onclick="dialCode('${d.code}')" style="cursor:pointer;"`;
-
-                    html += `<div class="sp-card ${styleData.theme}" data-id="${d.id}" data-title="${d.title}" data-code="${d.code}">
+                    
+                    html += `<div class="sp-card ${themeClass}" data-id="${d.id}" data-title="${d.title}" data-code="${d.code}">
                                 ${itemDragHandle}
                                 <div class="sp-info" ${clickAction}>
                                     <div class="sp-item-title">${d.title}</div>
                                     <div class="sp-code">${d.code}</div>
                                 </div>
-                                <div class="sp-icon-box">
-                                    <span class="material-symbols-outlined">${styleData.icon}</span>
-                                </div>
-                                ${delBtn}
+                                <div class="sp-icon-box"><span class="material-symbols-outlined">${d.icon || getSmartIcon(d.title)}</span></div>
+                                <div style="display:flex;">${editBtn}${delBtn}</div>
                             </div>`;
                 });
-                html += `   </div>
-                         </div>`;
+                html += `</div></div>`;
             });
         }
-        
-        document.getElementById('serviceListContainer').innerHTML = html;
-        document.getElementById('existingCategories').innerHTML = datalistHtml;
-
-        if(categorySortable) categorySortable.destroy();
-        itemSortables.forEach(s => s.destroy());
-        itemSortables = [];
-
+        document.getElementById('serviceListContainer').innerHTML = html; document.getElementById('existingCategories').innerHTML = datalistHtml;
+        if(categorySortable) categorySortable.destroy(); itemSortables.forEach(s => s.destroy()); itemSortables = [];
         if (isManageMode) {
             let container = document.getElementById('serviceListContainer');
             categorySortable = new Sortable(container, { animation: 150, handle: '.sp-cat-title .drag-handle', ghostClass: 'sortable-ghost', fallbackOnBody: true, swapThreshold: 0.65, onEnd: () => { rebuildServiceDataAndSave(); } });
-            document.querySelectorAll('.category-items-container').forEach(el => {
-                let sortable = new Sortable(el, { group: 'shared', animation: 150, handle: '.sp-card .drag-handle', ghostClass: 'sortable-ghost', fallbackOnBody: true, swapThreshold: 0.65, onEnd: () => { rebuildServiceDataAndSave(); } });
-                itemSortables.push(sortable);
-            });
+            document.querySelectorAll('.category-items-container').forEach(el => { let sortable = new Sortable(el, { group: 'shared', animation: 150, handle: '.sp-card .drag-handle', ghostClass: 'sortable-ghost', fallbackOnBody: true, swapThreshold: 0.65, onEnd: () => { rebuildServiceDataAndSave(); } }); itemSortables.push(sortable); });
         }
     };
 
@@ -1178,7 +1191,10 @@
         let newData = [];
         document.querySelectorAll('.category-block').forEach(catBlock => {
             let catName = catBlock.dataset.name; let catId = catBlock.dataset.id; let items = [];
-            catBlock.querySelectorAll('.sp-card').forEach(card => { items.push({ id: card.dataset.id, title: card.dataset.title, code: card.dataset.code }); });
+            catBlock.querySelectorAll('.sp-card').forEach(card => { 
+                let iconStr = card.querySelector('.sp-icon-box .material-symbols-outlined').innerText;
+                items.push({ id: card.dataset.id, title: card.dataset.title, code: card.dataset.code, icon: iconStr }); 
+            });
             if(items.length > 0) { newData.push({ id: catId, name: catName, items: items }); }
         });
         try { await setDoc(doc(db, "system", "service_data"), { categories: newData }); } catch(e) { window.showToast("อัปเดตลำดับล้มเหลว", true); }
@@ -1186,34 +1202,89 @@
 
     window.dialCode = (code) => { let dialStr = code.replace(/#/g, '%23'); window.location.href = `tel:${dialStr}`; };
 
+    // นำข้อมูลลงฟอร์มเพื่อแก้ไข
+    window.editServiceItem = (catId, itemId, catName, title, code, event) => {
+        event.stopPropagation();
+        editingServiceCatId = catId;
+        editingServiceItemId = itemId;
+        
+        document.getElementById('newServiceCategory').value = catName;
+        document.getElementById('newServiceTitle').value = title;
+        document.getElementById('newServiceCode').value = code;
+        
+        let btn = document.getElementById('addServiceBtn');
+        btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">save</span> บันทึกการแก้ไข`;
+        btn.style.background = 'var(--neon-yellow)';
+        btn.style.color = 'black';
+        
+        document.getElementById('cancelEditBtn').style.display = 'block';
+        document.getElementById('adminServiceAddSection').scrollIntoView({behavior: "smooth"});
+    };
+
+    // ยกเลิกการแก้ไข ล้างฟอร์ม
+    window.cancelEditService = () => {
+        editingServiceCatId = null;
+        editingServiceItemId = null;
+        document.getElementById('newServiceCategory').value = '';
+        document.getElementById('newServiceTitle').value = '';
+        document.getElementById('newServiceCode').value = '';
+        
+        let btn = document.getElementById('addServiceBtn');
+        btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span> เพิ่มรายการเข้าสู่ระบบ`;
+        btn.style.background = 'var(--neon-green)';
+        btn.style.color = 'white';
+        
+        document.getElementById('cancelEditBtn').style.display = 'none';
+    };
+
     window.addNewServiceCode = async () => {
-        let catName = document.getElementById('newServiceCategory').value.trim() || 'ทั่วไป';
-        let title = document.getElementById('newServiceTitle').value.trim();
+        let catName = document.getElementById('newServiceCategory').value.trim() || 'ทั่วไป'; 
+        let title = document.getElementById('newServiceTitle').value.trim(); 
         let code = document.getElementById('newServiceCode').value.trim();
         if(!title || !code) return window.showToast("กรุณากรอกชื่อและรหัสให้ครบ", true);
         
         let newData = JSON.parse(JSON.stringify(window.currentServiceData)); 
-        let catIndex = newData.findIndex(c => c.name === catName);
-        if(catIndex === -1) { newData.push({ id: 'cat_' + Date.now(), name: catName, items: [] }); catIndex = newData.length - 1; }
-        newData[catIndex].items.push({ id: 'item_' + Date.now(), title: title, code: code });
-
-        try {
-            await setDoc(doc(db, "system", "service_data"), { categories: newData });
-            document.getElementById('newServiceTitle').value = ''; document.getElementById('newServiceCode').value = '';
-            window.showToast("เพิ่มรายการสำเร็จ!"); await recordActivityLog(loggedInUserId, "เพิ่ม Service Code", `เพิ่ม: ${title}`);
-        } catch(e) { window.showToast("เกิดข้อผิดพลาด", true); }
+        
+        if (editingServiceItemId && editingServiceCatId) {
+            // โหมดแก้ไข (ลบของเก่าออกก่อน แล้วใส่ของใหม่เข้าไป)
+            let oldCatIndex = newData.findIndex(c => c.id === editingServiceCatId);
+            if (oldCatIndex !== -1) {
+                newData[oldCatIndex].items = newData[oldCatIndex].items.filter(i => i.id !== editingServiceItemId);
+                if(newData[oldCatIndex].items.length === 0) newData.splice(oldCatIndex, 1);
+            }
+            
+            let newCatIndex = newData.findIndex(c => c.name === catName);
+            if(newCatIndex === -1) { newData.push({ id: 'cat_' + Date.now(), name: catName, items: [] }); newCatIndex = newData.length - 1; }
+            newData[newCatIndex].items.push({ id: editingServiceItemId, title: title, code: code, icon: getSmartIcon(title) });
+            
+            try { 
+                await setDoc(doc(db, "system", "service_data"), { categories: newData }); 
+                window.showToast("แก้ไขรายการสำเร็จ!"); 
+                await recordActivityLog(loggedInUserId, "แก้ไข Service Code", `แก้ไข: ${title}`); 
+                cancelEditService();
+            } catch(e) { window.showToast("เกิดข้อผิดพลาด", true); }
+            
+        } else {
+            // โหมดเพิ่มของใหม่
+            let catIndex = newData.findIndex(c => c.name === catName);
+            if(catIndex === -1) { newData.push({ id: 'cat_' + Date.now(), name: catName, items: [] }); catIndex = newData.length - 1; }
+            newData[catIndex].items.push({ id: 'item_' + Date.now(), title: title, code: code, icon: getSmartIcon(title) });
+            
+            try { 
+                await setDoc(doc(db, "system", "service_data"), { categories: newData }); 
+                document.getElementById('newServiceTitle').value = ''; document.getElementById('newServiceCode').value = ''; 
+                window.showToast("เพิ่มรายการสำเร็จ!"); 
+                await recordActivityLog(loggedInUserId, "เพิ่ม Service Code", `เพิ่ม: ${title}`); 
+            } catch(e) { window.showToast("เกิดข้อผิดพลาด", true); }
+        }
     };
 
     window.deleteServiceItem = async (catId, itemId, event) => {
         event.stopPropagation();
         if(confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) {
-            let newData = JSON.parse(JSON.stringify(window.currentServiceData));
-            let catIndex = newData.findIndex(c => c.id === catId);
-            if(catIndex !== -1) {
-                newData[catIndex].items = newData[catIndex].items.filter(i => i.id !== itemId);
-                if(newData[catIndex].items.length === 0) { newData.splice(catIndex, 1); } 
-            }
-            try { await setDoc(doc(db, "system", "service_data"), { categories: newData }); window.showToast("ลบเรียบร้อย"); } catch(e) {}
+            let newData = JSON.parse(JSON.stringify(window.currentServiceData)); let catIndex = newData.findIndex(c => c.id === catId);
+            if(catIndex !== -1) { newData[catIndex].items = newData[catIndex].items.filter(i => i.id !== itemId); if(newData[catIndex].items.length === 0) { newData.splice(catIndex, 1); } }
+            try { await setDoc(doc(db, "system", "service_data"), { categories: newData }); window.showToast("ลบเรียบร้อย"); cancelEditService(); } catch(e) {}
         }
     };
 </script>
