@@ -762,11 +762,16 @@
                 
                 if (data.photoURL && data.photoURL.length > 10) {
                     document.getElementById('profilePic').src = data.photoURL; document.getElementById('editProfilePic').src = data.photoURL; document.getElementById('mainProfilePic').src = data.photoURL;
-                    document.getElementById('appHeaderIcon').src = data.photoURL; document.getElementById('appleIcon').href = data.photoURL; document.getElementById('shortcutIcon').href = data.photoURL;
+                    
+                    // ---- อัปเดตไอคอนแท็บเบราว์เซอร์ให้เป็นหน้า User ----
+                    document.getElementById('appleIcon').href = data.photoURL; 
+                    document.getElementById('shortcutIcon').href = data.photoURL;
                 } else { 
                     document.getElementById('mainProfilePic').src = "https://via.placeholder.com/80"; 
-                    document.getElementById('appHeaderIcon').src = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png";
-                    document.getElementById('appleIcon').href = "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg"; document.getElementById('shortcutIcon').href = "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg";
+                    
+                    // ---- ถ้าไม่มีรูป ให้กลับไปใช้รูปตั้งต้น ----
+                    document.getElementById('appleIcon').href = "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg"; 
+                    document.getElementById('shortcutIcon').href = "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg";
                 }
 
                 window.myCurrentQrCodeURL = data.qrCodeURL || ""; document.getElementById('editQrCodePic').src = window.myCurrentQrCodeURL || "https://via.placeholder.com/100?text=Upload+QR";
@@ -834,7 +839,7 @@
             let finalPhotoURL = document.getElementById('profilePic').src; let logDetails = [];
             if (fileInput.files && fileInput.files.length > 0) { finalPhotoURL = await fileToBase64(fileInput.files[0]); logDetails.push("เปลี่ยนรูปโปรไฟล์"); }
             let updatePayload = {};
-            // ปรับการเรียกฟังก์ชันโดยใส่ parameter true สำหรับรูป QR
+            
             if (qrInput.files && qrInput.files.length > 0) { let finalQrURL = await fileToBase64(qrInput.files[0], true); updatePayload.qrCodeURL = finalQrURL; logDetails.push("เปลี่ยนรูป QR Code รับเงิน"); }
             if(newName !== document.getElementById('displayUserName').innerText) { logDetails.push(`เปลี่ยนชื่อเป็น '${newName}'`); }
             if(finalPhotoURL !== "https://via.placeholder.com/80") updatePayload.photoURL = finalPhotoURL;
@@ -997,7 +1002,6 @@
                 if (!existCheck.empty) { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก`; btn.disabled = false; return window.showToast("Username นี้ถูกใช้งานแล้ว", true); }
                 if (fileInput.files && fileInput.files.length > 0) { photoUpdate = await fileToBase64(fileInput.files[0]); }
                 
-                // ปรับการเรียกฟังก์ชันโดยใส่ parameter true สำหรับรูป QR ในฝั่งแอดมิน
                 let qrUpdate = ""; if (qrInput.files && qrInput.files.length > 0) { qrUpdate = await fileToBase64(qrInput.files[0], true); }
 
                 await addDoc(collection(db, "users"), {
@@ -1016,7 +1020,6 @@
                 if (newPassword.trim().length >= 1) { updatePayload.password = newPassword.trim(); logDetail += " และเปลี่ยนรหัสผ่าน"; }
                 if (fileInput.files && fileInput.files.length > 0) { photoUpdate = await fileToBase64(fileInput.files[0]); updatePayload.photoURL = photoUpdate; logDetail += " และอัปเดตรูปภาพ"; }
                 
-                // ปรับการเรียกฟังก์ชันโดยใส่ parameter true สำหรับรูป QR ในฝั่งแอดมิน
                 if (qrInput.files && qrInput.files.length > 0) { let finalQr = await fileToBase64(qrInput.files[0], true); updatePayload.qrCodeURL = finalQr; logDetail += " และอัปเดต QR Code"; }
 
                 await updateDoc(doc(db, "users", uid), updatePayload);
