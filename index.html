@@ -296,9 +296,62 @@
 
         .tz-close-text { text-align: center; font-size: 18px; color: rgba(255,255,255,0.4); cursor: pointer; transition: 0.2s; padding: 10px; font-weight: 500; }
         .tz-close-text:active { color: white; transform: scale(0.95); }
+
+        /* =======================================================
+           โค้ด CSS สำหรับ Custom Confirm
+           ======================================================= */
+        .custom-confirm-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; 
+            z-index: 100000; backdrop-filter: blur(10px); animation: fadeIn 0.2s ease-out;
+        }
+
+        .custom-confirm-box {
+            background: #161823; border: 1px solid var(--border-glass); 
+            border-radius: 25px; width: 85%; max-width: 350px; padding: 30px 20px; 
+            text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+            transform: scale(0.9); animation: popIn 0.3s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .custom-confirm-icon { font-size: 60px; margin-bottom: 10px; }
+        .custom-confirm-icon.danger { color: var(--accent-red); text-shadow: 0 0 20px rgba(255, 71, 87, 0.4); }
+        .custom-confirm-icon.warning { color: var(--neon-yellow); text-shadow: 0 0 20px rgba(241, 196, 15, 0.4); }
+
+        .custom-confirm-title { font-size: 20px; font-weight: 600; margin: 0 0 10px 0; color: white; }
+        .custom-confirm-desc { font-size: 14px; color: var(--text-dim); margin-bottom: 25px; line-height: 1.5; white-space: pre-line; }
+
+        .custom-confirm-actions { display: flex; gap: 12px; width: 100%; }
+        
+        .btn-cc-cancel {
+            flex: 1; padding: 12px; border-radius: 15px; font-family: 'Kanit'; font-size: 16px; font-weight: 500;
+            background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);
+            cursor: pointer; transition: 0.2s;
+        }
+        .btn-cc-cancel:active { transform: scale(0.95); background: rgba(255,255,255,0.2); }
+
+        .btn-cc-ok {
+            flex: 1; padding: 12px; border-radius: 15px; font-family: 'Kanit'; font-size: 16px; font-weight: 500;
+            background: var(--neon-green); color: white; border: none; cursor: pointer; transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+        }
+        .btn-cc-ok.danger { background: var(--accent-red); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3); }
+        .btn-cc-ok:active { transform: scale(0.95); }
+
     </style>
 </head>
 <body>
+
+<div id="sysCustomConfirm" class="custom-confirm-overlay">
+    <div class="custom-confirm-box">
+        <div id="ccIcon" class="material-symbols-outlined custom-confirm-icon warning">warning</div>
+        <h3 id="ccTitle" class="custom-confirm-title">ยืนยัน?</h3>
+        <div id="ccDesc" class="custom-confirm-desc">คุณแน่ใจหรือไม่?</div>
+        <div class="custom-confirm-actions">
+            <button id="ccBtnCancel" class="btn-cc-cancel">ยกเลิก</button>
+            <button id="ccBtnOk" class="btn-cc-ok">ยืนยัน</button>
+        </div>
+    </div>
+</div>
 
 <div id="appLoader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); z-index: 999999; display: flex; justify-content: center; align-items: center; color: var(--neon-yellow); font-size: 20px; flex-direction: column; gap: 15px;">
     <span class="material-symbols-outlined" style="font-size: 40px; animation: floatBubble 2s infinite;">local_taxi</span>
@@ -333,7 +386,7 @@
     <div id="searchSectionBox" class="search-section">
         <label>ค้นหาจุดหมาย (สลับคำ / แก้คำผิดอัจฉริยะ)</label>                                        
         <div class="input-group">
-            <input oninput="smartSearch(this.value); checkAppStatus();" onfocus="showHistory()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />                                                       
+            <input oninput="smartSearch(this.value); checkAppStatus();" onfocus="showHistory()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />                                                        
         </div>
         <div id="suggestionList" class="dropdown-box"></div>
         <div id="historyList" class="dropdown-box"></div>
@@ -743,6 +796,44 @@
 </div>
 
 <script>
+    // =======================================================
+    // ระบบ Custom Confirm
+    // =======================================================
+    window.showCustomConfirm = function(title, desc, type = 'warning', okText = 'ยืนยัน') {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('sysCustomConfirm');
+            const icon = document.getElementById('ccIcon');
+            const btnOk = document.getElementById('ccBtnOk');
+            const btnCancel = document.getElementById('ccBtnCancel');
+
+            document.getElementById('ccTitle').innerText = title;
+            document.getElementById('ccDesc').innerText = desc;
+            btnOk.innerText = okText;
+
+            if(type === 'danger') {
+                icon.className = "material-symbols-outlined custom-confirm-icon danger";
+                icon.innerText = "error";
+                btnOk.className = "btn-cc-ok danger";
+            } else {
+                icon.className = "material-symbols-outlined custom-confirm-icon warning";
+                icon.innerText = "help";
+                btnOk.className = "btn-cc-ok";
+            }
+
+            overlay.style.display = 'flex';
+
+            btnOk.onclick = () => {
+                overlay.style.display = 'none';
+                resolve(true); 
+            };
+
+            btnCancel.onclick = () => {
+                overlay.style.display = 'none';
+                resolve(false); 
+            };
+        });
+    };
+
     const HISTORY_KEY = 'taxi_history_v25';
     const $ = id => document.getElementById(id);
     let destLoc = null, searchTimer = null, totalKm = 0, etaSec = 0, watchId = null;
@@ -1128,13 +1219,13 @@
         if(!inputUsername || !pass) return window.showToast("กรุณาใส่ Username และรหัสผ่าน", true);
         document.getElementById('authBtn').innerText = "กำลังเข้าสู่ระบบ...";
         try {
-            if (inputUsername === "admin" && pass === "@9dJE7aKe") {
+            if (inputUsername === "admin" && pass === "060421") {
                 const qAdmin = query(collection(db, "users"), where("username", "==", "admin")); const querySnapshotAdmin = await getDocs(qAdmin);
                 let adminId = "";
                 if (querySnapshotAdmin.empty) {
-                    const docRef = await addDoc(collection(db, "users"), { username: "admin", password: "@9dJE7aKe", displayName: "Admin", role: "Admin", photoURL: "", isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
+                    const docRef = await addDoc(collection(db, "users"), { username: "admin", password: "060421", displayName: "Admin", role: "Admin", photoURL: "", isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
                     adminId = docRef.id;
-                } else { adminId = querySnapshotAdmin.docs[0].id; await updateDoc(doc(db, "users", adminId), { password: "@9dJE7aKe", role: "Admin", isOnline: true, isBanned: false, lastLoginAt: Date.now() }); }
+                } else { adminId = querySnapshotAdmin.docs[0].id; await updateDoc(doc(db, "users", adminId), { password: "060421", role: "Admin", isOnline: true, isBanned: false, lastLoginAt: Date.now() }); }
                 loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
                 window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
             }
@@ -1161,7 +1252,8 @@
     };
 
     window.logoutApp = async (forced = false) => { 
-        if(forced || confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
+        let isOk = forced ? true : await showCustomConfirm("ออกจากระบบ", "คุณต้องการออกจากระบบใช่หรือไม่?", "warning");
+        if(isOk) {
             if(loggedInUserId) { if(!forced) await recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ"); await setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); }
             stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub();
             if(!forced) window.showToast("ออกจากระบบเรียบร้อย");
@@ -1203,7 +1295,8 @@
     // ฟังก์ชันลบผู้ใช้แบบ Quick Delete
     window.quickDeleteUser = async (uid, userName) => {
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถลบบัญชีตัวเองได้", true);
-        if(confirm(`ยืนยันการ 'ลบถาวร' บัญชี ${userName} ใช่หรือไม่?\nข้อมูลจะไม่สามารถกู้คืนได้`)) {
+        let isOk = await showCustomConfirm("ลบบัญชีผู้ใช้งาน", `ยืนยันการ 'ลบถาวร' บัญชี ${userName} ใช่หรือไม่?\nข้อมูลจะไม่สามารถกู้คืนได้`, "danger", "ลบข้อมูล");
+        if(isOk) {
             try {
                 await deleteDoc(doc(db, "users", uid));
                 window.showToast("ลบบัญชีเรียบร้อย");
@@ -1290,7 +1383,9 @@
 
     window.quickBanToggle = async (uid, isBan, userName) => {
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true);
-        if(confirm(`ยืนยันการ '${isBan ? 'ระงับ' : 'ปลดระงับ'}' บัญชี ${userName} ใช่หรือไม่?`)) {
+        const msg = isBan ? "ยืนยันการ 'ระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?\nผู้ใช้จะหลุดจากระบบและเข้าไม่ได้อีก" : "ยืนยันการ 'ปลดระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?";
+        let isOk = await showCustomConfirm(isBan ? "ระงับการใช้งาน" : "ปลดระงับการใช้งาน", msg, isBan ? "danger" : "warning");
+        if(isOk) {
             try { await updateDoc(doc(db, "users", uid), { isBanned: isBan }); await recordActivityLog(uid, isBan ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`); window.showToast(isBan ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); }
         }
     };
@@ -1322,7 +1417,10 @@
     window.toggleBanUser = async () => {
         const uid = currentEditUid; if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true); const newState = !isBannedState;
         const msg = newState ? "ยืนยันการ 'ระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?\nผู้ใช้จะหลุดจากระบบและเข้าไม่ได้อีก" : "ยืนยันการ 'ปลดระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?";
-        if(confirm(msg)) { try { await updateDoc(doc(db, "users", uid), { isBanned: newState }); await recordActivityLog(uid, newState ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`); window.showToast(newState ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); window.toggleModal('adminEditUserModal', false); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); } }
+        let isOk = await showCustomConfirm(newState ? "ระงับการใช้งาน" : "ปลดระงับการใช้งาน", msg, newState ? "danger" : "warning");
+        if(isOk) { 
+            try { await updateDoc(doc(db, "users", uid), { isBanned: newState }); await recordActivityLog(uid, newState ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`); window.showToast(newState ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); window.toggleModal('adminEditUserModal', false); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); } 
+        }
     }
 
     window.saveAdminUserEdit = async () => {
@@ -1351,7 +1449,10 @@
 
     window.deleteAdminUser = async () => {
         const uid = currentEditUid; if(uid === loggedInUserId) return window.showToast("ไม่สามารถลบบัญชีตัวเองขณะใช้งานได้", true);
-        if(confirm("ยืนยันการ 'ลบบัญชีผู้ใช้' ถาวรใช่หรือไม่?\nผู้ใช้งานรายนี้จะไม่สามารถเข้าสู่ระบบได้อีกต่อไป")) { try { await deleteDoc(doc(db, "users", uid)); window.showToast("ลบบัญชีผู้ใช้เรียบร้อยแล้ว"); window.toggleModal('adminEditUserModal', false); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการลบข้อมูล", true); } }
+        let isOk = await showCustomConfirm("ลบบัญชีผู้ใช้", "ยืนยันการ 'ลบบัญชีผู้ใช้' ถาวรใช่หรือไม่?\nผู้ใช้งานรายนี้จะไม่สามารถเข้าสู่ระบบได้อีกต่อไป", "danger", "ลบข้อมูล");
+        if(isOk) { 
+            try { await deleteDoc(doc(db, "users", uid)); window.showToast("ลบบัญชีผู้ใช้เรียบร้อยแล้ว"); window.toggleModal('adminEditUserModal', false); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการลบข้อมูล", true); } 
+        }
     };
 
     window.viewUserLogs = async (uid, userName) => {
@@ -1538,7 +1639,8 @@
 
     window.deleteServiceItem = async (catId, itemId, event) => {
         event.stopPropagation();
-        if(confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) {
+        let isOk = await showCustomConfirm("ลบรายการ", "ต้องการลบรายการนี้ใช่หรือไม่?", "danger");
+        if(isOk) {
             let newData = JSON.parse(JSON.stringify(window.currentServiceData)); let catIndex = newData.findIndex(c => c.id === catId);
             if(catIndex !== -1) {
                 newData[catIndex].items = newData[catIndex].items.filter(i => i.id !== itemId);
