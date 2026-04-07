@@ -163,14 +163,6 @@
         .modal-box.standard-box { background: var(--bg-dark); border: 1px solid var(--border-glass); border-radius: 30px; padding: 30px 20px; width: 90%; max-width: 400px; text-align: center; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; }
 
         .zoom-content { background: linear-gradient(135deg, #2ecc71, #f1c40f); width: 85%; max-width: 380px; padding: 80px 20px; border-radius: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 2px 10px rgba(255,255,255,0.4); }
-        .true-content { position: relative; width: 95%; max-width: 450px; height: 85vh; background: var(--bg-dark); border-radius: 30px; display: flex; flex-direction: column; padding: 10px; border: 1px solid var(--border-glass); }
-        .tracker-zoom-box { background: var(--bg-dark); border: 2px solid rgba(255,255,255,0.1); width: 92%; max-width: 420px; padding: 25px 20px; border-radius: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.9); position: relative; }
-        .tz-meter-box { background: var(--neon-green); border-radius: 25px; padding: 25px 15px; margin: 15px 0; box-shadow: 0 10px 30px rgba(46,204,113,0.4); }
-        .tz-meter-price { font-size: 85px; font-weight: 700; color: white; line-height: 1; }
-        .tz-dist-box { display: flex; justify-content: space-around; margin-bottom: 20px; }
-        .tz-dist-val { font-size: 36px; font-weight: 600; color: white; }
-        .tz-time-box { display: flex; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; border: 1px solid var(--border-glass); margin-top: 10px; }
-        .tz-time-val { font-size: 24px; font-weight: 600; color: white; }
 
         .admin-user-card { background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 15px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; text-align: left; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
@@ -182,7 +174,7 @@
         .log-time { font-size: 11px; color: var(--text-dim); margin-bottom: 3px; }
 
         /* ======================================================== */
-        /* สไตล์ใหม่สำหรับ Service Portal - จัดสีตาม Category */
+        /* สไตล์สำหรับ Service Portal - จัดสีตาม Category */
         /* ======================================================== */
         .sp-modal-box {
             background: #0f111a;
@@ -278,6 +270,67 @@
         .theme-cat-5 .sp-icon-box { background: rgba(33, 150, 243, 0.2); border: 1px solid rgba(33, 150, 243, 0.3); }
         .theme-cat-5 .sp-icon-box .material-symbols-outlined { color: #64b5f6; filter: drop-shadow(0 0 5px rgba(33, 150, 243, 0.5)); }
         .title-theme-5 { color: #64b5f6; text-shadow: 0 0 8px rgba(33, 150, 243, 0.4); }
+
+        /* ======================================================== */
+        /* สไตล์สำหรับกล่องมิเตอร์ใหญ่ (Live Tracker Zoom) ตามดีไซน์ใหม่ */
+        /* ======================================================== */
+        .tracker-zoom-box {
+            background: #0b0c10;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 30px;
+            padding: 25px 20px;
+            width: 90%;
+            max-width: 360px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+            font-family: 'Kanit', sans-serif;
+        }
+        
+        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .tz-start-time { color: white; font-weight: 600; font-size: 13px; }
+        .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 13px; }
+
+        .tz-progress-container { position: relative; margin: 10px 10px 30px 10px; }
+        .tz-progress-line { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; position: relative; }
+        .tz-progress-fill { position: absolute; left: 0; top: 0; height: 100%; background: rgba(255,255,255,0.3); border-radius: 2px; transition: width 1s ease-out; }
+        .tz-point-start { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; background: transparent; display: flex; justify-content: center; align-items: center; }
+        .tz-point-start::before { content: ''; width: 6px; height: 6px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -12px; left: -10px; box-shadow: 12px 12px 0 var(--neon-yellow); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotate(45deg); }
+        .tz-point-end { position: absolute; right: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent-red); background: transparent; }
+
+        .tz-stats-row { display: flex; justify-content: space-around; margin-bottom: 25px; }
+        .tz-stat-col { text-align: center; }
+        .tz-stat-num { font-size: 38px; font-weight: 700; line-height: 1; letter-spacing: -1px; margin-bottom: 5px; }
+        .tz-stat-label { font-size: 11px; color: var(--text-dim); }
+
+        .tz-fare-card {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            border-radius: 20px;
+            padding: 20px 15px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(46, 204, 113, 0.3);
+            margin-bottom: 20px;
+        }
+        .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 12px; font-weight: 500; margin-bottom: 5px; }
+        .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 8px; }
+        #tzMeterPrice { font-size: 80px; font-weight: 800; color: white; line-height: 0.9; letter-spacing: -2px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .tz-fare-currency { font-size: 36px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+
+        .tz-info-box {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 15px 0;
+            display: flex;
+            justify-content: space-evenly;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .tz-info-col { flex: 1; text-align: center; }
+        .tz-info-divider { width: 1px; height: 35px; background: rgba(255,255,255,0.08); }
+        .tz-info-label { font-size: 11px; color: var(--text-dim); margin-bottom: 5px; }
+        .tz-info-val { font-size: 17px; font-weight: 700; }
+
+        .tz-close-text { text-align: center; font-size: 12px; color: rgba(255,255,255,0.3); cursor: pointer; transition: 0.2s; }
+        .tz-close-text:active { color: white; transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -315,7 +368,7 @@
     <div id="searchSectionBox" class="search-section">
         <label>ค้นหาจุดหมาย (สลับคำ / แก้คำผิดอัจฉริยะ)</label>                                        
         <div class="input-group">
-            <input oninput="smartSearch(this.value); checkAppStatus();" onfocus="showHistory()" placeholder="ค้นหา: บางแค รพ, เซ็นทรัลปิ่น..." type="text" id="destInput" autocomplete="off" />                                                               
+            <input oninput="smartSearch(this.value); checkAppStatus();" onfocus="showHistory()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />                                                       
         </div>
         <div id="suggestionList" class="dropdown-box"></div>
         <div id="historyList" class="dropdown-box"></div>
@@ -647,6 +700,60 @@
 
 <div id="zoomOverlay" class="modal-overlay" onclick="toggleModal('zoomOverlay', false)"><div class="modal-box zoom-content"><div id="zoomPrice" style="font-size: 85px; font-weight: 600; color: #111;">0 ฿</div><div id="zoomKm" style="font-size: 24px; color: #222; margin-top: 20px;">0 กม.</div><div style="margin-top: 25px; color: rgba(0,0,0,0.5); font-weight: 600;">แตะเพื่อปิด</div></div></div>
 
+<div id="trackerZoomOverlay" class="modal-overlay" onclick="toggleModal('trackerZoomOverlay', false)">
+    <div class="modal-box tracker-zoom-box" onclick="event.stopPropagation()">
+        
+        <div class="tz-header">
+            <div class="tz-start-time">เริ่ม: <span id="tzStartTime">--:--</span> น.</div>
+            <div id="tzElapsedTime" class="tz-elapsed-time">0 นาที 0 วิ</div>
+        </div>
+
+        <div class="tz-progress-container">
+            <div class="tz-progress-line">
+                <div class="tz-point-start"></div>
+                <div id="tzProgressFill" class="tz-progress-fill"></div>
+                <div class="tz-point-end"></div>
+            </div>
+        </div>
+
+        <div class="tz-stats-row">
+            <div class="tz-stat-col">
+                <div id="tzDrivenKm" class="tz-stat-num" style="color: var(--neon-green);">0.00</div>
+                <div class="tz-stat-label">วิ่งแล้ว (กม.)</div>
+            </div>
+            <div class="tz-stat-col">
+                <div id="tzRemainKm" class="tz-stat-num" style="color: var(--neon-yellow);">0.00</div>
+                <div class="tz-stat-label">เหลือ (กม.)</div>
+            </div>
+        </div>
+
+        <div class="tz-fare-card">
+            <div class="tz-fare-title">• ค่าโดยสารเรียลไทม์ •</div>
+            <div class="tz-fare-price-box">
+                <span id="tzMeterPrice">35</span>
+                <span class="tz-fare-currency">฿</span>
+            </div>
+        </div>
+
+        <div class="tz-info-box">
+            <div class="tz-info-col">
+                <div class="tz-info-label">เวลาโดยประมาณ</div>
+                <div id="tzEtaTime" class="tz-info-val" style="color: var(--neon-yellow);">-- นาที</div>
+            </div>
+            <div class="tz-info-divider"></div>
+            <div class="tz-info-col">
+                <div class="tz-info-label">คาดว่าจะถึง</div>
+                <div id="tzArrivalTime" class="tz-info-val" style="color: var(--neon-green);">--:--</div>
+            </div>
+        </div>
+
+        <div class="tz-close-text" onclick="toggleModal('trackerZoomOverlay', false)">
+            แตะที่นี่เพื่อย่อหน้าจอ
+        </div>
+        
+    </div>
+</div>
+
 <div onclick="toggleModal('qrOverlay', false)" id="qrOverlay" class="modal-overlay">
     <div onclick="event.stopPropagation()" style="position: relative; display: inline-flex; flex-direction: column; align-items: center;">
         <div onclick="toggleModal('qrOverlay', false)" class="btn-close-floating" style="top: -15px; right: -15px;"><span class="material-symbols-outlined">close</span></div>
@@ -689,7 +796,73 @@
 
     window.saveHistory = (name, lat, lon) => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]').filter(i => i.name !== name); h.unshift({ name, lat, lon }); localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 10))); };
     window.showHistory = () => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); if (!h.length) return $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; $('historyList').innerHTML = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ประวัติล่าสุด</span><button class="clear-history-btn" onclick="event.stopPropagation(); localStorage.removeItem('${HISTORY_KEY}'); $('historyList').style.display='none';">ล้าง</button></div>` + h.map(i => `<div class="list-item" onclick="selectLocation('${i.name}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span>${i.name}</div>`).join(''); $('historyList').style.display = 'block'; };
-    window.smartSearch = (q) => { clearTimeout(searchTimer); const list = $('suggestionList'); $('historyList').style.display = 'none'; if (!(q = q.trim())) return list.style.display = 'none'; searchTimer = setTimeout(async () => { try { let res = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=th&limit=8&accept-language=th`)).json(); if(!res.length) return (list.innerHTML = '<div style="padding:15px; text-align:center;">ไม่พบข้อมูล</div>', list.style.display = 'block'); list.innerHTML = res.map(i => `<div class="list-item" onclick="selectLocation('${i.display_name.split(',')[0]}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span><div style="flex:1;">${i.display_name}</div></div>`).join(''); list.style.display = 'block'; } catch(e) {} }, 800); };
+    
+    // ===== ระบบ Smart Search (AI แบบ Rule-based จับรูปแบบคำ) =====
+    const formatSearchText = (text) => {
+        let t = text.trim();
+
+        // 1. แปลงคำนำหน้าสถานที่ (รพ. รร. ม.)
+        t = t.replace(/(^|\s)รพ\.?\s*/g, "$1โรงพยาบาล ");
+        t = t.replace(/(^|\s)รร\.?\s*/g, "$1โรงเรียน ");
+        t = t.replace(/(^|\s)ม\.?\s*(ราม|เกษตร|กรุงเทพ|ธรรมศาสตร์|มหิดล|จุฬา|ศิลปากร|รังสิต|หอการค้า)/g, "$1มหาวิทยาลัย$2");
+        t = t.replace(/(^|\s)(มบ\.?|ม\.)\s*/g, "$1หมู่บ้าน "); 
+
+        // 2. จัดการชื่อย่อถนน ให้เป็นชื่อเต็มก่อน (เช่น ราม -> รามคำแหง)
+        t = t.replace(/(^|\s)ราม\s*(\d+)/g, "$1รามคำแหง $2");
+        t = t.replace(/(^|\s)พหล\s*(\d+)/g, "$1พหลโยธิน $2");
+        t = t.replace(/(^|\s)สุขุม\s*(\d+)/g, "$1สุขุมวิท $2");
+        t = t.replace(/(^|\s)รัชดา\s*(\d+)/g, "$1รัชดาภิเษก $2");
+        t = t.replace(/(^|\s)จรัญ\s*(\d+)/g, "$1จรัญสนิทวงศ์ $2");
+        t = t.replace(/(^|\s)วิภา\s*(\d+)/g, "$1วิภาวดีรังสิต $2");
+
+        // 3. ตรวจจับ: ชื่อถนน + ตัวเลข -> เติมคำว่า "ซอย" ข้างหน้า
+        t = t.replace(/ซอย\s*/g, ""); 
+        const soiRoads = ["รามคำแหง", "ลาดพร้าว", "สุขุมวิท", "พหลโยธิน", "เพชรเกษม", "รัชดาภิเษก", "อ่อนนุช", "เอกมัย", "ทองหล่อ", "พัฒนาการ", "ศรีนครินทร์", "จรัญสนิทวงศ์", "วิภาวดีรังสิต", "นวมินทร์", "บางนา-ตราด", "รามอินทรา", "เพชรบุรี", "พระราม 1", "พระราม 2", "พระราม 3", "พระราม 4", "พระราม 5", "พระราม 6", "พระราม 7", "พระราม 8", "พระราม 9", "เจริญกรุง", "ประชาอุทิศ", "งามวงศ์วาน", "แจ้งวัฒนะ", "ติวานนท์", "ลาดกระบัง", "เสรีไทย", "รามอินทรา", "บางแค", "เพชรเกษม", "บางบอน"];
+        const roadRegex = new RegExp(`(^|\\s)(${soiRoads.join('|')})\\s*(\\d+)([\\s\\/]*)`, 'g');
+        t = t.replace(roadRegex, "$1ซอย$2 $3$4");
+
+        // 4. สถานที่ยอดฮิตอื่นๆ (พิมพ์สั้นให้กลายเป็นยาว)
+        const dictionary = {
+            "เซ็นทรัลปิ่นเกล้า": "เซ็นทรัล ปิ่นเกล้า",
+            "เซนปิ่น": "เซ็นทรัล ปิ่นเกล้า",
+            "เซนลาด": "เซ็นทรัล ลาดพร้าว",
+            "เซ็นลาด": "เซ็นทรัล ลาดพร้าว",
+            "เดอะมอลล์บางกะปิ": "เดอะมอลล์ บางกะปิ",
+            "สายใต้ใหม่": "สถานีขนส่งผู้โดยสารกรุงเทพ (สายใต้ใหม่)",
+            "หมอชิต": "สถานีขนส่งผู้โดยสารกรุงเทพ (จตุจักร)",
+            "ฟิวเจอร์": "ฟิวเจอร์พาร์ค รังสิต",
+            "แฟชั่น": "แฟชั่นไอส์แลนด์",
+            "สุวรรณภูมิ": "ท่าอากาศยานสุวรรณภูมิ",
+            "ดอนเมือง": "ท่าอากาศยานดอนเมือง",
+            "อนุสาวรีย์": "อนุสาวรีย์ชัยสมรภูมิ"
+        };
+
+        for (const [key, value] of Object.entries(dictionary)) {
+            t = t.replace(new RegExp(key, "gi"), value);
+        }
+
+        return t.trim();
+    };
+
+    window.smartSearch = (q) => { 
+        clearTimeout(searchTimer); 
+        const list = $('suggestionList'); 
+        $('historyList').style.display = 'none'; 
+        if (!(q = q.trim())) return list.style.display = 'none'; 
+
+        const smartQuery = formatSearchText(q);
+
+        searchTimer = setTimeout(async () => { 
+            try { 
+                let res = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(smartQuery)}&countrycodes=th&limit=8&accept-language=th`)).json(); 
+                if(!res.length) return (list.innerHTML = '<div style="padding:15px; text-align:center;">ไม่พบข้อมูลสถานที่<br><span style="font-size:12px;color:gray;">(ลองระบุเขตหรือแขวงเพิ่มดูนะครับ)</span></div>', list.style.display = 'block'); 
+                list.innerHTML = res.map(i => `<div class="list-item" onclick="selectLocation('${i.display_name.split(',')[0]}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span><div style="flex:1;">${i.display_name}</div></div>`).join(''); 
+                list.style.display = 'block'; 
+            } catch(e) {} 
+        }, 800); 
+    };
+    // =================================================================
+
     window.selectLocation = (name, lat, lon) => { clearTimeout(searchTimer); $('destInput').value = "กำลังคำนวณ..."; $('destInput').classList.add('loading-state'); $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; destLoc = { lat, lon }; $('searchSectionBox').style.display = 'none'; $('manualSectionBox').style.display = 'none'; saveHistory(name, lat, lon); getRouteData(lat, lon, name); };
     async function getRouteData(dLat, dLon, name) { navigator.geolocation.getCurrentPosition(async (pos) => { let startPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; try { let data = await (await fetch(`https://router.project-osrm.org/route/v1/driving/${startPos.lon},${startPos.lat};${dLon},${dLat}?overview=false`)).json(); if (data.code === 'Ok') { let km = data.routes[0].distance / 1000; currentTrueRemainKm = km; currentTrueRemainSec = km * 130; processRoute(km, currentTrueRemainSec, name); } else { alert('ไม่สามารถคำนวณเส้นทางได้'); resetAll(); } } catch(e) { alert('เกิดข้อผิดพลาดในการดึงข้อมูลเส้นทาง'); resetAll(); } }, () => { alert('กรุณาเปิด GPS'); resetAll(); }, { enableHighAccuracy: true }); }
     function processRoute(km, sec, name) { totalKm = km; etaSec = sec; $('kmInput').value = km.toFixed(2); $('destInput').value = name; $('destInput').classList.remove('loading-state'); updateFareBubble(km); checkAppStatus(); startMeterAndTracking(); }
@@ -716,7 +889,48 @@
     window.adjustKm = (val) => { let curr = parseFloat($('kmInput').value) || 0; $('kmInput').value = val > 0 ? Math.floor(curr)+1 : Math.max(0, Math.ceil(curr)-1); window.manualInputChange(); };
     window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; updateFareBubble(km); window.checkAppStatus(); };
     window.toggleManualTimer = () => { if(isManualRunning) { window.resetAll(); } else { startMeterAndTracking(); } };
-    function updateLiveMeterDisplay() { if (!startTime) return; let distFare = calcThaiMeterDist(actualDrivenKm); let timeFare = trafficSeconds * (3.0 / 60); let totalT = 35 + distFare + timeFare; let extra = Math.floor(totalT - 35); let displayFare = 35 + (extra % 2 === 0 ? extra : extra - 1); if (displayFare < 35) displayFare = 35; let btn = $('manualTimerBtn'); if(btn && btn.classList.contains('active')) { let elapsed = Math.floor((Date.now() - startTime) / 1000); btn.innerHTML = `<div style="text-align:left;"><div style="display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div><div style="font-size:11px; font-weight:400; color:rgba(255,255,255,0.8);">${Math.floor(elapsed/60)} นาที ${elapsed%60} วิ</div></div><div style="font-size:22px; font-weight:700;">${displayFare} ฿</div>`; } }
+    
+    function updateLiveMeterDisplay() { 
+        if (!startTime) return; 
+        
+        let distFare = calcThaiMeterDist(actualDrivenKm); 
+        let timeFare = trafficSeconds * (3.0 / 60); 
+        let totalT = 35 + distFare + timeFare; 
+        let extra = Math.floor(totalT - 35); 
+        let displayFare = 35 + (extra % 2 === 0 ? extra : extra - 1); 
+        if (displayFare < 35) displayFare = 35; 
+        
+        let elapsed = Math.floor((Date.now() - startTime) / 1000); 
+
+        let btn = $('manualTimerBtn'); 
+        if(btn && btn.classList.contains('active')) { 
+            btn.innerHTML = `<div style="text-align:left;"><div style="display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div><div style="font-size:11px; font-weight:400; color:rgba(255,255,255,0.8);">${Math.floor(elapsed/60)} นาที ${elapsed%60} วิ</div></div><div style="font-size:22px; font-weight:700;">${displayFare} ฿</div>`; 
+        } 
+
+        if ($('tzMeterPrice')) {
+            $('tzMeterPrice').innerText = displayFare;
+            $('tzDrivenKm').innerText = actualDrivenKm.toFixed(2);
+            $('tzRemainKm').innerText = currentTrueRemainKm.toFixed(2);
+            
+            let startD = new Date(startTime);
+            $('tzStartTime').innerText = startD.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
+            
+            let eMins = Math.floor(elapsed / 60);
+            let eSecs = elapsed % 60;
+            let hStr = Math.floor(eMins/60) > 0 ? `${Math.floor(eMins/60)} ชม. ` : "";
+            $('tzElapsedTime').innerText = `${hStr}${eMins%60} นาที ${eSecs} วิ`;
+
+            let remainMins = Math.ceil(currentTrueRemainSec / 60);
+            if(remainMins < 1) remainMins = 1;
+            $('tzEtaTime').innerText = formatDuration(remainMins);
+            $('tzArrivalTime').innerText = new Date(Date.now() + remainMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
+            
+            let totalEstimated = actualDrivenKm + currentTrueRemainKm;
+            let pct = totalEstimated > 0 ? Math.min((actualDrivenKm / totalEstimated) * 100, 100) : 0;
+            if($('tzProgressFill')) $('tzProgressFill').style.width = pct + '%';
+        }
+    }
+
     function startDynamicRouting() { if(routeUpdateTimer) clearInterval(routeUpdateTimer); routeUpdateTimer = setInterval(async () => { if(!lastPos || !destLoc) return; try { let res = await fetch(`https://router.project-osrm.org/route/v1/driving/${lastPos.lon},${lastPos.lat};${destLoc.lon},${destLoc.lat}?overview=false`); let data = await res.json(); if(data.code === 'Ok') { currentTrueRemainKm = data.routes[0].distance / 1000; currentTrueRemainSec = currentTrueRemainKm * 130; } } catch(e) {} }, 10000); }
     function stopTracking() { releaseWakeLock(); $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; }
     window.resetAll = () => { $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; isManualRunning = false; $('manualTimerBtn').classList.remove('active'); $('manualTimerBtn').innerHTML = '<span class="material-symbols-outlined">play_circle</span> เริ่มจับเวลามิเตอร์'; stopTracking(); updateFareBubble(0); window.checkAppStatus(); };
