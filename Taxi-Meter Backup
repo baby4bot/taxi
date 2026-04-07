@@ -11,6 +11,7 @@
     <link href="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" rel="shortcut icon" />
     <meta name="mobile-web-app-capable" content="yes" />
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <style>
         :root {
             color-scheme: dark;
@@ -28,7 +29,7 @@
 
         .card { 
             background: var(--card-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            width: 100%; max-width: 100%; min-height: 100vh; padding: 40px 20px 30px 20px; box-sizing: border-box;
+            width: 100%; max-width: 100%; min-height: 100vh; padding: 80px 20px 30px 20px; box-sizing: border-box; /* เพิ่ม padding-top หลบโปรไฟล์ */
             text-align: center; border: none; position: relative; animation: floatUp 0.8s ease-out;
             display: flex; flex-direction: column; 
         }
@@ -232,6 +233,10 @@
         
         .log-item { background: rgba(0,0,0,0.3); border-left: 3px solid var(--neon-yellow); padding: 10px 15px; margin-bottom: 8px; border-radius: 0 10px 10px 0; text-align: left; font-size: 13px; }
         .log-time { font-size: 11px; color: var(--text-dim); margin-bottom: 3px; }
+
+        /* ซ่อน ghost ตอนลาก sortable */
+        .sortable-ghost { opacity: 0.4; background: rgba(255,255,255,0.1); border: 1px dashed var(--neon-yellow); }
+        .drag-handle:active { cursor: grabbing !important; }
     </style>
 </head>
 <body>
@@ -249,6 +254,14 @@
 
 <div class="card" id="mainApp" style="display: none;">
     
+    <div id="mainUserInfo" style="position: absolute; top: 20px; left: 20px; z-index: 100; display: none; align-items: center; gap: 10px;">
+        <img id="mainProfilePic" src="https://via.placeholder.com/80" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--neon-green); box-shadow: 0 2px 10px rgba(0,0,0,0.5);" />
+        <div style="text-align: left;">
+            <div id="mainUserName" style="font-size: 15px; font-weight: 600; color: white; line-height: 1;">กำลังโหลด...</div>
+            <div id="mainUserRole" style="font-size: 12px; font-weight: 500; color: var(--neon-yellow); margin-top: 4px;">...</div>
+        </div>
+    </div>
+
     <div id="userMenu" style="position: absolute; top: 20px; right: 20px; z-index: 100; display: none;">
         <button class="hamburger-btn" onclick="toggleSideMenu(true)">
             <span class="material-symbols-outlined" style="font-size: 30px;">menu</span>
@@ -259,7 +272,7 @@
         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" class="header-icon" />                                        
         <h2>คำนวณค่าแท็กซี่</h2>
     </div>
-                                              
+                                                  
     <div id="searchSectionBox" class="search-section">
         <label>ค้นหาจุดหมาย (สลับคำ / แก้คำผิดอัจฉริยะ)</label>                                        
         <div class="input-group">
@@ -268,7 +281,7 @@
         <div id="suggestionList" class="dropdown-box"></div>
         <div id="historyList" class="dropdown-box"></div>
     </div>
-                                              
+                                                  
     <div onclick="toggleModal('trackerZoomOverlay', true)" id="liveTracker" class="live-tracker-box">
         <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">(แตะเพื่อเปิดมิเตอร์แบบขยายใหญ่)</div>
         <div class="tracker-stats">
@@ -288,7 +301,7 @@
             <div style="font-size: 13px;">ถึงเวลา: <span class="highlight" id="arrivalTime">--:--</span> น.</div>
         </div>
     </div>
-                                              
+                                                  
     <div id="manualSectionBox" class="manual-section">
         <button class="btn-math btn-minus flex-center" onclick="adjustKm(-1)" id="btnMinus">−</button>
         <div class="km-input-box">
@@ -296,7 +309,7 @@
         </div>
         <button class="btn-math btn-plus flex-center" onclick="adjustKm(1)" id="btnPlus">+</button>
     </div>
-                                              
+                                                  
     <div class="result-container" onclick="toggleModal('zoomOverlay', true)">
         <div class="bubble-bg-container">
             <div class="bubble bubble-1"></div><div class="bubble bubble-2"></div>
@@ -334,7 +347,7 @@
             <img src="https://i.ibb.co/210jq8dS/unnamed.png" style="width:28px; height:28px; object-fit:contain;" />                      
         </button>
     </div>
-                                              
+                                                  
     <div class="footer-credit flex-center">
         <img src="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" class="footer-logo" /><span>Design by นักเลงคีย์บอร์ด</span>                          
     </div>
@@ -357,7 +370,7 @@
                 <span>หน้าหลัก</span>
             </div>
             
-            <div id="adminMenuBtn" class="side-menu-item" onclick="toggleModal('adminMenuModal', true); toggleSideMenu(false);" style="display: none;">
+            <div id="adminMenuBtn" class="side-menu-item" onclick="toggleSideMenu(false); setTimeout(() => { toggleModal('adminMenuModal', true); }, 300);" style="display: none;">
                 <span class="material-symbols-outlined">manage_accounts</span>
                 <span>จัดการผู้ใช้งาน</span>
             </div>
@@ -448,7 +461,7 @@
         </div>
         <p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์ Manager ดูประวัติได้ แต่เพิ่ม/ลบ/แบนไม่ได้</p>
         
-        <div id="adminUserList" class="modal-content-scroll" style="text-align: left;">
+        <div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;">
             <div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div>
         </div>
 
@@ -567,7 +580,7 @@
         $('oldPassword').value = '';
         $('newPassword').value = '';
         $('confirmPassword').value = '';
-        $('cpProfilePic').src = $('editProfilePic').src; // ยืมรูปจากหน้าโปรไฟล์มาโชว์
+        $('cpProfilePic').src = $('editProfilePic').src; 
         toggleModal('changePasswordModal', true);
     };
 
@@ -585,13 +598,12 @@
         $('searchSectionBox').style.display = 'none'; $('manualSectionBox').style.display = 'none'; $('resetBtn').style.display = 'none';
         if(destLoc) { $('smallNavBtn').style.display = 'flex'; $('liveTracker').style.display = 'block'; startDynamicRouting(); }
         actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime;
-        $('zStartTime').innerText = new Date(startTime).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
-        if(destLoc) { let initialMins = Math.ceil(currentTrueRemainSec / 60); let formattedEta = formatDuration(initialMins); let initialArrTime = new Date(Date.now() + initialMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}); $('arrivalTime').innerText = initialArrTime; $('zArrivalTime').innerText = initialArrTime; $('zEtaTime').innerText = formattedEta; $('smallEtaTime').innerText = formattedEta; }
+        if(destLoc) { let initialMins = Math.ceil(currentTrueRemainSec / 60); let formattedEta = formatDuration(initialMins); let initialArrTime = new Date(Date.now() + initialMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}); $('arrivalTime').innerText = initialArrTime; $('smallEtaTime').innerText = formattedEta; }
         navigator.geolocation.getCurrentPosition(pos => { lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; }, null, { enableHighAccuracy: true });
         if(tripTimer) clearInterval(tripTimer);
-        tripTimer = setInterval(() => { let now = Date.now(); let elapsedSec = Math.floor((now - startTime) / 1000); let eMins = Math.floor(elapsedSec / 60); let eSecs = elapsedSec % 60; $('zElapsedTime').innerText = `${eMins} นาที ${eSecs} วิ`; let deltaSec = (now - lastCalcTime) / 1000; lastCalcTime = now; if (now - lastPosTime > 5000) currentSpeedKmh = 0; if (currentSpeedKmh <= 6) trafficSeconds += deltaSec; if(currentTrueRemainSec > 0) { currentTrueRemainSec -= deltaSec; if(currentTrueRemainSec < 0) currentTrueRemainSec = 0; } updateLiveMeterDisplay(); }, 1000);
+        tripTimer = setInterval(() => { let now = Date.now(); let elapsedSec = Math.floor((now - startTime) / 1000); let eMins = Math.floor(elapsedSec / 60); let eSecs = elapsedSec % 60; let deltaSec = (now - lastCalcTime) / 1000; lastCalcTime = now; if (now - lastPosTime > 5000) currentSpeedKmh = 0; if (currentSpeedKmh <= 6) trafficSeconds += deltaSec; if(currentTrueRemainSec > 0) { currentTrueRemainSec -= deltaSec; if(currentTrueRemainSec < 0) currentTrueRemainSec = 0; } updateLiveMeterDisplay(); }, 1000);
         if(watchId) navigator.geolocation.clearWatch(watchId);
-        watchId = navigator.geolocation.watchPosition((pos) => { let now = Date.now(); if (lastPos) { let dMoved = calcGPS(lastPos.lat, lastPos.lon, pos.coords.latitude, pos.coords.longitude); let timeHours = (now - lastPosTime) / 3600000; if (timeHours > 0) currentSpeedKmh = dMoved / timeHours; if (dMoved > 0.002) { actualDrivenKm += dMoved; currentTrueRemainKm -= dMoved; if(currentTrueRemainKm < 0) currentTrueRemainKm = 0; lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; lastPosTime = now; } } else { lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; lastPosTime = now; } if(destLoc) { let remainKm = currentTrueRemainKm; let totalEstimated = actualDrivenKm + remainKm; let pct = totalEstimated > 0 ? Math.min((actualDrivenKm / totalEstimated) * 100, 100) : 0; let remainMins = Math.ceil(currentTrueRemainSec / 60); if(remainMins < 1) remainMins = 1; let formattedEta = formatDuration(remainMins); let dStr = actualDrivenKm.toFixed(2); let rStr = remainKm.toFixed(2); $('driveCovered').innerText = dStr; $('driveRemain').innerText = rStr; $('progressFill').style.width = pct + '%'; $('carIcon').style.left = pct + '%'; $('arrivalTime').innerText = new Date(Date.now() + remainMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}); $('zDriven').innerText = dStr; $('zRemain').innerText = rStr; $('zProgressFill').style.width = pct + '%'; $('zCarIcon').style.left = pct + '%'; $('zArrivalTime').innerText = new Date(Date.now() + remainMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}); $('zEtaTime').innerText = formattedEta; $('smallEtaTime').innerText = formattedEta; } }, null, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
+        watchId = navigator.geolocation.watchPosition((pos) => { let now = Date.now(); if (lastPos) { let dMoved = calcGPS(lastPos.lat, lastPos.lon, pos.coords.latitude, pos.coords.longitude); let timeHours = (now - lastPosTime) / 3600000; if (timeHours > 0) currentSpeedKmh = dMoved / timeHours; if (dMoved > 0.002) { actualDrivenKm += dMoved; currentTrueRemainKm -= dMoved; if(currentTrueRemainKm < 0) currentTrueRemainKm = 0; lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; lastPosTime = now; } } else { lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; lastPosTime = now; } if(destLoc) { let remainKm = currentTrueRemainKm; let totalEstimated = actualDrivenKm + remainKm; let pct = totalEstimated > 0 ? Math.min((actualDrivenKm / totalEstimated) * 100, 100) : 0; let remainMins = Math.ceil(currentTrueRemainSec / 60); if(remainMins < 1) remainMins = 1; let formattedEta = formatDuration(remainMins); let dStr = actualDrivenKm.toFixed(2); let rStr = remainKm.toFixed(2); $('driveCovered').innerText = dStr; $('driveRemain').innerText = rStr; $('progressFill').style.width = pct + '%'; $('carIcon').style.left = pct + '%'; $('arrivalTime').innerText = new Date(Date.now() + remainMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}); $('smallEtaTime').innerText = formattedEta; } }, null, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
         updateLiveMeterDisplay();
     }
 
@@ -601,7 +613,7 @@
     window.adjustKm = (val) => { let curr = parseFloat($('kmInput').value) || 0; $('kmInput').value = val > 0 ? Math.floor(curr)+1 : Math.max(0, Math.ceil(curr)-1); window.manualInputChange(); };
     window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; updateFareBubble(km); window.checkAppStatus(); };
     window.toggleManualTimer = () => { if(isManualRunning) { window.resetAll(); } else { startMeterAndTracking(); } };
-    function updateLiveMeterDisplay() { if (!startTime) return; let distFare = calcThaiMeterDist(actualDrivenKm); let timeFare = trafficSeconds * (3.0 / 60); let totalT = 35 + distFare + timeFare; let extra = Math.floor(totalT - 35); let displayFare = 35 + (extra % 2 === 0 ? extra : extra - 1); if (displayFare < 35) displayFare = 35; if($('zLiveMeter')) $('zLiveMeter').innerHTML = displayFare + '<span style="font-size: 35px;"> ฿</span>'; let btn = $('manualTimerBtn'); if(btn && btn.classList.contains('active')) { let elapsed = Math.floor((Date.now() - startTime) / 1000); btn.innerHTML = `<div style="text-align:left;"><div style="display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div><div style="font-size:11px; font-weight:400; color:rgba(255,255,255,0.8);">${Math.floor(elapsed/60)} นาที ${elapsed%60} วิ</div></div><div style="font-size:22px; font-weight:700;">${displayFare} ฿</div>`; } }
+    function updateLiveMeterDisplay() { if (!startTime) return; let distFare = calcThaiMeterDist(actualDrivenKm); let timeFare = trafficSeconds * (3.0 / 60); let totalT = 35 + distFare + timeFare; let extra = Math.floor(totalT - 35); let displayFare = 35 + (extra % 2 === 0 ? extra : extra - 1); if (displayFare < 35) displayFare = 35; let btn = $('manualTimerBtn'); if(btn && btn.classList.contains('active')) { let elapsed = Math.floor((Date.now() - startTime) / 1000); btn.innerHTML = `<div style="text-align:left;"><div style="display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div><div style="font-size:11px; font-weight:400; color:rgba(255,255,255,0.8);">${Math.floor(elapsed/60)} นาที ${elapsed%60} วิ</div></div><div style="font-size:22px; font-weight:700;">${displayFare} ฿</div>`; } }
     function startDynamicRouting() { if(routeUpdateTimer) clearInterval(routeUpdateTimer); routeUpdateTimer = setInterval(async () => { if(!lastPos || !destLoc) return; try { let res = await fetch(`https://router.project-osrm.org/route/v1/driving/${lastPos.lon},${lastPos.lat};${destLoc.lon},${destLoc.lat}?overview=false`); let data = await res.json(); if(data.code === 'Ok') { currentTrueRemainKm = data.routes[0].distance / 1000; currentTrueRemainSec = currentTrueRemainKm * 130; } } catch(e) {} }, 10000); }
     function stopTracking() { releaseWakeLock(); $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; }
     window.resetAll = () => { $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; isManualRunning = false; $('manualTimerBtn').classList.remove('active'); $('manualTimerBtn').innerHTML = '<span class="material-symbols-outlined">play_circle</span> เริ่มจับเวลามิเตอร์'; stopTracking(); updateFareBubble(0); window.checkAppStatus(); };
@@ -621,7 +633,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"; // เพิ่ม writeBatch มาใช้สำหรับ Sortable
     
     const firebaseConfig = {
       apiKey: "AIzaSyAhK_yT1kbFVl3A11n_QU4BgTvHrC7YkXI",
@@ -709,7 +721,6 @@
         } catch(e) { console.log("Log error", e); }
     };
 
-    // Global Listener สำหรับเช็กคนออนไลน์/ออฟไลน์ พร้อมโชว์รูปและเสียง
     function startGlobalUserListener() {
         if(globalUsersUnsub) return;
         globalUsersUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
@@ -767,7 +778,6 @@
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 
-                // ตรวจสอบระบบแบน
                 if(data.isBanned) {
                     window.showToast("บัญชีนี้ถูกระงับการใช้งาน", true);
                     window.logoutApp(true);
@@ -778,9 +788,12 @@
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'flex';
                 document.getElementById('userMenu').style.display = 'block'; 
+                document.getElementById('mainUserInfo').style.display = 'flex'; // แสดงข้อมูลผู้ใช้มุมซ้ายบน
                 
                 currentUserRole = data.role || "User";
-                document.getElementById('displayUserName').innerText = data.displayName || data.username;
+                let displayNameVal = data.displayName || data.username;
+                document.getElementById('displayUserName').innerText = displayNameVal;
+                document.getElementById('mainUserName').innerText = displayNameVal;
                 
                 let displayRoleTH = currentUserRole;
                 if(currentUserRole === "Admin") displayRoleTH = "ผู้ดูแลระบบ";
@@ -788,11 +801,15 @@
                 else displayRoleTH = "ผู้ใช้งานทั่วไป";
                 
                 document.getElementById('displayUserRole').innerText = displayRoleTH;
+                document.getElementById('mainUserRole').innerText = displayRoleTH;
                 document.getElementById('editDisplayName').value = data.displayName || "";
                 
                 if (data.photoURL && data.photoURL.length > 10) {
                     document.getElementById('profilePic').src = data.photoURL;
                     document.getElementById('editProfilePic').src = data.photoURL;
+                    document.getElementById('mainProfilePic').src = data.photoURL;
+                } else {
+                    document.getElementById('mainProfilePic').src = "https://via.placeholder.com/80";
                 }
 
                 if(currentUserRole === "Admin" || currentUserRole === "Manager") {
@@ -979,6 +996,7 @@
             document.getElementById('appLoader').style.display = 'none';
             document.getElementById('mainApp').style.display = 'none';
             document.getElementById('userMenu').style.display = 'none';
+            document.getElementById('mainUserInfo').style.display = 'none'; // ซ่อนตอนล็อกเอาท์
             document.getElementById('loginOverlay').style.display = 'flex';
         }
     };
@@ -1067,6 +1085,7 @@
         return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     };
 
+    let adminSnapshotUnsub = null;
     window.handleAdminModalState = (isOpen) => {
         if(isOpen) {
             adminSnapshotUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
@@ -1074,11 +1093,10 @@
                 snapshot.forEach((doc) => {
                     let d = doc.data();
                     d.uid = doc.id;
-                    if(d.order === undefined) d.order = Date.now(); // สำรองข้อมูลเก่า
+                    if(d.order === undefined) d.order = Date.now(); 
                     window.currentAdminUsers.push(d);
                 });
                 
-                // เรียงลำดับจาก order
                 window.currentAdminUsers.sort((a,b) => a.order - b.order);
 
                 let html = '';
@@ -1096,18 +1114,12 @@
                     let safeUsername = u.username || '';
                     let safePassword = u.password || '';
 
-                    // ปุ่มจัดเรียง
-                    let moveBtnsHtml = '';
+                    // ไอคอนสำหรับ Drag
+                    let dragHandleHtml = '';
                     if(currentUserRole === "Admin" || currentUserRole === "Manager") {
-                        moveBtnsHtml = `
-                            <div style="display:flex; flex-direction:column; gap:5px; margin-right:5px;">
-                                <button onclick="moveUser('${uid}', -1)" style="border:none; background:rgba(255,255,255,0.1); color:white; width:22px; height:22px; border-radius:5px; cursor:pointer; display:flex; justify-content:center; align-items:center;">▲</button>
-                                <button onclick="moveUser('${uid}', 1)" style="border:none; background:rgba(255,255,255,0.1); color:white; width:22px; height:22px; border-radius:5px; cursor:pointer; display:flex; justify-content:center; align-items:center;">▼</button>
-                            </div>
-                        `;
+                        dragHandleHtml = `<div class="drag-handle" style="display:flex; align-items:center; cursor:grab; padding-right:5px; touch-action:none;"><span class="material-symbols-outlined" style="color: rgba(255,255,255,0.4); font-size: 28px;">drag_indicator</span></div>`;
                     }
 
-                    // ปุ่ม Ban / Unban รวดเร็ว และ ปุ่ม Edit
                     let quickBanBtn = '';
                     let editBtnHtml = '';
                     if(currentUserRole === "Admin" || (currentUserRole === "Manager" && safeRole !== "Admin")) {
@@ -1120,7 +1132,7 @@
                     }
 
                     html += `<div class="admin-user-card">
-                        ${moveBtnsHtml}
+                        ${dragHandleHtml}
                         <img src="${safePhoto}" style="width:45px;height:45px;border-radius:50%;object-fit:cover;border:1px solid #fff;">
                         <div style="flex:1; min-width:0;">
                             <div style="color:white; font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeName} <span style="font-size:11px; color:var(--neon-yellow);">[${safeRole}]</span></div>
@@ -1135,37 +1147,44 @@
                     </div>`;
                 });
                 document.getElementById('adminUserList').innerHTML = html || '<div style="padding: 20px; color: gray;">ไม่พบข้อมูล</div>';
+
+                // โค้ดสร้างระบบ Drag & Drop ด้วย SortableJS
+                if(currentUserRole === "Admin" || currentUserRole === "Manager") {
+                    if(window.adminSortable) { window.adminSortable.destroy(); }
+                    window.adminSortable = new Sortable(document.getElementById('adminUserList'), {
+                        animation: 150,
+                        delay: 200, // บนมือถือต้องกดค้าง 0.2 วิ ถึงจะลากได้ เพื่อกันลื่นตอนเลื่อนจอ
+                        delayOnTouchOnly: true,
+                        handle: '.drag-handle',
+                        ghostClass: 'sortable-ghost',
+                        onEnd: async function (evt) {
+                            if(evt.oldIndex === evt.newIndex) return;
+
+                            // สลับลำดับใน Array ตามที่ลากวาง
+                            const movedItem = window.currentAdminUsers.splice(evt.oldIndex, 1)[0];
+                            window.currentAdminUsers.splice(evt.newIndex, 0, movedItem);
+
+                            // อัปเดตขึ้น Firebase พร้อมกันด้วย writeBatch เพื่อความแม่นยำ
+                            const batch = writeBatch(db);
+                            let baseTime = Date.now();
+                            window.currentAdminUsers.forEach((u, index) => {
+                                const userRef = doc(db, "users", u.uid);
+                                batch.update(userRef, { order: baseTime + index });
+                            });
+                            try {
+                                await batch.commit();
+                            } catch(e) {
+                                window.showToast("อัปเดตลำดับล้มเหลว", true);
+                            }
+                        }
+                    });
+                }
             });
         } else {
             if(adminSnapshotUnsub) adminSnapshotUnsub();
         }
     };
 
-    // ฟังก์ชันสลับลำดับ User
-    window.moveUser = async (uid, direction) => {
-        let list = window.currentAdminUsers;
-        let idx = list.findIndex(u => u.uid === uid);
-        if(idx < 0) return;
-        let swapIdx = idx + direction;
-        if(swapIdx < 0 || swapIdx >= list.length) return; // ติดขอบบน/ล่าง
-
-        let currentOrder = list[idx].order;
-        let swapOrder = list[swapIdx].order;
-
-        if(currentOrder === swapOrder) {
-            currentOrder = Date.now();
-            swapOrder = currentOrder + (direction * 1000);
-        }
-
-        try {
-            await updateDoc(doc(db, "users", list[idx].uid), { order: swapOrder });
-            await updateDoc(doc(db, "users", list[swapIdx].uid), { order: currentOrder });
-        } catch(e) {
-            window.showToast("สลับตำแหน่งล้มเหลว", true);
-        }
-    };
-
-    // ฟังก์ชันแบนด่วน
     window.quickBanToggle = async (uid, isBan, userName) => {
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true);
         
