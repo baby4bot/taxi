@@ -103,7 +103,6 @@
         .progress-line { position: relative; width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin: 15px 0; }
         .progress-fill { position: absolute; top: 0; left: 0; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); border-radius: 3px; width: 0%; transition: width 1s ease-out; box-shadow: 0 0 10px var(--glow-yellow); }
         
-        /* แก้ไขรูปรถให้ขยับตรงเป๊ะ และใช้ SVG เพื่อให้รองรับทุกเครื่อง */
         .car-icon { position: absolute; top: -16px; left: 0%; transform: translateX(-50%); transition: left 1s ease-out; z-index: 2; display: flex; justify-content: center; align-items: center; }
         .point-dot { position: absolute; top: -3px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg-dark); border: 2px solid; z-index: 1; }
         
@@ -243,7 +242,7 @@
             background: #0b0c10;
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 30px;
-            padding: 30px 15px; /* ลดขอบข้างเพื่อเพิ่มพื้นที่จอ */
+            padding: 30px 15px; 
             width: 98%;
             max-width: 500px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.9);
@@ -837,7 +836,29 @@
     // =================================================================
 
     window.selectLocation = (name, lat, lon) => { clearTimeout(searchTimer); $('destInput').value = "กำลังคำนวณ..."; $('destInput').classList.add('loading-state'); $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; destLoc = { lat, lon }; $('searchSectionBox').style.display = 'none'; $('manualSectionBox').style.display = 'none'; saveHistory(name, lat, lon); getRouteData(lat, lon, name); };
-    async function getRouteData(dLat, dLon, name) { navigator.geolocation.getCurrentPosition(async (pos) => { let startPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; try { let data = await (await fetch(`https://router.project-osrm.org/route/v1/driving/${startPos.lon},${startPos.lat};${dLon},${dLat}?overview=false`)).json(); if (data.code === 'Ok') { let km = data.routes[0].distance / 1000; currentTrueRemainKm = km; currentTrueRemainSec = km * 130; processRoute(km, currentTrueRemainSec, name); } else { alert('ไม่สามารถคำนวณเส้นทางได้'); resetAll(); } } catch(e) { alert('เกิดข้อผิดพลาดในการดึงข้อมูลเส้นทาง'); resetAll(); } }, () => { alert('กรุณาเปิด GPS'); resetAll(); }, { enableHighAccuracy: true }); }
+    
+    // เปลี่ยนสูตรประเมินเวลาจาก OSRM โดยตรงเพื่อความแม่นยำสูงสุดของระบบฟรี
+    async function getRouteData(dLat, dLon, name) { 
+        navigator.geolocation.getCurrentPosition(async (pos) => { 
+            let startPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; 
+            try { 
+                let data = await (await fetch(`https://router.project-osrm.org/route/v1/driving/${startPos.lon},${startPos.lat};${dLon},${dLat}?overview=false`)).json(); 
+                if (data.code === 'Ok') { 
+                    let km = data.routes[0].distance / 1000; 
+                    currentTrueRemainKm = km; 
+                    currentTrueRemainSec = data.routes[0].duration; // ใช้เวลาจริงจากเส้นทาง
+                    processRoute(km, currentTrueRemainSec, name); 
+                } else { 
+                    alert('ไม่สามารถคำนวณเส้นทางได้'); resetAll(); 
+                } 
+            } catch(e) { 
+                alert('เกิดข้อผิดพลาดในการดึงข้อมูลเส้นทาง'); resetAll(); 
+            } 
+        }, () => { 
+            alert('กรุณาเปิด GPS'); resetAll(); 
+        }, { enableHighAccuracy: true }); 
+    }
+    
     function processRoute(km, sec, name) { totalKm = km; etaSec = sec; $('kmInput').value = km.toFixed(2); $('destInput').value = name; $('destInput').classList.remove('loading-state'); updateFareBubble(km); checkAppStatus(); startMeterAndTracking(); }
     
     function startMeterAndTracking() {
@@ -880,7 +901,6 @@
             btn.innerHTML = `<div style="text-align:left;"><div style="display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div><div style="font-size:11px; font-weight:400; color:rgba(255,255,255,0.8);">${Math.floor(elapsed/60)} นาที ${elapsed%60} วิ</div></div><div style="font-size:22px; font-weight:700;">${displayFare} ฿</div>`; 
         } 
 
-        // อัปเดตข้อมูลลง Pop-up หน้าจอใหญ่ (ดีไซน์ใหม่)
         if ($('tzMeterPrice')) {
             $('tzMeterPrice').innerText = displayFare;
             $('tzDrivenKm').innerText = actualDrivenKm.toFixed(2);
@@ -906,7 +926,22 @@
         }
     }
 
-    function startDynamicRouting() { if(routeUpdateTimer) clearInterval(routeUpdateTimer); routeUpdateTimer = setInterval(async () => { if(!lastPos || !destLoc) return; try { let res = await fetch(`https://router.project-osrm.org/route/v1/driving/${lastPos.lon},${lastPos.lat};${destLoc.lon},${destLoc.lat}?overview=false`); let data = await res.json(); if(data.code === 'Ok') { currentTrueRemainKm = data.routes[0].distance / 1000; currentTrueRemainSec = currentTrueRemainKm * 130; } } catch(e) {} }, 10000); }
+    // เปลี่ยนให้ดึงเวลาแบบ Dynamic Update อย่างถูกต้อง
+    function startDynamicRouting() { 
+        if(routeUpdateTimer) clearInterval(routeUpdateTimer); 
+        routeUpdateTimer = setInterval(async () => { 
+            if(!lastPos || !destLoc) return; 
+            try { 
+                let res = await fetch(`https://router.project-osrm.org/route/v1/driving/${lastPos.lon},${lastPos.lat};${destLoc.lon},${destLoc.lat}?overview=false`); 
+                let data = await res.json(); 
+                if(data.code === 'Ok') { 
+                    currentTrueRemainKm = data.routes[0].distance / 1000; 
+                    currentTrueRemainSec = data.routes[0].duration; // ใช้เวลาจริง
+                } 
+            } catch(e) {} 
+        }, 10000); 
+    }
+    
     function stopTracking() { releaseWakeLock(); $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; }
     window.resetAll = () => { $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; isManualRunning = false; $('manualTimerBtn').classList.remove('active'); $('manualTimerBtn').innerHTML = '<span class="material-symbols-outlined">play_circle</span> เริ่มจับเวลามิเตอร์'; stopTracking(); updateFareBubble(0); window.checkAppStatus(); };
     window.startNavigation = () => destLoc && (window.location.href = `google.navigation:q=${destLoc.lat},${destLoc.lon}&mode=d`);
@@ -1161,6 +1196,19 @@
         } catch (error) { window.showToast("แจ้งเตือน: " + error.message, true); } finally { saveBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกรหัสผ่าน`; saveBtn.disabled = false; }
     };
 
+    // ฟังก์ชันลบผู้ใช้แบบ Quick Delete
+    window.quickDeleteUser = async (uid, userName) => {
+        if(uid === loggedInUserId) return window.showToast("ไม่สามารถลบบัญชีตัวเองได้", true);
+        if(confirm(`ยืนยันการ 'ลบถาวร' บัญชี ${userName} ใช่หรือไม่?\nข้อมูลจะไม่สามารถกู้คืนได้`)) {
+            try {
+                await deleteDoc(doc(db, "users", uid));
+                window.showToast("ลบบัญชีเรียบร้อย");
+            } catch(e) {
+                window.showToast("เกิดข้อผิดพลาดในการลบข้อมูล", true);
+            }
+        }
+    };
+
     const formatDate = (timestamp) => { if(!timestamp) return "-"; const d = new Date(timestamp); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
 
     let adminSnapshotUnsub = null;
@@ -1180,23 +1228,33 @@
                     let safePhoto = u.photoURL && u.photoURL.length > 10 ? u.photoURL : 'https://via.placeholder.com/40'; let safeName = u.displayName || u.username; let safeRole = u.role || 'User'; let safeUsername = u.username || '';
                     
                     let dragHandleHtml = myPerms.canEdit ? `<div class="drag-handle" style="display:flex; align-items:center; cursor:grab; padding-right:5px; touch-action:none;"><span class="material-symbols-outlined" style="color: rgba(255,255,255,0.4); font-size: 28px;">drag_indicator</span></div>` : '';
-                    let quickBanBtn = ''; let editBtnHtml = ''; let logsBtn = '';
+                    
+                    let quickBanBtn = ''; let editBtnHtml = ''; let logsBtn = ''; let deleteBtn = '';
                     let canTouchThisUser = isGod || (safeRole !== "Admin"); 
                     let canViewThisLog = myPerms.canViewLogs;
                     if (safeRole === "Admin" && currentUserRole !== "Admin") { canViewThisLog = false; }
                     
                     if(canTouchThisUser) {
+                        // 1. ปุ่มแบน
                         if(myPerms.canBan) {
                             if(u.isBanned) quickBanBtn = `<button onclick="quickBanToggle('${uid}', false, '${safeName}')" style="background:rgba(46, 204, 113, 0.1); border:1px solid rgba(46, 204, 113, 0.3); color:var(--neon-green); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ปลดแบน"><span class="material-symbols-outlined" style="font-size:18px;">check_circle</span></button>`;
                             else quickBanBtn = `<button onclick="quickBanToggle('${uid}', true, '${safeName}')" style="background:rgba(255, 71, 87, 0.1); border:1px solid rgba(255, 71, 87, 0.3); color:var(--accent-red); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="แบน"><span class="material-symbols-outlined" style="font-size:18px;">block</span></button>`;
                         }
+                        // 3. ปุ่มแก้ไข
                         if(myPerms.canEdit) {
                             editBtnHtml = `<button onclick="openAdminEditUser('${uid}')" style="background:rgba(52, 152, 219, 0.1); border:1px solid rgba(52, 152, 219, 0.3); color:#3498db; width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="แก้ไข"><span class="material-symbols-outlined" style="font-size:18px;">edit</span></button>`;
                         }
                     }
+                    // 2. ปุ่มดูประวัติ
                     if(canViewThisLog) { logsBtn = `<button onclick="viewUserLogs('${uid}', '${safeName}')" style="background:rgba(241, 196, 15, 0.1); border:1px solid rgba(241, 196, 15, 0.3); color:var(--neon-yellow); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ประวัติ"><span class="material-symbols-outlined" style="font-size:18px;">history</span></button>`; }
+                    
+                    // 4. ปุ่มลบ (สำหรับ Admin สูงสุดเท่านั้น ป้องกันคนอื่นลบเล่น)
+                    if(isGod) {
+                        deleteBtn = `<button onclick="quickDeleteUser('${uid}', '${safeName}')" style="background:rgba(255, 71, 87, 0.1); border:1px solid rgba(255, 71, 87, 0.3); color:var(--accent-red); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ลบผู้ใช้"><span class="material-symbols-outlined" style="font-size:18px;">delete</span></button>`;
+                    }
 
-                    html += `<div class="admin-user-card">${dragHandleHtml}<img src="${safePhoto}" style="width:45px;height:45px;border-radius:50%;object-fit:cover;border:1px solid #fff;"><div style="flex:1; min-width:0;"><div style="color:white; font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeName} <span style="font-size:11px; color:var(--neon-yellow);">[${safeRole}]</span></div><div style="font-size:11px; color: #a0a5b5; margin-top:2px;">User: <span style="color:white;">${safeUsername}</span></div><div style="font-size:11px; margin-top:4px;">${statusHtml} ${lastLoginTxt}</div></div><div style="display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end;">${quickBanBtn}${editBtnHtml}${logsBtn}</div></div>`;
+                    // เรียงปุ่มตามที่ขอ: แบน -> ประวัติ -> แก้ไข -> ลบ
+                    html += `<div class="admin-user-card">${dragHandleHtml}<img src="${safePhoto}" style="width:45px;height:45px;border-radius:50%;object-fit:cover;border:1px solid #fff;"><div style="flex:1; min-width:0;"><div style="color:white; font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeName} <span style="font-size:11px; color:var(--neon-yellow);">[${safeRole}]</span></div><div style="font-size:11px; color: #a0a5b5; margin-top:2px;">User: <span style="color:white;">${safeUsername}</span></div><div style="font-size:11px; margin-top:4px;">${statusHtml} ${lastLoginTxt}</div></div><div style="display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end;">${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
                 });
                 document.getElementById('adminUserList').innerHTML = html || '<div style="padding: 20px; color: gray;">ไม่พบข้อมูล</div>';
 
