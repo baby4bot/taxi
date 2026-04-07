@@ -99,9 +99,12 @@
         .live-tracker-box:active { transform: scale(0.97); }
         .tracker-stats { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
         .highlight { color: var(--neon-green); font-weight: 600; text-shadow: 0 0 5px var(--glow-green); }
+        
         .progress-line { position: relative; width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin: 15px 0; }
         .progress-fill { position: absolute; top: 0; left: 0; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); border-radius: 3px; width: 0%; transition: width 1s ease-out; box-shadow: 0 0 10px var(--glow-yellow); }
-        .car-icon { position: absolute; top: -14px; left: 0%; transform: translateX(-50%); transition: left 1s ease-out; z-index: 2; }
+        
+        /* แก้ไขรูปรถให้ขยับตรงเป๊ะ และใช้ SVG เพื่อให้รองรับทุกเครื่อง */
+        .car-icon { position: absolute; top: -16px; left: 0%; transform: translateX(-50%); transition: left 1s ease-out; z-index: 2; display: flex; justify-content: center; align-items: center; }
         .point-dot { position: absolute; top: -3px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg-dark); border: 2px solid; z-index: 1; }
         
         .manual-section { flex-shrink: 0; display: flex; align-items: center; gap: 12px; margin: 10px auto; width: 100%; justify-content: center; position: relative; z-index: 20; }
@@ -174,67 +177,29 @@
         .log-time { font-size: 11px; color: var(--text-dim); margin-bottom: 3px; }
 
         /* ======================================================== */
-        /* สไตล์สำหรับ Service Portal - จัดสีตาม Category */
+        /* สไตล์สำหรับ Service Portal */
         /* ======================================================== */
-        .sp-modal-box {
-            background: #0f111a;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 20px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.9);
-        }
-        .sp-header {
-            position: relative; padding: 25px 20px 20px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); overflow: hidden;
-        }
-        .sp-neon-line {
-            position: absolute; top: 0; left: 0; width: 100%; height: 3px;
-            background: linear-gradient(90deg, transparent, #00bcd4, #ff4757, #f1c40f, transparent);
-            background-size: 200% 100%;
-            animation: spLightRun 2.5s infinite linear;
-        }
+        .sp-modal-box { background: #0f111a; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
+        .sp-header { position: relative; padding: 25px 20px 20px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
+        .sp-neon-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, transparent, #00bcd4, #ff4757, #f1c40f, transparent); background-size: 200% 100%; animation: spLightRun 2.5s infinite linear; }
         @keyframes spLightRun { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
-        
-        .sp-logo-text {
-            font-family: 'Arial', Helvetica, sans-serif; font-size: 26px; font-weight: 900; letter-spacing: -0.5px;
-            margin-bottom: 15px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
-        }
-        .sp-logo-text .h-box {
-            background: linear-gradient(135deg, #333, #000); color: white; font-size: 18px; padding: 2px 7px;
-            margin-left: 5px; border-radius: 6px; border: 1px solid #555; line-height: 1; box-shadow: inset 0 1px 3px rgba(255,255,255,0.3), 0 0 8px rgba(255,255,255,0.2);
-        }
-        
+        .sp-logo-text { font-family: 'Arial', Helvetica, sans-serif; font-size: 26px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+        .sp-logo-text .h-box { background: linear-gradient(135deg, #333, #000); color: white; font-size: 18px; padding: 2px 7px; margin-left: 5px; border-radius: 6px; border: 1px solid #555; line-height: 1; box-shadow: inset 0 1px 3px rgba(255,255,255,0.3), 0 0 8px rgba(255,255,255,0.2); }
         .sp-title { font-family: 'Kanit', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: #fff; text-transform: uppercase; }
-        
-        /* ขยายขนาดฟอนต์ ให้มองเห็นชัดในมือถือ และปรับสีให้สว่าง */
         .sp-cat-title { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; margin: 25px 0 15px 0; }
         .sp-cat-title .material-symbols-outlined { font-size: 20px; margin-right: 5px; }
-        
-        .sp-card { 
-            border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; 
-            justify-content: space-between; text-align: left; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
-        }
+        .sp-card { border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; text-align: left; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .sp-card:active { transform: scale(0.98); }
         .sp-info { flex: 1; min-width: 0; padding-right: 10px; }
-        
         .sp-item-title { font-size: 16px; font-weight: 600; color: white; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.5px; }
         .sp-code { display: inline-block; padding: 6px 14px; border-radius: 8px; font-family: monospace; font-size: 18px; font-weight: bold; border: 1px solid; letter-spacing: 1.5px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.3); }
         .sp-icon-box { width: 50px; height: 50px; border-radius: 12px; display: flex; justify-content: center; align-items: center; flex-shrink: 0; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
         .sp-icon-box .material-symbols-outlined { font-size: 28px; }
-
-        /* การจัดการแก้ปัญหาคลุมดำข้อความเวลาลาก และปรับปุ่มลากให้สมูท */
-        .drag-handle { 
-            cursor: grab; 
-            touch-action: none !important; /* ป้องกันการ Scroll เวลาแตะปุ่มลาก */
-            -webkit-user-select: none; 
-            user-select: none; 
-        }
+        .drag-handle { cursor: grab; touch-action: none !important; -webkit-user-select: none; user-select: none; }
         .drag-handle:active { cursor: grabbing; }
-        .sp-card, .sp-cat-title {
-            -webkit-user-select: none; 
-            user-select: none; 
-        }
+        .sp-card, .sp-cat-title { -webkit-user-select: none; user-select: none; }
         .sortable-ghost { opacity: 0.4; background: rgba(255,255,255,0.1); border: 1px dashed var(--neon-yellow); }
 
-        /* THEMES per category (บังคับสีเดียวกันทั้งกลุ่ม) */
         .theme-cat-0 { background: rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.4); border-left: 5px solid #2ecc71; }
         .theme-cat-0 .sp-code { color: #2ecc71; border-color: #2ecc71; background: rgba(0,0,0,0.5); }
         .theme-cat-0 .sp-icon-box { background: rgba(46, 204, 113, 0.2); border: 1px solid rgba(46, 204, 113, 0.3); }
@@ -272,64 +237,65 @@
         .title-theme-5 { color: #64b5f6; text-shadow: 0 0 8px rgba(33, 150, 243, 0.4); }
 
         /* ======================================================== */
-        /* สไตล์สำหรับกล่องมิเตอร์ใหญ่ (Live Tracker Zoom) ตามดีไซน์ใหม่ */
+        /* สไตล์สำหรับกล่องมิเตอร์ใหญ่ (Live Tracker Zoom Big Size) */
         /* ======================================================== */
         .tracker-zoom-box {
             background: #0b0c10;
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 30px;
-            padding: 25px 20px;
-            width: 90%;
-            max-width: 360px;
+            padding: 30px 15px; /* ลดขอบข้างเพื่อเพิ่มพื้นที่จอ */
+            width: 98%;
+            max-width: 500px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.9);
             font-family: 'Kanit', sans-serif;
         }
         
-        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .tz-start-time { color: white; font-weight: 600; font-size: 13px; }
-        .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 13px; }
+        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 0 10px; }
+        .tz-start-time { color: white; font-weight: 600; font-size: 18px; }
+        .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 18px; }
 
-        .tz-progress-container { position: relative; margin: 10px 10px 30px 10px; }
-        .tz-progress-line { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; position: relative; }
-        .tz-progress-fill { position: absolute; left: 0; top: 0; height: 100%; background: rgba(255,255,255,0.3); border-radius: 2px; transition: width 1s ease-out; }
-        .tz-point-start { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; background: transparent; display: flex; justify-content: center; align-items: center; }
-        .tz-point-start::before { content: ''; width: 6px; height: 6px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -12px; left: -10px; box-shadow: 12px 12px 0 var(--neon-yellow); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotate(45deg); }
-        .tz-point-end { position: absolute; right: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent-red); background: transparent; }
+        .tz-progress-container { position: relative; margin: 15px 15px 35px 15px; }
+        .tz-progress-line { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; position: relative; }
+        .tz-progress-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); border-radius: 3px; transition: width 1s ease-out; box-shadow: 0 0 10px var(--glow-yellow); }
+        
+        .tz-point-start { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; background: transparent; display: flex; justify-content: center; align-items: center; }
+        .tz-point-start::before { content: ''; width: 8px; height: 8px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -16px; left: -14px; box-shadow: 16px 16px 0 var(--neon-yellow); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotate(45deg); }
+        .tz-point-end { position: absolute; right: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--accent-red); background: transparent; }
 
-        .tz-stats-row { display: flex; justify-content: space-around; margin-bottom: 25px; }
+        .tz-stats-row { display: flex; justify-content: space-around; margin-bottom: 30px; }
         .tz-stat-col { text-align: center; }
-        .tz-stat-num { font-size: 38px; font-weight: 700; line-height: 1; letter-spacing: -1px; margin-bottom: 5px; }
-        .tz-stat-label { font-size: 11px; color: var(--text-dim); }
+        .tz-stat-num { font-size: 55px; font-weight: 700; line-height: 1; letter-spacing: -1px; margin-bottom: 5px; }
+        .tz-stat-label { font-size: 18px; color: var(--text-dim); }
 
         .tz-fare-card {
             background: linear-gradient(135deg, #2ecc71, #27ae60);
-            border-radius: 20px;
-            padding: 20px 15px;
+            border-radius: 25px;
+            padding: 35px 15px;
             text-align: center;
-            box-shadow: 0 10px 40px rgba(46, 204, 113, 0.3);
-            margin-bottom: 20px;
+            box-shadow: 0 15px 40px rgba(46, 204, 113, 0.4);
+            margin-bottom: 25px;
         }
-        .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 12px; font-weight: 500; margin-bottom: 5px; }
-        .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 8px; }
-        #tzMeterPrice { font-size: 80px; font-weight: 800; color: white; line-height: 0.9; letter-spacing: -2px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .tz-fare-currency { font-size: 36px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 20px; font-weight: 500; margin-bottom: 5px; }
+        .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 10px; }
+        #tzMeterPrice { font-size: 140px; font-weight: 800; color: white; line-height: 0.8; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .tz-fare-currency { font-size: 60px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
 
         .tz-info-box {
             background: rgba(255,255,255,0.03);
             border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 16px;
-            padding: 15px 0;
+            border-radius: 20px;
+            padding: 25px 0;
             display: flex;
             justify-content: space-evenly;
             align-items: center;
             margin-bottom: 25px;
         }
         .tz-info-col { flex: 1; text-align: center; }
-        .tz-info-divider { width: 1px; height: 35px; background: rgba(255,255,255,0.08); }
-        .tz-info-label { font-size: 11px; color: var(--text-dim); margin-bottom: 5px; }
-        .tz-info-val { font-size: 17px; font-weight: 700; }
+        .tz-info-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.08); }
+        .tz-info-label { font-size: 18px; color: var(--text-dim); margin-bottom: 5px; }
+        .tz-info-val { font-size: 32px; font-weight: 700; }
 
-        .tz-close-text { text-align: center; font-size: 12px; color: rgba(255,255,255,0.3); cursor: pointer; transition: 0.2s; }
+        .tz-close-text { text-align: center; font-size: 18px; color: rgba(255,255,255,0.4); cursor: pointer; transition: 0.2s; padding: 10px; font-weight: 500; }
         .tz-close-text:active { color: white; transform: scale(0.95); }
     </style>
 </head>
@@ -383,9 +349,13 @@
         <div class="progress-line">
             <div class="point-dot point-start"></div>
             <div id="progressFill" class="progress-fill"></div>
+            
             <div id="carIcon" class="car-icon">
-                <svg viewbox="0 0 24 24" style="width: 24px; height: 24px; fill: var(--neon-yellow);"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"></path></svg>                             
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 32px; height: 32px; fill: var(--neon-yellow); filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));">
+                    <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                </svg>                         
             </div>
+
             <div style="right:0; border-color:var(--accent-red);" class="point-dot point-end"></div>
         </div>
         <div style="margin: 10px 0 0 0; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px;" class="tracker-stats">
@@ -712,6 +682,13 @@
             <div class="tz-progress-line">
                 <div class="tz-point-start"></div>
                 <div id="tzProgressFill" class="tz-progress-fill"></div>
+                
+                <div id="tzCarIcon" class="car-icon" style="top: -20px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 48px; height: 48px; fill: var(--neon-yellow); filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));">
+                        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                    </svg>
+                </div>
+
                 <div class="tz-point-end"></div>
             </div>
         </div>
@@ -801,13 +778,11 @@
     const formatSearchText = (text) => {
         let t = text.trim();
 
-        // 1. แปลงคำนำหน้าสถานที่ (รพ. รร. ม.)
         t = t.replace(/(^|\s)รพ\.?\s*/g, "$1โรงพยาบาล ");
         t = t.replace(/(^|\s)รร\.?\s*/g, "$1โรงเรียน ");
         t = t.replace(/(^|\s)ม\.?\s*(ราม|เกษตร|กรุงเทพ|ธรรมศาสตร์|มหิดล|จุฬา|ศิลปากร|รังสิต|หอการค้า)/g, "$1มหาวิทยาลัย$2");
         t = t.replace(/(^|\s)(มบ\.?|ม\.)\s*/g, "$1หมู่บ้าน "); 
 
-        // 2. จัดการชื่อย่อถนน ให้เป็นชื่อเต็มก่อน (เช่น ราม -> รามคำแหง)
         t = t.replace(/(^|\s)ราม\s*(\d+)/g, "$1รามคำแหง $2");
         t = t.replace(/(^|\s)พหล\s*(\d+)/g, "$1พหลโยธิน $2");
         t = t.replace(/(^|\s)สุขุม\s*(\d+)/g, "$1สุขุมวิท $2");
@@ -815,13 +790,11 @@
         t = t.replace(/(^|\s)จรัญ\s*(\d+)/g, "$1จรัญสนิทวงศ์ $2");
         t = t.replace(/(^|\s)วิภา\s*(\d+)/g, "$1วิภาวดีรังสิต $2");
 
-        // 3. ตรวจจับ: ชื่อถนน + ตัวเลข -> เติมคำว่า "ซอย" ข้างหน้า
         t = t.replace(/ซอย\s*/g, ""); 
         const soiRoads = ["รามคำแหง", "ลาดพร้าว", "สุขุมวิท", "พหลโยธิน", "เพชรเกษม", "รัชดาภิเษก", "อ่อนนุช", "เอกมัย", "ทองหล่อ", "พัฒนาการ", "ศรีนครินทร์", "จรัญสนิทวงศ์", "วิภาวดีรังสิต", "นวมินทร์", "บางนา-ตราด", "รามอินทรา", "เพชรบุรี", "พระราม 1", "พระราม 2", "พระราม 3", "พระราม 4", "พระราม 5", "พระราม 6", "พระราม 7", "พระราม 8", "พระราม 9", "เจริญกรุง", "ประชาอุทิศ", "งามวงศ์วาน", "แจ้งวัฒนะ", "ติวานนท์", "ลาดกระบัง", "เสรีไทย", "รามอินทรา", "บางแค", "เพชรเกษม", "บางบอน"];
         const roadRegex = new RegExp(`(^|\\s)(${soiRoads.join('|')})\\s*(\\d+)([\\s\\/]*)`, 'g');
         t = t.replace(roadRegex, "$1ซอย$2 $3$4");
 
-        // 4. สถานที่ยอดฮิตอื่นๆ (พิมพ์สั้นให้กลายเป็นยาว)
         const dictionary = {
             "เซ็นทรัลปิ่นเกล้า": "เซ็นทรัล ปิ่นเกล้า",
             "เซนปิ่น": "เซ็นทรัล ปิ่นเกล้า",
@@ -907,6 +880,7 @@
             btn.innerHTML = `<div style="text-align:left;"><div style="display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div><div style="font-size:11px; font-weight:400; color:rgba(255,255,255,0.8);">${Math.floor(elapsed/60)} นาที ${elapsed%60} วิ</div></div><div style="font-size:22px; font-weight:700;">${displayFare} ฿</div>`; 
         } 
 
+        // อัปเดตข้อมูลลง Pop-up หน้าจอใหญ่ (ดีไซน์ใหม่)
         if ($('tzMeterPrice')) {
             $('tzMeterPrice').innerText = displayFare;
             $('tzDrivenKm').innerText = actualDrivenKm.toFixed(2);
@@ -928,6 +902,7 @@
             let totalEstimated = actualDrivenKm + currentTrueRemainKm;
             let pct = totalEstimated > 0 ? Math.min((actualDrivenKm / totalEstimated) * 100, 100) : 0;
             if($('tzProgressFill')) $('tzProgressFill').style.width = pct + '%';
+            if($('tzCarIcon')) $('tzCarIcon').style.left = pct + '%';
         }
     }
 
