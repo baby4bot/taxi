@@ -7,8 +7,8 @@
     <meta content="#090a0f" name="theme-color" />
     <title>Taxi Fare Calculator 2026</title>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet" />
-    <link href="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" rel="apple-touch-icon" />
-    <link href="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" rel="shortcut icon" />
+    <link id="appleIcon" href="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" rel="apple-touch-icon" />
+    <link id="shortcutIcon" href="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" rel="shortcut icon" />
     <meta name="mobile-web-app-capable" content="yes" />
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -29,9 +29,7 @@
 
         .card { 
             background: var(--card-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            width: 100%; max-width: 100%; min-height: 100vh; 
-            /* ปรับ Padding ด้านบนจาก 80px เหลือ 20px เพื่อดันเนื้อหาขึ้นไป */
-            padding: 20px 20px 30px 20px; box-sizing: border-box; 
+            width: 100%; max-width: 100%; min-height: 100vh; padding: 20px 20px 30px 20px; box-sizing: border-box; 
             text-align: center; border: none; position: relative; animation: floatUp 0.8s ease-out;
             display: flex; flex-direction: column; 
         }
@@ -40,7 +38,6 @@
         
         .flex-center { display: flex; align-items: center; justify-content: center; }
         
-        /* Toast Notification แบบรองรับรูปภาพ */
         #toastBox {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
             background: rgba(22, 24, 35, 0.95); border: 1px solid var(--border-glass);
@@ -55,88 +52,59 @@
         }
         .toast-img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; display: none; border: 1px solid rgba(255,255,255,0.2); }
 
-        /* ----------------------------------------------------------------- */
-        /* Hamburger & Side Menu Styles (ปรับปรุงใหม่ตามสั่ง) */
-        /* ----------------------------------------------------------------- */
         .hamburger-btn {
-            background: transparent; /* เอาขอบสี่เหลี่ยมและพื้นหลังออก */
-            border: none; 
-            color: var(--neon-yellow); /* เปลี่ยนเป็นสีเหลือง */
-            cursor: pointer; width: 50px; height: 50px; display: flex; justify-content: center; 
-            align-items: center; transition: 0.2s;
-            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); /* เพิ่มเงาให้ปุ่มลอยดูมีมิติ */
-            -webkit-tap-highlight-color: transparent;
+            background: transparent; border: none; color: var(--neon-yellow); cursor: pointer; 
+            width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; 
+            transition: 0.2s; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); -webkit-tap-highlight-color: transparent;
         }
         .hamburger-btn:active { transform: scale(0.9); }
         .hamburger-btn .material-symbols-outlined { font-size: 38px !important; }
 
-        .side-menu-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); 
-            z-index: 100000; display: none; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(5px);
-        }
-        
-        .side-menu {
-            position: fixed; top: 0; right: -320px; width: 280px; height: 100%;
-            background: #0d0f17; border-left: 1px solid rgba(255,255,255,0.05);
-            box-shadow: -10px 0 40px rgba(0,0,0,0.9); transition: right 0.3s ease-in-out; 
-            display: flex; flex-direction: column; padding: 40px 20px; box-sizing: border-box;
-        }
-
+        .side-menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100000; display: none; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(5px); }
+        .side-menu { position: fixed; top: 0; right: -320px; width: 280px; height: 100%; background: #0d0f17; border-left: 1px solid rgba(255,255,255,0.05); box-shadow: -10px 0 40px rgba(0,0,0,0.9); transition: right 0.3s ease-in-out; display: flex; flex-direction: column; padding: 40px 20px; box-sizing: border-box; }
         .side-menu-header { text-align: center; margin-bottom: 25px; }
         .side-profile-pic { width: 90px; height: 90px; border-radius: 50%; border: 3px solid #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.4); object-fit: cover; cursor: pointer; margin-bottom: 15px; transition: 0.3s; }
         .side-profile-pic:active { transform: scale(0.95); }
         .side-user-name { font-size: 22px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; }
         .side-user-role { font-size: 15px; font-weight: 600; color: #f39c12; margin-top: 2px; }
-        
         .side-divider { border: 0; height: 1px; background: rgba(255,255,255,0.08); margin: 20px 0; width: 100%; }
-
         .side-menu-items { flex: 1; display: flex; flex-direction: column; gap: 5px; }
         .side-menu-item { display: flex; align-items: center; gap: 15px; padding: 15px 20px; border-radius: 12px; cursor: pointer; transition: 0.2s; font-size: 17px; font-weight: 600; color: white; }
         .side-menu-item:hover { background: rgba(255,255,255,0.05); transform: translateX(5px); }
         .side-menu-item .material-symbols-outlined { color: #f1c40f; font-size: 24px; }
-        
         .side-menu-item.logout-item { color: #ff4757; margin-top: auto; }
         .side-menu-item.logout-item .material-symbols-outlined { color: #ff4757; }
 
         .header-container { margin-bottom: 25px; margin-top: 15px; gap: 15px; flex-shrink: 0; }
-        .header-icon { width: 40px; height: 40px; border-radius: 12px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+        .header-icon { width: 40px; height: 40px; border-radius: 12px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); object-fit: cover; }
         h2 { font-size: 24px; font-weight: 500; margin: 0; background: linear-gradient(90deg, #fff, #a0a5b5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
         .search-section { text-align: left; position: relative; flex-shrink: 0; margin-bottom: 20px; }
         label { display: block; margin-bottom: 10px; font-size: 13px; color: var(--text-dim); text-align: center; }
-        
         .input-group { display: flex; gap: 10px; align-items: center; width: 100%; }
         input[type="text"], input[type="email"], input[type="password"], .km-input-box { background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 20px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); transition: 0.3s; }
         input[type="text"], input[type="email"], input[type="password"] { flex: 1; min-width: 0; padding: 18px 20px; font-size: 15px; outline: none; color: white; text-align: center; width: 100%; box-sizing: border-box; }
         input:focus, .km-input-box:focus-within { border-color: var(--neon-yellow); box-shadow: 0 0 15px rgba(241, 196, 15, 0.2), inset 0 2px 5px rgba(0,0,0,0.5); }
         input.loading-state { color: var(--neon-yellow) !important; text-shadow: 0 0 10px var(--glow-yellow); }
 
-        .dropdown-box { position: absolute; background: rgba(30, 32, 45, 0.95); width: 100%; z-index: 1000; border-radius: 20px; max-height: 320px; overflow-y: auto; display: none; margin-top: 10px; border: 1px solid var(--border-glass); box-shadow: 0 15px 40px rgba(0,0,0,0.8); backdrop-filter: blur(15px); }
+        .dropdown-box { position: absolute; background: rgba(30, 32, 45, 0.95); width: 100%; z-index: 1000; border-radius: 20px; max-height: 320px; overflow-y: auto; display: none; margin-top: 10px; border: 1px solid var(--border-glass); box-shadow: 0 15px 40px rgba(0,0,0,0.8); backdrop-filter: blur(15px); -ms-overflow-style: none; scrollbar-width: none; }
         .dropdown-box::-webkit-scrollbar { display: none; }
-        .dropdown-box { -ms-overflow-style: none; scrollbar-width: none; }
-        
         .history-header { padding: 15px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border-glass); display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--neon-green); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(5px); }
-        .clear-btn { background: rgba(255, 71, 87, 0.1); color: var(--accent-red); padding: 12px 20px; border-radius: 15px; font-size: 14px; cursor: pointer; border: 1px solid rgba(255, 71, 87, 0.3); font-weight: 600; transition: 0.2s; }
-        .clear-btn:hover { background: var(--accent-red); color: white; box-shadow: 0 0 15px rgba(255, 71, 87, 0.4); }
         .clear-history-btn { background: rgba(255, 71, 87, 0.1); color: var(--accent-red); padding: 6px 14px; border-radius: 10px; font-size: 11px; cursor: pointer; border: 1px solid rgba(255, 71, 87, 0.3); font-weight: 600; }
-        
         .list-item { padding: 16px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); text-align: left; font-size: 14px; display: flex; align-items: center; gap: 12px; transition: 0.2s; }
         .list-item:hover { background: rgba(255,255,255,0.05); }
         .item-icon { font-size: 20px !important; color: var(--neon-green); text-shadow: 0 0 10px rgba(46, 204, 113, 0.4); flex-shrink: 0; }
 
         .live-tracker-box { flex-shrink: 0; display: none; cursor: pointer; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 20px; padding: 15px; margin-top: 10px; text-align: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); transition: 0.3s; animation: fadeIn 0.5s ease; }
         .live-tracker-box:active { transform: scale(0.97); }
-        
         .tracker-stats { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
         .highlight { color: var(--neon-green); font-weight: 600; text-shadow: 0 0 5px var(--glow-green); }
-        
         .progress-line { position: relative; width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin: 15px 0; }
         .progress-fill { position: absolute; top: 0; left: 0; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); border-radius: 3px; width: 0%; transition: width 1s ease-out; box-shadow: 0 0 10px var(--glow-yellow); }
         .car-icon { position: absolute; top: -14px; left: 0%; transform: translateX(-50%); transition: left 1s ease-out; z-index: 2; }
         .point-dot { position: absolute; top: -3px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg-dark); border: 2px solid; z-index: 1; }
         
         .manual-section { flex-shrink: 0; display: flex; align-items: center; gap: 12px; margin: 10px auto; width: 100%; justify-content: center; position: relative; z-index: 20; }
-        
         .btn-math { width: 60px; height: 60px; border-radius: 20px; font-size: 30px; cursor: pointer; flex-shrink: 0; border: none; color: white; transition: 0.2s; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
         .btn-math:active { transform: scale(0.95); }
         .btn-minus { background: var(--accent-red); box-shadow: 0 4px 10px rgba(255, 71, 87, 0.3); }
@@ -149,7 +117,6 @@
 
         .result-container { flex: 1; position: relative; margin: 10px 0 20px 0; padding: 40px 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; }
         .bubble-bg-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: visible; }
-        
         .bubble { position: absolute; border-radius: 50%; animation: floatBubble 8s ease-in-out infinite; mix-blend-mode: screen; filter: blur(15px); }
         .bubble-1 { width: 180px; height: 180px; top: -30px; left: 5%; background: rgba(46, 204, 113, 0.8); }
         .bubble-2 { width: 200px; height: 200px; bottom: -40px; right: -5%; background: rgba(255, 71, 87, 0.8); animation-delay: -2s; }
@@ -157,7 +124,6 @@
         .bubble-4 { width: 170px; height: 170px; top: -10px; right: 15%; background: rgba(255, 152, 0, 0.8); animation-delay: -1s; }
         .bubble-5 { width: 190px; height: 190px; bottom: 0px; left: 20%; background: rgba(0, 191, 255, 0.8); animation-delay: -3s; }
         .bubble-6 { width: 170px; height: 170px; top: 45%; left: -10%; background: rgba(155, 89, 182, 0.8); animation-delay: -5s; }
-        
         @keyframes floatBubble { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-15px) scale(1.05); } }
         
         .result-content { position: relative; z-index: 10; text-align: center; transition: 0.3s; }
@@ -165,7 +131,6 @@
         .sub-info { font-size: 16px; font-weight: 500; margin-top: 15px; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.8); background: rgba(10, 12, 18, 0.7); border: 1px solid rgba(255,255,255,0.15); padding: 6px 18px; border-radius: 20px; display: inline-block; backdrop-filter: blur(8px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
         .action-row { display: flex; gap: 10px; margin-bottom: 12px; width: 100%; flex-shrink: 0; }
-        
         .manual-timer-btn { flex: 1; padding: 18px 20px; border-radius: 20px; background: var(--neon-green); color: white; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 600; transition: 0.3s; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); -webkit-user-select: none; user-select: none; }
         .manual-timer-btn:active { transform: scale(0.98); }
         .manual-timer-btn.active { background: var(--accent-red); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); padding: 12px 20px; justify-content: space-between; }
@@ -180,47 +145,22 @@
         .footer-credit { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border-glass); gap: 8px; font-size: 12px; color: var(--text-dim); width: 100%; justify-content: center; flex-shrink: 0;}
         .footer-logo { width: 22px; height: 22px; border-radius: 50%; }
         
-        /* ----------------------------------------------------------------- */
-        /* การจัดการ Modal ทั่วไป */
-        /* ----------------------------------------------------------------- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(15px); animation: fadeIn 0.3s; overflow: hidden; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        .modal-box.flex-col-box { 
-            background: var(--bg-dark); border: 1px solid var(--border-glass); border-radius: 30px; 
-            width: 95%; max-width: 500px; height: 85vh;
-            display: flex; flex-direction: column; overflow: hidden; 
-            padding: 0; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; 
-        }
+        .modal-box.flex-col-box { background: var(--bg-dark); border: 1px solid var(--border-glass); border-radius: 30px; width: 95%; max-width: 500px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; padding: 0; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; }
         @keyframes popIn { to { transform: scale(1); } }
         
-        .modal-header {
-            position: relative; padding: 20px; flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center;
-        }
+        .modal-header { position: relative; padding: 20px; flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; }
         .modal-header h3 { margin: 0; color: white; font-size: 22px; font-weight: 500; }
         
-        .btn-close-floating { 
-            position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
-            width: 36px; height: 36px; 
-            background: var(--accent-red); color: white; 
-            border-radius: 50%; display: flex; justify-content: center; align-items: center; 
-            font-size: 24px; font-weight: bold; cursor: pointer; z-index: 10001; 
-            border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-            -webkit-tap-highlight-color: transparent; transition: 0.2s;
-        }
+        .btn-close-floating { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); width: 36px; height: 36px; background: var(--accent-red); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; cursor: pointer; z-index: 10001; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.4); -webkit-tap-highlight-color: transparent; transition: 0.2s; }
         .btn-close-floating:active { transform: translateY(-50%) scale(0.9); }
         
-        .modal-content-scroll { 
-            padding: 20px; flex: 1; overflow-y: auto; overflow-x: hidden; 
-            -ms-overflow-style: none; scrollbar-width: none; text-align: center; 
-        }
+        .modal-content-scroll { padding: 20px; flex: 1; overflow-y: auto; overflow-x: hidden; -ms-overflow-style: none; scrollbar-width: none; text-align: center; }
         .modal-content-scroll::-webkit-scrollbar { display: none; }
 
-        .modal-box.standard-box {
-            background: var(--bg-dark); border: 1px solid var(--border-glass); border-radius: 30px; 
-            padding: 30px 20px; width: 90%; max-width: 400px; text-align: center; position: relative; 
-            transform: scale(0.9); animation: popIn 0.3s forwards; 
-        }
+        .modal-box.standard-box { background: var(--bg-dark); border: 1px solid var(--border-glass); border-radius: 30px; padding: 30px 20px; width: 90%; max-width: 400px; text-align: center; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; }
 
         .zoom-content { background: linear-gradient(135deg, #2ecc71, #f1c40f); width: 85%; max-width: 380px; padding: 80px 20px; border-radius: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 2px 10px rgba(255,255,255,0.4); }
         .true-content { position: relative; width: 95%; max-width: 450px; height: 85vh; background: var(--bg-dark); border-radius: 30px; display: flex; flex-direction: column; padding: 10px; border: 1px solid var(--border-glass); }
@@ -241,7 +181,6 @@
         .log-item { background: rgba(0,0,0,0.3); border-left: 3px solid var(--neon-yellow); padding: 10px 15px; margin-bottom: 8px; border-radius: 0 10px 10px 0; text-align: left; font-size: 13px; }
         .log-time { font-size: 11px; color: var(--text-dim); margin-bottom: 3px; }
 
-        /* ซ่อน ghost ตอนลาก sortable */
         .sortable-ghost { opacity: 0.4; background: rgba(255,255,255,0.1); border: 1px dashed var(--neon-yellow); }
         .drag-handle:active { cursor: grabbing !important; }
     </style>
@@ -263,19 +202,18 @@
     
     <div id="mainUserInfo" style="position: absolute; top: 20px; left: 20px; z-index: 100; display: none; align-items: center; gap: 10px;">
         <img id="mainProfilePic" src="https://via.placeholder.com/80" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--neon-green); box-shadow: 0 2px 10px rgba(0,0,0,0.5);" />
-        <div style="text-align: left; display: none;"> <div id="mainUserName" style="font-size: 15px; font-weight: 600; color: white; line-height: 1;">กำลังโหลด...</div>
+        <div style="text-align: left; display: none;"> 
+            <div id="mainUserName" style="font-size: 15px; font-weight: 600; color: white; line-height: 1;">กำลังโหลด...</div>
             <div id="mainUserRole" style="font-size: 12px; font-weight: 500; color: var(--neon-yellow); margin-top: 4px;">...</div>
         </div>
     </div>
 
     <div id="userMenu" style="position: fixed; top: 15px; right: 15px; z-index: 9999; display: none;">
-        <button class="hamburger-btn" onclick="toggleSideMenu(true)">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
+        <button class="hamburger-btn" onclick="toggleSideMenu(true)"><span class="material-symbols-outlined">menu</span></button>
     </div>
 
     <div class="header-container flex-center">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" class="header-icon" />                                        
+        <img id="appHeaderIcon" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" class="header-icon" style="object-fit: cover;" />                                        
         <h2>คำนวณค่าแท็กซี่</h2>
     </div>
                                                   
@@ -367,33 +305,26 @@
             <div id="displayUserName" class="side-user-name">กำลังโหลด...</div>
             <div id="displayUserRole" class="side-user-role">...</div>
         </div>
-        
         <hr class="side-divider">
-        
         <div class="side-menu-items">
             <div class="side-menu-item" onclick="toggleSideMenu(false)">
                 <span class="material-symbols-outlined">home</span>
                 <span>หน้าหลัก</span>
             </div>
-            
             <div id="adminMenuBtn" class="side-menu-item" onclick="toggleSideMenu(false); setTimeout(() => { toggleModal('adminMenuModal', true); }, 300);" style="display: none;">
                 <span class="material-symbols-outlined">manage_accounts</span>
                 <span>จัดการผู้ใช้งาน</span>
             </div>
-            
             <div id="roleSettingsBtn" class="side-menu-item" onclick="toggleSideMenu(false); setTimeout(() => { openRoleSettingsModal(); }, 300);" style="display: none;">
                 <span class="material-symbols-outlined">admin_panel_settings</span>
                 <span>ตั้งค่าสิทธิ์การใช้งาน</span>
             </div>
         </div>
-        
         <hr class="side-divider">
-        
         <div class="side-menu-item logout-item" onclick="toggleSideMenu(false); logoutApp();">
             <span class="material-symbols-outlined">logout</span>
             <span>ออกจากระบบ</span>
         </div>
-        
     </div>
 </div>
 
@@ -405,15 +336,12 @@
             <div style="font-size: 12px; color: var(--text-dim); margin-top: 5px; cursor: pointer;" onclick="document.getElementById('regUploadPicInput').click()">เลือกรูปโปรไฟล์</div>
             <input type="file" id="regUploadPicInput" accept="image/*" style="display: none;" onchange="previewRegProfilePic(event)">
         </div>
-        
         <input type="text" id="authUsername" placeholder="Username (ไม่ต้องใช้ Email)" style="margin-bottom: 15px; text-align: left;" autocomplete="off">
         <input type="text" id="authDisplayName" placeholder="ชื่อที่แสดง (เช่น อาร์ม)" style="margin-bottom: 15px; text-align: left; display: none;" autocomplete="off">
         <input type="password" id="authPassword" placeholder="Password" style="margin-bottom: 25px; text-align: left;" autocomplete="new-password">
-        
         <div style="display: flex; justify-content: center; width: 100%;">
             <button id="authBtn" onclick="loginApp()" class="manual-timer-btn" style="max-width: 250px; justify-content: center;">เข้าสู่ระบบ</button>
         </div>
-        
         <div style="margin-top: 25px; font-size: 14px; color: var(--neon-yellow); cursor: pointer;" onclick="toggleAuthMode()" id="toggleAuthText">
             ยังไม่มีบัญชีใช่ไหม? คลิกเพื่อสร้างบัญชี
         </div>
@@ -428,28 +356,27 @@
         </div>
         
         <div class="modal-content-scroll">
-            <div style="margin-bottom: 20px; display: inline-block; position: relative;">
-                <img id="editProfilePic" src="https://via.placeholder.com/100" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 3px solid var(--neon-green);" onclick="document.getElementById('uploadPicInput').click()">
-                <div id="profilePicHint" style="font-size: 12px; color: var(--text-dim); margin-top: 8px; cursor: pointer;" onclick="document.getElementById('uploadPicInput').click()">แตะเพื่อเปลี่ยนรูปโปรไฟล์</div>
-                <input type="file" id="uploadPicInput" accept="image/*" style="display: none;" onchange="previewProfilePic(event, 'editProfilePic')">
-            </div>
-
-            <label style="text-align: left;">ชื่อที่แสดง</label>
-            <input type="text" id="editDisplayName" style="margin-bottom: 10px; text-align: left;">
             
-            <div style="margin-top: 20px; margin-bottom: 30px; text-align: left;">
-                <label style="color: var(--text-dim); font-size: 13px; text-align: center; display: block;">QR Code รับเงินของคุณ</label>
-                <div style="margin-top: 10px; display: inline-block; position: relative; text-align: center; width: 100%;">
-                    <img id="editQrCodePic" src="https://via.placeholder.com/150?text=Upload+QR" style="width: 180px; height: 180px; object-fit: contain; cursor: pointer; border: 2px dashed var(--border-glass); border-radius: 15px; background: rgba(0,0,0,0.5);" onclick="document.getElementById('uploadQrInput').click()">
-                    <div id="qrPicHint" style="font-size: 12px; color: var(--text-dim); margin-top: 8px; cursor: pointer;" onclick="document.getElementById('uploadQrInput').click()">แตะเพื่ออัปโหลด QR Code</div>
+            <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 30px;">
+                <div style="position: relative; text-align: center;">
+                    <img id="editProfilePic" src="https://via.placeholder.com/100" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 3px solid var(--neon-green);" onclick="document.getElementById('uploadPicInput').click()">
+                    <div id="profilePicHint" style="font-size: 12px; color: var(--text-dim); margin-top: 8px; cursor: pointer;" onclick="document.getElementById('uploadPicInput').click()">แตะเปลี่ยนรูปโปรไฟล์</div>
+                    <input type="file" id="uploadPicInput" accept="image/*" style="display: none;" onchange="previewProfilePic(event, 'editProfilePic')">
+                </div>
+
+                <div style="position: relative; text-align: center;">
+                    <img id="editQrCodePic" src="https://via.placeholder.com/100?text=Upload+QR" style="width: 100px; height: 100px; object-fit: contain; cursor: pointer; border: 2px dashed var(--border-glass); border-radius: 15px; background: rgba(0,0,0,0.5);" onclick="document.getElementById('uploadQrInput').click()">
+                    <div id="qrPicHint" style="font-size: 12px; color: var(--text-dim); margin-top: 8px; cursor: pointer;" onclick="document.getElementById('uploadQrInput').click()">แตะเปลี่ยน QR Code</div>
                     <input type="file" id="uploadQrInput" accept="image/*" style="display: none;" onchange="previewProfilePic(event, 'editQrCodePic')">
                 </div>
             </div>
+
+            <label style="text-align: left;">ชื่อที่แสดง</label>
+            <input type="text" id="editDisplayName" style="margin-bottom: 25px; text-align: left;">
             
             <button onclick="openChangePasswordModal()" class="manual-timer-btn" style="background: var(--accent-red); width: 100%; justify-content: center; margin-bottom: 15px;">
                 <span class="material-symbols-outlined" style="font-size: 20px;">lock</span> เปลี่ยนรหัสผ่าน
             </button>
-            
             <button onclick="saveProfileInfo()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: white;" id="saveProfileBtn">
                 <span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกข้อมูล
             </button>
@@ -461,13 +388,10 @@
     <div class="modal-box standard-box" onclick="event.stopPropagation()">
         <button class="btn-close-floating" onclick="toggleModal('changePasswordModal', false)"><span class="material-symbols-outlined">close</span></button>
         <h3 style="color: white; margin-bottom: 20px;">เปลี่ยนรหัสผ่าน</h3>
-        
         <img id="cpProfilePic" src="https://via.placeholder.com/80" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 20px; border: 2px solid var(--border-glass);">
-        
         <input type="password" id="oldPassword" placeholder="รหัสผ่านเดิม" style="margin-bottom: 15px; text-align: left;" autocomplete="new-password">
         <input type="password" id="newPassword" placeholder="รหัสผ่านใหม่" style="margin-bottom: 15px; text-align: left;" autocomplete="new-password">
         <input type="password" id="confirmPassword" placeholder="ยืนยันรหัสผ่านใหม่" style="margin-bottom: 20px; text-align: left;" autocomplete="new-password">
-        
         <button onclick="savePasswordChange()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: white;" id="savePasswordBtn">
             <span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกรหัสผ่าน
         </button>
@@ -502,23 +426,27 @@
         </div>
         
         <div class="modal-content-scroll">
-            <div style="margin-bottom: 20px; display: inline-block; position: relative;">
-                <img id="adminEditPic" src="https://via.placeholder.com/80" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid #3498db;" onclick="document.getElementById('adminUploadPicInput').click()">
-                <div style="font-size: 12px; color: var(--text-dim); margin-top: 5px; cursor: pointer;" onclick="document.getElementById('adminUploadPicInput').click()">แตะเพื่อเปลี่ยนรูป</div>
-                <input type="file" id="adminUploadPicInput" accept="image/*" style="display: none;" onchange="previewProfilePic(event, 'adminEditPic')">
+            <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 25px;">
+                <div style="position: relative; text-align: center;">
+                    <img id="adminEditPic" src="https://via.placeholder.com/80" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid #3498db;" onclick="document.getElementById('adminUploadPicInput').click()">
+                    <div style="font-size: 11px; color: var(--text-dim); margin-top: 5px; cursor: pointer;" onclick="document.getElementById('adminUploadPicInput').click()">แตะเปลี่ยนรูป</div>
+                    <input type="file" id="adminUploadPicInput" accept="image/*" style="display: none;" onchange="previewProfilePic(event, 'adminEditPic')">
+                </div>
+                
+                <div style="position: relative; text-align: center;">
+                    <img id="adminEditQrPic" src="https://via.placeholder.com/80?text=QR" style="width: 80px; height: 80px; object-fit: contain; cursor: pointer; border: 2px dashed #3498db; border-radius: 15px; background: rgba(0,0,0,0.5);" onclick="document.getElementById('adminUploadQrInput').click()">
+                    <div style="font-size: 11px; color: var(--text-dim); margin-top: 5px; cursor: pointer;" onclick="document.getElementById('adminUploadQrInput').click()">แตะเปลี่ยน QR</div>
+                    <input type="file" id="adminUploadQrInput" accept="image/*" style="display: none;" onchange="previewProfilePic(event, 'adminEditQrPic')">
+                </div>
             </div>
 
             <input type="hidden" id="adminEditUid">
-            
             <label id="adminEditUsernameLabel" style="text-align: left; display: none;">Username</label>
             <input type="text" id="adminEditUsername" style="margin-bottom: 15px; text-align: left;" placeholder="เช่น staff01" autocomplete="off">
-
             <label style="text-align: left;">ชื่อที่แสดง</label>
             <input type="text" id="adminEditName" style="margin-bottom: 15px; text-align: left;" autocomplete="off">
-            
             <label style="text-align: left;" id="adminEditPasswordLabel">รหัสผ่าน (แก้ไขได้)</label>
             <input type="text" id="adminEditPassword" style="margin-bottom: 15px; text-align: left;" placeholder="รหัสผ่าน" autocomplete="new-password">
-            
             <label style="text-align: left;">สิทธิ์การใช้งาน (Role)</label>
             <select id="adminEditRole" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: 20px; outline: none; font-family: 'Kanit';">
                 <option value="User">ผู้ใช้งานทั่วไป (User)</option>
@@ -569,24 +497,19 @@
 
             <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;">
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="perm_canAdd" style="width: 20px; height: 20px;">
-                    <span>สิทธิ์การเพิ่มพนักงานใหม่</span>
+                    <input type="checkbox" id="perm_canAdd" style="width: 20px; height: 20px;"><span>สิทธิ์การเพิ่มพนักงานใหม่</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="perm_canEdit" style="width: 20px; height: 20px;">
-                    <span>สิทธิ์แก้ไขข้อมูลพนักงาน (คนอื่น)</span>
+                    <input type="checkbox" id="perm_canEdit" style="width: 20px; height: 20px;"><span>สิทธิ์แก้ไขข้อมูลพนักงาน (คนอื่น)</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="perm_canBan" style="width: 20px; height: 20px;">
-                    <span>สิทธิ์การแบน / ปลดแบน</span>
+                    <input type="checkbox" id="perm_canBan" style="width: 20px; height: 20px;"><span>สิทธิ์การแบน / ปลดแบน</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="perm_canViewLogs" style="width: 20px; height: 20px;">
-                    <span>สิทธิ์ดูประวัติการใช้งาน (Logs)</span>
+                    <input type="checkbox" id="perm_canViewLogs" style="width: 20px; height: 20px;"><span>สิทธิ์ดูประวัติการใช้งาน (Logs)</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="perm_canEditOwn" style="width: 20px; height: 20px;">
-                    <span>สิทธิ์แก้ไขโปรไฟล์/QR Code ของตัวเอง</span>
+                    <input type="checkbox" id="perm_canEditOwn" style="width: 20px; height: 20px;"><span>สิทธิ์แก้ไขโปรไฟล์/QR Code ของตัวเอง</span>
                 </label>
             </div>
 
@@ -623,15 +546,9 @@
     function formatDuration(totalMins) { if (totalMins < 60) return totalMins + " นาที"; let h = Math.floor(totalMins / 60); let m = totalMins % 60; return h + " ชม. " + (m > 0 ? m + " นาที" : ""); }
 
     window.toggleSideMenu = (show) => {
-        const overlay = $('sideMenuOverlay');
-        const box = $('sideMenuBox');
-        if (show) {
-            overlay.style.display = 'block';
-            setTimeout(() => { overlay.style.opacity = '1'; box.style.right = '0'; }, 10);
-        } else {
-            overlay.style.opacity = '0'; box.style.right = '-320px';
-            setTimeout(() => { overlay.style.display = 'none'; }, 300);
-        }
+        const overlay = $('sideMenuOverlay'); const box = $('sideMenuBox');
+        if (show) { overlay.style.display = 'block'; setTimeout(() => { overlay.style.opacity = '1'; box.style.right = '0'; }, 10); } 
+        else { overlay.style.opacity = '0'; box.style.right = '-320px'; setTimeout(() => { overlay.style.display = 'none'; }, 300); }
     };
 
     window.toggleModal = (id, show) => {
@@ -642,8 +559,7 @@
 
     window.openChangePasswordModal = () => {
         $('oldPassword').value = ''; $('newPassword').value = ''; $('confirmPassword').value = '';
-        $('cpProfilePic').src = $('editProfilePic').src; 
-        toggleModal('changePasswordModal', true);
+        $('cpProfilePic').src = $('editProfilePic').src; toggleModal('changePasswordModal', true);
     };
 
     window.saveHistory = (name, lat, lon) => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]').filter(i => i.name !== name); h.unshift({ name, lat, lon }); localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 10))); };
@@ -684,11 +600,7 @@
 
     window.previewProfilePic = (event, imgId) => {
         const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) { document.getElementById(imgId).src = e.target.result; }
-            reader.readAsDataURL(file);
-        }
+        if (file) { const reader = new FileReader(); reader.onload = function(e) { document.getElementById(imgId).src = e.target.result; }; reader.readAsDataURL(file); }
     };
     window.previewRegProfilePic = (event) => window.previewProfilePic(event, 'regProfilePicPreview');
 </script>
@@ -718,7 +630,6 @@
     window.myCurrentQrCodeURL = "";
     window.myCurrentDisplayName = "";
 
-    // ข้อมูลสิทธิ์การใช้งาน (Permissions) พื้นฐาน จะถูกทับด้วยของใน Database ถ้ามี
     let globalPermissions = {
         Manager: { canAdd: false, canEdit: false, canBan: false, canViewLogs: true, canEditOwn: true },
         User: { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true }
@@ -730,44 +641,41 @@
     let userOnlineStates = {};
     let isInitialUserLoad = true;
     let permsUnsub = null;
-
     window.currentAdminUsers = [];
 
     window.showToast = (msg, isError = false, imgUrl = null) => {
-        const toast = document.getElementById('toastBox');
-        const icon = document.getElementById('toastIcon');
-        const img = document.getElementById('toastImg');
-
+        const toast = document.getElementById('toastBox'); const icon = document.getElementById('toastIcon'); const img = document.getElementById('toastImg');
         document.getElementById('toastMsg').innerText = msg;
-        
-        if (imgUrl && imgUrl.length > 10) {
-            img.src = imgUrl; img.style.display = 'block'; icon.style.display = 'none';
-        } else {
-            img.style.display = 'none'; icon.style.display = 'block';
-            if(isError) { icon.innerText = 'error'; icon.style.color = 'var(--accent-red)'; toast.style.borderColor = 'var(--accent-red)'; } 
-            else { icon.innerText = 'notifications_active'; icon.style.color = 'var(--neon-green)'; toast.style.borderColor = 'var(--neon-green)'; }
-        }
-        
-        toast.style.borderColor = isError ? 'var(--accent-red)' : 'var(--neon-green)';
-        toast.style.display = 'flex';
-        setTimeout(() => { toast.style.display = 'none'; }, 4000);
+        if (imgUrl && imgUrl.length > 10) { img.src = imgUrl; img.style.display = 'block'; icon.style.display = 'none'; } 
+        else { img.style.display = 'none'; icon.style.display = 'block'; if(isError) { icon.innerText = 'error'; icon.style.color = 'var(--accent-red)'; toast.style.borderColor = 'var(--accent-red)'; } else { icon.innerText = 'notifications_active'; icon.style.color = 'var(--neon-green)'; toast.style.borderColor = 'var(--neon-green)'; } }
+        toast.style.borderColor = isError ? 'var(--accent-red)' : 'var(--neon-green)'; toast.style.display = 'flex'; setTimeout(() => { toast.style.display = 'none'; }, 4000);
     };
 
-    const fileToBase64 = async (file) => {
+    // อัปเกรดฟังก์ชันแยกความชัด: ถ้าระบุ isQr = true จะให้ขนาดใหญ่ถึง 800px และความคมชัด 95%
+    const fileToBase64 = async (file, isQr = false) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
                 const img = new Image();
                 img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_SIZE = 300; // ปรับขนาด QR ให้ใหญ่และชัดขึ้นได้นิดนึง
+                    const canvas = document.createElement('canvas'); 
+                    // ถ้าเป็น QR ขยายให้เป็น 800 px จะได้สแกนติดง่ายๆ
+                    const MAX_SIZE = isQr ? 800 : 300; 
                     let width = img.width; let height = img.height;
                     if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } } 
                     else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
-                    canvas.width = width; canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.8)); 
+                    canvas.width = width; canvas.height = height; 
+                    const ctx = canvas.getContext('2d'); 
+                    
+                    // ถมพื้นหลังสีขาวล้วนกันเหนียว (เผื่ออัพไฟล์ PNG พื้นใสมา)
+                    if(isQr) {
+                        ctx.fillStyle = "#FFFFFF";
+                        ctx.fillRect(0, 0, width, height);
+                    }
+                    
+                    ctx.drawImage(img, 0, 0, width, height); 
+                    // ปรับ Quality ภาพ: QR = 95%, รูปทั่วไป = 80%
+                    resolve(canvas.toDataURL('image/jpeg', isQr ? 0.95 : 0.8)); 
                 };
                 img.onerror = () => reject(new Error("ไฟล์รูปเสีย")); img.src = e.target.result;
             };
@@ -777,34 +685,19 @@
 
     const recordActivityLog = async (targetUid, actionTitle, detailDesc) => {
         if(!loggedInUserId) return;
-        try {
-            await addDoc(collection(db, "users", targetUid, "logs"), {
-                action: actionTitle, detail: detailDesc, timestamp: Date.now(),
-                byUid: loggedInUserId, byName: document.getElementById('displayUserName').innerText
-            });
-        } catch(e) {}
+        try { await addDoc(collection(db, "users", targetUid, "logs"), { action: actionTitle, detail: detailDesc, timestamp: Date.now(), byUid: loggedInUserId, byName: document.getElementById('displayUserName').innerText }); } catch(e) {}
     };
 
     function startGlobalUserListener() {
         if(globalUsersUnsub) return;
         globalUsersUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
-            if(isInitialUserLoad) {
-                snapshot.forEach(doc => { userOnlineStates[doc.id] = doc.data().isOnline; });
-                isInitialUserLoad = false;
-                return;
-            }
+            if(isInitialUserLoad) { snapshot.forEach(doc => { userOnlineStates[doc.id] = doc.data().isOnline; }); isInitialUserLoad = false; return; }
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "modified" || change.type === "added") {
-                    const data = change.doc.data();
-                    const oldState = userOnlineStates[change.doc.id];
+                    const data = change.doc.data(); const oldState = userOnlineStates[change.doc.id];
                     if (change.doc.id !== loggedInUserId && oldState !== undefined) {
-                        if (data.isOnline && !oldState) {
-                            window.showToast(`${data.displayName || data.username} เข้าสู่ระบบ`, false, data.photoURL);
-                            onlineAudio.play().catch(e=>{});
-                        } else if (!data.isOnline && oldState) {
-                            window.showToast(`${data.displayName || data.username} ออกจากระบบ`, true, data.photoURL);
-                            offlineAudio.play().catch(e=>{});
-                        }
+                        if (data.isOnline && !oldState) { window.showToast(`${data.displayName || data.username} เข้าสู่ระบบ`, false, data.photoURL); onlineAudio.play().catch(e=>{}); } 
+                        else if (!data.isOnline && oldState) { window.showToast(`${data.displayName || data.username} ออกจากระบบ`, true, data.photoURL); offlineAudio.play().catch(e=>{}); }
                     }
                     userOnlineStates[change.doc.id] = data.isOnline;
                 }
@@ -815,48 +708,34 @@
     function stopGlobalUserListener() {
         if(globalUsersUnsub) { globalUsersUnsub(); globalUsersUnsub = null; }
         if(permsUnsub) { permsUnsub(); permsUnsub = null; }
-        isInitialUserLoad = true;
-        userOnlineStates = {};
+        isInitialUserLoad = true; userOnlineStates = {};
     }
 
-    // ฟังก์ชันอัปเดต UI ให้ตรงกับสิทธิ์การใช้งาน
     window.applyPermissionsUI = () => {
         if(!loggedInUserId) return;
-        
         let isGod = currentUserRole === "Admin";
-        let myPerms = isGod ? 
-            { canAdd: true, canEdit: true, canBan: true, canViewLogs: true, canEditOwn: true } : 
-            (globalPermissions[currentUserRole] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true });
+        let myPerms = isGod ? { canAdd: true, canEdit: true, canBan: true, canViewLogs: true, canEditOwn: true } : (globalPermissions[currentUserRole] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true });
         
-        // ควบคุมเมนูด้านซ้าย
         let showAdminMenu = myPerms.canAdd || myPerms.canEdit || myPerms.canBan || myPerms.canViewLogs;
         document.getElementById('adminMenuBtn').style.display = showAdminMenu ? 'flex' : 'none';
         document.getElementById('roleSettingsBtn').style.display = isGod ? 'flex' : 'none';
         document.getElementById('adminAddUserBtn').style.display = myPerms.canAdd ? 'flex' : 'none';
         document.getElementById('adminRoleNotice').style.display = isGod ? 'none' : 'block';
 
-        // ควบคุมโปรไฟล์
         document.getElementById('saveProfileBtn').style.display = myPerms.canEditOwn !== false ? 'flex' : 'none';
         document.getElementById('editDisplayName').disabled = myPerms.canEditOwn === false;
         document.getElementById('profilePicHint').style.display = myPerms.canEditOwn !== false ? 'block' : 'none';
         document.getElementById('qrPicHint').style.display = myPerms.canEditOwn !== false ? 'block' : 'none';
         
-        // ถ้าหากเปิดหน้าจัดการผู้ใช้อยู่ ให้โหลดซ้ำเพื่ออัปเดตปุ่มข้างใน (Edit/Ban/Logs)
-        if(document.getElementById('adminMenuModal').style.display === 'flex') {
-            if(window.handleAdminModalState) window.handleAdminModalState(true);
-        }
+        if(document.getElementById('adminMenuModal').style.display === 'flex') { if(window.handleAdminModalState) window.handleAdminModalState(true); }
     };
 
     let isLoginMode = true;
     window.toggleAuthMode = () => {
-        isLoginMode = !isLoginMode;
-        document.getElementById('authTitle').innerText = isLoginMode ? "เข้าสู่ระบบ" : "สร้างบัญชีใหม่";
-        document.getElementById('authBtn').innerText = isLoginMode ? "เข้าสู่ระบบ" : "สร้างบัญชีใหม่";
-        document.getElementById('authDisplayName').style.display = isLoginMode ? "none" : "block";
-        document.getElementById('registerPhotoDiv').style.display = isLoginMode ? "none" : "block"; 
+        isLoginMode = !isLoginMode; document.getElementById('authTitle').innerText = isLoginMode ? "เข้าสู่ระบบ" : "สร้างบัญชีใหม่"; document.getElementById('authBtn').innerText = isLoginMode ? "เข้าสู่ระบบ" : "สร้างบัญชีใหม่";
+        document.getElementById('authDisplayName').style.display = isLoginMode ? "none" : "block"; document.getElementById('registerPhotoDiv').style.display = isLoginMode ? "none" : "block"; 
         document.getElementById('toggleAuthText').innerText = isLoginMode ? "ยังไม่มีบัญชีใช่ไหม? คลิกเพื่อสร้างบัญชี" : "มีบัญชีอยู่แล้ว? คลิกเพื่อเข้าสู่ระบบ";
         document.getElementById('authBtn').onclick = isLoginMode ? window.loginApp : window.registerApp;
-        
         document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authDisplayName').value = '';
         if(!isLoginMode) document.getElementById('regProfilePicPreview').src = "https://via.placeholder.com/80";
     };
@@ -864,14 +743,7 @@
     let myUserUnsub = null;
     const listenToMyUser = () => {
         if(!loggedInUserId) return;
-        
-        // ติดตามสิทธิ์การใช้งาน
-        if(!permsUnsub) {
-            permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => {
-                if(docSnap.exists()) { globalPermissions = { ...globalPermissions, ...docSnap.data() }; }
-                window.applyPermissionsUI();
-            });
-        }
+        if(!permsUnsub) { permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { if(docSnap.exists()) { globalPermissions = { ...globalPermissions, ...docSnap.data() }; } window.applyPermissionsUI(); }); }
 
         myUserUnsub = onSnapshot(doc(db, "users", loggedInUserId), (docSnap) => {
             if (docSnap.exists()) {
@@ -879,248 +751,136 @@
                 if(data.isBanned) { window.showToast("บัญชีนี้ถูกระงับการใช้งาน", true); window.logoutApp(true); return; }
                 
                 document.getElementById('appLoader').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'flex'; document.getElementById('userMenu').style.display = 'block'; 
-                document.getElementById('mainUserInfo').style.display = 'flex';
+                document.getElementById('mainApp').style.display = 'flex'; document.getElementById('userMenu').style.display = 'block'; document.getElementById('mainUserInfo').style.display = 'flex';
                 
-                currentUserRole = data.role || "User";
-                let displayNameVal = data.displayName || data.username;
-                window.myCurrentDisplayName = displayNameVal;
-                
-                document.getElementById('displayUserName').innerText = displayNameVal;
-                document.getElementById('mainUserName').innerText = displayNameVal;
+                currentUserRole = data.role || "User"; let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
+                document.getElementById('displayUserName').innerText = displayNameVal; document.getElementById('mainUserName').innerText = displayNameVal;
                 
                 let displayRoleTH = currentUserRole;
-                if(currentUserRole === "Admin") displayRoleTH = "ผู้ดูแลระบบ";
-                else if(currentUserRole === "Manager") displayRoleTH = "ผู้จัดการ";
-                else displayRoleTH = "ผู้ใช้งานทั่วไป";
-                
-                document.getElementById('displayUserRole').innerText = displayRoleTH;
-                document.getElementById('mainUserRole').innerText = displayRoleTH;
-                document.getElementById('editDisplayName').value = data.displayName || "";
+                if(currentUserRole === "Admin") displayRoleTH = "ผู้ดูแลระบบ"; else if(currentUserRole === "Manager") displayRoleTH = "ผู้จัดการ"; else displayRoleTH = "ผู้ใช้งานทั่วไป";
+                document.getElementById('displayUserRole').innerText = displayRoleTH; document.getElementById('mainUserRole').innerText = displayRoleTH; document.getElementById('editDisplayName').value = data.displayName || "";
                 
                 if (data.photoURL && data.photoURL.length > 10) {
                     document.getElementById('profilePic').src = data.photoURL; document.getElementById('editProfilePic').src = data.photoURL; document.getElementById('mainProfilePic').src = data.photoURL;
-                } else { document.getElementById('mainProfilePic').src = "https://via.placeholder.com/80"; }
+                    document.getElementById('appHeaderIcon').src = data.photoURL; document.getElementById('appleIcon').href = data.photoURL; document.getElementById('shortcutIcon').href = data.photoURL;
+                } else { 
+                    document.getElementById('mainProfilePic').src = "https://via.placeholder.com/80"; 
+                    document.getElementById('appHeaderIcon').src = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png";
+                    document.getElementById('appleIcon').href = "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg"; document.getElementById('shortcutIcon').href = "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg";
+                }
 
-                // โหลด QR Code ของคนนี้
-                window.myCurrentQrCodeURL = data.qrCodeURL || "";
-                document.getElementById('editQrCodePic').src = window.myCurrentQrCodeURL || "https://via.placeholder.com/150?text=Upload+QR";
+                window.myCurrentQrCodeURL = data.qrCodeURL || ""; document.getElementById('editQrCodePic').src = window.myCurrentQrCodeURL || "https://via.placeholder.com/100?text=Upload+QR";
 
-                window.applyPermissionsUI();
-                startGlobalUserListener(); 
+                window.applyPermissionsUI(); startGlobalUserListener(); 
             } else { window.logoutApp(true); }
         });
     };
 
-    if (loggedInUserId) { listenToMyUser(); } 
-    else {
-        document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none';
-        document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex';
-    }
-
+    if (loggedInUserId) { listenToMyUser(); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; }
     window.addEventListener('beforeunload', () => { if(loggedInUserId) { setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); } });
 
     window.loginApp = async () => {
-        let inputUsername = document.getElementById('authUsername').value.trim();
-        const pass = document.getElementById('authPassword').value;
+        let inputUsername = document.getElementById('authUsername').value.trim(); const pass = document.getElementById('authPassword').value;
         if(!inputUsername || !pass) return window.showToast("กรุณาใส่ Username และรหัสผ่าน", true);
-        
         document.getElementById('authBtn').innerText = "กำลังเข้าสู่ระบบ...";
         try {
             if (inputUsername === "admin" && pass === "@9dJE7aKe") {
-                const qAdmin = query(collection(db, "users"), where("username", "==", "admin"));
-                const querySnapshotAdmin = await getDocs(qAdmin);
-
+                const qAdmin = query(collection(db, "users"), where("username", "==", "admin")); const querySnapshotAdmin = await getDocs(qAdmin);
                 let adminId = "";
                 if (querySnapshotAdmin.empty) {
-                    const docRef = await addDoc(collection(db, "users"), {
-                        username: "admin", password: "@9dJE7aKe", displayName: "Admin", role: "Admin",
-                        photoURL: "", isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now()
-                    });
+                    const docRef = await addDoc(collection(db, "users"), { username: "admin", password: "@9dJE7aKe", displayName: "Admin", role: "Admin", photoURL: "", isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
                     adminId = docRef.id;
-                } else {
-                    adminId = querySnapshotAdmin.docs[0].id;
-                    await updateDoc(doc(db, "users", adminId), { password: "@9dJE7aKe", role: "Admin", isOnline: true, isBanned: false, lastLoginAt: Date.now() });
-                }
-                loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId);
-                await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
-                window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ";
-                return;
+                } else { adminId = querySnapshotAdmin.docs[0].id; await updateDoc(doc(db, "users", adminId), { password: "@9dJE7aKe", role: "Admin", isOnline: true, isBanned: false, lastLoginAt: Date.now() }); }
+                loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
+                window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
             }
-
-            const q = query(collection(db, "users"), where("username", "==", inputUsername), where("password", "==", pass));
-            const querySnapshot = await getDocs(q);
-            
+            const q = query(collection(db, "users"), where("username", "==", inputUsername), where("password", "==", pass)); const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
                 const userDoc = querySnapshot.docs[0];
                 if (userDoc.data().isBanned) { window.showToast("บัญชีของคุณถูกระงับการใช้งาน", true); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return; }
-                loggedInUserId = userDoc.id; localStorage.setItem('taxi_user_id', loggedInUserId);
-                await setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastLoginAt: Date.now() }, { merge: true });
-                await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ");
-                window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser();
+                loggedInUserId = userDoc.id; localStorage.setItem('taxi_user_id', loggedInUserId); await setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastLoginAt: Date.now() }, { merge: true }); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"); window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser();
             } else { window.showToast("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด", true); }
-        } catch (error) { window.showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ", true); } 
-        finally { document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; }
+        } catch (error) { window.showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ", true); } finally { document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; }
     };
 
     window.registerApp = async () => {
-        let inputUsername = document.getElementById('authUsername').value.trim();
-        let dName = document.getElementById('authDisplayName').value.trim();
-        const pass = document.getElementById('authPassword').value;
-        const fileInput = document.getElementById('regUploadPicInput');
-        
-        if(!inputUsername || !pass || !dName) return window.showToast("กรุณากรอกข้อมูลให้ครบถ้วน", true);
-        if(pass.length < 6) return window.showToast("รหัสผ่านต้องมี 6 ตัวอักษรขึ้นไป", true);
-
+        let inputUsername = document.getElementById('authUsername').value.trim(); let dName = document.getElementById('authDisplayName').value.trim(); const pass = document.getElementById('authPassword').value; const fileInput = document.getElementById('regUploadPicInput');
+        if(!inputUsername || !pass || !dName) return window.showToast("กรุณากรอกข้อมูลให้ครบถ้วน", true); if(pass.length < 6) return window.showToast("รหัสผ่านต้องมี 6 ตัวอักษรขึ้นไป", true);
         document.getElementById('authBtn').innerText = "กำลังสร้างบัญชี...";
-
         try {
-            const q = query(collection(db, "users"), where("username", "==", inputUsername));
-            const existCheck = await getDocs(q);
+            const q = query(collection(db, "users"), where("username", "==", inputUsername)); const existCheck = await getDocs(q);
             if (!existCheck.empty) { window.showToast("Username นี้มีคนใช้แล้ว กรุณาเปลี่ยนใหม่", true); return; }
-
-            let finalPhotoURL = "";
-            if (fileInput.files && fileInput.files.length > 0) { finalPhotoURL = await fileToBase64(fileInput.files[0]); }
-
-            const docRef = await addDoc(collection(db, "users"), {
-                username: inputUsername, password: pass, displayName: dName, role: "User",
-                photoURL: finalPhotoURL, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now()
-            });
-            
-            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId);
-            await recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ");
-            window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser();
-        } catch (error) { window.showToast("เกิดข้อผิดพลาด: " + error.message, true); } 
-        finally { document.getElementById('authBtn').innerText = "สร้างบัญชีใหม่"; }
+            let finalPhotoURL = ""; if (fileInput.files && fileInput.files.length > 0) { finalPhotoURL = await fileToBase64(fileInput.files[0]); }
+            const docRef = await addDoc(collection(db, "users"), { username: inputUsername, password: pass, displayName: dName, role: "User", photoURL: finalPhotoURL, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
+            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser();
+        } catch (error) { window.showToast("เกิดข้อผิดพลาด: " + error.message, true); } finally { document.getElementById('authBtn').innerText = "สร้างบัญชีใหม่"; }
     };
 
     window.logoutApp = async (forced = false) => { 
         if(forced || confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
-            if(loggedInUserId) { 
-                if(!forced) await recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ");
-                await setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); 
-            }
-            
-            stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); loggedInUserId = null;
-            if(myUserUnsub) myUserUnsub();
-            
+            if(loggedInUserId) { if(!forced) await recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ"); await setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); }
+            stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub();
             if(!forced) window.showToast("ออกจากระบบเรียบร้อย");
-            
-            isLoginMode = true; document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ";
-            document.getElementById('authDisplayName').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none";
-            document.getElementById('toggleAuthText').innerText = "ยังไม่มีบัญชีใช่ไหม? คลิกเพื่อสร้างบัญชี"; document.getElementById('authBtn').onclick = window.loginApp;
-            document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authDisplayName').value = '';
-            document.getElementById('regProfilePicPreview').src = "https://via.placeholder.com/80";
-            
-            document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none';
-            document.getElementById('userMenu').style.display = 'none'; document.getElementById('mainUserInfo').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex';
+            isLoginMode = true; document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; document.getElementById('authDisplayName').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none"; document.getElementById('toggleAuthText').innerText = "ยังไม่มีบัญชีใช่ไหม? คลิกเพื่อสร้างบัญชี"; document.getElementById('authBtn').onclick = window.loginApp; document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authDisplayName').value = ''; document.getElementById('regProfilePicPreview').src = "https://via.placeholder.com/80";
+            document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('mainUserInfo').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex';
         }
     };
 
     window.saveProfileInfo = async () => {
         if(!loggedInUserId) return window.showToast("กรุณาล็อกอินใหม่", true);
-        const saveBtn = document.getElementById('saveProfileBtn');
-        saveBtn.innerText = "กำลังบันทึก..."; saveBtn.disabled = true;
-
+        const saveBtn = document.getElementById('saveProfileBtn'); saveBtn.innerText = "กำลังบันทึก..."; saveBtn.disabled = true;
         try {
-            const newName = document.getElementById('editDisplayName').value;
-            const fileInput = document.getElementById('uploadPicInput');
-            const qrInput = document.getElementById('uploadQrInput');
-            
-            let finalPhotoURL = document.getElementById('profilePic').src;
-            let logDetails = [];
-
-            if (fileInput.files && fileInput.files.length > 0) {
-                finalPhotoURL = await fileToBase64(fileInput.files[0]);
-                logDetails.push("เปลี่ยนรูปโปรไฟล์");
-            }
-            
+            const newName = document.getElementById('editDisplayName').value; const fileInput = document.getElementById('uploadPicInput'); const qrInput = document.getElementById('uploadQrInput');
+            let finalPhotoURL = document.getElementById('profilePic').src; let logDetails = [];
+            if (fileInput.files && fileInput.files.length > 0) { finalPhotoURL = await fileToBase64(fileInput.files[0]); logDetails.push("เปลี่ยนรูปโปรไฟล์"); }
             let updatePayload = {};
-            
-            // เช็คว่ามีการอัปโหลด QR ใหม่ไหม
-            if (qrInput.files && qrInput.files.length > 0) {
-                let finalQrURL = await fileToBase64(qrInput.files[0]);
-                updatePayload.qrCodeURL = finalQrURL;
-                logDetails.push("เปลี่ยนรูป QR Code รับเงิน");
-            }
-
+            // ปรับการเรียกฟังก์ชันโดยใส่ parameter true สำหรับรูป QR
+            if (qrInput.files && qrInput.files.length > 0) { let finalQrURL = await fileToBase64(qrInput.files[0], true); updatePayload.qrCodeURL = finalQrURL; logDetails.push("เปลี่ยนรูป QR Code รับเงิน"); }
             if(newName !== document.getElementById('displayUserName').innerText) { logDetails.push(`เปลี่ยนชื่อเป็น '${newName}'`); }
-            
             if(finalPhotoURL !== "https://via.placeholder.com/80") updatePayload.photoURL = finalPhotoURL;
             updatePayload.displayName = newName;
-
             if(Object.keys(updatePayload).length > 0) { await updateDoc(doc(db, "users", loggedInUserId), updatePayload); }
             if(logDetails.length > 0) { await recordActivityLog(loggedInUserId, "แก้ไขโปรไฟล์", logDetails.join(', ')); }
-            
             window.toggleModal('profileModal', false); window.showToast("อัปเดตโปรไฟล์สำเร็จ!");
-        } catch (error) { window.showToast("แจ้งเตือน: " + error.message, true); } 
-        finally { saveBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกข้อมูล`; saveBtn.disabled = false; }
+        } catch (error) { window.showToast("แจ้งเตือน: " + error.message, true); } finally { saveBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกข้อมูล`; saveBtn.disabled = false; }
     };
 
     window.savePasswordChange = async () => {
         if(!loggedInUserId) return window.showToast("กรุณาล็อกอินใหม่", true);
         const oldPass = document.getElementById('oldPassword').value; const newPass = document.getElementById('newPassword').value; const confPass = document.getElementById('confirmPassword').value;
-
-        if (!oldPass || !newPass || !confPass) { return window.showToast("กรุณากรอกข้อมูลให้ครบ", true); }
-        if (newPass !== confPass) { return window.showToast("รหัสผ่านใหม่ไม่ตรงกัน", true); }
-        if (newPass.length < 6) { return window.showToast("รหัสผ่านต้องมี 6 ตัวอักษรขึ้นไป", true); }
-
-        const saveBtn = document.getElementById('savePasswordBtn');
-        saveBtn.innerText = "กำลังบันทึก..."; saveBtn.disabled = true;
-
+        if (!oldPass || !newPass || !confPass) { return window.showToast("กรุณากรอกข้อมูลให้ครบ", true); } if (newPass !== confPass) { return window.showToast("รหัสผ่านใหม่ไม่ตรงกัน", true); } if (newPass.length < 6) { return window.showToast("รหัสผ่านต้องมี 6 ตัวอักษรขึ้นไป", true); }
+        const saveBtn = document.getElementById('savePasswordBtn'); saveBtn.innerText = "กำลังบันทึก..."; saveBtn.disabled = true;
         try {
-            const docSnap = await getDoc(doc(db, "users", loggedInUserId));
-            if(docSnap.data().password !== oldPass) { throw new Error("รหัสผ่านเดิมไม่ถูกต้อง"); }
-
-            await updateDoc(doc(db, "users", loggedInUserId), { password: newPass });
-            await recordActivityLog(loggedInUserId, "เปลี่ยนรหัสผ่าน", "ผู้ใช้เปลี่ยนรหัสผ่านสำเร็จ");
-            
+            const docSnap = await getDoc(doc(db, "users", loggedInUserId)); if(docSnap.data().password !== oldPass) { throw new Error("รหัสผ่านเดิมไม่ถูกต้อง"); }
+            await updateDoc(doc(db, "users", loggedInUserId), { password: newPass }); await recordActivityLog(loggedInUserId, "เปลี่ยนรหัสผ่าน", "ผู้ใช้เปลี่ยนรหัสผ่านสำเร็จ");
             window.toggleModal('changePasswordModal', false); window.showToast("เปลี่ยนรหัสผ่านสำเร็จ!");
-        } catch (error) { window.showToast("แจ้งเตือน: " + error.message, true); } 
-        finally { saveBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกรหัสผ่าน`; saveBtn.disabled = false; }
+        } catch (error) { window.showToast("แจ้งเตือน: " + error.message, true); } finally { saveBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกรหัสผ่าน`; saveBtn.disabled = false; }
     };
 
-    const formatDate = (timestamp) => {
-        if(!timestamp) return "-"; const d = new Date(timestamp);
-        return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    };
+    const formatDate = (timestamp) => { if(!timestamp) return "-"; const d = new Date(timestamp); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
 
     let adminSnapshotUnsub = null;
     window.handleAdminModalState = (isOpen) => {
         if(isOpen) {
-            let isGod = currentUserRole === "Admin";
-            let myPerms = isGod ? { canAdd: true, canEdit: true, canBan: true, canViewLogs: true } : (globalPermissions[currentUserRole] || {});
-
+            let isGod = currentUserRole === "Admin"; let myPerms = isGod ? { canAdd: true, canEdit: true, canBan: true, canViewLogs: true } : (globalPermissions[currentUserRole] || {});
             if(adminSnapshotUnsub) adminSnapshotUnsub();
             adminSnapshotUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
                 window.currentAdminUsers = [];
-                snapshot.forEach((doc) => {
-                    let d = doc.data(); d.uid = doc.id;
-                    if(d.order === undefined) d.order = Date.now(); 
-                    window.currentAdminUsers.push(d);
-                });
-                
+                snapshot.forEach((doc) => { let d = doc.data(); d.uid = doc.id; if(d.order === undefined) d.order = Date.now(); window.currentAdminUsers.push(d); });
                 window.currentAdminUsers.sort((a,b) => a.order - b.order);
-
                 let html = '';
                 window.currentAdminUsers.forEach((u) => {
                     let uid = u.uid; let statusHtml = '';
-                    if(u.isBanned) { statusHtml = '<span class="status-dot status-banned"></span><span style="color:var(--accent-red)">ถูกระงับ (Ban)</span>'; }
-                    else if(u.isOnline) { statusHtml = '<span class="status-dot status-online"></span><span style="color:var(--neon-green)">ออนไลน์</span>'; }
-                    else { statusHtml = '<span class="status-dot status-offline"></span><span style="color:#a0a5b5">ออฟไลน์</span>'; }
-                    
+                    if(u.isBanned) { statusHtml = '<span class="status-dot status-banned"></span><span style="color:var(--accent-red)">ถูกระงับ (Ban)</span>'; } else if(u.isOnline) { statusHtml = '<span class="status-dot status-online"></span><span style="color:var(--neon-green)">ออนไลน์</span>'; } else { statusHtml = '<span class="status-dot status-offline"></span><span style="color:#a0a5b5">ออฟไลน์</span>'; }
                     let lastLoginTxt = u.lastLoginAt ? `<br><span style="color:var(--neon-yellow); font-size:11px;"><span class="material-symbols-outlined" style="font-size:12px; vertical-align:middle;">lightbulb</span> เข้าใช้: ${formatDate(u.lastLoginAt)}</span>` : '';
-                    let safePhoto = u.photoURL && u.photoURL.length > 10 ? u.photoURL : 'https://via.placeholder.com/40';
-                    let safeName = u.displayName || u.username;
-                    let safeRole = u.role || 'User';
-                    let safeUsername = u.username || '';
-                    let safePassword = u.password || '';
-
-                    // ไอคอน Drag โชว์เฉพาะตอนมีสิทธิ์แก้ไข
+                    let safePhoto = u.photoURL && u.photoURL.length > 10 ? u.photoURL : 'https://via.placeholder.com/40'; let safeName = u.displayName || u.username; let safeRole = u.role || 'User'; let safeUsername = u.username || '';
+                    
                     let dragHandleHtml = myPerms.canEdit ? `<div class="drag-handle" style="display:flex; align-items:center; cursor:grab; padding-right:5px; touch-action:none;"><span class="material-symbols-outlined" style="color: rgba(255,255,255,0.4); font-size: 28px;">drag_indicator</span></div>` : '';
-
                     let quickBanBtn = ''; let editBtnHtml = ''; let logsBtn = '';
-                    let canTouchThisUser = isGod || (safeRole !== "Admin"); // Non-Admin ห้ามยุ่งกับ Admin
+                    let canTouchThisUser = isGod || (safeRole !== "Admin"); 
+                    
+                    let canViewThisLog = myPerms.canViewLogs;
+                    if (safeRole === "Admin" && currentUserRole !== "Admin") { canViewThisLog = false; }
                     
                     if(canTouchThisUser) {
                         if(myPerms.canBan) {
@@ -1128,171 +888,100 @@
                             else quickBanBtn = `<button onclick="quickBanToggle('${uid}', true, '${safeName}')" style="background:rgba(255, 71, 87, 0.1); border:1px solid rgba(255, 71, 87, 0.3); color:var(--accent-red); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="แบน"><span class="material-symbols-outlined" style="font-size:18px;">block</span></button>`;
                         }
                         if(myPerms.canEdit) {
-                            editBtnHtml = `<button onclick="openAdminEditUser('${uid}', '${safeUsername}', '${safeName}', '${safePhoto}', '${safeRole}', '${safePassword}', ${u.isBanned || false})" style="background:rgba(52, 152, 219, 0.1); border:1px solid rgba(52, 152, 219, 0.3); color:#3498db; width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="แก้ไข"><span class="material-symbols-outlined" style="font-size:18px;">edit</span></button>`;
+                            editBtnHtml = `<button onclick="openAdminEditUser('${uid}')" style="background:rgba(52, 152, 219, 0.1); border:1px solid rgba(52, 152, 219, 0.3); color:#3498db; width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="แก้ไข"><span class="material-symbols-outlined" style="font-size:18px;">edit</span></button>`;
                         }
                     }
-                    if(myPerms.canViewLogs) {
-                        logsBtn = `<button onclick="viewUserLogs('${uid}', '${safeName}')" style="background:rgba(241, 196, 15, 0.1); border:1px solid rgba(241, 196, 15, 0.3); color:var(--neon-yellow); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ประวัติ"><span class="material-symbols-outlined" style="font-size:18px;">history</span></button>`;
-                    }
+                    if(canViewThisLog) { logsBtn = `<button onclick="viewUserLogs('${uid}', '${safeName}')" style="background:rgba(241, 196, 15, 0.1); border:1px solid rgba(241, 196, 15, 0.3); color:var(--neon-yellow); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ประวัติ"><span class="material-symbols-outlined" style="font-size:18px;">history</span></button>`; }
 
-                    html += `<div class="admin-user-card">
-                        ${dragHandleHtml}
-                        <img src="${safePhoto}" style="width:45px;height:45px;border-radius:50%;object-fit:cover;border:1px solid #fff;">
-                        <div style="flex:1; min-width:0;">
-                            <div style="color:white; font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeName} <span style="font-size:11px; color:var(--neon-yellow);">[${safeRole}]</span></div>
-                            <div style="font-size:11px; color: #a0a5b5; margin-top:2px;">User: <span style="color:white;">${safeUsername}</span></div>
-                            <div style="font-size:11px; margin-top:4px;">${statusHtml} ${lastLoginTxt}</div>
-                        </div>
-                        <div style="display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end;">
-                            ${quickBanBtn}
-                            ${editBtnHtml}
-                            ${logsBtn}
-                        </div>
-                    </div>`;
+                    html += `<div class="admin-user-card">${dragHandleHtml}<img src="${safePhoto}" style="width:45px;height:45px;border-radius:50%;object-fit:cover;border:1px solid #fff;"><div style="flex:1; min-width:0;"><div style="color:white; font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeName} <span style="font-size:11px; color:var(--neon-yellow);">[${safeRole}]</span></div><div style="font-size:11px; color: #a0a5b5; margin-top:2px;">User: <span style="color:white;">${safeUsername}</span></div><div style="font-size:11px; margin-top:4px;">${statusHtml} ${lastLoginTxt}</div></div><div style="display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end;">${quickBanBtn}${editBtnHtml}${logsBtn}</div></div>`;
                 });
                 document.getElementById('adminUserList').innerHTML = html || '<div style="padding: 20px; color: gray;">ไม่พบข้อมูล</div>';
 
                 if(myPerms.canEdit) {
                     if(window.adminSortable) { window.adminSortable.destroy(); }
-                    window.adminSortable = new Sortable(document.getElementById('adminUserList'), {
-                        animation: 150, delay: 200, delayOnTouchOnly: true, handle: '.drag-handle', ghostClass: 'sortable-ghost',
+                    window.adminSortable = new Sortable(document.getElementById('adminUserList'), { animation: 150, delay: 200, delayOnTouchOnly: true, handle: '.drag-handle', ghostClass: 'sortable-ghost',
                         onEnd: async function (evt) {
-                            if(evt.oldIndex === evt.newIndex) return;
-                            const movedItem = window.currentAdminUsers.splice(evt.oldIndex, 1)[0];
-                            window.currentAdminUsers.splice(evt.newIndex, 0, movedItem);
-
+                            if(evt.oldIndex === evt.newIndex) return; const movedItem = window.currentAdminUsers.splice(evt.oldIndex, 1)[0]; window.currentAdminUsers.splice(evt.newIndex, 0, movedItem);
                             const batch = writeBatch(db); let baseTime = Date.now();
-                            window.currentAdminUsers.forEach((u, index) => {
-                                const userRef = doc(db, "users", u.uid); batch.update(userRef, { order: baseTime + index });
-                            });
+                            window.currentAdminUsers.forEach((u, index) => { const userRef = doc(db, "users", u.uid); batch.update(userRef, { order: baseTime + index }); });
                             try { await batch.commit(); } catch(e) { window.showToast("อัปเดตลำดับล้มเหลว", true); }
                         }
                     });
                 }
             });
-        } else {
-            if(adminSnapshotUnsub) adminSnapshotUnsub();
-        }
+        } else { if(adminSnapshotUnsub) adminSnapshotUnsub(); }
     };
 
-    window.openRoleSettingsModal = () => {
-        window.toggleModal('roleSettingsModal', true);
-        window.loadRolePermissionsToUI();
-    };
-
+    window.openRoleSettingsModal = () => { window.toggleModal('roleSettingsModal', true); window.loadRolePermissionsToUI(); };
     window.loadRolePermissionsToUI = () => {
-        let role = document.getElementById('settingRoleSelect').value;
-        let perms = globalPermissions[role] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true };
-        
-        document.getElementById('perm_canAdd').checked = perms.canAdd;
-        document.getElementById('perm_canEdit').checked = perms.canEdit;
-        document.getElementById('perm_canBan').checked = perms.canBan;
-        document.getElementById('perm_canViewLogs').checked = perms.canViewLogs;
-        document.getElementById('perm_canEditOwn').checked = perms.canEditOwn !== false;
+        let role = document.getElementById('settingRoleSelect').value; let perms = globalPermissions[role] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true };
+        document.getElementById('perm_canAdd').checked = perms.canAdd; document.getElementById('perm_canEdit').checked = perms.canEdit; document.getElementById('perm_canBan').checked = perms.canBan; document.getElementById('perm_canViewLogs').checked = perms.canViewLogs; document.getElementById('perm_canEditOwn').checked = perms.canEditOwn !== false;
     };
 
     window.saveRolePermissions = async () => {
-        let role = document.getElementById('settingRoleSelect').value;
-        let btn = document.getElementById('saveRolePermBtn');
-        btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
-
-        let newPerms = {
-            canAdd: document.getElementById('perm_canAdd').checked,
-            canEdit: document.getElementById('perm_canEdit').checked,
-            canBan: document.getElementById('perm_canBan').checked,
-            canViewLogs: document.getElementById('perm_canViewLogs').checked,
-            canEditOwn: document.getElementById('perm_canEditOwn').checked
-        };
-
-        try {
-            await setDoc(doc(db, "settings", "roles"), { [role]: newPerms }, { merge: true });
-            window.showToast(`บันทึกสิทธิ์สำหรับ ${role} สำเร็จ`);
-            window.toggleModal('roleSettingsModal', false);
-        } catch(e) { window.showToast("บันทึกล้มเหลว", true); } 
-        finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์`; btn.disabled = false; }
+        let role = document.getElementById('settingRoleSelect').value; let btn = document.getElementById('saveRolePermBtn'); btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
+        let newPerms = { canAdd: document.getElementById('perm_canAdd').checked, canEdit: document.getElementById('perm_canEdit').checked, canBan: document.getElementById('perm_canBan').checked, canViewLogs: document.getElementById('perm_canViewLogs').checked, canEditOwn: document.getElementById('perm_canEditOwn').checked };
+        try { await setDoc(doc(db, "settings", "roles"), { [role]: newPerms }, { merge: true }); window.showToast(`บันทึกสิทธิ์สำหรับ ${role} สำเร็จ`); window.toggleModal('roleSettingsModal', false); } catch(e) { window.showToast("บันทึกล้มเหลว", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์`; btn.disabled = false; }
     };
 
     window.quickBanToggle = async (uid, isBan, userName) => {
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true);
         if(confirm(`ยืนยันการ '${isBan ? 'ระงับ' : 'ปลดระงับ'}' บัญชี ${userName} ใช่หรือไม่?`)) {
-            try {
-                await updateDoc(doc(db, "users", uid), { isBanned: isBan });
-                await recordActivityLog(uid, isBan ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`);
-                window.showToast(isBan ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย");
-            } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); }
+            try { await updateDoc(doc(db, "users", uid), { isBanned: isBan }); await recordActivityLog(uid, isBan ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`); window.showToast(isBan ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); }
         }
     };
 
     let currentEditUid = "";
     window.openAdminAddUser = () => {
         currentEditUid = ""; isBannedState = false;
-        
-        document.getElementById('adminEditUid').value = ""; document.getElementById('adminEditUsername').value = "";
-        document.getElementById('adminEditUsername').disabled = false; document.getElementById('adminEditUsernameLabel').style.display = "block";
-        document.getElementById('adminEditName').value = ""; document.getElementById('adminEditPic').src = "https://via.placeholder.com/80";
-        document.getElementById('adminEditRole').value = "User"; document.getElementById('adminEditPassword').value = "";
-        document.getElementById('adminUploadPicInput').value = '';
-        
-        document.getElementById('adminEditRole').disabled = currentUserRole !== "Admin"; // เฉพาะแอดมินสูงสุดเปลี่ยน Role ได้
-
-        document.getElementById('adminEditModalTitle').innerText = "เพิ่มผู้ใช้งานใหม่";
-        document.getElementById('deleteUserBtn').style.display = 'none'; document.getElementById('banUserBtn').style.display = 'none'; 
-        
+        document.getElementById('adminEditUid').value = ""; document.getElementById('adminEditUsername').value = ""; document.getElementById('adminEditUsername').disabled = false; document.getElementById('adminEditUsernameLabel').style.display = "block"; document.getElementById('adminEditName').value = ""; document.getElementById('adminEditPic').src = "https://via.placeholder.com/80"; 
+        document.getElementById('adminEditQrPic').src = "https://via.placeholder.com/80?text=QR";
+        document.getElementById('adminEditRole').value = "User"; document.getElementById('adminEditPassword').value = ""; document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = '';
+        document.getElementById('adminEditRole').disabled = currentUserRole !== "Admin"; 
+        document.getElementById('adminEditModalTitle').innerText = "เพิ่มผู้ใช้งานใหม่"; document.getElementById('deleteUserBtn').style.display = 'none'; document.getElementById('banUserBtn').style.display = 'none'; 
         window.toggleModal('adminMenuModal', false); window.toggleModal('adminEditUserModal', true);
     };
 
-    window.openAdminEditUser = (uid, username, name, photo, role, password, isBanned) => {
-        currentEditUid = uid; isBannedState = isBanned;
+    window.openAdminEditUser = (uid) => {
+        let u = window.currentAdminUsers.find(x => x.uid === uid);
+        if(!u) return;
+        currentEditUid = uid; isBannedState = u.isBanned || false;
         
-        document.getElementById('adminEditUid').value = uid; document.getElementById('adminEditUsername').value = username;
+        document.getElementById('adminEditUid').value = uid; 
+        document.getElementById('adminEditUsername').value = u.username || '';
         document.getElementById('adminEditUsername').disabled = true; document.getElementById('adminEditUsernameLabel').style.display = "block";
-        document.getElementById('adminEditName').value = name; document.getElementById('adminEditPic').src = photo;
-        document.getElementById('adminEditRole').value = role;
-        
-        document.getElementById('adminEditPasswordLabel').innerText = "รหัสผ่าน (แก้ไขได้)"; document.getElementById('adminEditPassword').value = password || '';
-        document.getElementById('adminUploadPicInput').value = '';
+        document.getElementById('adminEditName').value = u.displayName || u.username; 
+        document.getElementById('adminEditPic').src = (u.photoURL && u.photoURL.length > 10) ? u.photoURL : "https://via.placeholder.com/80";
+        document.getElementById('adminEditQrPic').src = (u.qrCodeURL && u.qrCodeURL.length > 10) ? u.qrCodeURL : "https://via.placeholder.com/80?text=QR";
+        document.getElementById('adminEditRole').value = u.role || 'User';
+        document.getElementById('adminEditPasswordLabel').innerText = "รหัสผ่าน (แก้ไขได้)"; document.getElementById('adminEditPassword').value = u.password || '';
+        document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = '';
         
         document.getElementById('adminEditModalTitle').innerText = "จัดการผู้ใช้";
         document.getElementById('adminEditRole').disabled = currentUserRole !== "Admin";
 
-        let isGod = currentUserRole === "Admin";
-        let myPerms = isGod ? { canBan: true } : (globalPermissions[currentUserRole] || {});
-
+        let isGod = currentUserRole === "Admin"; let myPerms = isGod ? { canBan: true } : (globalPermissions[currentUserRole] || {});
         if(myPerms.canBan) {
-            document.getElementById('banUserBtn').style.display = 'flex';
-            const banBtn = document.getElementById('banUserBtn'); const banIcon = document.getElementById('banIcon'); const banText = document.getElementById('banText');
+            document.getElementById('banUserBtn').style.display = 'flex'; const banBtn = document.getElementById('banUserBtn'); const banIcon = document.getElementById('banIcon'); const banText = document.getElementById('banText');
             if(isBannedState) { banBtn.style.background = 'var(--neon-green)'; banIcon.innerText = 'check_circle'; banText.innerText = 'ปลดระงับการใช้งาน'; } 
             else { banBtn.style.background = 'var(--accent-red)'; banIcon.innerText = 'block'; banText.innerText = 'ระงับการใช้งาน (Ban)'; }
-        } else {
-            document.getElementById('banUserBtn').style.display = 'none';
-        }
+        } else { document.getElementById('banUserBtn').style.display = 'none'; }
         
-        document.getElementById('deleteUserBtn').style.display = isGod ? 'flex' : 'none'; // ลบให้สิทธิ์เฉพาะ Admin เท่านั้น
+        document.getElementById('deleteUserBtn').style.display = isGod ? 'flex' : 'none'; 
         window.toggleModal('adminEditUserModal', true);
     };
 
     window.toggleBanUser = async () => {
-        const uid = currentEditUid;
-        if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true);
-        const newState = !isBannedState;
+        const uid = currentEditUid; if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true); const newState = !isBannedState;
         const msg = newState ? "ยืนยันการ 'ระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?\nผู้ใช้จะหลุดจากระบบและเข้าไม่ได้อีก" : "ยืนยันการ 'ปลดระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?";
-        
-        if(confirm(msg)) {
-            try {
-                await updateDoc(doc(db, "users", uid), { isBanned: newState });
-                await recordActivityLog(uid, newState ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`);
-                window.showToast(newState ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); window.toggleModal('adminEditUserModal', false);
-            } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); }
-        }
+        if(confirm(msg)) { try { await updateDoc(doc(db, "users", uid), { isBanned: newState }); await recordActivityLog(uid, newState ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`); window.showToast(newState ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); window.toggleModal('adminEditUserModal', false); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); } }
     }
 
     window.saveAdminUserEdit = async () => {
         const uid = document.getElementById('adminEditUid').value;
-        const newUsername = document.getElementById('adminEditUsername').value.trim();
-        const newName = document.getElementById('adminEditName').value;
-        const newRole = document.getElementById('adminEditRole').value;
-        const newPassword = document.getElementById('adminEditPassword').value;
-        const fileInput = document.getElementById('adminUploadPicInput');
+        const newUsername = document.getElementById('adminEditUsername').value.trim(); const newName = document.getElementById('adminEditName').value;
+        const newRole = document.getElementById('adminEditRole').value; const newPassword = document.getElementById('adminEditPassword').value;
+        const fileInput = document.getElementById('adminUploadPicInput'); const qrInput = document.getElementById('adminUploadQrInput');
         const btn = document.getElementById('saveAdminUserBtn');
 
         btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
@@ -1304,14 +993,16 @@
                 if (!newUsername || !newPassword || !newName) { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก`; btn.disabled = false; return window.showToast("กรุณากรอกข้อมูลให้ครบถ้วน", true); }
                 if (newPassword.length < 1) { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก`; btn.disabled = false; return window.showToast("รหัสผ่านต้องมีอย่างน้อย 1 ตัวอักษร", true); }
 
-                const q = query(collection(db, "users"), where("username", "==", newUsername));
-                const existCheck = await getDocs(q);
+                const q = query(collection(db, "users"), where("username", "==", newUsername)); const existCheck = await getDocs(q);
                 if (!existCheck.empty) { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก`; btn.disabled = false; return window.showToast("Username นี้ถูกใช้งานแล้ว", true); }
                 if (fileInput.files && fileInput.files.length > 0) { photoUpdate = await fileToBase64(fileInput.files[0]); }
+                
+                // ปรับการเรียกฟังก์ชันโดยใส่ parameter true สำหรับรูป QR ในฝั่งแอดมิน
+                let qrUpdate = ""; if (qrInput.files && qrInput.files.length > 0) { qrUpdate = await fileToBase64(qrInput.files[0], true); }
 
                 await addDoc(collection(db, "users"), {
                     username: newUsername, password: newPassword, displayName: newName, role: newRole,
-                    photoURL: photoUpdate, isOnline: false, isBanned: false, lastLoginAt: null, order: Date.now()
+                    photoURL: photoUpdate, qrCodeURL: qrUpdate, isOnline: false, isBanned: false, lastLoginAt: null, order: Date.now()
                 });
 
                 await recordActivityLog(loggedInUserId, "เพิ่มผู้ใช้งานใหม่", `ชื่อ: ${newName}, สิทธิ์: ${newRole}`);
@@ -1324,54 +1015,39 @@
                 if(currentUserRole === "Admin") { updatePayload.role = newRole; logDetail += `, สิทธิ์: ${newRole}`; }
                 if (newPassword.trim().length >= 1) { updatePayload.password = newPassword.trim(); logDetail += " และเปลี่ยนรหัสผ่าน"; }
                 if (fileInput.files && fileInput.files.length > 0) { photoUpdate = await fileToBase64(fileInput.files[0]); updatePayload.photoURL = photoUpdate; logDetail += " และอัปเดตรูปภาพ"; }
+                
+                // ปรับการเรียกฟังก์ชันโดยใส่ parameter true สำหรับรูป QR ในฝั่งแอดมิน
+                if (qrInput.files && qrInput.files.length > 0) { let finalQr = await fileToBase64(qrInput.files[0], true); updatePayload.qrCodeURL = finalQr; logDetail += " และอัปเดต QR Code"; }
 
                 await updateDoc(doc(db, "users", uid), updatePayload);
                 await recordActivityLog(uid, "ผู้ดูแลระบบแก้ไขข้อมูล", logDetail);
-
                 window.showToast("อัปเดตข้อมูลผู้ใช้เรียบร้อย!"); window.toggleModal('adminEditUserModal', false);
             }
-        } catch(e) { window.showToast("เกิดข้อผิดพลาด", true); } 
-        finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก`; btn.disabled = false; }
+        } catch(e) { window.showToast("เกิดข้อผิดพลาด", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก`; btn.disabled = false; }
     };
 
     window.deleteAdminUser = async () => {
-        const uid = currentEditUid;
-        if(uid === loggedInUserId) return window.showToast("ไม่สามารถลบบัญชีตัวเองขณะใช้งานได้", true);
+        const uid = currentEditUid; if(uid === loggedInUserId) return window.showToast("ไม่สามารถลบบัญชีตัวเองขณะใช้งานได้", true);
         if(confirm("ยืนยันการ 'ลบบัญชีผู้ใช้' ถาวรใช่หรือไม่?\nผู้ใช้งานรายนี้จะไม่สามารถเข้าสู่ระบบได้อีกต่อไป")) {
-            try {
-                await deleteDoc(doc(db, "users", uid));
-                window.showToast("ลบบัญชีผู้ใช้เรียบร้อยแล้ว"); window.toggleModal('adminEditUserModal', false);
-            } catch(e) { window.showToast("เกิดข้อผิดพลาดในการลบข้อมูล", true); }
+            try { await deleteDoc(doc(db, "users", uid)); window.showToast("ลบบัญชีผู้ใช้เรียบร้อยแล้ว"); window.toggleModal('adminEditUserModal', false); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการลบข้อมูล", true); }
         }
     };
 
     window.viewUserLogs = async (uid, userName) => {
         window.toggleModal('activityLogModal', true);
         const listDiv = document.getElementById('activityLogList'); listDiv.innerHTML = '<div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลด...</div>';
-        
         try {
             const q = query(collection(db, "users", uid, "logs"), orderBy("timestamp", "desc")); const querySnapshot = await getDocs(q);
             let html = `<div style="font-size:14px; margin-bottom:15px; color:var(--neon-yellow); text-align:center;">ประวัติของ: ${userName}</div>`;
             if(querySnapshot.empty) { html += `<div style="text-align:center; color:var(--text-dim); font-size:12px;">ไม่มีประวัติการทำรายการ</div>`; } 
-            else {
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    html += `<div class="log-item"><div class="log-time">${formatDate(data.timestamp)}</div><div style="font-weight:600; color:white;">${data.action}</div><div style="color:#ccc; margin-top:3px;">${data.detail}</div></div>`;
-                });
-            }
+            else { querySnapshot.forEach((doc) => { const data = doc.data(); html += `<div class="log-item"><div class="log-time">${formatDate(data.timestamp)}</div><div style="font-weight:600; color:white;">${data.action}</div><div style="color:#ccc; margin-top:3px;">${data.detail}</div></div>`; }); }
             listDiv.innerHTML = html;
         } catch(e) { listDiv.innerHTML = '<div style="color: var(--accent-red); text-align: center; padding: 20px;">เกิดข้อผิดพลาดในการโหลดประวัติ</div>'; }
     };
 
-    // เปิด QR Code ส่วนตัว
     window.openMainQrCode = () => {
-        if(!window.myCurrentQrCodeURL || window.myCurrentQrCodeURL.length < 10) {
-            window.showToast("คุณยังไม่ได้ตั้งค่า QR Code รับเงิน กรุณาตั้งค่าในเมนูโปรไฟล์", true);
-            return;
-        }
-        document.getElementById('mainScreenQrImg').src = window.myCurrentQrCodeURL;
-        document.getElementById('qrNameText').innerText = window.myCurrentDisplayName;
-        toggleModal('qrOverlay', true);
+        if(!window.myCurrentQrCodeURL || window.myCurrentQrCodeURL.length < 10) { window.showToast("คุณยังไม่ได้ตั้งค่า QR Code รับเงิน กรุณาตั้งค่าในเมนูโปรไฟล์", true); return; }
+        document.getElementById('mainScreenQrImg').src = window.myCurrentQrCodeURL; document.getElementById('qrNameText').innerText = window.myCurrentDisplayName; toggleModal('qrOverlay', true);
     };
 </script>
 </body>
