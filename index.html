@@ -63,7 +63,7 @@
         .side-menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100000; display: none; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(5px); }
         .side-menu { position: fixed; top: 0; right: -320px; width: 280px; height: 100%; background: #0d0f17; border-left: 1px solid rgba(255,255,255,0.05); box-shadow: -10px 0 40px rgba(0,0,0,0.9); transition: right 0.3s ease-in-out; display: flex; flex-direction: column; padding: 40px 20px; box-sizing: border-box; }
         .side-menu-header { text-align: center; margin-bottom: 25px; }
-        .side-profile-pic { width: 90px; height: 90px; border-radius: 50%; border: 3px solid #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.4); object-fit: cover; cursor: pointer; margin-bottom: 15px; transition: 0.3s; }
+        .side-profile-pic { width: 90px; height: 90px; border-radius: 50%; border: 3px solid #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.4); object-fit: cover; cursor: margin-bottom: 15px; transition: 0.3s; }
         .side-profile-pic:active { transform: scale(0.95); }
         .side-user-name { font-size: 22px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; }
         .side-user-role { font-size: 15px; font-weight: 600; color: #f39c12; margin-top: 2px; }
@@ -620,6 +620,10 @@
                     <input type="checkbox" id="perm_canManageService" style="width: 20px; height: 20px;">
                     <span style="color: #00bcd4; font-weight: 600;">สิทธิ์จัดการ Service Portal (เพิ่ม/ลบ/จัดเรียง)</span>
                 </label>
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; margin-top: 5px;">
+                    <input type="checkbox" id="perm_canDelete" style="width: 20px; height: 20px;">
+                    <span style="color: var(--accent-red); font-weight: 600;">สิทธิ์การลบผู้ใช้งาน (Delete)</span>
+                </label>
             </div>
             <button onclick="saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: 20px;" id="saveRolePermBtn">
                 <span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์
@@ -980,8 +984,8 @@
     window.myCurrentDisplayName = "";
 
     let globalPermissions = {
-        Manager: { canAdd: false, canEdit: false, canBan: false, canViewLogs: true, canEditOwn: true, canManageService: false },
-        User: { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false }
+        Manager: { canAdd: false, canEdit: false, canBan: false, canViewLogs: true, canEditOwn: true, canManageService: false, canDelete: false },
+        User: { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false }
     };
 
     const onlineAudio = new Audio('https://actions.google.com/sounds/v1/ui/bell_ping.ogg');
@@ -1052,9 +1056,9 @@
     window.applyPermissionsUI = () => {
         if(!loggedInUserId) return;
         let isGod = currentUserRole === "Admin";
-        let myPerms = isGod ? { canAdd: true, canEdit: true, canBan: true, canViewLogs: true, canEditOwn: true, canManageService: true } : (globalPermissions[currentUserRole] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false });
+        let myPerms = isGod ? { canAdd: true, canEdit: true, canBan: true, canViewLogs: true, canEditOwn: true, canManageService: true, canDelete: true } : (globalPermissions[currentUserRole] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false });
         
-        let showAdminMenu = myPerms.canAdd || myPerms.canEdit || myPerms.canBan || myPerms.canViewLogs;
+        let showAdminMenu = myPerms.canAdd || myPerms.canEdit || myPerms.canBan || myPerms.canViewLogs || myPerms.canDelete;
         document.getElementById('adminMenuBtn').style.display = showAdminMenu ? 'flex' : 'none';
         document.getElementById('roleSettingsBtn').style.display = isGod ? 'flex' : 'none';
         document.getElementById('adminAddUserBtn').style.display = myPerms.canAdd ? 'flex' : 'none';
@@ -1214,7 +1218,7 @@
     let adminSnapshotUnsub = null;
     window.handleAdminModalState = (isOpen) => {
         if(isOpen) {
-            let isGod = currentUserRole === "Admin"; let myPerms = isGod ? { canAdd: true, canEdit: true, canBan: true, canViewLogs: true } : (globalPermissions[currentUserRole] || {});
+            let isGod = currentUserRole === "Admin"; let myPerms = isGod ? { canAdd: true, canEdit: true, canBan: true, canViewLogs: true, canDelete: true } : (globalPermissions[currentUserRole] || {});
             if(adminSnapshotUnsub) adminSnapshotUnsub();
             adminSnapshotUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
                 window.currentAdminUsers = [];
@@ -1234,26 +1238,25 @@
                     let canViewThisLog = myPerms.canViewLogs;
                     if (safeRole === "Admin" && currentUserRole !== "Admin") { canViewThisLog = false; }
                     
+                    // เพิ่มระบบสิทธิ์การลบผู้ใช้งาน
+                    let canDeleteThisUser = isGod || (myPerms.canDelete && safeRole !== "Admin");
+                    
                     if(canTouchThisUser) {
-                        // 1. ปุ่มแบน
                         if(myPerms.canBan) {
                             if(u.isBanned) quickBanBtn = `<button onclick="quickBanToggle('${uid}', false, '${safeName}')" style="background:rgba(46, 204, 113, 0.1); border:1px solid rgba(46, 204, 113, 0.3); color:var(--neon-green); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ปลดแบน"><span class="material-symbols-outlined" style="font-size:18px;">check_circle</span></button>`;
                             else quickBanBtn = `<button onclick="quickBanToggle('${uid}', true, '${safeName}')" style="background:rgba(255, 71, 87, 0.1); border:1px solid rgba(255, 71, 87, 0.3); color:var(--accent-red); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="แบน"><span class="material-symbols-outlined" style="font-size:18px;">block</span></button>`;
                         }
-                        // 3. ปุ่มแก้ไข
                         if(myPerms.canEdit) {
                             editBtnHtml = `<button onclick="openAdminEditUser('${uid}')" style="background:rgba(52, 152, 219, 0.1); border:1px solid rgba(52, 152, 219, 0.3); color:#3498db; width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="แก้ไข"><span class="material-symbols-outlined" style="font-size:18px;">edit</span></button>`;
                         }
                     }
-                    // 2. ปุ่มดูประวัติ
                     if(canViewThisLog) { logsBtn = `<button onclick="viewUserLogs('${uid}', '${safeName}')" style="background:rgba(241, 196, 15, 0.1); border:1px solid rgba(241, 196, 15, 0.3); color:var(--neon-yellow); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ประวัติ"><span class="material-symbols-outlined" style="font-size:18px;">history</span></button>`; }
-                    
-                    // 4. ปุ่มลบ (สำหรับ Admin สูงสุดเท่านั้น ป้องกันคนอื่นลบเล่น)
-                    if(isGod) {
+
+                    // เพิ่มปุ่มลบ
+                    if(canDeleteThisUser) {
                         deleteBtn = `<button onclick="quickDeleteUser('${uid}', '${safeName}')" style="background:rgba(255, 71, 87, 0.1); border:1px solid rgba(255, 71, 87, 0.3); color:var(--accent-red); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ลบผู้ใช้"><span class="material-symbols-outlined" style="font-size:18px;">delete</span></button>`;
                     }
 
-                    // เรียงปุ่มตามที่ขอ: แบน -> ประวัติ -> แก้ไข -> ลบ
                     html += `<div class="admin-user-card">${dragHandleHtml}<img src="${safePhoto}" style="width:45px;height:45px;border-radius:50%;object-fit:cover;border:1px solid #fff;"><div style="flex:1; min-width:0;"><div style="color:white; font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeName} <span style="font-size:11px; color:var(--neon-yellow);">[${safeRole}]</span></div><div style="font-size:11px; color: #a0a5b5; margin-top:2px;">User: <span style="color:white;">${safeUsername}</span></div><div style="font-size:11px; margin-top:4px;">${statusHtml} ${lastLoginTxt}</div></div><div style="display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end;">${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
                 });
                 document.getElementById('adminUserList').innerHTML = html || '<div style="padding: 20px; color: gray;">ไม่พบข้อมูล</div>';
@@ -1275,13 +1278,13 @@
 
     window.openRoleSettingsModal = () => { window.toggleModal('roleSettingsModal', true); window.loadRolePermissionsToUI(); };
     window.loadRolePermissionsToUI = () => {
-        let role = document.getElementById('settingRoleSelect').value; let perms = globalPermissions[role] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false };
-        document.getElementById('perm_canAdd').checked = perms.canAdd; document.getElementById('perm_canEdit').checked = perms.canEdit; document.getElementById('perm_canBan').checked = perms.canBan; document.getElementById('perm_canViewLogs').checked = perms.canViewLogs; document.getElementById('perm_canEditOwn').checked = perms.canEditOwn !== false; document.getElementById('perm_canManageService').checked = perms.canManageService || false;
+        let role = document.getElementById('settingRoleSelect').value; let perms = globalPermissions[role] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false };
+        document.getElementById('perm_canAdd').checked = perms.canAdd; document.getElementById('perm_canEdit').checked = perms.canEdit; document.getElementById('perm_canBan').checked = perms.canBan; document.getElementById('perm_canViewLogs').checked = perms.canViewLogs; document.getElementById('perm_canEditOwn').checked = perms.canEditOwn !== false; document.getElementById('perm_canManageService').checked = perms.canManageService || false; document.getElementById('perm_canDelete').checked = perms.canDelete || false;
     };
 
     window.saveRolePermissions = async () => {
         let role = document.getElementById('settingRoleSelect').value; let btn = document.getElementById('saveRolePermBtn'); btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
-        let newPerms = { canAdd: document.getElementById('perm_canAdd').checked, canEdit: document.getElementById('perm_canEdit').checked, canBan: document.getElementById('perm_canBan').checked, canViewLogs: document.getElementById('perm_canViewLogs').checked, canEditOwn: document.getElementById('perm_canEditOwn').checked, canManageService: document.getElementById('perm_canManageService').checked };
+        let newPerms = { canAdd: document.getElementById('perm_canAdd').checked, canEdit: document.getElementById('perm_canEdit').checked, canBan: document.getElementById('perm_canBan').checked, canViewLogs: document.getElementById('perm_canViewLogs').checked, canEditOwn: document.getElementById('perm_canEditOwn').checked, canManageService: document.getElementById('perm_canManageService').checked, canDelete: document.getElementById('perm_canDelete').checked };
         try { await setDoc(doc(db, "settings", "roles"), { [role]: newPerms }, { merge: true }); window.showToast(`บันทึกสิทธิ์สำหรับ ${role} สำเร็จ`); window.toggleModal('roleSettingsModal', false); } catch(e) { window.showToast("บันทึกล้มเหลว", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์`; btn.disabled = false; }
     };
 
@@ -1303,13 +1306,17 @@
     window.openAdminEditUser = (uid) => {
         let u = window.currentAdminUsers.find(x => x.uid === uid); if(!u) return; currentEditUid = uid; isBannedState = u.isBanned || false;
         document.getElementById('adminEditUid').value = uid; document.getElementById('adminEditUsername').value = u.username || ''; document.getElementById('adminEditUsername').disabled = true; document.getElementById('adminEditUsernameLabel').style.display = "block"; document.getElementById('adminEditName').value = u.displayName || u.username; document.getElementById('adminEditPic').src = (u.photoURL && u.photoURL.length > 10) ? u.photoURL : "https://via.placeholder.com/80"; document.getElementById('adminEditQrPic').src = (u.qrCodeURL && u.qrCodeURL.length > 10) ? u.qrCodeURL : "https://via.placeholder.com/80?text=QR"; document.getElementById('adminEditRole').value = u.role || 'User'; document.getElementById('adminEditPasswordLabel').innerText = "รหัสผ่าน (แก้ไขได้)"; document.getElementById('adminEditPassword').value = u.password || ''; document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = ''; document.getElementById('adminEditModalTitle').innerText = "จัดการผู้ใช้"; document.getElementById('adminEditRole').disabled = currentUserRole !== "Admin";
-        let isGod = currentUserRole === "Admin"; let myPerms = isGod ? { canBan: true } : (globalPermissions[currentUserRole] || {});
+        let isGod = currentUserRole === "Admin"; let myPerms = isGod ? { canBan: true, canDelete: true } : (globalPermissions[currentUserRole] || {});
         if(myPerms.canBan) {
             document.getElementById('banUserBtn').style.display = 'flex'; const banBtn = document.getElementById('banUserBtn'); const banIcon = document.getElementById('banIcon'); const banText = document.getElementById('banText');
             if(isBannedState) { banBtn.style.background = 'var(--neon-green)'; banIcon.innerText = 'check_circle'; banText.innerText = 'ปลดระงับการใช้งาน'; } 
             else { banBtn.style.background = 'var(--accent-red)'; banIcon.innerText = 'block'; banText.innerText = 'ระงับการใช้งาน (Ban)'; }
         } else { document.getElementById('banUserBtn').style.display = 'none'; }
-        document.getElementById('deleteUserBtn').style.display = isGod ? 'flex' : 'none'; window.toggleModal('adminEditUserModal', true);
+        
+        let canDeleteThisUser = isGod || (myPerms.canDelete && u.role !== "Admin");
+        document.getElementById('deleteUserBtn').style.display = canDeleteThisUser ? 'flex' : 'none'; 
+        
+        window.toggleModal('adminEditUserModal', true);
     };
 
     window.toggleBanUser = async () => {
