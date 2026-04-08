@@ -350,7 +350,7 @@
 
     <div class="header-container flex-center">
         <img id="appHeaderIcon" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" class="header-icon" style="object-fit: cover;" />                                        
-        <h2>คำนวณค่าแท็กซี่</h2>
+        <h2>คำนวณค่าแท็กซี่ ๙๙</h2>
     </div>
                                                   
     <div id="searchSectionBox" class="search-section">
@@ -881,7 +881,6 @@
         if(id === 'adminMenuModal' && window.handleAdminModalState) window.handleAdminModalState(show);
     };
 
-    // ฟังก์ชันใหม่! สำหรับดึงข้อมูลล่าสุดมาทับฟอร์มเวลาเปิดหน้าแก้โปรไฟล์
     window.openProfileModal = () => {
         document.getElementById('editDisplayName').value = window.myCurrentDisplayName || "";
         document.getElementById('editProfilePic').src = (window.myCurrentPhotoURL && window.myCurrentPhotoURL.length > 10) ? window.myCurrentPhotoURL : window.DEFAULT_AVATAR;
@@ -965,7 +964,6 @@
 
     window.selectLocation = (name, lat, lon) => { clearTimeout(searchTimer); $('destInput').value = "กำลังคำนวณ..."; $('destInput').classList.add('loading-state'); $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; destLoc = { lat, lon }; $('searchSectionBox').style.display = 'none'; $('manualSectionBox').style.display = 'none'; saveHistory(name, lat, lon); getRouteData(lat, lon, name); };
     
-    // เปลี่ยนสูตรประเมินเวลาจาก OSRM โดยตรงเพื่อความแม่นยำสูงสุดของระบบฟรี
     async function getRouteData(dLat, dLon, name) { 
         navigator.geolocation.getCurrentPosition(async (pos) => { 
             let startPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; 
@@ -974,7 +972,7 @@
                 if (data.code === 'Ok') { 
                     let km = data.routes[0].distance / 1000; 
                     currentTrueRemainKm = km; 
-                    currentTrueRemainSec = data.routes[0].duration; // ใช้เวลาจริงจากเส้นทาง
+                    currentTrueRemainSec = data.routes[0].duration; 
                     processRoute(km, currentTrueRemainSec, name); 
                 } else { 
                     alert('ไม่สามารถคำนวณเส้นทางได้'); resetAll(); 
@@ -1054,7 +1052,6 @@
         }
     }
 
-    // เปลี่ยนให้ดึงเวลาแบบ Dynamic Update อย่างถูกต้อง
     function startDynamicRouting() { 
         if(routeUpdateTimer) clearInterval(routeUpdateTimer); 
         routeUpdateTimer = setInterval(async () => { 
@@ -1064,7 +1061,7 @@
                 let data = await res.json(); 
                 if(data.code === 'Ok') { 
                     currentTrueRemainKm = data.routes[0].distance / 1000; 
-                    currentTrueRemainSec = data.routes[0].duration; // ใช้เวลาจริง
+                    currentTrueRemainSec = data.routes[0].duration; 
                 } 
             } catch(e) {} 
         }, 10000); 
@@ -1073,7 +1070,41 @@
     function stopTracking() { releaseWakeLock(); $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; }
     window.resetAll = () => { $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; isManualRunning = false; $('manualTimerBtn').classList.remove('active'); $('manualTimerBtn').innerHTML = '<span class="material-symbols-outlined">play_circle</span> เริ่มจับเวลามิเตอร์'; stopTracking(); updateFareBubble(0); window.checkAppStatus(); };
     window.startNavigation = () => destLoc && (window.location.href = `google.navigation:q=${destLoc.lat},${destLoc.lon}&mode=d`);
-    window.shareToPlatform = (p) => { let txt = `[พิกัด] https://www.google.com/maps?q=$${lastPos?.lat},${lastPos?.lon}\n[ค่าแท็กซี่] ${$('farePrice').innerText}`; p === 'line' ? window.location.href = `line://msg/text/${encodeURIComponent(txt)}` : navigator.share?.({ text: txt }); };
+    
+    window.shareToPlatform = (p) => { 
+        // เช็คว่าเป็นการค้นหาสถานที่ (มีชื่อสถานที่) หรือแค่กรอกกิโลเมตร
+        let isSearchMode = destLoc !== null && $('destInput').value.trim() !== "";
+        let km = parseFloat($('kmInput').value) || 0;
+        let price = $('farePrice').innerText.replace(/<[^>]*>?/gm, '').trim(); // ดึงเฉพาะตัวเลขราคา
+        let txt = "";
+
+        if (isSearchMode) {
+            let destName = $('destInput').value.trim();
+            let remainMins = currentTrueRemainSec > 0 ? Math.ceil(currentTrueRemainSec / 60) : 0;
+            let timeStr = remainMins > 0 ? formatDuration(remainMins) : "ไม่ทราบเวลา";
+            
+            // สร้างลิงก์นำทางของ Google Maps
+            let originStr = lastPos ? `${lastPos.lat},${lastPos.lon}` : "";
+            let mapLink = `https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${destLoc.lat},${destLoc.lon}&travelmode=driving`;
+            
+            txt = `🚕 แผนการเดินทาง (ประเมิน)\n📍 ปลายทาง: ${destName}\n📏 ระยะทาง: ${km.toFixed(2)} กม.\n⏱️ เวลาเดินทาง: ${timeStr}\n💰 ค่าโดยสารประมาณ: ${price}\n\n🗺️ ดูเส้นทางบนแผนที่คลิก:\n${mapLink}`;
+        } else {
+            txt = `🚕 สรุปค่าแท็กซี่ (ประเมิน)\n📏 ระยะทาง: ${km.toFixed(2)} กม.\n💰 ค่าโดยสารประมาณ: ${price}\n\n(คำนวณโดยระบบ Taxi Fare 2026)`;
+        }
+
+        if (p === 'line') {
+            window.location.href = `line://msg/text/${encodeURIComponent(txt)}`;
+        } else if (p === 'messenger') {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'สรุปค่าโดยสารแท็กซี่',
+                    text: txt
+                }).catch((error) => console.log('Error sharing', error));
+            } else {
+                prompt("อุปกรณ์ของคุณไม่รองรับการแชร์ตรงๆ รบกวนก๊อปปี้ข้อความด้านล่างเพื่อส่งต่อครับ:", txt);
+            }
+        }
+    };
 
     window.previewProfilePic = (event, imgId) => {
         const file = event.target.files[0];
