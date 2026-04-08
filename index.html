@@ -181,6 +181,16 @@
         .btn-del-media .material-symbols-outlined { font-size: 16px; }
         .btn-del-media:active { transform: scale(0.9); }
         
+        /* สไตล์สำหรับปุ่มจัดการ Admin ไม่มีพื้นหลัง */
+        .action-icon-btn { background: transparent; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; padding: 6px; transition: 0.2s; border-radius: 50%; outline: none; }
+        .action-icon-btn:hover { background: rgba(255,255,255,0.05); }
+        .action-icon-btn:active { transform: scale(0.85); background: rgba(255,255,255,0.1); }
+        .icon-unban { color: var(--neon-green); }
+        .icon-ban { color: var(--accent-red); }
+        .icon-edit { color: #3498db; }
+        .icon-log { color: var(--neon-yellow); }
+        .icon-del { color: var(--accent-red); }
+
         .modal-content-scroll { padding: 20px; flex: 1; overflow-y: auto; overflow-x: hidden; -ms-overflow-style: none; scrollbar-width: none; text-align: center; }
         .modal-content-scroll::-webkit-scrollbar { display: none; }
 
@@ -627,48 +637,19 @@
 <div id="roleSettingsModal" class="modal-overlay" style="z-index: 10005;">
     <div class="modal-box flex-col-box" onclick="event.stopPropagation()">
         <div class="modal-header">
-            <h3>ตั้งค่าสิทธิ์การใช้งาน</h3>
+            <h3 style="color: var(--neon-yellow);">ตั้งค่าสิทธิ์การใช้งาน</h3>
             <button class="btn-close-floating" onclick="toggleModal('roleSettingsModal', false)"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-content-scroll" style="text-align: left;">
-            <label style="color: var(--text-dim); font-size: 13px;">เลือกตำแหน่ง (Role) ที่ต้องการตั้งค่าสิทธิ์</label>
+            <label style="color: var(--neon-yellow); font-size: 13px;">เลือกตำแหน่ง (Role) ที่ต้องการตั้งค่าสิทธิ์</label>
             <select id="settingRoleSelect" onchange="loadRolePermissionsToUI()" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-top: 10px; margin-bottom: 20px; outline: none; font-family: 'Kanit';">
                 <option value="Manager">ผู้จัดการ (Manager)</option>
                 <option value="User">ผู้ใช้งานทั่วไป (User)</option>
             </select>
-            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="perm_canAdd" style="width: 20px; height: 20px;"><span>สิทธิ์การเพิ่มพนักงานใหม่</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="perm_canEdit" style="width: 20px; height: 20px;"><span>สิทธิ์แก้ไขข้อมูลพนักงาน (คนอื่น)</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="perm_canViewPassword" style="width: 20px; height: 20px;">
-                    <span style="color: var(--neon-yellow); font-weight: 500;">สิทธิ์ดูรหัสผ่านผู้ใช้อื่น</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="perm_canBan" style="width: 20px; height: 20px;"><span>สิทธิ์การแบน / ปลดแบน</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="perm_canViewLogs" style="width: 20px; height: 20px;"><span>สิทธิ์ดูประวัติการใช้งาน (Logs)</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="perm_canEditOwn" style="width: 20px; height: 20px;"><span>สิทธิ์แก้ไขโปรไฟล์/QR Code ของตัวเอง</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; margin-top: 5px;">
-                    <input type="checkbox" id="perm_canManageService" style="width: 20px; height: 20px;">
-                    <span style="color: #00bcd4; font-weight: 600;">สิทธิ์จัดการ Service Portal (เพิ่ม/ลบ/จัดเรียง)</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; margin-top: 5px;">
-                    <input type="checkbox" id="perm_canDeleteMedia" style="width: 20px; height: 20px;">
-                    <span style="color: #ff9800; font-weight: 600;">สิทธิ์ลบรูปโปรไฟล์และรูป QR Code</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; margin-top: 5px;">
-                    <input type="checkbox" id="perm_canDelete" style="width: 20px; height: 20px;">
-                    <span style="color: var(--accent-red); font-weight: 600;">สิทธิ์การลบผู้ใช้งาน (Delete)</span>
-                </label>
-            </div>
+            
+            <div id="permListContainer" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;">
+                </div>
+            
             <button onclick="saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: 20px;" id="saveRolePermBtn">
                 <span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์
             </button>
@@ -1139,6 +1120,20 @@
     window.myCurrentDisplayName = "";
     window.myCurrentPhotoURL = "";
 
+    // ระบบจัดการชื่อสิทธิ์ (ลากสลับตำแหน่งได้, เปลี่ยนชื่อได้)
+    window.defaultPermConfig = [
+        { id: 'perm_canAdd', label: 'สิทธิ์การเพิ่มพนักงานใหม่' },
+        { id: 'perm_canEdit', label: 'สิทธิ์แก้ไขข้อมูลพนักงาน (คนอื่น)' },
+        { id: 'perm_canViewPassword', label: 'สิทธิ์ดูรหัสผ่านผู้ใช้อื่น' },
+        { id: 'perm_canBan', label: 'สิทธิ์การแบน / ปลดแบน' },
+        { id: 'perm_canViewLogs', label: 'สิทธิ์ดูประวัติการใช้งาน (Logs)' },
+        { id: 'perm_canEditOwn', label: 'สิทธิ์แก้ไขโปรไฟล์/QR Code ของตัวเอง' },
+        { id: 'perm_canManageService', label: 'สิทธิ์จัดการ Service Portal (เพิ่ม/ลบ/จัดเรียง)' },
+        { id: 'perm_canDeleteMedia', label: 'สิทธิ์ลบรูปโปรไฟล์และรูป QR Code' },
+        { id: 'perm_canDelete', label: 'สิทธิ์การลบผู้ใช้งาน (Delete)' }
+    ];
+    window.currentPermConfig = [...window.defaultPermConfig];
+
     // เพิ่มสิทธิ์ canDeleteMedia เข้าไปในระบบ
     let globalPermissions = {
         Manager: { canAdd: false, canEdit: false, canBan: false, canViewLogs: true, canEditOwn: true, canManageService: false, canDelete: false, canViewPassword: false, canDeleteMedia: false },
@@ -1151,6 +1146,7 @@
     let userOnlineStates = {};
     let isInitialUserLoad = true;
     let permsUnsub = null;
+    let permConfigUnsub = null;
     window.currentAdminUsers = [];
 
     window.showToast = (msg, isError = false, imgUrl = null) => {
@@ -1206,6 +1202,7 @@
     function stopGlobalUserListener() {
         if(globalUsersUnsub) { globalUsersUnsub(); globalUsersUnsub = null; }
         if(permsUnsub) { permsUnsub(); permsUnsub = null; }
+        if(permConfigUnsub) { permConfigUnsub(); permConfigUnsub = null; }
         isInitialUserLoad = true; userOnlineStates = {};
         if(serviceDataUnsub) { serviceDataUnsub(); serviceDataUnsub = null; } 
     }
@@ -1259,6 +1256,13 @@
     const listenToMyUser = () => {
         if(!loggedInUserId) return;
         if(!permsUnsub) { permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { if(docSnap.exists()) { globalPermissions = { ...globalPermissions, ...docSnap.data() }; } window.applyPermissionsUI(); }); }
+        if(!permConfigUnsub) { 
+            permConfigUnsub = onSnapshot(doc(db, "settings", "permission_config"), (docSnap) => { 
+                if(docSnap.exists()) { window.currentPermConfig = docSnap.data().config || window.defaultPermConfig; } 
+                else { window.currentPermConfig = [...window.defaultPermConfig]; }
+                if(document.getElementById('roleSettingsModal').style.display === 'flex') { window.renderPermList(); }
+            }); 
+        }
 
         myUserUnsub = onSnapshot(doc(db, "users", loggedInUserId), (docSnap) => {
             if (docSnap.exists()) {
@@ -1440,17 +1444,17 @@
                     
                     if(canTouchThisUser) {
                         if(myPerms.canBan) {
-                            if(u.isBanned) quickBanBtn = `<button onclick="quickBanToggle('${uid}', false, '${safeName}')" style="background:rgba(46, 204, 113, 0.1); border:1px solid rgba(46, 204, 113, 0.3); color:var(--neon-green); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ปลดแบน"><span class="material-symbols-outlined" style="font-size:18px;">check_circle</span></button>`;
-                            else quickBanBtn = `<button onclick="quickBanToggle('${uid}', true, '${safeName}')" style="background:rgba(255, 71, 87, 0.1); border:1px solid rgba(255, 71, 87, 0.3); color:var(--accent-red); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="แบน"><span class="material-symbols-outlined" style="font-size:18px;">block</span></button>`;
+                            if(u.isBanned) quickBanBtn = `<button onclick="quickBanToggle('${uid}', false, '${safeName}')" class="action-icon-btn icon-unban" title="ปลดแบน"><span class="material-symbols-outlined" style="font-size:26px;">check_circle</span></button>`;
+                            else quickBanBtn = `<button onclick="quickBanToggle('${uid}', true, '${safeName}')" class="action-icon-btn icon-ban" title="แบน"><span class="material-symbols-outlined" style="font-size:26px;">block</span></button>`;
                         }
                         if(myPerms.canEdit) {
-                            editBtnHtml = `<button onclick="openAdminEditUser('${uid}')" style="background:rgba(52, 152, 219, 0.1); border:1px solid rgba(52, 152, 219, 0.3); color:#3498db; width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="แก้ไข"><span class="material-symbols-outlined" style="font-size:18px;">edit</span></button>`;
+                            editBtnHtml = `<button onclick="openAdminEditUser('${uid}')" class="action-icon-btn icon-edit" title="แก้ไข"><span class="material-symbols-outlined" style="font-size:26px;">edit</span></button>`;
                         }
                     }
-                    if(canViewThisLog) { logsBtn = `<button onclick="viewUserLogs('${uid}', '${safeName}')" style="background:rgba(241, 196, 15, 0.1); border:1px solid rgba(241, 196, 15, 0.3); color:var(--neon-yellow); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ประวัติ"><span class="material-symbols-outlined" style="font-size:18px;">history</span></button>`; }
+                    if(canViewThisLog) { logsBtn = `<button onclick="viewUserLogs('${uid}', '${safeName}')" class="action-icon-btn icon-log" title="ประวัติ"><span class="material-symbols-outlined" style="font-size:26px;">history</span></button>`; }
 
                     if(canDeleteThisUser) {
-                        deleteBtn = `<button onclick="quickDeleteUser('${uid}', '${safeName}')" style="background:rgba(255, 71, 87, 0.1); border:1px solid rgba(255, 71, 87, 0.3); color:var(--accent-red); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ลบผู้ใช้"><span class="material-symbols-outlined" style="font-size:18px;">delete</span></button>`;
+                        deleteBtn = `<button onclick="quickDeleteUser('${uid}', '${safeName}')" class="action-icon-btn icon-del" title="ลบผู้ใช้"><span class="material-symbols-outlined" style="font-size:26px;">delete</span></button>`;
                     }
 
                     html += `<div class="admin-user-card">${dragHandleHtml}<img src="${safePhoto}" style="width:45px;height:45px;border-radius:50%;object-fit:cover;border:1px solid #fff;"><div style="flex:1; min-width:0;"><div style="color:white; font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safeName} <span style="font-size:11px; color:var(--neon-yellow);">[${safeRole}]</span></div><div style="font-size:11px; color: #a0a5b5; margin-top:2px;">User: <span style="color:white;">${safeUsername}</span></div><div style="font-size:11px; margin-top:4px;">${statusHtml} ${lastLoginTxt}</div></div><div style="display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-end;">${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
@@ -1472,15 +1476,73 @@
         } else { if(adminSnapshotUnsub) adminSnapshotUnsub(); }
     };
 
-    window.openRoleSettingsModal = () => { window.toggleModal('roleSettingsModal', true); window.loadRolePermissionsToUI(); };
-    window.loadRolePermissionsToUI = () => {
-        let role = document.getElementById('settingRoleSelect').value; let perms = globalPermissions[role] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false, canViewPassword: false, canDeleteMedia: false };
-        document.getElementById('perm_canAdd').checked = perms.canAdd; document.getElementById('perm_canEdit').checked = perms.canEdit; document.getElementById('perm_canBan').checked = perms.canBan; document.getElementById('perm_canViewLogs').checked = perms.canViewLogs; document.getElementById('perm_canEditOwn').checked = perms.canEditOwn !== false; document.getElementById('perm_canManageService').checked = perms.canManageService || false; document.getElementById('perm_canDelete').checked = perms.canDelete || false; document.getElementById('perm_canViewPassword').checked = perms.canViewPassword || false; document.getElementById('perm_canDeleteMedia').checked = perms.canDeleteMedia || false;
+    // ฟังก์ชันจัดการ UI เปลี่ยนชื่อและลากสลับสิทธิ์
+    window.openRoleSettingsModal = () => { window.toggleModal('roleSettingsModal', true); window.renderPermList(); };
+    window.loadRolePermissionsToUI = () => { window.renderPermList(); };
+    
+    window.renderPermList = () => {
+        let html = '';
+        let perms = window.currentPermConfig;
+        let role = document.getElementById('settingRoleSelect').value;
+        let rolePerms = globalPermissions[role] || {};
+
+        perms.forEach(p => {
+            let prop = p.id.replace('perm_', '');
+            let checkedStr = rolePerms[prop] ? 'checked' : '';
+            if(prop === 'canEditOwn' && rolePerms[prop] !== false) checkedStr = 'checked'; // Default true
+            
+            html += `
+            <div class="perm-item" data-id="${p.id}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                    <div class="drag-handle" style="cursor: grab; color: rgba(255,255,255,0.3); display: flex; align-items: center;"><span class="material-symbols-outlined">drag_indicator</span></div>
+                    <input type="checkbox" id="${p.id}" style="width: 20px; height: 20px;" ${checkedStr}>
+                    <span style="color: var(--neon-yellow); font-weight: 500; font-size: 14px; flex:1; cursor:pointer;" onclick="document.getElementById('${p.id}').click()">${p.label}</span>
+                </div>
+                <button onclick="editPermLabel('${p.id}')" style="background:none; border:none; color: var(--neon-yellow); cursor:pointer; padding:5px; display:flex; align-items:center; transition:0.2s;" title="แก้ไขชื่อสิทธิ์"><span class="material-symbols-outlined" style="font-size: 20px;">edit</span></button>
+            </div>`;
+        });
+        document.getElementById('permListContainer').innerHTML = html;
+
+        if(window.permSortable) window.permSortable.destroy();
+        window.permSortable = new Sortable(document.getElementById('permListContainer'), {
+            handle: '.drag-handle', animation: 150, delay: 200, delayOnTouchOnly: true, ghostClass: 'sortable-ghost',
+            onEnd: () => { window.savePermConfigOrder(); }
+        });
+    };
+
+    window.editPermLabel = async (id) => {
+        let item = window.currentPermConfig.find(x => x.id === id);
+        let newLabel = prompt("แก้ไขชื่อสิทธิ์การใช้งาน:", item.label);
+        if (newLabel && newLabel.trim() !== "") {
+            item.label = newLabel.trim();
+            window.renderPermList();
+            await window.savePermConfigToDB();
+        }
+    };
+
+    window.savePermConfigOrder = async () => {
+        let newOrder = [];
+        document.querySelectorAll('.perm-item').forEach(el => {
+            let id = el.dataset.id;
+            let item = window.currentPermConfig.find(x => x.id === id);
+            if(item) newOrder.push(item);
+        });
+        window.currentPermConfig = newOrder;
+        await window.savePermConfigToDB();
+    };
+
+    window.savePermConfigToDB = async () => {
+        try { await setDoc(doc(db, "settings", "permission_config"), { config: window.currentPermConfig }); } catch(e) {}
     };
 
     window.saveRolePermissions = async () => {
         let role = document.getElementById('settingRoleSelect').value; let btn = document.getElementById('saveRolePermBtn'); btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
-        let newPerms = { canAdd: document.getElementById('perm_canAdd').checked, canEdit: document.getElementById('perm_canEdit').checked, canBan: document.getElementById('perm_canBan').checked, canViewLogs: document.getElementById('perm_canViewLogs').checked, canEditOwn: document.getElementById('perm_canEditOwn').checked, canManageService: document.getElementById('perm_canManageService').checked, canDelete: document.getElementById('perm_canDelete').checked, canViewPassword: document.getElementById('perm_canViewPassword').checked, canDeleteMedia: document.getElementById('perm_canDeleteMedia').checked };
+        let newPerms = {};
+        window.currentPermConfig.forEach(p => {
+            let prop = p.id.replace('perm_', '');
+            let el = document.getElementById(p.id);
+            if(el) newPerms[prop] = el.checked;
+        });
         try { await setDoc(doc(db, "settings", "roles"), { [role]: newPerms }, { merge: true }); window.showToast(`บันทึกสิทธิ์สำหรับ ${role} สำเร็จ`); window.toggleModal('roleSettingsModal', false); } catch(e) { window.showToast("บันทึกล้มเหลว", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์`; btn.disabled = false; }
     };
 
