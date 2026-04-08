@@ -95,6 +95,16 @@
         input:focus, .km-input-box:focus-within { border-color: var(--neon-yellow); box-shadow: 0 0 15px rgba(241, 196, 15, 0.2), inset 0 2px 5px rgba(0,0,0,0.5); }
         input.loading-state { color: var(--neon-yellow) !important; text-shadow: 0 0 10px var(--glow-yellow); }
 
+        /* สไตล์สำหรับกล่อง Password เพื่อให้มีรูปตา */
+        .password-wrapper { position: relative; width: 100%; margin-bottom: 15px; }
+        .password-wrapper input { width: 100%; margin-bottom: 0 !important; padding-right: 50px !important; }
+        .toggle-password {
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+            color: var(--text-dim); cursor: pointer; user-select: none; z-index: 10;
+            transition: 0.2s;
+        }
+        .toggle-password:active { transform: translateY(-50%) scale(0.9); color: white; }
+
         .dropdown-box { position: absolute; background: rgba(30, 32, 45, 0.95); width: 100%; z-index: 1000; border-radius: 20px; max-height: 320px; overflow-y: auto; display: none; margin-top: 10px; border: 1px solid var(--border-glass); box-shadow: 0 15px 40px rgba(0,0,0,0.8); backdrop-filter: blur(15px); -ms-overflow-style: none; scrollbar-width: none; }
         .dropdown-box::-webkit-scrollbar { display: none; }
         .history-header { padding: 15px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border-glass); display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--neon-green); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(5px); }
@@ -453,7 +463,12 @@
         </div>
         <input type="text" id="authUsername" placeholder="Username (ไม่ต้องใช้ Email)" style="margin-bottom: 15px; text-align: left;" autocomplete="off">
         <input type="text" id="authDisplayName" placeholder="ชื่อที่แสดง (เช่น อาร์ม)" style="margin-bottom: 15px; text-align: left; display: none;" autocomplete="off">
-        <input type="password" id="authPassword" placeholder="Password" style="margin-bottom: 25px; text-align: left;" autocomplete="new-password">
+        
+        <div class="password-wrapper" style="margin-bottom: 25px;">
+            <input type="password" id="authPassword" placeholder="Password" style="text-align: left;" autocomplete="new-password">
+            <span class="material-symbols-outlined toggle-password" onclick="togglePasswordVisibility('authPassword', this)">visibility_off</span>
+        </div>
+
         <div style="display: flex; justify-content: center; width: 100%;">
             <button id="authBtn" onclick="loginApp()" class="manual-timer-btn" style="max-width: 250px; justify-content: center;">เข้าสู่ระบบ</button>
         </div>
@@ -499,9 +514,20 @@
         <button class="btn-close-floating" onclick="toggleModal('changePasswordModal', false)"><span class="material-symbols-outlined">close</span></button>
         <h3 style="color: white; margin-bottom: 20px;">เปลี่ยนรหัสผ่าน</h3>
         <img id="cpProfilePic" src="https://via.placeholder.com/80" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 20px; border: 2px solid var(--border-glass);">
-        <input type="password" id="oldPassword" placeholder="รหัสผ่านเดิม" style="margin-bottom: 15px; text-align: left;" autocomplete="new-password">
-        <input type="password" id="newPassword" placeholder="รหัสผ่านใหม่" style="margin-bottom: 15px; text-align: left;" autocomplete="new-password">
-        <input type="password" id="confirmPassword" placeholder="ยืนยันรหัสผ่านใหม่" style="margin-bottom: 20px; text-align: left;" autocomplete="new-password">
+        
+        <div class="password-wrapper">
+            <input type="password" id="oldPassword" placeholder="รหัสผ่านเดิม" style="text-align: left;" autocomplete="new-password">
+            <span class="material-symbols-outlined toggle-password" onclick="togglePasswordVisibility('oldPassword', this)">visibility_off</span>
+        </div>
+        <div class="password-wrapper">
+            <input type="password" id="newPassword" placeholder="รหัสผ่านใหม่" style="text-align: left;" autocomplete="new-password">
+            <span class="material-symbols-outlined toggle-password" onclick="togglePasswordVisibility('newPassword', this)">visibility_off</span>
+        </div>
+        <div class="password-wrapper" style="margin-bottom: 20px;">
+            <input type="password" id="confirmPassword" placeholder="ยืนยันรหัสผ่านใหม่" style="text-align: left;" autocomplete="new-password">
+            <span class="material-symbols-outlined toggle-password" onclick="togglePasswordVisibility('confirmPassword', this)">visibility_off</span>
+        </div>
+
         <button onclick="savePasswordChange()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: white;" id="savePasswordBtn">
             <span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกรหัสผ่าน
         </button>
@@ -552,8 +578,13 @@
             <input type="text" id="adminEditUsername" style="margin-bottom: 15px; text-align: left;" placeholder="เช่น staff" autocomplete="off">
             <label style="text-align: left;">ชื่อที่แสดง</label>
             <input type="text" id="adminEditName" style="margin-bottom: 15px; text-align: left;" autocomplete="off">
-            <label style="text-align: left;" id="adminEditPasswordLabel">รหัสผ่าน (แก้ไขได้)</label>
-            <input type="text" id="adminEditPassword" style="margin-bottom: 15px; text-align: left;" placeholder="รหัสผ่าน" autocomplete="new-password">
+            
+            <label style="text-align: left;" id="adminEditPasswordLabel">รหัสผ่าน (คลิกรูปตาเพื่อดู)</label>
+            <div class="password-wrapper">
+                <input type="password" id="adminEditPassword" style="text-align: left;" placeholder="รหัสผ่าน" autocomplete="new-password">
+                <span class="material-symbols-outlined toggle-password" onclick="togglePasswordVisibility('adminEditPassword', this)">visibility_off</span>
+            </div>
+
             <label style="text-align: left;">สิทธิ์การใช้งาน (Role)</label>
             <select id="adminEditRole" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: 20px; outline: none; font-family: 'Kanit';">
                 <option value="User">ผู้ใช้งานทั่วไป (User)</option>
@@ -605,6 +636,10 @@
                 </label>
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
                     <input type="checkbox" id="perm_canEdit" style="width: 20px; height: 20px;"><span>สิทธิ์แก้ไขข้อมูลพนักงาน (คนอื่น)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="perm_canViewPassword" style="width: 20px; height: 20px;">
+                    <span style="color: var(--neon-yellow); font-weight: 500;">สิทธิ์ดูรหัสผ่านผู้ใช้อื่น</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
                     <input type="checkbox" id="perm_canBan" style="width: 20px; height: 20px;"><span>สิทธิ์การแบน / ปลดแบน</span>
@@ -742,7 +777,18 @@
 </div>
 
 <script>
-    // สคริปต์สำหรับการเปลี่ยนไอคอน PWA เป็นรูปโปรไฟล์
+    // สคริปต์สำหรับการสลับซ่อน/แสดงรหัสผ่าน
+    window.togglePasswordVisibility = function(inputId, iconEl) {
+        const input = document.getElementById(inputId);
+        if (input.type === "password") {
+            input.type = "text";
+            iconEl.innerText = "visibility";
+        } else {
+            input.type = "password";
+            iconEl.innerText = "visibility_off";
+        }
+    };
+
     window.updateAppManifest = function(userName, photoUrl) {
         let safeName = userName ? userName : "Taxi 2026";
         let safeIcon = (photoUrl && photoUrl.length > 10) ? photoUrl : "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg";
@@ -846,6 +892,8 @@
 
     window.openChangePasswordModal = () => {
         $('oldPassword').value = ''; $('newPassword').value = ''; $('confirmPassword').value = '';
+        $('oldPassword').type = 'password'; $('newPassword').type = 'password'; $('confirmPassword').type = 'password';
+        document.querySelectorAll('#changePasswordModal .toggle-password').forEach(icon => icon.innerText = 'visibility_off');
         $('cpProfilePic').src = $('editProfilePic').src; toggleModal('changePasswordModal', true);
     };
 
@@ -1058,9 +1106,10 @@
     window.myCurrentQrCodeURL = "";
     window.myCurrentDisplayName = "";
 
+    // เพิ่มสิทธิ์ canViewPassword เข้าไปในระบบ Default Permission
     let globalPermissions = {
-        Manager: { canAdd: false, canEdit: false, canBan: false, canViewLogs: true, canEditOwn: true, canManageService: false, canDelete: false },
-        User: { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false }
+        Manager: { canAdd: false, canEdit: false, canBan: false, canViewLogs: true, canEditOwn: true, canManageService: false, canDelete: false, canViewPassword: false },
+        User: { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false, canViewPassword: false }
     };
 
     const onlineAudio = new Audio('https://actions.google.com/sounds/v1/ui/bell_ping.ogg');
@@ -1131,7 +1180,7 @@
     window.applyPermissionsUI = () => {
         if(!loggedInUserId) return;
         let isGod = currentUserRole === "Admin";
-        let myPerms = isGod ? { canAdd: true, canEdit: true, canBan: true, canViewLogs: true, canEditOwn: true, canManageService: true, canDelete: true } : (globalPermissions[currentUserRole] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false });
+        let myPerms = isGod ? { canAdd: true, canEdit: true, canBan: true, canViewLogs: true, canEditOwn: true, canManageService: true, canDelete: true, canViewPassword: true } : (globalPermissions[currentUserRole] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false, canViewPassword: false });
         
         let showAdminMenu = myPerms.canAdd || myPerms.canEdit || myPerms.canBan || myPerms.canViewLogs || myPerms.canDelete;
         document.getElementById('adminMenuBtn').style.display = showAdminMenu ? 'flex' : 'none';
@@ -1158,6 +1207,8 @@
         document.getElementById('authBtn').onclick = isLoginMode ? window.loginApp : window.registerApp;
         document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authDisplayName').value = '';
         if(!isLoginMode) document.getElementById('regProfilePicPreview').src = "https://via.placeholder.com/80";
+        document.getElementById('authPassword').type = 'password'; 
+        document.querySelectorAll('#loginOverlay .toggle-password').forEach(icon => icon.innerText = 'visibility_off');
     };
 
     let myUserUnsub = null;
@@ -1188,7 +1239,6 @@
                     document.getElementById('mainProfilePic').src = "https://via.placeholder.com/80"; 
                 }
 
-                // เรียกฟังก์ชันเพื่อเปลี่ยน Manifest เป็นรูปภาพของ User
                 window.updateAppManifest(displayNameVal, safeIcon);
 
                 window.myCurrentQrCodeURL = data.qrCodeURL || ""; document.getElementById('editQrCodePic').src = window.myCurrentQrCodeURL || "https://via.placeholder.com/100?text=Upload+QR";
@@ -1244,10 +1294,10 @@
             if(loggedInUserId) { if(!forced) await recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ"); await setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); }
             stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub();
             if(!forced) window.showToast("ออกจากระบบเรียบร้อย");
-            isLoginMode = true; document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; document.getElementById('authDisplayName').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none"; document.getElementById('toggleAuthText').innerText = "ยังไม่มีบัญชีใช่ไหม? คลิกเพื่อสร้างบัญชี"; document.getElementById('authBtn').onclick = window.loginApp; document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authDisplayName').value = ''; document.getElementById('regProfilePicPreview').src = "https://via.placeholder.com/80";
+            isLoginMode = true; document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; document.getElementById('authDisplayName').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none"; document.getElementById('toggleAuthText').innerText = "ยังไม่มีบัญชีใช่ไหม? คลิกเพื่อสร้างบัญชี"; document.getElementById('authBtn').onclick = window.loginApp; document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authPassword').type = 'password'; document.getElementById('authDisplayName').value = ''; document.getElementById('regProfilePicPreview').src = "https://via.placeholder.com/80";
+            document.querySelectorAll('#loginOverlay .toggle-password').forEach(icon => icon.innerText = 'visibility_off');
             document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('mainUserInfo').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex';
             
-            // รีเซ็ต Manifest กลับเป็นค่าพื้นฐาน
             window.updateAppManifest("Taxi Fare 2026", "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg");
         }
     };
@@ -1282,7 +1332,6 @@
         } catch (error) { window.showToast("แจ้งเตือน: " + error.message, true); } finally { saveBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกรหัสผ่าน`; saveBtn.disabled = false; }
     };
 
-    // ฟังก์ชันลบผู้ใช้แบบ Quick Delete
     window.quickDeleteUser = async (uid, userName) => {
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถลบบัญชีตัวเองได้", true);
         let isOk = await showCustomConfirm("ลบบัญชีผู้ใช้งาน", `ยืนยันการ 'ลบถาวร' บัญชี ${userName} ใช่หรือไม่?\nข้อมูลจะไม่สามารถกู้คืนได้`, "danger", "ลบข้อมูล");
@@ -1321,7 +1370,6 @@
                     let canViewThisLog = myPerms.canViewLogs;
                     if (safeRole === "Admin" && currentUserRole !== "Admin") { canViewThisLog = false; }
                     
-                    // เพิ่มระบบสิทธิ์การลบผู้ใช้งาน
                     let canDeleteThisUser = isGod || (myPerms.canDelete && safeRole !== "Admin");
                     
                     if(canTouchThisUser) {
@@ -1335,7 +1383,6 @@
                     }
                     if(canViewThisLog) { logsBtn = `<button onclick="viewUserLogs('${uid}', '${safeName}')" style="background:rgba(241, 196, 15, 0.1); border:1px solid rgba(241, 196, 15, 0.3); color:var(--neon-yellow); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ประวัติ"><span class="material-symbols-outlined" style="font-size:18px;">history</span></button>`; }
 
-                    // เพิ่มปุ่มลบ
                     if(canDeleteThisUser) {
                         deleteBtn = `<button onclick="quickDeleteUser('${uid}', '${safeName}')" style="background:rgba(255, 71, 87, 0.1); border:1px solid rgba(255, 71, 87, 0.3); color:var(--accent-red); width: 35px; height: 35px; border-radius:8px; cursor:pointer; display:flex; justify-content:center; align-items:center;" title="ลบผู้ใช้"><span class="material-symbols-outlined" style="font-size:18px;">delete</span></button>`;
                     }
@@ -1361,13 +1408,13 @@
 
     window.openRoleSettingsModal = () => { window.toggleModal('roleSettingsModal', true); window.loadRolePermissionsToUI(); };
     window.loadRolePermissionsToUI = () => {
-        let role = document.getElementById('settingRoleSelect').value; let perms = globalPermissions[role] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false };
-        document.getElementById('perm_canAdd').checked = perms.canAdd; document.getElementById('perm_canEdit').checked = perms.canEdit; document.getElementById('perm_canBan').checked = perms.canBan; document.getElementById('perm_canViewLogs').checked = perms.canViewLogs; document.getElementById('perm_canEditOwn').checked = perms.canEditOwn !== false; document.getElementById('perm_canManageService').checked = perms.canManageService || false; document.getElementById('perm_canDelete').checked = perms.canDelete || false;
+        let role = document.getElementById('settingRoleSelect').value; let perms = globalPermissions[role] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false, canViewPassword: false };
+        document.getElementById('perm_canAdd').checked = perms.canAdd; document.getElementById('perm_canEdit').checked = perms.canEdit; document.getElementById('perm_canBan').checked = perms.canBan; document.getElementById('perm_canViewLogs').checked = perms.canViewLogs; document.getElementById('perm_canEditOwn').checked = perms.canEditOwn !== false; document.getElementById('perm_canManageService').checked = perms.canManageService || false; document.getElementById('perm_canDelete').checked = perms.canDelete || false; document.getElementById('perm_canViewPassword').checked = perms.canViewPassword || false;
     };
 
     window.saveRolePermissions = async () => {
         let role = document.getElementById('settingRoleSelect').value; let btn = document.getElementById('saveRolePermBtn'); btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
-        let newPerms = { canAdd: document.getElementById('perm_canAdd').checked, canEdit: document.getElementById('perm_canEdit').checked, canBan: document.getElementById('perm_canBan').checked, canViewLogs: document.getElementById('perm_canViewLogs').checked, canEditOwn: document.getElementById('perm_canEditOwn').checked, canManageService: document.getElementById('perm_canManageService').checked, canDelete: document.getElementById('perm_canDelete').checked };
+        let newPerms = { canAdd: document.getElementById('perm_canAdd').checked, canEdit: document.getElementById('perm_canEdit').checked, canBan: document.getElementById('perm_canBan').checked, canViewLogs: document.getElementById('perm_canViewLogs').checked, canEditOwn: document.getElementById('perm_canEditOwn').checked, canManageService: document.getElementById('perm_canManageService').checked, canDelete: document.getElementById('perm_canDelete').checked, canViewPassword: document.getElementById('perm_canViewPassword').checked };
         try { await setDoc(doc(db, "settings", "roles"), { [role]: newPerms }, { merge: true }); window.showToast(`บันทึกสิทธิ์สำหรับ ${role} สำเร็จ`); window.toggleModal('roleSettingsModal', false); } catch(e) { window.showToast("บันทึกล้มเหลว", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์`; btn.disabled = false; }
     };
 
@@ -1375,23 +1422,45 @@
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true);
         const msg = isBan ? "ยืนยันการ 'ระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?\nผู้ใช้จะหลุดจากระบบและเข้าไม่ได้อีก" : "ยืนยันการ 'ปลดระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?";
         let isOk = await showCustomConfirm(isBan ? "ระงับการใช้งาน" : "ปลดระงับการใช้งาน", msg, isBan ? "danger" : "warning");
-        if(isOk) {
-            try { await updateDoc(doc(db, "users", uid), { isBanned: isBan }); await recordActivityLog(uid, isBan ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`); window.showToast(isBan ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); }
+        if(isOk) { 
+            try { await updateDoc(doc(db, "users", uid), { isBanned: isBan }); await recordActivityLog(uid, isBan ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`); window.showToast(isBan ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); window.toggleModal('adminEditUserModal', false); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); } 
         }
-    };
+    }
 
     let currentEditUid = "";
     window.openAdminAddUser = () => {
         currentEditUid = ""; isBannedState = false;
         document.getElementById('adminEditUid').value = ""; document.getElementById('adminEditUsername').value = ""; document.getElementById('adminEditUsername').disabled = false; document.getElementById('adminEditUsernameLabel').style.display = "block"; document.getElementById('adminEditName').value = ""; document.getElementById('adminEditPic').src = "https://via.placeholder.com/80"; document.getElementById('adminEditQrPic').src = "https://via.placeholder.com/80?text=QR"; document.getElementById('adminEditRole').value = "User"; document.getElementById('adminEditPassword').value = ""; document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = ''; document.getElementById('adminEditRole').disabled = currentUserRole !== "Admin"; 
+        
+        document.getElementById('adminEditPassword').type = 'password';
+        document.querySelectorAll('#adminEditUserModal .toggle-password').forEach(icon => icon.innerText = 'visibility_off');
+        document.getElementById('adminEditPasswordLabel').innerText = "รหัสผ่าน (คลิกรูปตาเพื่อดู)";
+
         document.getElementById('adminEditModalTitle').innerText = "เพิ่มผู้ใช้งานใหม่"; document.getElementById('deleteUserBtn').style.display = 'none'; document.getElementById('banUserBtn').style.display = 'none'; 
         window.toggleModal('adminMenuModal', false); window.toggleModal('adminEditUserModal', true);
     };
 
     window.openAdminEditUser = (uid) => {
         let u = window.currentAdminUsers.find(x => x.uid === uid); if(!u) return; currentEditUid = uid; isBannedState = u.isBanned || false;
-        document.getElementById('adminEditUid').value = uid; document.getElementById('adminEditUsername').value = u.username || ''; document.getElementById('adminEditUsername').disabled = true; document.getElementById('adminEditUsernameLabel').style.display = "block"; document.getElementById('adminEditName').value = u.displayName || u.username; document.getElementById('adminEditPic').src = (u.photoURL && u.photoURL.length > 10) ? u.photoURL : "https://via.placeholder.com/80"; document.getElementById('adminEditQrPic').src = (u.qrCodeURL && u.qrCodeURL.length > 10) ? u.qrCodeURL : "https://via.placeholder.com/80?text=QR"; document.getElementById('adminEditRole').value = u.role || 'User'; document.getElementById('adminEditPasswordLabel').innerText = "รหัสผ่าน (แก้ไขได้)"; document.getElementById('adminEditPassword').value = u.password || ''; document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = ''; document.getElementById('adminEditModalTitle').innerText = "จัดการผู้ใช้"; document.getElementById('adminEditRole').disabled = currentUserRole !== "Admin";
-        let isGod = currentUserRole === "Admin"; let myPerms = isGod ? { canBan: true, canDelete: true } : (globalPermissions[currentUserRole] || {});
+        document.getElementById('adminEditUid').value = uid; document.getElementById('adminEditUsername').value = u.username || ''; document.getElementById('adminEditUsername').disabled = true; document.getElementById('adminEditUsernameLabel').style.display = "block"; document.getElementById('adminEditName').value = u.displayName || u.username; document.getElementById('adminEditPic').src = (u.photoURL && u.photoURL.length > 10) ? u.photoURL : "https://via.placeholder.com/80"; document.getElementById('adminEditQrPic').src = (u.qrCodeURL && u.qrCodeURL.length > 10) ? u.qrCodeURL : "https://via.placeholder.com/80?text=QR"; document.getElementById('adminEditRole').value = u.role || 'User'; 
+        
+        document.getElementById('adminEditPassword').type = 'password';
+        document.querySelectorAll('#adminEditUserModal .toggle-password').forEach(icon => icon.innerText = 'visibility_off');
+
+        // เช็คสิทธิ์ว่ามีสิทธิ์ดูรหัสผ่านหรือไม่
+        let isGod = currentUserRole === "Admin"; let myPerms = isGod ? { canBan: true, canDelete: true, canViewPassword: true } : (globalPermissions[currentUserRole] || {});
+        
+        if(myPerms.canViewPassword || isGod) {
+            document.getElementById('adminEditPassword').value = u.password || ''; 
+            document.getElementById('adminEditPasswordLabel').innerText = "รหัสผ่าน (คลิกรูปตาเพื่อดู)";
+        } else {
+            // ถ้าไม่มีสิทธิ์ดูรหัส ให้ช่องว่างเปล่าและบอกว่าให้ตั้งใหม่
+            document.getElementById('adminEditPassword').value = ''; 
+            document.getElementById('adminEditPasswordLabel').innerText = "ตั้งรหัสผ่านใหม่ (ปล่อยว่างหากไม่เปลี่ยน)";
+        }
+
+        document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = ''; document.getElementById('adminEditModalTitle').innerText = "จัดการผู้ใช้"; document.getElementById('adminEditRole').disabled = currentUserRole !== "Admin";
+        
         if(myPerms.canBan) {
             document.getElementById('banUserBtn').style.display = 'flex'; const banBtn = document.getElementById('banUserBtn'); const banIcon = document.getElementById('banIcon'); const banText = document.getElementById('banText');
             if(isBannedState) { banBtn.style.background = 'var(--neon-green)'; banIcon.innerText = 'check_circle'; banText.innerText = 'ปลดระงับการใช้งาน'; } 
@@ -1403,15 +1472,6 @@
         
         window.toggleModal('adminEditUserModal', true);
     };
-
-    window.toggleBanUser = async () => {
-        const uid = currentEditUid; if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true); const newState = !isBannedState;
-        const msg = newState ? "ยืนยันการ 'ระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?\nผู้ใช้จะหลุดจากระบบและเข้าไม่ได้อีก" : "ยืนยันการ 'ปลดระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?";
-        let isOk = await showCustomConfirm(newState ? "ระงับการใช้งาน" : "ปลดระงับการใช้งาน", msg, newState ? "danger" : "warning");
-        if(isOk) { 
-            try { await updateDoc(doc(db, "users", uid), { isBanned: newState }); await recordActivityLog(uid, newState ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`); window.showToast(newState ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); window.toggleModal('adminEditUserModal', false); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); } 
-        }
-    }
 
     window.saveAdminUserEdit = async () => {
         const uid = document.getElementById('adminEditUid').value; const newUsername = document.getElementById('adminEditUsername').value.trim(); const newName = document.getElementById('adminEditName').value; const newRole = document.getElementById('adminEditRole').value; const newPassword = document.getElementById('adminEditPassword').value; const fileInput = document.getElementById('adminUploadPicInput'); const qrInput = document.getElementById('adminUploadQrInput'); const btn = document.getElementById('saveAdminUserBtn'); btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
