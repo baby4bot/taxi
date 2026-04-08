@@ -6,10 +6,18 @@
     <meta content="dark" name="color-scheme" />
     <meta content="#090a0f" name="theme-color" />
     <title>Taxi Fare Calculator 2026</title>
+    
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Taxi 2026" />
+    
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet" />
     <link id="appleIcon" href="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" rel="apple-touch-icon" />
     <link id="shortcutIcon" href="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" rel="shortcut icon" />
-    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <link id="dynamicManifest" rel="manifest" href='data:application/manifest+json,{"name":"Taxi Fare 2026","short_name":"Taxi 2026","start_url":".","display":"standalone","background_color":"#090a0f","theme_color":"#090a0f","icons":[{"src":"https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg","sizes":"192x192","type":"image/jpeg"},{"src":"https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg","sizes":"512x512","type":"image/jpeg"}]}' />
+    
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <style>
@@ -63,7 +71,7 @@
         .side-menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100000; display: none; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(5px); }
         .side-menu { position: fixed; top: 0; right: -320px; width: 280px; height: 100%; background: #0d0f17; border-left: 1px solid rgba(255,255,255,0.05); box-shadow: -10px 0 40px rgba(0,0,0,0.9); transition: right 0.3s ease-in-out; display: flex; flex-direction: column; padding: 40px 20px; box-sizing: border-box; }
         .side-menu-header { text-align: center; margin-bottom: 25px; }
-        .side-profile-pic { width: 90px; height: 90px; border-radius: 50%; border: 3px solid #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.4); object-fit: cover; cursor: margin-bottom: 15px; transition: 0.3s; }
+        .side-profile-pic { width: 90px; height: 90px; border-radius: 50%; border: 3px solid #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.4); object-fit: cover; cursor: pointer; margin-bottom: 15px; transition: 0.3s; }
         .side-profile-pic:active { transform: scale(0.95); }
         .side-user-name { font-size: 22px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; }
         .side-user-role { font-size: 15px; font-weight: 600; color: #f39c12; margin-top: 2px; }
@@ -175,9 +183,7 @@
         .log-item { background: rgba(0,0,0,0.3); border-left: 3px solid var(--neon-yellow); padding: 10px 15px; margin-bottom: 8px; border-radius: 0 10px 10px 0; text-align: left; font-size: 13px; }
         .log-time { font-size: 11px; color: var(--text-dim); margin-bottom: 3px; }
 
-        /* ======================================================== */
-        /* สไตล์สำหรับ Service Portal */
-        /* ======================================================== */
+        /* Service Portal CSS */
         .sp-modal-box { background: #0f111a; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
         .sp-header { position: relative; padding: 25px 20px 20px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
         .sp-neon-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, transparent, #00bcd4, #ff4757, #f1c40f, transparent); background-size: 200% 100%; animation: spLightRun 2.5s infinite linear; }
@@ -235,108 +241,48 @@
         .theme-cat-5 .sp-icon-box .material-symbols-outlined { color: #64b5f6; filter: drop-shadow(0 0 5px rgba(33, 150, 243, 0.5)); }
         .title-theme-5 { color: #64b5f6; text-shadow: 0 0 8px rgba(33, 150, 243, 0.4); }
 
-        /* ======================================================== */
-        /* สไตล์สำหรับกล่องมิเตอร์ใหญ่ (Live Tracker Zoom Big Size) */
-        /* ======================================================== */
-        .tracker-zoom-box {
-            background: #0b0c10;
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 30px;
-            padding: 30px 15px; 
-            width: 98%;
-            max-width: 500px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.9);
-            font-family: 'Kanit', sans-serif;
-        }
-        
+        /* Live Tracker Zoom Big Size CSS */
+        .tracker-zoom-box { background: #0b0c10; border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; padding: 30px 15px; width: 98%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); font-family: 'Kanit', sans-serif; }
         .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 0 10px; }
         .tz-start-time { color: white; font-weight: 600; font-size: 18px; }
         .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 18px; }
-
         .tz-progress-container { position: relative; margin: 15px 15px 35px 15px; }
         .tz-progress-line { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; position: relative; }
         .tz-progress-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); border-radius: 3px; transition: width 1s ease-out; box-shadow: 0 0 10px var(--glow-yellow); }
-        
         .tz-point-start { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; background: transparent; display: flex; justify-content: center; align-items: center; }
         .tz-point-start::before { content: ''; width: 8px; height: 8px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -16px; left: -14px; box-shadow: 16px 16px 0 var(--neon-yellow); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotate(45deg); }
         .tz-point-end { position: absolute; right: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--accent-red); background: transparent; }
-
         .tz-stats-row { display: flex; justify-content: space-around; margin-bottom: 30px; }
         .tz-stat-col { text-align: center; }
         .tz-stat-num { font-size: 55px; font-weight: 700; line-height: 1; letter-spacing: -1px; margin-bottom: 5px; }
         .tz-stat-label { font-size: 18px; color: var(--text-dim); }
-
-        .tz-fare-card {
-            background: linear-gradient(135deg, #2ecc71, #27ae60);
-            border-radius: 25px;
-            padding: 35px 15px;
-            text-align: center;
-            box-shadow: 0 15px 40px rgba(46, 204, 113, 0.4);
-            margin-bottom: 25px;
-        }
+        .tz-fare-card { background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 25px; padding: 35px 15px; text-align: center; box-shadow: 0 15px 40px rgba(46, 204, 113, 0.4); margin-bottom: 25px; }
         .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 20px; font-weight: 500; margin-bottom: 5px; }
         .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 10px; }
         #tzMeterPrice { font-size: 140px; font-weight: 800; color: white; line-height: 0.8; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .tz-fare-currency { font-size: 60px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-
-        .tz-info-box {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 20px;
-            padding: 25px 0;
-            display: flex;
-            justify-content: space-evenly;
-            align-items: center;
-            margin-bottom: 25px;
-        }
+        .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: 25px; }
         .tz-info-col { flex: 1; text-align: center; }
         .tz-info-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.08); }
         .tz-info-label { font-size: 18px; color: var(--text-dim); margin-bottom: 5px; }
         .tz-info-val { font-size: 32px; font-weight: 700; }
-
         .tz-close-text { text-align: center; font-size: 18px; color: rgba(255,255,255,0.4); cursor: pointer; transition: 0.2s; padding: 10px; font-weight: 500; }
         .tz-close-text:active { color: white; transform: scale(0.95); }
 
-        /* =======================================================
-           โค้ด CSS สำหรับ Custom Confirm
-           ======================================================= */
-        .custom-confirm-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; 
-            z-index: 100000; backdrop-filter: blur(10px); animation: fadeIn 0.2s ease-out;
-        }
-
-        .custom-confirm-box {
-            background: #161823; border: 1px solid var(--border-glass); 
-            border-radius: 25px; width: 85%; max-width: 350px; padding: 30px 20px; 
-            text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9);
-            transform: scale(0.9); animation: popIn 0.3s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
+        /* Custom Confirm CSS */
+        .custom-confirm-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 100000; backdrop-filter: blur(10px); animation: fadeIn 0.2s ease-out; }
+        .custom-confirm-box { background: #161823; border: 1px solid var(--border-glass); border-radius: 25px; width: 85%; max-width: 350px; padding: 30px 20px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9); transform: scale(0.9); animation: popIn 0.3s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .custom-confirm-icon { font-size: 60px; margin-bottom: 10px; }
         .custom-confirm-icon.danger { color: var(--accent-red); text-shadow: 0 0 20px rgba(255, 71, 87, 0.4); }
         .custom-confirm-icon.warning { color: var(--neon-yellow); text-shadow: 0 0 20px rgba(241, 196, 15, 0.4); }
-
         .custom-confirm-title { font-size: 20px; font-weight: 600; margin: 0 0 10px 0; color: white; }
         .custom-confirm-desc { font-size: 14px; color: var(--text-dim); margin-bottom: 25px; line-height: 1.5; white-space: pre-line; }
-
         .custom-confirm-actions { display: flex; gap: 12px; width: 100%; }
-        
-        .btn-cc-cancel {
-            flex: 1; padding: 12px; border-radius: 15px; font-family: 'Kanit'; font-size: 16px; font-weight: 500;
-            background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);
-            cursor: pointer; transition: 0.2s;
-        }
+        .btn-cc-cancel { flex: 1; padding: 12px; border-radius: 15px; font-family: 'Kanit'; font-size: 16px; font-weight: 500; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.2s; }
         .btn-cc-cancel:active { transform: scale(0.95); background: rgba(255,255,255,0.2); }
-
-        .btn-cc-ok {
-            flex: 1; padding: 12px; border-radius: 15px; font-family: 'Kanit'; font-size: 16px; font-weight: 500;
-            background: var(--neon-green); color: white; border: none; cursor: pointer; transition: 0.2s;
-            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
-        }
+        .btn-cc-ok { flex: 1; padding: 12px; border-radius: 15px; font-family: 'Kanit'; font-size: 16px; font-weight: 500; background: var(--neon-green); color: white; border: none; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); }
         .btn-cc-ok.danger { background: var(--accent-red); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3); }
         .btn-cc-ok:active { transform: scale(0.95); }
-
     </style>
 </head>
 <body>
@@ -796,6 +742,44 @@
 </div>
 
 <script>
+    // สคริปต์สำหรับการเปลี่ยนไอคอน PWA เป็นรูปโปรไฟล์
+    window.updateAppManifest = function(userName, photoUrl) {
+        let safeName = userName ? userName : "Taxi 2026";
+        let safeIcon = (photoUrl && photoUrl.length > 10) ? photoUrl : "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg";
+
+        document.getElementById('appleIcon').href = safeIcon;
+        document.getElementById('shortcutIcon').href = safeIcon;
+
+        let manifest = {
+            "name": "Taxi: " + safeName,
+            "short_name": safeName,
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#090a0f",
+            "theme_color": "#090a0f",
+            "icons": [
+                {
+                    "src": safeIcon,
+                    "sizes": "192x192",
+                    "type": "image/jpeg"
+                },
+                {
+                    "src": safeIcon,
+                    "sizes": "512x512",
+                    "type": "image/jpeg"
+                }
+            ]
+        };
+
+        let stringManifest = JSON.stringify(manifest);
+        let manifestURI = 'data:application/manifest+json,' + encodeURIComponent(stringManifest);
+        
+        let manifestLink = document.getElementById('dynamicManifest');
+        if (manifestLink) {
+            manifestLink.href = manifestURI;
+        }
+    };
+
     // =======================================================
     // ระบบ Custom Confirm
     // =======================================================
@@ -1196,13 +1180,16 @@
                 if(currentUserRole === "Admin") displayRoleTH = "ผู้ดูแลระบบ"; else if(currentUserRole === "Manager") displayRoleTH = "ผู้จัดการ"; else displayRoleTH = "ผู้ใช้งานทั่วไป";
                 document.getElementById('displayUserRole').innerText = displayRoleTH; document.getElementById('mainUserRole').innerText = displayRoleTH; document.getElementById('editDisplayName').value = data.displayName || "";
                 
+                let safeIcon = "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg";
                 if (data.photoURL && data.photoURL.length > 10) {
+                    safeIcon = data.photoURL;
                     document.getElementById('profilePic').src = data.photoURL; document.getElementById('editProfilePic').src = data.photoURL; document.getElementById('mainProfilePic').src = data.photoURL;
-                    document.getElementById('appleIcon').href = data.photoURL; document.getElementById('shortcutIcon').href = data.photoURL;
                 } else { 
                     document.getElementById('mainProfilePic').src = "https://via.placeholder.com/80"; 
-                    document.getElementById('appleIcon').href = "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg"; document.getElementById('shortcutIcon').href = "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg";
                 }
+
+                // เรียกฟังก์ชันเพื่อเปลี่ยน Manifest เป็นรูปภาพของ User
+                window.updateAppManifest(displayNameVal, safeIcon);
 
                 window.myCurrentQrCodeURL = data.qrCodeURL || ""; document.getElementById('editQrCodePic').src = window.myCurrentQrCodeURL || "https://via.placeholder.com/100?text=Upload+QR";
 
@@ -1259,6 +1246,9 @@
             if(!forced) window.showToast("ออกจากระบบเรียบร้อย");
             isLoginMode = true; document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; document.getElementById('authDisplayName').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none"; document.getElementById('toggleAuthText').innerText = "ยังไม่มีบัญชีใช่ไหม? คลิกเพื่อสร้างบัญชี"; document.getElementById('authBtn').onclick = window.loginApp; document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authDisplayName').value = ''; document.getElementById('regProfilePicPreview').src = "https://via.placeholder.com/80";
             document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('mainUserInfo').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex';
+            
+            // รีเซ็ต Manifest กลับเป็นค่าพื้นฐาน
+            window.updateAppManifest("Taxi Fare 2026", "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg");
         }
     };
 
