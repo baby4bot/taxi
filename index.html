@@ -83,25 +83,45 @@
         .side-menu-item.logout-item { color: #ff4757; margin-top: auto; }
         .side-menu-item.logout-item .material-symbols-outlined { color: #ff4757; }
 
-        .header-container { margin-bottom: 25px; margin-top: 15px; gap: 15px; flex-shrink: 0; }
+        .header-container { margin-bottom: 15px; margin-top: 15px; gap: 15px; flex-shrink: 0; }
         .header-icon { width: 40px; height: 40px; border-radius: 12px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); object-fit: cover; }
         h2 { font-size: 24px; font-weight: 500; margin: 0; background: linear-gradient(90deg, #fff, #a0a5b5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        .search-section { text-align: left; position: relative; flex-shrink: 0; margin-bottom: 20px; }
+        /* สวิตช์เลือกประเภทรถแบบมินิมอล */
+        .taxi-type-selector {
+            display: inline-flex; background: var(--input-bg); border-radius: 30px; padding: 5px; border: 1px solid var(--border-glass); margin-bottom: 20px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .taxi-type-option {
+            padding: 8px 20px; border-radius: 25px; color: var(--text-dim); font-size: 14px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; font-weight: 500; -webkit-tap-highlight-color: transparent; user-select: none;
+        }
+        .taxi-type-option .material-symbols-outlined { font-size: 20px; }
+        .taxi-type-option.active {
+            background: var(--neon-green); color: white; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+        }
+
+        .search-section { text-align: left; position: relative; flex-shrink: 0; margin-bottom: 15px; }
         label { display: block; margin-bottom: 10px; font-size: 13px; color: var(--text-dim); text-align: center; }
         .input-group { display: flex; gap: 10px; align-items: center; width: 100%; }
         input[type="text"], input[type="email"], input[type="password"], .km-input-box { background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 20px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); transition: 0.3s; }
         input[type="text"], input[type="email"], input[type="password"] { flex: 1; min-width: 0; padding: 18px 20px; font-size: 15px; outline: none; color: white; text-align: center; width: 100%; box-sizing: border-box; }
         input:focus, .km-input-box:focus-within { border-color: var(--neon-yellow); box-shadow: 0 0 15px rgba(241, 196, 15, 0.2), inset 0 2px 5px rgba(0,0,0,0.5); }
         input.loading-state { color: var(--neon-yellow) !important; text-shadow: 0 0 10px var(--glow-yellow); }
+        
+        .surcharge-row { display: flex; gap: 10px; padding-bottom: 5px; margin-bottom: 10px; justify-content: center; flex-wrap: wrap; }
+        .surcharge-btn { padding: 10px 20px; border-radius: 20px; background: rgba(241, 196, 15, 0.1); border: 1px solid rgba(241, 196, 15, 0.3); color: var(--neon-yellow); font-family: 'Kanit'; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .surcharge-btn:active { transform: scale(0.95); background: rgba(241, 196, 15, 0.3); }
+        .surcharge-btn.danger { color: var(--accent-red); border-color: rgba(255, 71, 87, 0.3); background: rgba(255, 71, 87, 0.1); }
+        .surcharge-btn.danger:active { background: rgba(255, 71, 87, 0.3); }
+
+        /* ส่วนแสดงรายการบิลค่าใช้จ่ายพิเศษ */
+        .surcharge-list-container { width: 100%; max-width: 320px; margin: 0 auto 15px auto; display: flex; flex-direction: column; gap: 6px; }
+        .surcharge-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px 15px; border-radius: 12px; font-size: 13px; color: white; border: 1px solid rgba(255,255,255,0.1); animation: fadeIn 0.3s ease; }
+        .surcharge-item .del-btn { color: var(--text-dim); cursor: pointer; font-size: 18px; margin-left: 10px; transition: 0.2s; }
+        .surcharge-item .del-btn:active { color: var(--accent-red); transform: scale(0.9); }
 
         .password-wrapper { position: relative; width: 100%; margin-bottom: 15px; }
         .password-wrapper input { width: 100%; margin-bottom: 0 !important; padding-right: 50px !important; }
-        .toggle-password {
-            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
-            color: var(--text-dim); cursor: pointer; user-select: none; z-index: 10;
-            transition: 0.2s;
-        }
+        .toggle-password { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--text-dim); cursor: pointer; user-select: none; z-index: 10; transition: 0.2s; }
         .toggle-password:active { transform: translateY(-50%) scale(0.9); color: white; }
 
         .dropdown-box { position: absolute; background: rgba(30, 32, 45, 0.95); width: 100%; z-index: 1000; border-radius: 20px; max-height: 320px; overflow-y: auto; display: none; margin-top: 10px; border: 1px solid var(--border-glass); box-shadow: 0 15px 40px rgba(0,0,0,0.8); backdrop-filter: blur(15px); -ms-overflow-style: none; scrollbar-width: none; }
@@ -130,11 +150,12 @@
         .btn-plus { background: var(--neon-green); box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3); }
         .btn-math:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; box-shadow: none; }
         
-        .km-input-box { flex: 1; height: 60px; display: flex; align-items: center; overflow: hidden; transition: 0.3s; background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 20px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
-        input[type="number"] { width: 100%; border: none; text-align: center; font-size: 26px; outline: none; color: white; background: transparent; font-weight: 500; -moz-appearance: textfield; transition: 0.3s; }
+        .km-input-box { flex: 1; height: 60px; display: flex; align-items: center; position: relative; overflow: hidden; transition: 0.3s; background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 20px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
+        input[type="number"] { width: 100%; border: none; text-align: center; font-size: 26px; outline: none; color: white; background: transparent; font-weight: 500; -moz-appearance: textfield; transition: 0.3s; padding-right: 30px; }
         input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .km-label { position: absolute; right: 20px; font-size: 16px; color: var(--text-dim); pointer-events: none; }
 
-        .result-container { flex: 1; position: relative; margin: 10px 0 20px 0; padding: 40px 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; }
+        .result-container { flex: 1; position: relative; margin: 10px 0 20px 0; padding: 30px 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 180px; }
         .bubble-bg-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: visible; }
         .bubble { position: absolute; border-radius: 50%; animation: floatBubble 8s ease-in-out infinite; mix-blend-mode: screen; filter: blur(15px); }
         .bubble-1 { width: 180px; height: 180px; top: -30px; left: 5%; background: rgba(46, 204, 113, 0.8); }
@@ -147,7 +168,7 @@
         
         .result-content { position: relative; z-index: 10; text-align: center; transition: 0.3s; }
         .price { font-size: 68px; font-weight: 600; line-height: 1; color: #fff; text-shadow: 0 4px 15px rgba(0,0,0,0.8), 0 0 20px rgba(46, 204, 113, 0.5); }
-        .sub-info { font-size: 16px; font-weight: 500; margin-top: 15px; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.8); background: rgba(10, 12, 18, 0.7); border: 1px solid rgba(255,255,255,0.15); padding: 6px 18px; border-radius: 20px; display: inline-block; backdrop-filter: blur(8px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .sub-info { font-size: 15px; font-weight: 500; margin-top: 15px; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.8); background: rgba(10, 12, 18, 0.7); border: 1px solid rgba(255,255,255,0.15); padding: 6px 18px; border-radius: 20px; display: inline-block; backdrop-filter: blur(8px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
         .action-row { display: flex; gap: 10px; margin-bottom: 12px; width: 100%; flex-shrink: 0; }
         .manual-timer-btn { flex: 1; padding: 18px 20px; border-radius: 20px; background: var(--neon-green); color: white; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 600; transition: 0.3s; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); -webkit-user-select: none; user-select: none; }
@@ -181,7 +202,56 @@
         .btn-del-media .material-symbols-outlined { font-size: 16px; }
         .btn-del-media:active { transform: scale(0.9); }
         
-        /* สไตล์สำหรับปุ่มจัดการ Admin ไม่มีพื้นหลัง */
+        .modal-content-scroll { padding: 20px; flex: 1; overflow-y: auto; overflow-x: hidden; -ms-overflow-style: none; scrollbar-width: none; text-align: center; }
+        .modal-content-scroll::-webkit-scrollbar { display: none; }
+
+        .modal-box.standard-box { background: var(--bg-dark); border: 1px solid var(--border-glass); border-radius: 30px; padding: 30px 20px; width: 90%; max-width: 400px; text-align: center; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; }
+
+        .zoom-content { background: linear-gradient(135deg, #2ecc71, #f1c40f); width: 85%; max-width: 380px; padding: 80px 20px; border-radius: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 2px 10px rgba(255,255,255,0.4); }
+
+        /* Live Tracker Zoom Big Size CSS */
+        .tracker-zoom-box { background: #0b0c10; border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; padding: 30px 15px; width: 98%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); font-family: 'Kanit', sans-serif; }
+        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 0 10px; }
+        .tz-start-time { color: white; font-weight: 600; font-size: 18px; }
+        .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 18px; }
+        .tz-progress-container { position: relative; margin: 15px 15px 35px 15px; }
+        .tz-progress-line { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; position: relative; }
+        .tz-progress-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); border-radius: 3px; transition: width 1s ease-out; box-shadow: 0 0 10px var(--glow-yellow); }
+        .tz-point-start { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; background: transparent; display: flex; justify-content: center; align-items: center; }
+        .tz-point-start::before { content: ''; width: 8px; height: 8px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -16px; left: -14px; box-shadow: 16px 16px 0 var(--neon-yellow); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotate(45deg); }
+        .tz-point-end { position: absolute; right: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--accent-red); background: transparent; }
+        .tz-stats-row { display: flex; justify-content: space-around; margin-bottom: 30px; }
+        .tz-stat-col { text-align: center; }
+        .tz-stat-num { font-size: 55px; font-weight: 700; line-height: 1; letter-spacing: -1px; margin-bottom: 5px; }
+        .tz-stat-label { font-size: 18px; color: var(--text-dim); }
+        .tz-fare-card { background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 25px; padding: 35px 15px; text-align: center; box-shadow: 0 15px 40px rgba(46, 204, 113, 0.4); margin-bottom: 25px; }
+        .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 20px; font-weight: 500; margin-bottom: 5px; }
+        .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 10px; }
+        #tzMeterPrice { font-size: 140px; font-weight: 800; color: white; line-height: 0.8; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .tz-fare-currency { font-size: 60px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: 25px; }
+        .tz-info-col { flex: 1; text-align: center; }
+        .tz-info-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.08); }
+        .tz-info-label { font-size: 18px; color: var(--text-dim); margin-bottom: 5px; }
+        .tz-info-val { font-size: 32px; font-weight: 700; }
+        .tz-close-text { text-align: center; font-size: 18px; color: rgba(255,255,255,0.4); cursor: pointer; transition: 0.2s; padding: 10px; font-weight: 500; }
+        .tz-close-text:active { color: white; transform: scale(0.95); }
+
+        /* Custom Confirm CSS */
+        .custom-confirm-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 100000; backdrop-filter: blur(10px); animation: fadeIn 0.2s ease-out; }
+        .custom-confirm-box { background: #161823; border: 1px solid var(--border-glass); border-radius: 25px; width: 85%; max-width: 350px; padding: 30px 20px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9); transform: scale(0.9); animation: popIn 0.3s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .custom-confirm-icon { font-size: 60px; margin-bottom: 10px; }
+        .custom-confirm-icon.danger { color: var(--accent-red); text-shadow: 0 0 20px rgba(255, 71, 87, 0.4); }
+        .custom-confirm-icon.warning { color: var(--neon-yellow); text-shadow: 0 0 20px rgba(241, 196, 15, 0.4); }
+        .custom-confirm-title { font-size: 20px; font-weight: 600; margin: 0 0 10px 0; color: white; }
+        .custom-confirm-desc { font-size: 14px; color: var(--text-dim); margin-bottom: 25px; line-height: 1.5; white-space: pre-line; }
+        .custom-confirm-actions { display: flex; gap: 12px; width: 100%; }
+        .btn-cc-cancel { flex: 1; padding: 12px; border-radius: 15px; font-family: 'Kanit'; font-size: 16px; font-weight: 500; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.2s; }
+        .btn-cc-cancel:active { transform: scale(0.95); background: rgba(255,255,255,0.2); }
+        .btn-cc-ok { flex: 1; padding: 12px; border-radius: 15px; font-family: 'Kanit'; font-size: 16px; font-weight: 500; background: var(--neon-green); color: white; border: none; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); }
+        .btn-cc-ok.danger { background: var(--accent-red); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3); }
+        .btn-cc-ok:active { transform: scale(0.95); }
+
         .action-icon-btn { background: transparent; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; padding: 6px; transition: 0.2s; border-radius: 50%; outline: none; }
         .action-icon-btn:hover { background: rgba(255,255,255,0.05); }
         .action-icon-btn:active { transform: scale(0.85); background: rgba(255,255,255,0.1); }
@@ -190,13 +260,6 @@
         .icon-edit { color: #3498db; }
         .icon-log { color: var(--neon-yellow); }
         .icon-del { color: var(--accent-red); }
-
-        .modal-content-scroll { padding: 20px; flex: 1; overflow-y: auto; overflow-x: hidden; -ms-overflow-style: none; scrollbar-width: none; text-align: center; }
-        .modal-content-scroll::-webkit-scrollbar { display: none; }
-
-        .modal-box.standard-box { background: var(--bg-dark); border: 1px solid var(--border-glass); border-radius: 30px; padding: 30px 20px; width: 90%; max-width: 400px; text-align: center; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; }
-
-        .zoom-content { background: linear-gradient(135deg, #2ecc71, #f1c40f); width: 85%; max-width: 380px; padding: 80px 20px; border-radius: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 2px 10px rgba(255,255,255,0.4); }
 
         .admin-user-card { background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 15px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; text-align: left; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
@@ -264,49 +327,6 @@
         .theme-cat-5 .sp-icon-box { background: rgba(33, 150, 243, 0.2); border: 1px solid rgba(33, 150, 243, 0.3); }
         .theme-cat-5 .sp-icon-box .material-symbols-outlined { color: #64b5f6; filter: drop-shadow(0 0 5px rgba(33, 150, 243, 0.5)); }
         .title-theme-5 { color: #64b5f6; text-shadow: 0 0 8px rgba(33, 150, 243, 0.4); }
-
-        /* Live Tracker Zoom Big Size CSS */
-        .tracker-zoom-box { background: #0b0c10; border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; padding: 30px 15px; width: 98%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); font-family: 'Kanit', sans-serif; }
-        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 0 10px; }
-        .tz-start-time { color: white; font-weight: 600; font-size: 18px; }
-        .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 18px; }
-        .tz-progress-container { position: relative; margin: 15px 15px 35px 15px; }
-        .tz-progress-line { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; position: relative; }
-        .tz-progress-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); border-radius: 3px; transition: width 1s ease-out; box-shadow: 0 0 10px var(--glow-yellow); }
-        .tz-point-start { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; background: transparent; display: flex; justify-content: center; align-items: center; }
-        .tz-point-start::before { content: ''; width: 8px; height: 8px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -16px; left: -14px; box-shadow: 16px 16px 0 var(--neon-yellow); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotate(45deg); }
-        .tz-point-end { position: absolute; right: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--accent-red); background: transparent; }
-        .tz-stats-row { display: flex; justify-content: space-around; margin-bottom: 30px; }
-        .tz-stat-col { text-align: center; }
-        .tz-stat-num { font-size: 55px; font-weight: 700; line-height: 1; letter-spacing: -1px; margin-bottom: 5px; }
-        .tz-stat-label { font-size: 18px; color: var(--text-dim); }
-        .tz-fare-card { background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 25px; padding: 35px 15px; text-align: center; box-shadow: 0 15px 40px rgba(46, 204, 113, 0.4); margin-bottom: 25px; }
-        .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 20px; font-weight: 500; margin-bottom: 5px; }
-        .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 10px; }
-        #tzMeterPrice { font-size: 140px; font-weight: 800; color: white; line-height: 0.8; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .tz-fare-currency { font-size: 60px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: 25px; }
-        .tz-info-col { flex: 1; text-align: center; }
-        .tz-info-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.08); }
-        .tz-info-label { font-size: 18px; color: var(--text-dim); margin-bottom: 5px; }
-        .tz-info-val { font-size: 32px; font-weight: 700; }
-        .tz-close-text { text-align: center; font-size: 18px; color: rgba(255,255,255,0.4); cursor: pointer; transition: 0.2s; padding: 10px; font-weight: 500; }
-        .tz-close-text:active { color: white; transform: scale(0.95); }
-
-        /* Custom Confirm CSS */
-        .custom-confirm-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 100000; backdrop-filter: blur(10px); animation: fadeIn 0.2s ease-out; }
-        .custom-confirm-box { background: #161823; border: 1px solid var(--border-glass); border-radius: 25px; width: 85%; max-width: 350px; padding: 30px 20px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.9); transform: scale(0.9); animation: popIn 0.3s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .custom-confirm-icon { font-size: 60px; margin-bottom: 10px; }
-        .custom-confirm-icon.danger { color: var(--accent-red); text-shadow: 0 0 20px rgba(255, 71, 87, 0.4); }
-        .custom-confirm-icon.warning { color: var(--neon-yellow); text-shadow: 0 0 20px rgba(241, 196, 15, 0.4); }
-        .custom-confirm-title { font-size: 20px; font-weight: 600; margin: 0 0 10px 0; color: white; }
-        .custom-confirm-desc { font-size: 14px; color: var(--text-dim); margin-bottom: 25px; line-height: 1.5; white-space: pre-line; }
-        .custom-confirm-actions { display: flex; gap: 12px; width: 100%; }
-        .btn-cc-cancel { flex: 1; padding: 12px; border-radius: 15px; font-family: 'Kanit'; font-size: 16px; font-weight: 500; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.2s; }
-        .btn-cc-cancel:active { transform: scale(0.95); background: rgba(255,255,255,0.2); }
-        .btn-cc-ok { flex: 1; padding: 12px; border-radius: 15px; font-family: 'Kanit'; font-size: 16px; font-weight: 500; background: var(--neon-green); color: white; border: none; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); }
-        .btn-cc-ok.danger { background: var(--accent-red); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3); }
-        .btn-cc-ok:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -352,6 +372,17 @@
         <img id="appHeaderIcon" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" class="header-icon" style="object-fit: cover;" />                                        
         <h2>คำนวณค่าแท็กซี่</h2>
     </div>
+
+    <div style="display:flex; justify-content:center; width:100%; flex-shrink:0;">
+        <div class="taxi-type-selector">
+            <div id="btnTaxiNormal" class="taxi-type-option active" onclick="setTaxiType(35, this)">
+                <span class="material-symbols-outlined">local_taxi</span> ปกติ (35฿)
+            </div>
+            <div id="btnTaxiVan" class="taxi-type-option" onclick="setTaxiType(40, this)">
+                <span class="material-symbols-outlined">airport_shuttle</span> แวน (40฿)
+            </div>
+        </div>
+    </div>
                                                   
     <div id="searchSectionBox" class="search-section">
         <label>ค้นหาจุดหมาย</label>                                        
@@ -389,10 +420,19 @@
     <div id="manualSectionBox" class="manual-section">
         <button class="btn-math btn-minus flex-center" onclick="adjustKm(-1)" id="btnMinus">−</button>
         <div class="km-input-box">
-            <input type="number" value="0" step="0.01" oninput="manualInputChange()" id="kmInput" />                      
+            <input type="number" value="0" step="0.01" oninput="manualInputChange()" id="kmInput" />
+            <span class="km-label">กม.</span>                      
         </div>
         <button class="btn-math btn-plus flex-center" onclick="adjustKm(1)" id="btnPlus">+</button>
     </div>
+
+    <div class="surcharge-row" id="surchargeRow">
+        <button onclick="promptToll()" class="surcharge-btn">+ ค่าทางด่วน</button>
+        <button onclick="addSurcharge(50, 'ค่าเรียกจากสนามบิน')" class="surcharge-btn">+ สนามบิน (50฿)</button>
+        <button onclick="clearSurcharge()" class="surcharge-btn danger"><span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">restart_alt</span> ล้างค่าพิเศษ</button>
+    </div>
+
+    <div id="surchargeDetails" class="surcharge-list-container" style="display:none;"></div>
                                                   
     <div class="result-container" onclick="toggleModal('zoomOverlay', true)">
         <div class="bubble-bg-container">
@@ -401,7 +441,7 @@
             <div class="bubble bubble-5"></div><div class="bubble bubble-6"></div>
         </div>
         <div class="result-content">
-            <div id="farePrice" class="price">0<span style="font-size: 32px; font-weight:400;"> ฿</span></div>
+            <div id="farePrice" class="price">35<span style="font-size: 32px; font-weight:400;"> ฿</span></div>
             <div id="infoText" class="sub-info">ประเมินระยะทาง 0 กม.</div>
         </div>
     </div>
@@ -419,13 +459,13 @@
                              
     <div style="gap:15px; margin-bottom: 20px; flex-shrink: 0;" class="flex-center">
         <button onclick="shareToPlatform('messenger')" class="btn-icon-base flex-center">
-            <svg viewbox="0 0 24 24" fill="#0084FF" style="width:28px; height:28px;"><path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.908 1.463 5.483 3.75 7.182V22l3.414-1.874A10.322 10.322 0 0012 20.516c5.523 0 10-4.145 10-9.258S17.523 2 12 2zm1.09 12.83l-2.774-2.954-5.414 2.954 5.952-6.32 2.844 2.954 5.344-2.954-5.952 6.32z"></path></svg>                      
+            <svg viewbox="0 0 24 24" fill="#0084FF" style="width:28px; height:28px;"><path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.908 1.463 5.483 3.75 7.182V22l3.414-1.874A10.322 10.322 0 0012 20.516c5.523 0 10-4.145 10-9.258S17.523 2 12 2zm1.09 12.83l-2.774-2.954-5.414 2.954 5.952-6.32 2.844 2.954 5.344-2.954-5.952 6.32z"></path></svg>                        
         </button>
         <button onclick="shareToPlatform('line')" class="btn-icon-base flex-center">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" style="width:28px; height:28px;" />                      
+            <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" style="width:28px; height:28px;" />                        
         </button>
         <button onclick="openMainQrCode()" class="btn-icon-base flex-center">
-            <svg viewbox="0 0 24 24" fill="#f1c40f" style="width:28px; height:28px;"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z"></path></svg>                      
+            <svg viewbox="0 0 24 24" fill="#f1c40f" style="width:28px; height:28px;"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z"></path></svg>                        
         </button>
         <button onclick="openServicePortal(false)" class="btn-icon-base flex-center">
             <img src="https://i.ibb.co/210jq8dS/unnamed.png" style="width:28px; height:28px; object-fit:contain;" />                      
@@ -768,92 +808,9 @@
 </div>
 
 <script>
-    // สคริปต์สำหรับการสลับซ่อน/แสดงรหัสผ่าน
-    window.togglePasswordVisibility = function(inputId, iconEl) {
-        const input = document.getElementById(inputId);
-        if (input.type === "password") {
-            input.type = "text";
-            iconEl.innerText = "visibility";
-        } else {
-            input.type = "password";
-            iconEl.innerText = "visibility_off";
-        }
-    };
-
-    window.updateAppManifest = function(userName, photoUrl) {
-        let safeName = userName ? userName : "Taxi 2026";
-        let safeIcon = (photoUrl && photoUrl.length > 10) ? photoUrl : "https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg";
-
-        document.getElementById('appleIcon').href = safeIcon;
-        document.getElementById('shortcutIcon').href = safeIcon;
-
-        let manifest = {
-            "name": "Taxi: " + safeName,
-            "short_name": safeName,
-            "start_url": ".",
-            "display": "standalone",
-            "background_color": "#090a0f",
-            "theme_color": "#090a0f",
-            "icons": [
-                {
-                    "src": safeIcon,
-                    "sizes": "192x192",
-                    "type": "image/jpeg"
-                },
-                {
-                    "src": safeIcon,
-                    "sizes": "512x512",
-                    "type": "image/jpeg"
-                }
-            ]
-        };
-
-        let stringManifest = JSON.stringify(manifest);
-        let manifestURI = 'data:application/manifest+json,' + encodeURIComponent(stringManifest);
-        
-        let manifestLink = document.getElementById('dynamicManifest');
-        if (manifestLink) {
-            manifestLink.href = manifestURI;
-        }
-    };
-
-    // =======================================================
-    // ระบบ Custom Confirm
-    // =======================================================
-    window.showCustomConfirm = function(title, desc, type = 'warning', okText = 'ยืนยัน') {
-        return new Promise((resolve) => {
-            const overlay = document.getElementById('sysCustomConfirm');
-            const icon = document.getElementById('ccIcon');
-            const btnOk = document.getElementById('ccBtnOk');
-            const btnCancel = document.getElementById('ccBtnCancel');
-
-            document.getElementById('ccTitle').innerText = title;
-            document.getElementById('ccDesc').innerText = desc;
-            btnOk.innerText = okText;
-
-            if(type === 'danger') {
-                icon.className = "material-symbols-outlined custom-confirm-icon danger";
-                icon.innerText = "error";
-                btnOk.className = "btn-cc-ok danger";
-            } else {
-                icon.className = "material-symbols-outlined custom-confirm-icon warning";
-                icon.innerText = "help";
-                btnOk.className = "btn-cc-ok";
-            }
-
-            overlay.style.display = 'flex';
-
-            btnOk.onclick = () => {
-                overlay.style.display = 'none';
-                resolve(true); 
-            };
-
-            btnCancel.onclick = () => {
-                overlay.style.display = 'none';
-                resolve(false); 
-            };
-        });
-    };
+    // ตัวแปรส่วนเพิ่ม (Surcharges & Rates)
+    let baseFare = 35;
+    let surchargeList = []; // เก็บอาร์เรย์ของค่าใช้จ่ายพิเศษ
 
     const HISTORY_KEY = 'taxi_history_v25';
     const $ = id => document.getElementById(id);
@@ -881,6 +838,74 @@
         if(id === 'adminMenuModal' && window.handleAdminModalState) window.handleAdminModalState(show);
     };
 
+    window.showToast = (msg, isError = false, imgUrl = null) => {
+        const toast = document.getElementById('toastBox'); const icon = document.getElementById('toastIcon'); const img = document.getElementById('toastImg');
+        document.getElementById('toastMsg').innerText = msg;
+        if (imgUrl && imgUrl.length > 10) { img.src = imgUrl; img.style.display = 'block'; icon.style.display = 'none'; } 
+        else { img.style.display = 'none'; icon.style.display = 'block'; if(isError) { icon.innerText = 'error'; icon.style.color = 'var(--accent-red)'; toast.style.borderColor = 'var(--accent-red)'; } else { icon.innerText = 'notifications_active'; icon.style.color = 'var(--neon-green)'; toast.style.borderColor = 'var(--neon-green)'; } }
+        toast.style.borderColor = isError ? 'var(--accent-red)' : 'var(--neon-green)'; toast.style.display = 'flex'; setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    };
+
+    // การเปลี่ยนประเภทรถ (Toggle)
+    window.setTaxiType = (fare, el) => {
+        baseFare = fare;
+        document.querySelectorAll('.taxi-type-option').forEach(btn => btn.classList.remove('active'));
+        el.classList.add('active');
+        if(isManualRunning) updateLiveMeterDisplay();
+        else manualInputChange();
+    };
+
+    // ฟังก์ชันจัดการค่าธรรมเนียมพิเศษ
+    window.addSurcharge = (amount, name) => {
+        surchargeList.push({ name: name, amount: amount, id: Date.now() });
+        updateSurchargeUI();
+    };
+
+    window.promptToll = () => {
+        let amount = prompt("ระบุค่าทางด่วน (บาท):", "50");
+        if(amount !== null && !isNaN(amount)) {
+            let num = parseInt(amount);
+            if(num > 0) {
+                surchargeList.push({ name: "ค่าทางด่วน", amount: num, id: Date.now() });
+                updateSurchargeUI();
+            }
+        }
+    };
+
+    window.removeSurcharge = (id) => {
+        surchargeList = surchargeList.filter(item => item.id !== id);
+        updateSurchargeUI();
+    };
+
+    window.clearSurcharge = () => {
+        surchargeList = [];
+        updateSurchargeUI();
+        window.showToast("ล้างค่าพิเศษแล้ว");
+    };
+
+    function updateSurchargeUI() {
+        let extraSurcharge = surchargeList.reduce((sum, item) => sum + item.amount, 0);
+        let container = document.getElementById('surchargeDetails');
+        
+        if(surchargeList.length > 0) {
+            let html = '';
+            surchargeList.forEach(item => {
+                html += `<div class="surcharge-item">
+                            <span>${item.name}</span>
+                            <span>+${item.amount} ฿ <span class="material-symbols-outlined del-btn" onclick="removeSurcharge(${item.id})">cancel</span></span>
+                         </div>`;
+            });
+            container.innerHTML = html;
+            container.style.display = 'flex';
+        } else {
+            container.innerHTML = '';
+            container.style.display = 'none';
+        }
+        
+        if(isManualRunning) updateLiveMeterDisplay();
+        else manualInputChange();
+    }
+
     window.openProfileModal = () => {
         document.getElementById('editDisplayName').value = window.myCurrentDisplayName || "";
         document.getElementById('editProfilePic').src = (window.myCurrentPhotoURL && window.myCurrentPhotoURL.length > 10) ? window.myCurrentPhotoURL : window.DEFAULT_AVATAR;
@@ -900,69 +925,23 @@
     window.saveHistory = (name, lat, lon) => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]').filter(i => i.name !== name); h.unshift({ name, lat, lon }); localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 10))); };
     window.showHistory = () => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); if (!h.length) return $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; $('historyList').innerHTML = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ประวัติล่าสุด</span><button class="clear-history-btn" onclick="event.stopPropagation(); localStorage.removeItem('${HISTORY_KEY}'); $('historyList').style.display='none';">ล้าง</button></div>` + h.map(i => `<div class="list-item" onclick="selectLocation('${i.name}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span>${i.name}</div>`).join(''); $('historyList').style.display = 'block'; };
     
-    // ===== ระบบ Smart Search (AI แบบ Rule-based จับรูปแบบคำ) =====
-    const formatSearchText = (text) => {
-        let t = text.trim();
-
-        t = t.replace(/(^|\s)รพ\.?\s*/g, "$1โรงพยาบาล ");
-        t = t.replace(/(^|\s)รร\.?\s*/g, "$1โรงเรียน ");
-        t = t.replace(/(^|\s)ม\.?\s*(ราม|เกษตร|กรุงเทพ|ธรรมศาสตร์|มหิดล|จุฬา|ศิลปากร|รังสิต|หอการค้า)/g, "$1มหาวิทยาลัย$2");
-        t = t.replace(/(^|\s)(มบ\.?|ม\.)\s*/g, "$1หมู่บ้าน "); 
-
-        t = t.replace(/(^|\s)ราม\s*(\d+)/g, "$1รามคำแหง $2");
-        t = t.replace(/(^|\s)พหล\s*(\d+)/g, "$1พหลโยธิน $2");
-        t = t.replace(/(^|\s)สุขุม\s*(\d+)/g, "$1สุขุมวิท $2");
-        t = t.replace(/(^|\s)รัชดา\s*(\d+)/g, "$1รัชดาภิเษก $2");
-        t = t.replace(/(^|\s)จรัญ\s*(\d+)/g, "$1จรัญสนิทวงศ์ $2");
-        t = t.replace(/(^|\s)วิภา\s*(\d+)/g, "$1วิภาวดีรังสิต $2");
-
-        t = t.replace(/ซอย\s*/g, ""); 
-        const soiRoads = ["รามคำแหง", "ลาดพร้าว", "สุขุมวิท", "พหลโยธิน", "เพชรเกษม", "รัชดาภิเษก", "อ่อนนุช", "เอกมัย", "ทองหล่อ", "พัฒนาการ", "ศรีนครินทร์", "จรัญสนิทวงศ์", "วิภาวดีรังสิต", "นวมินทร์", "บางนา-ตราด", "รามอินทรา", "เพชรบุรี", "พระราม 1", "พระราม 2", "พระราม 3", "พระราม 4", "พระราม 5", "พระราม 6", "พระราม 7", "พระราม 8", "พระราม 9", "เจริญกรุง", "ประชาอุทิศ", "งามวงศ์วาน", "แจ้งวัฒนะ", "ติวานนท์", "ลาดกระบัง", "เสรีไทย", "รามอินทรา", "บางแค", "เพชรเกษม", "บางบอน"];
-        const roadRegex = new RegExp(`(^|\\s)(${soiRoads.join('|')})\\s*(\\d+)([\\s\\/]*)`, 'g');
-        t = t.replace(roadRegex, "$1ซอย$2 $3$4");
-
-        const dictionary = {
-            "เซ็นทรัลปิ่นเกล้า": "เซ็นทรัล ปิ่นเกล้า",
-            "เซนปิ่น": "เซ็นทรัล ปิ่นเกล้า",
-            "เซนลาด": "เซ็นทรัล ลาดพร้าว",
-            "เซ็นลาด": "เซ็นทรัล ลาดพร้าว",
-            "เดอะมอลล์บางกะปิ": "เดอะมอลล์ บางกะปิ",
-            "สายใต้ใหม่": "สถานีขนส่งผู้โดยสารกรุงเทพ (สายใต้ใหม่)",
-            "หมอชิต": "สถานีขนส่งผู้โดยสารกรุงเทพ (จตุจักร)",
-            "ฟิวเจอร์": "ฟิวเจอร์พาร์ค รังสิต",
-            "แฟชั่น": "แฟชั่นไอส์แลนด์",
-            "สุวรรณภูมิ": "ท่าอากาศยานสุวรรณภูมิ",
-            "ดอนเมือง": "ท่าอากาศยานดอนเมือง",
-            "อนุสาวรีย์": "อนุสาวรีย์ชัยสมรภูมิ"
-        };
-
-        for (const [key, value] of Object.entries(dictionary)) {
-            t = t.replace(new RegExp(key, "gi"), value);
-        }
-
-        return t.trim();
-    };
-
+    // ระบบ Smart Search (แบบง่าย)
     window.smartSearch = (q) => { 
         clearTimeout(searchTimer); 
         const list = $('suggestionList'); 
         $('historyList').style.display = 'none'; 
         if (!(q = q.trim())) return list.style.display = 'none'; 
-
-        const smartQuery = formatSearchText(q);
-
         searchTimer = setTimeout(async () => { 
             try { 
-                let res = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(smartQuery)}&countrycodes=th&limit=8&accept-language=th`)).json(); 
-                if(!res.length) return (list.innerHTML = '<div style="padding:15px; text-align:center;">ไม่พบข้อมูลสถานที่<br><span style="font-size:12px;color:gray;">(ลองระบุเขตหรือแขวงเพิ่มดูนะครับ)</span></div>', list.style.display = 'block'); 
+                let res = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=th&limit=8&accept-language=th`)).json(); 
+                if(!res.length) return (list.innerHTML = '<div style="padding:15px; text-align:center;">ไม่พบข้อมูลสถานที่</div>', list.style.display = 'block'); 
                 list.innerHTML = res.map(i => `<div class="list-item" onclick="selectLocation('${i.display_name.split(',')[0]}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span><div style="flex:1;">${i.display_name}</div></div>`).join(''); 
                 list.style.display = 'block'; 
             } catch(e) {} 
         }, 800); 
     };
-    // =================================================================
 
-    window.selectLocation = (name, lat, lon) => { clearTimeout(searchTimer); $('destInput').value = "กำลังคำนวณ..."; $('destInput').classList.add('loading-state'); $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; destLoc = { lat, lon }; $('searchSectionBox').style.display = 'none'; $('manualSectionBox').style.display = 'none'; saveHistory(name, lat, lon); getRouteData(lat, lon, name); };
+    window.selectLocation = (name, lat, lon) => { clearTimeout(searchTimer); $('destInput').value = "กำลังคำนวณ..."; $('destInput').classList.add('loading-state'); $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; destLoc = { lat, lon }; $('searchSectionBox').style.display = 'none'; $('manualSectionBox').style.display = 'none'; $('surchargeRow').style.display = 'none'; $('surchargeDetails').style.display = 'none'; saveHistory(name, lat, lon); getRouteData(lat, lon, name); };
     
     async function getRouteData(dLat, dLon, name) { 
         navigator.geolocation.getCurrentPosition(async (pos) => { 
@@ -992,20 +971,103 @@
         isManualRunning = true; requestWakeLock();
         $('manualTimerBtn').disabled = false; $('manualTimerBtn').classList.add('active');
         $('searchSectionBox').style.display = 'none'; $('manualSectionBox').style.display = 'none'; $('resetBtn').style.display = 'none';
+        $('surchargeRow').style.display = 'flex'; 
+        if (surchargeList.length > 0) $('surchargeDetails').style.display = 'flex';
+        
         if(destLoc) { $('smallNavBtn').style.display = 'flex'; $('liveTracker').style.display = 'block'; startDynamicRouting(); }
-        actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime;
-        if(destLoc) { let initialMins = Math.ceil(currentTrueRemainSec / 60); let formattedEta = formatDuration(initialMins); let initialArrTime = new Date(Date.now() + initialMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}); $('arrivalTime').innerText = initialArrTime; $('smallEtaTime').innerText = formattedEta; }
+        
+        actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; 
+        startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime;
+        
+        if(destLoc) { let initialMins = Math.ceil(currentTrueRemainSec / 60); $('arrivalTime').innerText = new Date(Date.now() + initialMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}); $('smallEtaTime').innerText = formatDuration(initialMins); }
+        
         navigator.geolocation.getCurrentPosition(pos => { lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; }, null, { enableHighAccuracy: true });
+        
         if(tripTimer) clearInterval(tripTimer);
-        tripTimer = setInterval(() => { let now = Date.now(); let elapsedSec = Math.floor((now - startTime) / 1000); let eMins = Math.floor(elapsedSec / 60); let eSecs = elapsedSec % 60; let deltaSec = (now - lastCalcTime) / 1000; lastCalcTime = now; if (now - lastPosTime > 5000) currentSpeedKmh = 0; if (currentSpeedKmh <= 6) trafficSeconds += deltaSec; if(currentTrueRemainSec > 0) { currentTrueRemainSec -= deltaSec; if(currentTrueRemainSec < 0) currentTrueRemainSec = 0; } updateLiveMeterDisplay(); }, 1000);
+        tripTimer = setInterval(() => { 
+            let now = Date.now(); 
+            let deltaSec = (now - lastCalcTime) / 1000; 
+            lastCalcTime = now; 
+            
+            if (now - lastPosTime > 5000) currentSpeedKmh = 0; 
+            if (currentSpeedKmh <= 6) trafficSeconds += deltaSec; 
+            
+            if(currentTrueRemainSec > 0) { currentTrueRemainSec -= deltaSec; if(currentTrueRemainSec < 0) currentTrueRemainSec = 0; } 
+            updateLiveMeterDisplay(); 
+        }, 1000);
+        
         if(watchId) navigator.geolocation.clearWatch(watchId);
-        watchId = navigator.geolocation.watchPosition((pos) => { let now = Date.now(); if (lastPos) { let dMoved = calcGPS(lastPos.lat, lastPos.lon, pos.coords.latitude, pos.coords.longitude); let timeHours = (now - lastPosTime) / 3600000; if (timeHours > 0) currentSpeedKmh = dMoved / timeHours; if (dMoved > 0.002) { actualDrivenKm += dMoved; currentTrueRemainKm -= dMoved; if(currentTrueRemainKm < 0) currentTrueRemainKm = 0; lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; lastPosTime = now; } } else { lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; lastPosTime = now; } if(destLoc) { let remainKm = currentTrueRemainKm; let totalEstimated = actualDrivenKm + remainKm; let pct = totalEstimated > 0 ? Math.min((actualDrivenKm / totalEstimated) * 100, 100) : 0; let remainMins = Math.ceil(currentTrueRemainSec / 60); if(remainMins < 1) remainMins = 1; let formattedEta = formatDuration(remainMins); let dStr = actualDrivenKm.toFixed(2); let rStr = remainKm.toFixed(2); $('driveCovered').innerText = dStr; $('driveRemain').innerText = rStr; $('progressFill').style.width = pct + '%'; $('carIcon').style.left = pct + '%'; $('arrivalTime').innerText = new Date(Date.now() + remainMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}); $('smallEtaTime').innerText = formattedEta; } }, null, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
+        watchId = navigator.geolocation.watchPosition((pos) => { 
+            let now = Date.now(); 
+            if (pos.coords.accuracy > 30) return; 
+
+            let OS_SpeedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
+
+            if (lastPos) { 
+                let dMoved = calcGPS(lastPos.lat, lastPos.lon, pos.coords.latitude, pos.coords.longitude); 
+                let timeHours = (now - lastPosTime) / 3600000; 
+                
+                if(OS_SpeedKmh !== -1) {
+                    currentSpeedKmh = OS_SpeedKmh;
+                } else if (timeHours > 0) {
+                    currentSpeedKmh = dMoved / timeHours; 
+                }
+                
+                if (dMoved > 0.005) { 
+                    actualDrivenKm += dMoved; 
+                    currentTrueRemainKm -= dMoved; 
+                    if(currentTrueRemainKm < 0) currentTrueRemainKm = 0; 
+                    lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; 
+                    lastPosTime = now; 
+                } else {
+                    lastPosTime = now; 
+                }
+            } else { 
+                lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; 
+                lastPosTime = now; 
+            } 
+            
+            if(destLoc) { 
+                let remainKm = currentTrueRemainKm; 
+                let totalEstimated = actualDrivenKm + remainKm; 
+                let pct = totalEstimated > 0 ? Math.min((actualDrivenKm / totalEstimated) * 100, 100) : 0; 
+                let remainMins = Math.ceil(currentTrueRemainSec / 60); if(remainMins < 1) remainMins = 1; 
+                $('driveCovered').innerText = actualDrivenKm.toFixed(2); 
+                $('driveRemain').innerText = remainKm.toFixed(2); 
+                $('progressFill').style.width = pct + '%'; 
+                $('carIcon').style.left = pct + '%'; 
+                $('arrivalTime').innerText = new Date(Date.now() + remainMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}); 
+                $('smallEtaTime').innerText = formatDuration(remainMins); 
+            } 
+        }, null, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
+        
         updateLiveMeterDisplay();
     }
 
-    function calcThaiMeterDist(km) { if (km <= 1) return 0; let f = 0; if (km <= 10) f = (km - 1) * 6.5; else if (km <= 20) f = (9 * 6.5) + (km - 10) * 7.0; else if (km <= 40) f = (9 * 6.5) + (10 * 7.0) + (km - 20) * 8.0; else if (km <= 60) f = (9 * 6.5) + (10 * 7.0) + (20 * 8.0) + (km - 40) * 8.5; else if (km <= 80) f = (9 * 6.5) + (10 * 7.0) + (20 * 8.0) + (20 * 8.5) + (km - 60) * 9.0; else f = (9 * 6.5) + (10 * 7.0) + (20 * 8.0) + (20 * 8.5) + (20 * 9.0) + (km - 80) * 10.5; return f; }
-    function updateFareBubble(km) { let distFare = calcThaiMeterDist(km); let displayFare = 35 + distFare; let extra = Math.floor(displayFare - 35); displayFare = 35 + (extra % 2 === 0 ? extra : extra - 1); if (displayFare < 35) displayFare = 35; $('farePrice').innerHTML = (km > 0 ? displayFare.toLocaleString('th-TH') : "0") + '<span style="font-size: 32px; font-weight:400;"> ฿</span>'; $('infoText').innerText = "ประเมินระยะทาง " + (km.toFixed(2)) + " กม."; }
-    window.checkAppStatus = () => { let km = parseFloat($('kmInput').value) || 0; let destText = $('destInput').value.trim(); if (km > 0 && !isManualRunning) { $('manualTimerBtn').disabled = false; } else if (!isManualRunning) { $('manualTimerBtn').disabled = true; } $('resetBtn').style.display = (!isManualRunning && (km > 0 || destText !== "")) ? 'block' : 'none'; };
+    function calcThaiMeterDist(km) { 
+        if (km <= 1) return 0; 
+        let f = 0; 
+        if (km <= 10) f = (km - 1) * 6.5; 
+        else if (km <= 20) f = (9 * 6.5) + (km - 10) * 7.0; 
+        else if (km <= 40) f = (9 * 6.5) + (10 * 7.0) + (km - 20) * 8.0; 
+        else if (km <= 60) f = (9 * 6.5) + (10 * 7.0) + (20 * 8.0) + (km - 40) * 8.5; 
+        else if (km <= 80) f = (9 * 6.5) + (10 * 7.0) + (20 * 8.0) + (20 * 8.5) + (km - 60) * 9.0; 
+        else f = (9 * 6.5) + (10 * 7.0) + (20 * 8.0) + (20 * 8.5) + (20 * 9.0) + (km - 80) * 10.5; 
+        return f; 
+    }
+    
+    function updateFareBubble(km) { 
+        let distFare = calcThaiMeterDist(km); 
+        let extraSurcharge = surchargeList.reduce((sum, item) => sum + item.amount, 0);
+        let displayFare = baseFare + Math.floor(distFare / 2) * 2 + extraSurcharge;
+
+        $('farePrice').innerHTML = (km > 0 || extraSurcharge > 0 ? displayFare.toLocaleString('th-TH') : baseFare) + '<span style="font-size: 32px; font-weight:400;"> ฿</span>'; 
+        
+        let extraText = extraSurcharge > 0 ? ` (+พิเศษ ${extraSurcharge}฿)` : "";
+        $('infoText').innerText = "ประเมินระยะทาง " + (km.toFixed(2)) + " กม." + extraText; 
+    }
+    
+    window.checkAppStatus = () => { let km = parseFloat($('kmInput').value) || 0; let destText = $('destInput').value.trim(); let extraSurcharge = surchargeList.reduce((sum, item) => sum + item.amount, 0); if (km > 0 && !isManualRunning) { $('manualTimerBtn').disabled = false; } else if (!isManualRunning) { $('manualTimerBtn').disabled = true; } $('resetBtn').style.display = (!isManualRunning && (km > 0 || destText !== "" || extraSurcharge > 0)) ? 'block' : 'none'; };
     window.adjustKm = (val) => { let curr = parseFloat($('kmInput').value) || 0; $('kmInput').value = val > 0 ? Math.floor(curr)+1 : Math.max(0, Math.ceil(curr)-1); window.manualInputChange(); };
     window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; updateFareBubble(km); window.checkAppStatus(); };
     window.toggleManualTimer = () => { if(isManualRunning) { window.resetAll(); } else { startMeterAndTracking(); } };
@@ -1015,10 +1077,10 @@
         
         let distFare = calcThaiMeterDist(actualDrivenKm); 
         let timeFare = trafficSeconds * (3.0 / 60); 
-        let totalT = 35 + distFare + timeFare; 
-        let extra = Math.floor(totalT - 35); 
-        let displayFare = 35 + (extra % 2 === 0 ? extra : extra - 1); 
-        if (displayFare < 35) displayFare = 35; 
+        let extraFare = distFare + timeFare;
+        let extraSurcharge = surchargeList.reduce((sum, item) => sum + item.amount, 0);
+        
+        let displayFare = baseFare + Math.floor(extraFare / 2) * 2 + extraSurcharge; 
         
         let elapsed = Math.floor((Date.now() - startTime) / 1000); 
 
@@ -1067,23 +1129,35 @@
         }, 10000); 
     }
     
-    function stopTracking() { releaseWakeLock(); $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; }
-    window.resetAll = () => { $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; isManualRunning = false; $('manualTimerBtn').classList.remove('active'); $('manualTimerBtn').innerHTML = '<span class="material-symbols-outlined">play_circle</span> เริ่มจับเวลามิเตอร์'; stopTracking(); updateFareBubble(0); window.checkAppStatus(); };
+    function stopTracking() { releaseWakeLock(); $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('surchargeRow').style.display = 'flex'; if (surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; }
+    
+    window.resetAll = () => { 
+        $('kmInput').value = "0"; 
+        $('destInput').value = ""; 
+        $('suggestionList').style.display = 'none'; 
+        $('historyList').style.display = 'none'; 
+        isManualRunning = false; 
+        surchargeList = [];
+        updateSurchargeUI();
+        $('manualTimerBtn').classList.remove('active'); 
+        $('manualTimerBtn').innerHTML = '<span class="material-symbols-outlined">play_circle</span> เริ่มจับเวลามิเตอร์'; 
+        stopTracking(); 
+        updateFareBubble(0); 
+        window.checkAppStatus(); 
+    };
+
     window.startNavigation = () => destLoc && (window.location.href = `google.navigation:q=${destLoc.lat},${destLoc.lon}&mode=d`);
     
     window.shareToPlatform = (p) => { 
-        // เช็คว่าเป็นการค้นหาสถานที่ (มีชื่อสถานที่) หรือแค่กรอกกิโลเมตร
         let isSearchMode = destLoc !== null && $('destInput').value.trim() !== "";
         let km = parseFloat($('kmInput').value) || 0;
-        let price = $('farePrice').innerText.replace(/<[^>]*>?/gm, '').trim(); // ดึงเฉพาะตัวเลขราคา
+        let price = $('farePrice').innerText.replace(/<[^>]*>?/gm, '').trim(); 
         let txt = "";
 
         if (isSearchMode) {
             let destName = $('destInput').value.trim();
             let remainMins = currentTrueRemainSec > 0 ? Math.ceil(currentTrueRemainSec / 60) : 0;
             let timeStr = remainMins > 0 ? formatDuration(remainMins) : "ไม่ทราบเวลา";
-            
-            // สร้างลิงก์นำทางของ Google Maps
             let originStr = lastPos ? `${lastPos.lat},${lastPos.lon}` : "";
             let mapLink = `https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${destLoc.lat},${destLoc.lon}&travelmode=driving`;
             
@@ -1117,7 +1191,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
-    // ตั้งค่ารูปภาพพื้นฐานแบบ Base64 SVG เพือให้โหลดได้ทันทีและเป็นสีเทาตามที่ต้องการ
     window.DEFAULT_AVATAR = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a5b5'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
     window.DEFAULT_QR = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a5b5'%3E%3Cpath d='M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-2 2h2v2h-2v-2zm-1-2h2v2h-2v-2zm2-3h2v2h-2v-2zm-4 4h2v2h-2v-2zm1-5h2v2h-2v-2z'/%3E%3C/svg%3E";
 
@@ -1151,7 +1224,6 @@
     window.myCurrentDisplayName = "";
     window.myCurrentPhotoURL = "";
 
-    // ระบบจัดการชื่อสิทธิ์ (ลากสลับตำแหน่งได้, เปลี่ยนชื่อได้)
     window.defaultPermConfig = [
         { id: 'perm_canAdd', label: 'สิทธิ์การเพิ่มพนักงานใหม่' },
         { id: 'perm_canEdit', label: 'สิทธิ์แก้ไขข้อมูลพนักงาน (คนอื่น)' },
@@ -1165,7 +1237,6 @@
     ];
     window.currentPermConfig = [...window.defaultPermConfig];
 
-    // เพิ่มสิทธิ์ canDeleteMedia เข้าไปในระบบ
     let globalPermissions = {
         Manager: { canAdd: false, canEdit: false, canBan: false, canViewLogs: true, canEditOwn: true, canManageService: false, canDelete: false, canViewPassword: false, canDeleteMedia: false },
         User: { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false, canViewPassword: false, canDeleteMedia: false }
@@ -1179,14 +1250,6 @@
     let permsUnsub = null;
     let permConfigUnsub = null;
     window.currentAdminUsers = [];
-
-    window.showToast = (msg, isError = false, imgUrl = null) => {
-        const toast = document.getElementById('toastBox'); const icon = document.getElementById('toastIcon'); const img = document.getElementById('toastImg');
-        document.getElementById('toastMsg').innerText = msg;
-        if (imgUrl && imgUrl.length > 10) { img.src = imgUrl; img.style.display = 'block'; icon.style.display = 'none'; } 
-        else { img.style.display = 'none'; icon.style.display = 'block'; if(isError) { icon.innerText = 'error'; icon.style.color = 'var(--accent-red)'; toast.style.borderColor = 'var(--accent-red)'; } else { icon.innerText = 'notifications_active'; icon.style.color = 'var(--neon-green)'; toast.style.borderColor = 'var(--neon-green)'; } }
-        toast.style.borderColor = isError ? 'var(--accent-red)' : 'var(--neon-green)'; toast.style.display = 'flex'; setTimeout(() => { toast.style.display = 'none'; }, 4000);
-    };
 
     const fileToBase64 = async (file, isQr = false) => {
         return new Promise((resolve, reject) => {
@@ -1271,7 +1334,6 @@
         if(document.getElementById('servicePortalModal').style.display === 'flex') { window.openServicePortal(currentServiceModeManage); }
     };
 
-    let isLoginMode = true;
     window.toggleAuthMode = () => {
         isLoginMode = !isLoginMode; document.getElementById('authTitle').innerText = isLoginMode ? "เข้าสู่ระบบ" : "สร้างบัญชีใหม่"; document.getElementById('authBtn').innerText = isLoginMode ? "เข้าสู่ระบบ" : "สร้างบัญชีใหม่";
         document.getElementById('authDisplayName').style.display = isLoginMode ? "none" : "block"; document.getElementById('registerPhotoDiv').style.display = isLoginMode ? "none" : "block"; 
@@ -1283,7 +1345,9 @@
         document.querySelectorAll('#loginOverlay .toggle-password').forEach(icon => icon.innerText = 'visibility_off');
     };
 
+    let isLoginMode = true;
     let myUserUnsub = null;
+
     const listenToMyUser = () => {
         if(!loggedInUserId) return;
         if(!permsUnsub) { permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { if(docSnap.exists()) { globalPermissions = { ...globalPermissions, ...docSnap.data() }; } window.applyPermissionsUI(); }); }
@@ -1300,8 +1364,11 @@
                 const data = docSnap.data();
                 if(data.isBanned) { window.showToast("บัญชีนี้ถูกระงับการใช้งาน", true); window.logoutApp(true); return; }
                 
-                document.getElementById('appLoader').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'flex'; document.getElementById('userMenu').style.display = 'block'; document.getElementById('mainUserInfo').style.display = 'flex';
+                document.getElementById('appLoader').style.display = 'none'; 
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'flex'; 
+                document.getElementById('userMenu').style.display = 'block'; 
+                document.getElementById('mainUserInfo').style.display = 'flex';
                 
                 currentUserRole = data.role || "User"; let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
                 document.getElementById('displayUserName').innerText = displayNameVal; document.getElementById('mainUserName').innerText = displayNameVal;
@@ -1327,7 +1394,15 @@
         });
     };
 
-    if (loggedInUserId) { listenToMyUser(); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; }
+    if (loggedInUserId) { 
+        listenToMyUser(); 
+    } else { 
+        document.getElementById('appLoader').style.display = 'none'; 
+        document.getElementById('mainApp').style.display = 'none'; 
+        document.getElementById('userMenu').style.display = 'none'; 
+        document.getElementById('loginOverlay').style.display = 'flex'; 
+    }
+
     window.addEventListener('beforeunload', () => { if(loggedInUserId) { setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); } });
 
     window.loginApp = async () => {
@@ -1507,7 +1582,6 @@
         } else { if(adminSnapshotUnsub) adminSnapshotUnsub(); }
     };
 
-    // ฟังก์ชันจัดการ UI เปลี่ยนชื่อและลากสลับสิทธิ์
     window.openRoleSettingsModal = () => { window.toggleModal('roleSettingsModal', true); window.renderPermList(); };
     window.loadRolePermissionsToUI = () => { window.renderPermList(); };
     
@@ -1520,7 +1594,7 @@
         perms.forEach(p => {
             let prop = p.id.replace('perm_', '');
             let checkedStr = rolePerms[prop] ? 'checked' : '';
-            if(prop === 'canEditOwn' && rolePerms[prop] !== false) checkedStr = 'checked'; // Default true
+            if(prop === 'canEditOwn' && rolePerms[prop] !== false) checkedStr = 'checked'; 
             
             html += `
             <div class="perm-item" data-id="${p.id}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
@@ -1689,10 +1763,6 @@
         document.getElementById('mainScreenQrImg').src = window.myCurrentQrCodeURL; document.getElementById('qrNameText').innerText = window.myCurrentDisplayName; toggleModal('qrOverlay', true);
     };
 
-    // =========================================================================
-    // โค้ดส่วนจัดการระบบ Service Portal
-    // =========================================================================
-    
     let editingServiceCatId = null;
     let editingServiceItemId = null;
 
