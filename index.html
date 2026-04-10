@@ -304,6 +304,21 @@
         .tz-info-val { font-size: 32px; font-weight: 700; }
         .tz-close-text { text-align: center; font-size: 18px; color: rgba(255,255,255,0.4); cursor: pointer; transition: 0.2s; padding: 10px; font-weight: 500; }
         .tz-close-text:active { color: white; transform: scale(0.95); }
+
+        /* Custom Confirm Modal CSS (เพิ่มเข้ามาใหม่เพื่อแก้ปัญหา UI พัง) */
+        .custom-confirm-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 100050; backdrop-filter: blur(10px); }
+        .custom-confirm-box { background: var(--bg-dark); border: 1px solid var(--border-glass); border-radius: 25px; padding: 30px 20px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.8); animation: popIn 0.3s forwards; }
+        .custom-confirm-icon { font-size: 50px !important; margin-bottom: 15px; }
+        .custom-confirm-icon.warning { color: var(--neon-yellow); text-shadow: 0 0 15px var(--glow-yellow); }
+        .custom-confirm-icon.danger { color: var(--accent-red); text-shadow: 0 0 15px rgba(255,71,87,0.4); }
+        .custom-confirm-title { font-size: 22px; font-weight: 600; color: white; margin: 0 0 10px 0; }
+        .custom-confirm-desc { font-size: 14px; color: var(--text-dim); margin-bottom: 25px; line-height: 1.4; white-space: pre-wrap; }
+        .custom-confirm-actions { display: flex; gap: 10px; }
+        .btn-cc-cancel { flex: 1; padding: 12px; border-radius: 15px; border: 1px solid var(--border-glass); background: rgba(255,255,255,0.05); color: white; cursor: pointer; font-family: 'Kanit'; font-weight: 500; font-size: 15px; transition: 0.2s; }
+        .btn-cc-cancel:active { background: rgba(255,255,255,0.1); transform: scale(0.95); }
+        .btn-cc-ok { flex: 1; padding: 12px; border-radius: 15px; border: none; background: var(--neon-green); color: white; cursor: pointer; font-family: 'Kanit'; font-weight: 500; font-size: 15px; transition: 0.2s; }
+        .btn-cc-ok:active { transform: scale(0.95); }
+        .btn-cc-ok.danger { background: var(--accent-red); }
     </style>
 </head>
 <body>
@@ -629,6 +644,11 @@
     window.togglePasswordVisibility = (inputId, iconEl) => {
         const input = document.getElementById(inputId);
         if (input.type === "password") { input.type = "text"; iconEl.innerText = "visibility"; } else { input.type = "password"; iconEl.innerText = "visibility_off"; }
+    };
+
+    // เปิดหน้าต่างแก้ไขโปรไฟล์ตัวเอง
+    window.openProfileModal = () => {
+        window.toggleModal('profileModal', true);
     };
 
     // ----------------------------------------------------
