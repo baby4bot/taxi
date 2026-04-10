@@ -145,6 +145,7 @@
         input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .km-label { position: absolute; right: 20px; font-size: 16px; color: var(--text-dim); pointer-events: none; }
 
+        /* แก้ไข onclick มาเรียกใช้ฟังก์ชันเช็คสถานะก่อนเปิดจอ */
         .result-container { flex: 1; position: relative; margin: 10px 0 20px 0; padding: 30px 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 180px; }
         .bubble-bg-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: visible; }
         .bubble { position: absolute; border-radius: 50%; animation: floatBubble 8s ease-in-out infinite; mix-blend-mode: screen; filter: blur(15px); }
@@ -273,7 +274,12 @@
 
         .modal-box.standard-box { background: var(--bg-dark); border: 1px solid var(--border-glass); border-radius: 30px; padding: 30px 20px; width: 90%; max-width: 400px; text-align: center; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; }
 
-        .zoom-content { background: linear-gradient(135deg, #2ecc71, #f1c40f); width: 85%; max-width: 380px; padding: 80px 20px; border-radius: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 2px 10px rgba(255,255,255,0.4); }
+        /* New Zoom Card Style */
+        .zoom-card-new { background: #161823; border: 1px solid var(--border-glass); border-radius: 30px; width: 90%; max-width: 400px; overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.9); animation: popIn 0.3s forwards; padding: 0; }
+        .zoom-header { background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(22, 24, 35, 1)); padding: 30px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .zoom-body { padding: 30px 20px; text-align: center; }
+        .zoom-price-box { margin-bottom: 25px; }
+        .zoom-detail-row { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 15px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.03); }
 
         /* Live Tracker Zoom Big Size CSS */
         .tracker-zoom-box { background: #0b0c10; border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; padding: 30px 15px; width: 98%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); font-family: 'Kanit', sans-serif; }
@@ -373,7 +379,7 @@
         <img id="appHeaderIcon" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" class="header-icon" style="object-fit: cover;" />                                        
         <h2>คำนวณค่าแท็กซี่</h2>
     </div>
-                                                      
+                                                       
     <div id="searchSectionBox" class="search-section">
         <label>ค้นหาจุดหมาย</label>                                        
         <div class="input-group">
@@ -382,7 +388,7 @@
         <div id="suggestionList" class="dropdown-box"></div>
         <div id="historyList" class="dropdown-box"></div>
     </div>
-                                                      
+                                                       
     <div onclick="window.toggleModal('trackerZoomOverlay', true)" id="liveTracker" class="live-tracker-box">
         <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">(แตะเพื่อเปิดมิเตอร์แบบขยายใหญ่)</div>
         <div class="tracker-stats">
@@ -406,7 +412,7 @@
             <div style="font-size: 13px;">รถติด: <span class="highlight" id="smallTrafficTime" style="color:var(--accent-orange);">0น. 0ว.</span></div>
         </div>
     </div>
-                                                      
+                                                       
     <div id="manualSectionBox" class="manual-section">
         <button class="btn-math btn-minus flex-center" onclick="window.adjustKm(-1)" id="btnMinus">−</button>
         <div class="km-input-box">
@@ -416,14 +422,14 @@
         <button class="btn-math btn-plus flex-center" onclick="window.adjustKm(1)" id="btnPlus">+</button>
     </div>
 
-    <div class="surcharge-row" id="surchargeRow">
+    <div class="surcharge-row" id="surchargeRow" style="display: none;">
         <button onclick="window.promptToll()" class="surcharge-btn">+ ค่าทางด่วน</button>
         <button id="btnAirport" onclick="window.addSurcharge(50, 'ค่าเรียกจากสนามบิน')" class="surcharge-btn">+ สนามบิน (50฿)</button>
     </div>
 
     <div id="surchargeDetails" class="surcharge-list-container" style="display:none;"></div>
-                                                      
-    <div class="result-container" onclick="window.toggleModal('zoomOverlay', true)">
+                                                       
+    <div class="result-container" onclick="window.handleResultClick()">
         <div class="bubble-bg-container">
             <div class="bubble bubble-1"></div><div class="bubble bubble-2"></div>
             <div class="bubble bubble-3"></div><div class="bubble bubble-4"></div>
@@ -436,7 +442,7 @@
     </div>
                  
     <div class="action-row">
-        <button onclick="window.toggleManualTimer()" disabled="" class="manual-timer-btn" id="manualTimerBtn">
+        <button onclick="window.toggleManualTimer()" class="manual-timer-btn" id="manualTimerBtn">
             </button>
         <button onclick="window.startNavigation()" class="small-nav-btn" id="smallNavBtn">
             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" />            
@@ -456,10 +462,10 @@
             <svg viewbox="0 0 24 24" fill="#f1c40f" style="width:28px; height:28px;"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z"></path></svg>                        
         </button>
         <button onclick="window.openServicePortal(false)" class="btn-icon-base flex-center">
-            <img src="https://i.ibb.co/210jq8dS/unnamed.png" style="width:28px; height:28px; object-fit:contain;" />                       
+            <img src="https://i.ibb.co/210jq8dS/unnamed.png" style="width:28px; height:28px; object-fit:contain;" />                        
         </button>
     </div>
-                                                      
+                                                       
     <div class="footer-credit flex-center">
         <img src="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" class="footer-logo" /><span>Design by นักเลงคีย์บอร์ด</span>                          
     </div>
@@ -500,7 +506,28 @@
 
 <div id="servicePortalModal" class="modal-overlay" style="z-index: 10020;"><div class="modal-box flex-col-box sp-modal-box" onclick="event.stopPropagation()"><div class="sp-header"><div class="sp-neon-line"></div><div class="sp-logo-text"><span style="color: #ef2f2c;">true</span><span style="color: #f7931e;">move</span><span class="h-box">H</span></div><div class="sp-title" id="serviceModalTitle">SERVICE PORTAL</div><button class="btn-close-floating" onclick="window.toggleModal('servicePortalModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="serviceListContainer" class="modal-content-scroll" style="text-align: left; padding: 15px;"><div style="text-align:center; color:gray; padding:20px;">กำลังโหลดข้อมูล...</div></div><div id="adminServiceAddSection" style="display: none; padding: 15px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.6); flex-shrink: 0;"><div style="display: flex; gap: 10px; margin-bottom: 10px;"><input type="text" id="newServiceCategory" list="existingCategories" placeholder="เลือก/พิมพ์ หมวดหมู่" style="font-size: 14px; padding: 12px; flex: 1;"><datalist id="existingCategories"></datalist></div><input type="text" id="newServiceTitle" placeholder="ชื่อรายการ (เช่น เพิ่มวัน 30 วัน)" style="margin-bottom: 10px; font-size: 14px; padding: 12px;"><input type="text" id="newServiceCode" placeholder="รหัส USSD / เบอร์โทร (เช่น *934*30#)" style="margin-bottom: 10px; font-size: 14px; padding: 12px; font-family: monospace;"><div style="display: flex; gap: 10px;"><button id="addServiceBtn" onclick="window.addNewServiceCode()" class="manual-timer-btn" style="background: var(--neon-green); flex: 1; justify-content: center; padding: 12px;"><span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span> เพิ่มรายการเข้าสู่ระบบ</button><button id="cancelEditBtn" onclick="window.cancelEditService()" class="manual-timer-btn" style="background: var(--accent-red); width: 50px; display: none; flex: none; justify-content: center; padding: 12px;"><span class="material-symbols-outlined" style="font-size: 18px;">close</span></button></div></div></div></div>
 
-<div id="zoomOverlay" class="modal-overlay" onclick="window.toggleModal('zoomOverlay', false)"><div class="modal-box zoom-content"><div id="zoomPrice" style="font-size: 85px; font-weight: 600; color: #111;">0 ฿</div><div id="zoomKm" style="font-size: 24px; color: #222; margin-top: 20px;">0 กม.</div><div style="margin-top: 25px; color: rgba(0,0,0,0.5); font-weight: 600;">แตะเพื่อปิด</div></div></div>
+<div id="zoomOverlay" class="modal-overlay" onclick="window.toggleModal('zoomOverlay', false)">
+    <div class="modal-box zoom-card-new" onclick="event.stopPropagation()">
+        <div class="zoom-header">
+            <span class="material-symbols-outlined" style="font-size: 40px; color: #2ecc71;">receipt_long</span>
+            <h3 style="margin: 10px 0 0 0; font-weight: 500; color: white;">สรุปราคาประเมิน</h3>
+        </div>
+        <div class="zoom-body">
+            <div class="zoom-price-box">
+                <span id="zoomPrice" style="font-size: 70px; font-weight: 700; color: var(--neon-green); text-shadow: 0 0 15px rgba(46, 204, 113, 0.4);">0 ฿</span>
+            </div>
+            <div class="zoom-detail-row">
+                <span class="material-symbols-outlined" style="color: var(--text-dim);">route</span>
+                <span id="zoomKm" style="font-size: 18px; color: white;">ระยะทาง 0 กม.</span>
+            </div>
+            <div id="zoomExtraRow" class="zoom-detail-row" style="display:none;">
+                <span class="material-symbols-outlined" style="color: var(--neon-yellow);">add_circle</span>
+                <span id="zoomExtraVal" style="font-size: 16px; color: var(--neon-yellow);">ค่าบริการเพิ่มเติม 0 ฿</span>
+            </div>
+            <button onclick="window.toggleModal('zoomOverlay', false)" class="manual-timer-btn" style="width: 100%; margin-top: 25px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+</div>
 
 <div id="trackerZoomOverlay" class="modal-overlay" onclick="window.toggleModal('trackerZoomOverlay', false)">
     <div class="modal-box tracker-zoom-box" onclick="event.stopPropagation()">
@@ -508,7 +535,7 @@
             <div class="tz-start-time">เริ่ม: <span id="tzStartTime">--:--</span> น.</div>
             <div id="tzElapsedTime" class="tz-elapsed-time">0 นาที 0 วิ</div>
         </div>
-        <div class="tz-progress-container">
+        <div class="tz-progress-container" id="tzProgressContainer">
             <div class="tz-progress-line">
                 <div class="tz-point-start"></div><div id="tzProgressFill" class="tz-progress-fill"></div>
                 <div id="tzCarIcon" class="car-icon" style="top: -20px;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 48px; height: 48px; fill: var(--neon-yellow); filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div>
@@ -518,16 +545,16 @@
         <div class="tz-stats-row">
             <div class="tz-stat-col"><div id="tzDrivenKm" class="tz-stat-num" style="color: var(--neon-green);">0.00</div><div class="tz-stat-label">วิ่งแล้ว (กม.)</div></div>
             <div class="tz-stat-col"><div id="tzTrafficTime" class="tz-stat-num" style="color: var(--accent-orange); font-size: 40px; padding-top: 10px;">0:00</div><div class="tz-stat-label">รถติด (นาที:วิ)</div></div>
-            <div class="tz-stat-col"><div id="tzRemainKm" class="tz-stat-num" style="color: var(--neon-yellow);">0.00</div><div class="tz-stat-label">เหลือ (กม.)</div></div>
+            <div class="tz-stat-col" id="tzRemainKmCol"><div id="tzRemainKm" class="tz-stat-num" style="color: var(--neon-yellow);">0.00</div><div class="tz-stat-label">เหลือ (กม.)</div></div>
         </div>
         <div class="tz-fare-card"><div class="tz-fare-title">• ค่าโดยสารเรียลไทม์ •</div><div class="tz-fare-price-box"><span id="tzMeterPrice">35</span><span class="tz-fare-currency">฿</span></div></div>
-        <div class="tz-info-box">
+        <div class="tz-info-box" id="tzInfoBox">
             <div class="tz-info-col"><div class="tz-info-label">เวลาโดยประมาณ</div><div id="tzEtaTime" class="tz-info-val" style="color: var(--neon-yellow);">-- นาที</div></div>
             <div class="tz-info-divider"></div>
             <div class="tz-info-col"><div class="tz-info-label">คาดว่าจะถึง</div><div id="tzArrivalTime" class="tz-info-val" style="color: var(--neon-green);">--:--</div></div>
         </div>
         
-        <button onclick="window.toggleManualTimer(); window.toggleModal('trackerZoomOverlay', false);" class="manual-timer-btn" id="modalStopBtn" style="background: var(--accent-red); width: 100%; justify-content: space-between; margin-bottom: 15px; font-size: 18px; padding: 12px 20px;">
+        <button onclick="window.modalStopTripClick();" class="manual-timer-btn" id="modalStopBtn" style="background: var(--accent-red); width: 100%; justify-content: space-between; margin-bottom: 15px; font-size: 18px; padding: 12px 20px;">
             </button>
         
         <div class="tz-close-text" onclick="window.toggleModal('trackerZoomOverlay', false)">แตะที่นี่เพื่อย่อหน้าจอ</div>
@@ -605,9 +632,48 @@
         else { overlay.style.opacity = '0'; box.style.right = '-320px'; setTimeout(() => { overlay.style.display = 'none'; }, 300); }
     };
 
+    // เปิดจอขยาย
+    window.handleResultClick = () => {
+        if (window.isManualRunning) {
+            window.toggleModal('trackerZoomOverlay', true);
+        } else {
+            window.toggleModal('zoomOverlay', true);
+        }
+    };
+
     window.toggleModal = (id, show) => {
         $(id).style.display = show ? 'flex' : 'none';
-        if(id === 'zoomOverlay' && show) { $('zoomPrice').innerHTML = $('farePrice').innerHTML; $('zoomKm').innerText = $('infoText').innerText; }
+        
+        // อัปเดตข้อมูล Pop up สรุปราคาใหม่
+        if(id === 'zoomOverlay' && show) {
+            $('zoomPrice').innerHTML = $('farePrice').innerHTML;
+            let km = parseFloat($('kmInput').value) || 0;
+            $('zoomKm').innerText = "ระยะทาง " + km.toFixed(2) + " กม.";
+            
+            let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0);
+            if (extraSurcharge > 0) {
+                $('zoomExtraRow').style.display = 'flex';
+                $('zoomExtraVal').innerText = "ค่าบริการเพิ่มเติม +" + extraSurcharge + " ฿";
+            } else {
+                $('zoomExtraRow').style.display = 'none';
+            }
+        }
+        
+        // ควบคุมการแสดงผลหน้า Tracker ว่าเป็นแบบ Manual หรือ Search
+        if(id === 'trackerZoomOverlay' && show) {
+            if(!destLoc) {
+                // Manual mode (ไม่มีการค้นหาสถานที่)
+                if($('tzProgressContainer')) $('tzProgressContainer').style.display = 'none';
+                if($('tzRemainKmCol')) $('tzRemainKmCol').style.display = 'none';
+                if($('tzInfoBox')) $('tzInfoBox').style.display = 'none';
+            } else {
+                // Search mode (มีการค้นหาสถานที่)
+                if($('tzProgressContainer')) $('tzProgressContainer').style.display = 'block';
+                if($('tzRemainKmCol')) $('tzRemainKmCol').style.display = 'block';
+                if($('tzInfoBox')) $('tzInfoBox').style.display = 'flex';
+            }
+        }
+
         if(id === 'adminMenuModal' && window.handleAdminModalState) window.handleAdminModalState(show);
     };
 
@@ -894,10 +960,49 @@
         $('infoText').innerText = "ประเมินระยะทาง " + (km.toFixed(2)) + " กม." + extraText; 
     };
     
-    window.checkAppStatus = () => { let km = parseFloat($('kmInput').value) || 0; let destText = $('destInput').value.trim(); let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0); if (km > 0 && !window.isManualRunning) { $('manualTimerBtn').disabled = false; } else if (!window.isManualRunning) { $('manualTimerBtn').disabled = true; } $('resetBtn').style.display = (!window.isManualRunning && (km > 0 || destText !== "" || extraSurcharge > 0)) ? 'block' : 'none'; };
+    window.checkAppStatus = () => { 
+        let km = parseFloat($('kmInput').value) || 0; 
+        let destText = $('destInput').value.trim(); 
+        let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0); 
+        
+        // ซ่อนปุ่มทางด่วนและสนามบิน เมื่อไม่ได้กดเริ่มมิเตอร์ และกิโลยังเป็น 0
+        if (!window.isManualRunning && km === 0) {
+            $('surchargeRow').style.display = 'none';
+        } else {
+            $('surchargeRow').style.display = 'flex';
+        }
+
+        // ปลดล็อกให้กดปุ่มเริ่มมิเตอร์ได้ตลอดเวลาแม้กิโลเป็น 0
+        if (!window.isManualRunning) { 
+            $('manualTimerBtn').disabled = false; 
+        } 
+        
+        $('resetBtn').style.display = (!window.isManualRunning && (km > 0 || destText !== "" || extraSurcharge > 0)) ? 'block' : 'none'; 
+    };
+
     window.adjustKm = (val) => { let curr = parseFloat($('kmInput').value) || 0; $('kmInput').value = val > 0 ? Math.floor(curr)+1 : Math.max(0, Math.ceil(curr)-1); window.manualInputChange(); };
     window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; window.updateFareEstimation(km); window.checkAppStatus(); };
-    window.toggleManualTimer = () => { if(window.isManualRunning) { window.resetAll(); } else { window.startMeterAndTracking(); } };
+    
+    // ฟังก์ชันกดยืนยันการจบงานจากหน้าหลัก
+    window.toggleManualTimer = async () => { 
+        if(window.isManualRunning) { 
+            let isOk = await window.showCustomConfirm("สิ้นสุดการเดินทาง", "ระบบจะทำการหยุดมิเตอร์และสรุปยอด\nคุณต้องการสิ้นสุดการเดินทางใช่หรือไม่?", "danger", "สิ้นสุดเดินทาง");
+            if(isOk) {
+                window.resetAll();
+            }
+        } else { 
+            window.startMeterAndTracking(); 
+        } 
+    };
+
+    // ฟังก์ชันกดยืนยันการจบงานจากหน้า Zoom
+    window.modalStopTripClick = async () => {
+        let isOk = await window.showCustomConfirm("สิ้นสุดการเดินทาง", "ระบบจะทำการหยุดมิเตอร์และสรุปยอด\nคุณต้องการสิ้นสุดการเดินทางใช่หรือไม่?", "danger", "สิ้นสุดเดินทาง");
+        if(isOk) {
+            window.resetAll();
+            window.toggleModal('trackerZoomOverlay', false);
+        }
+    };
     
     // ฟังก์ชันคำนวณราคาวิ่งจริง (Live) และจัดหน้าตาปุ่มหยุด
     window.updateLiveMeterDisplay = () => { 
@@ -1168,9 +1273,7 @@
                 window.myCurrentQrCodeURL = data.qrCodeURL || ""; 
                 document.getElementById('editQrCodePic').src = window.myCurrentQrCodeURL || window.DEFAULT_QR;
 
-                // ----------------------------------------------------
                 // โหลดค่าประเภทรถจาก Firebase ให้โปรไฟล์และหน้าหลัก
-                // ----------------------------------------------------
                 window.baseFare = data.taxiType ? parseInt(data.taxiType) : 35;
                 window.setProfileTaxiType(window.baseFare, false); 
                 
