@@ -371,7 +371,10 @@
     </div>
 
     <div id="userMenu" style="position: fixed; top: 15px; right: 15px; z-index: 9999; display: none;">
-        <button class="hamburger-btn" onclick="window.toggleSideMenu(true)"><span class="material-symbols-outlined">menu</span></button>
+        <div style="display: flex; gap: 5px; align-items: center;">
+            <button class="hamburger-btn" onclick="window.openShareModal()" title="แชร์แอปพลิเคชัน"><span class="material-symbols-outlined">share</span></button>
+            <button class="hamburger-btn" onclick="window.toggleSideMenu(true)"><span class="material-symbols-outlined">menu</span></button>
+        </div>
     </div>
 
     <div class="header-container flex-center">
@@ -486,6 +489,25 @@
         </div>
         <hr class="side-divider">
         <div class="side-menu-item logout-item" onclick="window.toggleSideMenu(false); window.logoutApp();"><span class="material-symbols-outlined">logout</span><span>ออกจากระบบ</span></div>
+    </div>
+</div>
+
+<div id="shareModal" class="modal-overlay" onclick="window.toggleModal('shareModal', false)">
+    <div class="modal-box standard-box" onclick="event.stopPropagation()">
+        <button class="btn-close-floating" style="top: 15px; right: 15px; transform: none;" onclick="window.toggleModal('shareModal', false)"><span class="material-symbols-outlined">close</span></button>
+        <h3 style="color: white; margin-bottom: 20px;">แชร์แอปพลิเคชัน</h3>
+        
+        <div style="background: white; padding: 15px; border-radius: 15px; display: inline-block; margin-bottom: 20px;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://baby4bot.github.io/taxi/" alt="QR Code" style="width: 180px; height: 180px; object-fit: contain;">
+        </div>
+        
+        <div style="color: var(--neon-yellow); font-size: 14px; margin-bottom: 15px; word-break: break-all;">
+            https://baby4bot.github.io/taxi/
+        </div>
+        
+        <button onclick="window.copyAppShareLink()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: white;">
+            <span class="material-symbols-outlined" style="font-size: 20px; margin-right: 5px;">content_copy</span> คัดลอกลิงก์
+        </button>
     </div>
 </div>
 
@@ -631,6 +653,22 @@
         const overlay = $('sideMenuOverlay'); const box = $('sideMenuBox');
         if (show) { overlay.style.display = 'block'; setTimeout(() => { overlay.style.opacity = '1'; box.style.right = '0'; }, 10); } 
         else { overlay.style.opacity = '0'; box.style.right = '-320px'; setTimeout(() => { overlay.style.display = 'none'; }, 300); }
+    };
+
+    // เปิดหน้าแชร์
+    window.openShareModal = () => {
+        window.toggleModal('shareModal', true);
+    };
+
+    // ฟังก์ชันก๊อปปี้ลิงก์แอป
+    window.copyAppShareLink = () => {
+        const link = "https://baby4bot.github.io/taxi/";
+        navigator.clipboard.writeText(link).then(() => {
+            window.showToast("คัดลอกลิงก์สำเร็จ!", false);
+            window.toggleModal('shareModal', false);
+        }).catch(err => {
+            window.showToast("ไม่สามารถคัดลอกได้ อุปกรณ์อาจไม่รองรับ", true);
+        });
     };
 
     // เปิดจอขยาย
