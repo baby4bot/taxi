@@ -87,7 +87,6 @@
         .header-icon { width: 40px; height: 40px; border-radius: 12px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); object-fit: cover; }
         h2 { font-size: 24px; font-weight: 500; margin: 0; background: linear-gradient(90deg, #fff, #a0a5b5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        /* สวิตช์เลือกประเภทรถแบบมินิมอล */
         .taxi-type-selector { display: inline-flex; background: var(--input-bg); border-radius: 30px; padding: 5px; border: 1px solid var(--border-glass); margin-bottom: 20px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
         .taxi-type-option { padding: 8px 20px; border-radius: 25px; color: var(--text-dim); font-size: 14px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; font-weight: 500; -webkit-tap-highlight-color: transparent; user-select: none; }
         .taxi-type-option .material-symbols-outlined { font-size: 20px; }
@@ -101,14 +100,12 @@
         input:focus, .km-input-box:focus-within { border-color: var(--neon-yellow); box-shadow: 0 0 15px rgba(241, 196, 15, 0.2), inset 0 2px 5px rgba(0,0,0,0.5); }
         input.loading-state { color: var(--neon-yellow) !important; text-shadow: 0 0 10px var(--glow-yellow); }
         
-        /* ปุ่มบวกพิเศษ */
         .surcharge-row { display: flex; gap: 10px; padding-bottom: 5px; margin-bottom: 10px; justify-content: center; flex-wrap: wrap; }
         .surcharge-btn { padding: 10px 20px; border-radius: 20px; background: rgba(241, 196, 15, 0.1); border: 1px solid rgba(241, 196, 15, 0.3); color: var(--neon-yellow); font-family: 'Kanit'; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .surcharge-btn:active { transform: scale(0.95); background: rgba(241, 196, 15, 0.3); }
         .surcharge-btn.danger { color: var(--accent-red); border-color: rgba(255, 71, 87, 0.3); background: rgba(255, 71, 87, 0.1); }
         .surcharge-btn.danger:active { background: rgba(255, 71, 87, 0.3); }
 
-        /* ส่วนแสดงรายการบิลค่าใช้จ่ายพิเศษ */
         .surcharge-list-container { width: 100%; max-width: 320px; margin: 0 auto 15px auto; display: flex; flex-direction: column; gap: 6px; }
         .surcharge-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px 15px; border-radius: 12px; font-size: 13px; color: white; border: 1px solid rgba(255,255,255,0.1); animation: fadeIn 0.3s ease; }
         .surcharge-item .del-btn { color: var(--text-dim); cursor: pointer; font-size: 18px; margin-left: 10px; transition: 0.2s; }
@@ -376,8 +373,8 @@
     <div onclick="window.toggleModal('trackerZoomOverlay', true)" id="liveTracker" class="live-tracker-box">
         <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">(แตะเพื่อเปิดมิเตอร์แบบขยายใหญ่)</div>
         <div class="tracker-stats">
-            <div>วิ่งแล้ว: <span class="highlight" id="driveCovered">0.0</span> กม.</div>
-            <div>เหลือ: <span class="highlight" id="driveRemain">0.0</span> กม.</div>
+            <div>วิ่งแล้ว: <span class="highlight" id="driveCovered">0.00</span> กม.</div>
+            <div>เหลือ: <span class="highlight" id="driveRemain">0.00</span> กม.</div>
         </div>
         <div class="progress-line">
             <div class="point-dot point-start"></div>
@@ -518,6 +515,11 @@
             <div class="tz-info-divider"></div>
             <div class="tz-info-col"><div class="tz-info-label">คาดว่าจะถึง</div><div id="tzArrivalTime" class="tz-info-val" style="color: var(--neon-green);">--:--</div></div>
         </div>
+        
+        <button onclick="window.toggleManualTimer(); window.toggleModal('trackerZoomOverlay', false);" class="manual-timer-btn" style="background: var(--accent-red); width: 100%; justify-content: center; margin-bottom: 15px; font-size: 18px;">
+            <span class="material-symbols-outlined" style="font-size: 24px;">stop_circle</span> สิ้นสุดการเดินทาง
+        </button>
+        
         <div class="tz-close-text" onclick="window.toggleModal('trackerZoomOverlay', false)">แตะที่นี่เพื่อย่อหน้าจอ</div>
     </div>
 </div>
@@ -582,7 +584,7 @@
     const offlineAudio = new Audio('https://actions.google.com/sounds/v1/ui/pop.ogg');
 
     // ----------------------------------------------------
-    // ฟังก์ชันทั่วไป & UI (ลากมาไว้ใน Module เพื่อไม่ให้ตีกัน)
+    // ฟังก์ชันทั่วไป & UI 
     // ----------------------------------------------------
     const $ = id => document.getElementById(id);
     
@@ -738,6 +740,11 @@
         
         window.updateFareEstimation(km); 
         window.checkAppStatus(); 
+        
+        // -------------------------
+        // เริ่มมิเตอร์อัตโนมัติทันที
+        // -------------------------
+        window.startMeterAndTracking();
     };
     
     window.startMeterAndTracking = () => {
@@ -753,7 +760,16 @@
         actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; 
         startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime;
         
-        if(destLoc) { let initialMins = Math.ceil(currentTrueRemainSec / 60); $('arrivalTime').innerText = new Date(Date.now() + initialMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}); $('smallEtaTime').innerText = formatDuration(initialMins); }
+        if(destLoc) { 
+            let initialMins = Math.ceil(currentTrueRemainSec / 60); 
+            $('smallEtaTime').innerText = formatDuration(initialMins); 
+            
+            // ทำให้แถบ Tracking เริ่มต้นที่ 0 ได้อย่างถูกต้องก่อนที่ GPS จะดึงค่า
+            $('driveCovered').innerText = "0.00";
+            $('driveRemain').innerText = currentTrueRemainKm.toFixed(2);
+            $('progressFill').style.width = '0%';
+            $('carIcon').style.left = '0%';
+        }
         
         navigator.geolocation.getCurrentPosition(pos => { lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; }, null, { enableHighAccuracy: true });
         
@@ -795,7 +811,6 @@
                 let remainMins = Math.ceil(currentTrueRemainSec / 60); if(remainMins < 1) remainMins = 1; 
                 $('driveCovered').innerText = actualDrivenKm.toFixed(2); $('driveRemain').innerText = remainKm.toFixed(2); 
                 $('progressFill').style.width = pct + '%'; $('carIcon').style.left = pct + '%'; 
-                $('arrivalTime').innerText = new Date(Date.now() + remainMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'}); 
                 $('smallEtaTime').innerText = formatDuration(remainMins); 
             } 
         }, null, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
@@ -848,6 +863,7 @@
         let tMins = Math.floor(trafficSeconds / 60); let tSecs = Math.floor(trafficSeconds % 60);
         if ($('smallTrafficTime')) { $('smallTrafficTime').innerText = `${tMins}น. ${tSecs}ว.`; }
 
+        // ------------- ส่วนอัปเดตหน้าปัดใหญ่ -------------
         if ($('tzMeterPrice')) {
             $('tzMeterPrice').innerText = displayFare;
             $('tzDrivenKm').innerText = targetKm.toFixed(2);
