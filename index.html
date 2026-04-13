@@ -620,11 +620,9 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // สร้างตัวแปรทั้งหมดให้ผูกกับ window เพื่อให้ HTML มองเห็นและไม่ Error
     window.DEFAULT_AVATAR = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a5b5'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
     window.DEFAULT_QR = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a5b5'%3E%3Cpath d='M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4V5h-4zM13 13h8v8H3v-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z'></path></svg>";
     
-    // ระบบเสียงสังเคราะห์ (Web Audio API) รองรับทุกเบราว์เซอร์ ไม่ต้องโหลดไฟล์ แก้ปัญหาเสียงไม่ดังบนมือถือ
     let audioCtx = null;
     function initAudio() {
         if (!audioCtx) {
@@ -634,7 +632,6 @@
         if (audioCtx.state === 'suspended') { audioCtx.resume(); }
     }
     
-    // ปลดล็อกระบบเสียงเมื่อผู้ใช้แตะหน้าจอครั้งแรก
     document.addEventListener('click', initAudio, { once: true });
     document.addEventListener('touchstart', initAudio, { once: true });
 
@@ -723,12 +720,10 @@
         else { overlay.style.opacity = '0'; box.style.right = '-320px'; setTimeout(() => { overlay.style.display = 'none'; }, 300); }
     };
 
-    // เปิดหน้าแชร์
     window.openShareModal = () => {
         window.toggleModal('shareModal', true);
     };
 
-    // ฟังก์ชันก๊อปปี้ลิงก์แอป
     window.copyAppShareLink = () => {
         const link = "https://baby4bot.github.io/taxi/";
         navigator.clipboard.writeText(link).then(() => {
@@ -739,7 +734,6 @@
         });
     };
 
-    // เปิดจอขยาย
     window.handleResultClick = () => {
         if (window.isManualRunning) {
             window.toggleModal('trackerZoomOverlay', true);
@@ -751,7 +745,6 @@
     window.toggleModal = (id, show) => {
         $(id).style.display = show ? 'flex' : 'none';
         
-        // อัปเดตข้อมูล Pop up สรุปราคาใหม่
         if(id === 'zoomOverlay' && show) {
             $('zoomPrice').innerHTML = $('farePrice').innerHTML;
             let km = parseFloat($('kmInput').value) || 0;
@@ -766,15 +759,12 @@
             }
         }
         
-        // ควบคุมการแสดงผลหน้า Tracker ว่าเป็นแบบ Manual หรือ Search
         if(id === 'trackerZoomOverlay' && show) {
             if(!destLoc) {
-                // Manual mode (ไม่มีการค้นหาสถานที่)
                 if($('tzProgressContainer')) $('tzProgressContainer').style.display = 'none';
                 if($('tzRemainKmCol')) $('tzRemainKmCol').style.display = 'none';
                 if($('tzInfoBox')) $('tzInfoBox').style.display = 'none';
             } else {
-                // Search mode (มีการค้นหาสถานที่)
                 if($('tzProgressContainer')) $('tzProgressContainer').style.display = 'block';
                 if($('tzRemainKmCol')) $('tzRemainKmCol').style.display = 'block';
                 if($('tzInfoBox')) $('tzInfoBox').style.display = 'flex';
@@ -811,7 +801,6 @@
     window.openChangePasswordModal = () => { window.toggleModal('changePasswordModal', true); };
     window.openProfileModal = () => { window.toggleModal('profileModal', true); };
     
-    // ตั้งค่าประเภทรถจากหน้าโปรไฟล์
     window.setProfileTaxiType = (val, save = false) => {
         document.querySelectorAll('#profileModal .taxi-type-option').forEach(el => el.classList.remove('active'));
         if(val === 40) document.getElementById('profileTaxiVan').classList.add('active');
@@ -825,7 +814,6 @@
         }
     };
 
-    // ปุ่มสลับรถบนหน้าแรก
     window.toggleTaxiTypeDB = async () => {
         window.playSound('toggle');
         
@@ -841,14 +829,13 @@
         }
     };
 
-    // วาดหน้าตาปุ่มเริ่ม/หยุด
     window.renderStartButton = () => {
         let btn = document.getElementById('manualTimerBtn');
         if (!btn) return;
         let isVan = window.baseFare === 40;
         let icon = isVan ? 'airport_shuttle' : 'local_taxi';
         let txt = isVan ? 'แวน' : 'ปกติ';
-        let bgColor = isVan ? 'rgba(155, 89, 182, 0.9)' : 'rgba(52, 152, 219, 0.9)'; // ม่วง กับ ฟ้า
+        let bgColor = isVan ? 'rgba(155, 89, 182, 0.9)' : 'rgba(52, 152, 219, 0.9)'; 
         let borderColor = isVan ? '#9b59b6' : '#3498db';
 
         if (!window.isManualRunning) {
@@ -987,7 +974,6 @@
     window.startMeterAndTracking = () => {
         if (window.isManualRunning) return;
         
-        // เล่นเสียงแจ้งเตือนการเริ่มระบบ
         window.playSound('start');
 
         window.isManualRunning = true; requestWakeLock();
@@ -1062,7 +1048,6 @@
         return f; 
     };
     
-    // อัปเดตราคาประเมิน
     window.updateFareEstimation = (km) => { 
         let distFare = window.calcThaiMeterDist(km); 
         let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0);
@@ -1080,14 +1065,12 @@
         let destText = $('destInput').value.trim(); 
         let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0); 
         
-        // ซ่อนปุ่มทางด่วนและสนามบิน เมื่อไม่ได้กดเริ่มมิเตอร์ และกิโลยังเป็น 0
         if (!window.isManualRunning && km === 0) {
             $('surchargeRow').style.display = 'none';
         } else {
             $('surchargeRow').style.display = 'flex';
         }
 
-        // ปลดล็อกให้กดปุ่มเริ่มมิเตอร์ได้ตลอดเวลาแม้กิโลเป็น 0
         if (!window.isManualRunning) { 
             $('manualTimerBtn').disabled = false; 
         } 
@@ -1105,7 +1088,6 @@
     };
     window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; window.updateFareEstimation(km); window.checkAppStatus(); };
     
-    // ฟังก์ชันกดยืนยันการจบงานจากหน้าหลัก
     window.toggleManualTimer = async () => { 
         if(window.isManualRunning) { 
             let isOk = await window.showCustomConfirm("สิ้นสุดการเดินทาง", "ระบบจะทำการหยุดมิเตอร์และสรุปยอด\nคุณต้องการสิ้นสุดการเดินทางใช่หรือไม่?", "danger", "สิ้นสุดเดินทาง");
@@ -1118,7 +1100,6 @@
         } 
     };
 
-    // ฟังก์ชันกดยืนยันการจบงานจากหน้า Zoom
     window.modalStopTripClick = async () => {
         let isOk = await window.showCustomConfirm("สิ้นสุดการเดินทาง", "ระบบจะทำการหยุดมิเตอร์และสรุปยอด\nคุณต้องการสิ้นสุดการเดินทางใช่หรือไม่?", "danger", "สิ้นสุดเดินทาง");
         if(isOk) {
@@ -1128,7 +1109,6 @@
         }
     };
     
-    // ฟังก์ชันคำนวณราคาวิ่งจริง (Live) และจัดหน้าตาปุ่มหยุด
     window.updateLiveMeterDisplay = () => { 
         if (!startTime) return; 
         
@@ -1227,7 +1207,13 @@
         window.stopTracking(); window.updateFareEstimation(0); window.checkAppStatus(); 
     };
 
-    window.startNavigation = () => destLoc && (window.location.href = `google.navigation:q=${destLoc.lat},${destLoc.lon}&mode=d`);
+    window.startNavigation = () => {
+        if(destLoc) {
+            window.location.href = `google.navigation:q=${destLoc.lat},${destLoc.lon}&mode=d`;
+        } else {
+            window.showToast("กรุณาค้นหาจุดหมายก่อนกดนำทางครับ", true);
+        }
+    };
     
     window.shareToPlatform = (p) => { 
         let isSearchMode = destLoc !== null && $('destInput').value.trim() !== ""; let km = parseFloat($('kmInput').value) || 0; let price = $('farePrice').innerText.replace(/<[^>]*>?/gm, '').trim(); let txt = "";
@@ -1245,9 +1231,6 @@
     window.previewProfilePic = (event, imgId) => { const file = event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = function(e) { document.getElementById(imgId).src = e.target.result; }; reader.readAsDataURL(file); } };
     window.previewRegProfilePic = (event) => window.previewProfilePic(event, 'regProfilePicPreview');
 
-    // ----------------------------------------------------
-    // ฟังก์ชันเชื่อมต่อ Firebase 
-    // ----------------------------------------------------
     window.removeImage = (imgId, isProfile) => {
         document.getElementById(imgId).src = isProfile ? window.DEFAULT_AVATAR : window.DEFAULT_QR;
         if(imgId === 'editProfilePic') document.getElementById('uploadPicInput').value = '';
@@ -1280,7 +1263,7 @@
         try { 
             let logData = { action: actionTitle, detail: detailDesc, timestamp: Date.now(), byUid: loggedInUserId, byName: document.getElementById('displayUserName').innerText, targetUid: targetUid };
             await addDoc(collection(db, "users", targetUid, "logs"), logData); 
-            await addDoc(collection(db, "global_logs"), logData); // ยิงเข้าส่วนกลางเพื่อให้แอดมินดูได้
+            await addDoc(collection(db, "global_logs"), logData); 
         } catch(e) {}
     };
 
@@ -1399,7 +1382,6 @@
                 window.myCurrentQrCodeURL = data.qrCodeURL || ""; 
                 document.getElementById('editQrCodePic').src = window.myCurrentQrCodeURL || window.DEFAULT_QR;
 
-                // โหลดค่าประเภทรถจาก Firebase ให้โปรไฟล์และหน้าหลัก
                 window.baseFare = data.taxiType ? parseInt(data.taxiType) : 35;
                 window.setProfileTaxiType(window.baseFare, false); 
                 
@@ -1481,11 +1463,9 @@
             if(newName !== document.getElementById('displayUserName').innerText) { logDetails.push(`เปลี่ยนชื่อเป็น '${newName}'`); }
             updatePayload.photoURL = finalPhotoURL; updatePayload.displayName = newName;
             
-            // บันทึกเบอร์โทร
             let phoneInput = document.getElementById('editPhone').value.trim();
             if(phoneInput !== "") updatePayload.phoneNumber = phoneInput;
             
-            // บันทึกประเภทรถด้วย
             updatePayload.taxiType = parseInt(document.getElementById('editTaxiType').value);
 
             if(Object.keys(updatePayload).length > 0) { await updateDoc(doc(db, "users", loggedInUserId), updatePayload); }
@@ -1678,7 +1658,6 @@
         } catch(e) { listDiv.innerHTML = '<div style="color: var(--accent-red); text-align: center; padding: 20px;">เกิดข้อผิดพลาดในการโหลดประวัติ</div>'; }
     };
 
-    // ดูประวัติรวมทั้งหมด (หน้าแอดมิน)
     window.viewGlobalLogs = async () => {
         window.toggleModal('activityLogModal', true); 
         document.getElementById('logModalTitle').innerText = 'ประวัติรวมระบบ'; 
