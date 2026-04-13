@@ -96,7 +96,6 @@
         label { display: block; margin-bottom: 10px; font-size: 13px; color: var(--text-dim); text-align: center; }
         .input-group { display: flex; gap: 10px; align-items: center; width: 100%; }
         
-        /* ปรับปรุงช่องกรอกข้อมูลให้โดดเด่นขึ้น */
         input[type="text"], input[type="email"], input[type="password"], input[type="tel"], .km-input-box { 
             background: rgba(255, 255, 255, 0.1); 
             border: 1px solid rgba(255, 255, 255, 0.25); 
@@ -625,6 +624,19 @@
     window.DEFAULT_AVATAR = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a5b5'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
     window.DEFAULT_QR = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a5b5'%3E%3Cpath d='M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4V5h-4zM13 13h8v8H3v-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z'></path></svg>";
     
+    // ตั้งค่าตัวแปรเสียงแจ้งเตือน
+    const sndToggle = new Audio('https://actions.google.com/sounds/v1/ui/button_click.ogg');
+    const sndStart = new Audio('https://actions.google.com/sounds/v1/ui/positive_notification.ogg');
+    const sndStop = new Audio('https://actions.google.com/sounds/v1/ui/pop.ogg');
+    const sndPlus = new Audio('https://actions.google.com/sounds/v1/ui/casual_task_start.ogg');
+    const sndMinus = new Audio('https://actions.google.com/sounds/v1/ui/casual_task_end.ogg');
+
+    // ฟังก์ชันช่วยเล่นเสียง
+    window.playSound = (audioObj) => { 
+        audioObj.currentTime = 0; 
+        audioObj.play().catch(e => {}); 
+    };
+
     window.baseFare = 35;
     window.surchargeList = [];
     const HISTORY_KEY = 'taxi_history_v25';
@@ -768,6 +780,8 @@
 
     // ปุ่มสลับรถบนหน้าแรก
     window.toggleTaxiTypeDB = async () => {
+        window.playSound(sndToggle);
+        
         let newFare = window.baseFare === 35 ? 40 : 35;
         window.baseFare = newFare;
         window.setProfileTaxiType(newFare, false);
@@ -787,11 +801,13 @@
         let isVan = window.baseFare === 40;
         let icon = isVan ? 'airport_shuttle' : 'local_taxi';
         let txt = isVan ? 'แวน' : 'ปกติ';
+        let bgColor = isVan ? 'rgba(155, 89, 182, 0.9)' : 'rgba(52, 152, 219, 0.9)'; // ม่วง กับ ฟ้า
+        let borderColor = isVan ? '#9b59b6' : '#3498db';
 
         if (!window.isManualRunning) {
             btn.innerHTML = `
                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%; position:relative;">
-                    <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB();" style="display:flex; align-items:center; gap:4px; background:rgba(0,0,0,0.2); padding:6px 10px; border-radius:12px; font-size:12px; font-weight:500; border: 1px solid rgba(255,255,255,0.1); z-index:2; cursor:pointer;" title="จิ้มเพื่อสลับประเภทรถ">
+                    <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB();" style="display:flex; align-items:center; gap:4px; background:${bgColor}; padding:6px 10px; border-radius:12px; font-size:12px; font-weight:500; border: 1px solid ${borderColor}; z-index:2; cursor:pointer;" title="จิ้มเพื่อสลับประเภทรถ">
                         <span class="material-symbols-outlined" style="font-size:16px;">${icon}</span> <span>${txt}</span>
                     </div>
                     <div style="position:absolute; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:5px; pointer-events:none;">
@@ -923,6 +939,10 @@
     
     window.startMeterAndTracking = () => {
         if (window.isManualRunning) return;
+        
+        // เล่นเสียงแจ้งเตือนการเริ่มระบบ
+        window.playSound(sndStart);
+
         window.isManualRunning = true; requestWakeLock();
         $('manualTimerBtn').disabled = false; $('manualTimerBtn').classList.add('active');
         $('searchSectionBox').style.display = 'none'; $('manualSectionBox').style.display = 'none'; $('resetBtn').style.display = 'none';
@@ -1028,7 +1048,14 @@
         $('resetBtn').style.display = (!window.isManualRunning && (km > 0 || destText !== "" || extraSurcharge > 0)) ? 'block' : 'none'; 
     };
 
-    window.adjustKm = (val) => { let curr = parseFloat($('kmInput').value) || 0; $('kmInput').value = val > 0 ? Math.floor(curr)+1 : Math.max(0, Math.ceil(curr)-1); window.manualInputChange(); };
+    window.adjustKm = (val) => { 
+        if(val > 0) window.playSound(sndPlus);
+        else window.playSound(sndMinus);
+
+        let curr = parseFloat($('kmInput').value) || 0; 
+        $('kmInput').value = val > 0 ? Math.floor(curr)+1 : Math.max(0, Math.ceil(curr)-1); 
+        window.manualInputChange(); 
+    };
     window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; window.updateFareEstimation(km); window.checkAppStatus(); };
     
     // ฟังก์ชันกดยืนยันการจบงานจากหน้าหลัก
@@ -1036,6 +1063,7 @@
         if(window.isManualRunning) { 
             let isOk = await window.showCustomConfirm("สิ้นสุดการเดินทาง", "ระบบจะทำการหยุดมิเตอร์และสรุปยอด\nคุณต้องการสิ้นสุดการเดินทางใช่หรือไม่?", "danger", "สิ้นสุดเดินทาง");
             if(isOk) {
+                window.playSound(sndStop);
                 window.resetAll();
             }
         } else { 
@@ -1047,6 +1075,7 @@
     window.modalStopTripClick = async () => {
         let isOk = await window.showCustomConfirm("สิ้นสุดการเดินทาง", "ระบบจะทำการหยุดมิเตอร์และสรุปยอด\nคุณต้องการสิ้นสุดการเดินทางใช่หรือไม่?", "danger", "สิ้นสุดเดินทาง");
         if(isOk) {
+            window.playSound(sndStop);
             window.resetAll();
             window.toggleModal('trackerZoomOverlay', false);
         }
@@ -1068,12 +1097,14 @@
         let isVan = window.baseFare === 40;
         let icon = isVan ? 'airport_shuttle' : 'local_taxi';
         let txt = isVan ? 'แวน' : 'ปกติ';
+        let bgColor = isVan ? 'rgba(155, 89, 182, 0.9)' : 'rgba(52, 152, 219, 0.9)';
+        let borderColor = isVan ? '#9b59b6' : '#3498db';
 
         let btn = $('manualTimerBtn'); 
         if(btn && btn.classList.contains('active')) { 
             btn.innerHTML = `
                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%; position:relative;">
-                    <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB();" style="display:flex; align-items:center; gap:4px; background:rgba(0,0,0,0.2); padding:6px 10px; border-radius:12px; font-size:12px; font-weight:500; border: 1px solid rgba(255,255,255,0.1); z-index:2; flex-shrink:0; cursor:pointer;" title="จิ้มเพื่อสลับประเภทรถ">
+                    <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB();" style="display:flex; align-items:center; gap:4px; background:${bgColor}; padding:6px 10px; border-radius:12px; font-size:12px; font-weight:500; border: 1px solid ${borderColor}; z-index:2; flex-shrink:0; cursor:pointer;" title="จิ้มเพื่อสลับประเภทรถ">
                         <span class="material-symbols-outlined" style="font-size:16px;">${icon}</span> <span>${txt}</span>
                     </div>
                     <div style="position:absolute; left:0; right:0; display:flex; flex-direction:column; align-items:center; pointer-events:none;">
@@ -1115,7 +1146,7 @@
         if (modalBtn) {
             modalBtn.innerHTML = `
                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%; position:relative;">
-                    <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB();" style="display:flex; align-items:center; gap:4px; background:rgba(0,0,0,0.2); padding:6px 12px; border-radius:12px; font-size:14px; font-weight:500; border: 1px solid rgba(255,255,255,0.1); z-index:2; flex-shrink:0; cursor:pointer;">
+                    <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB();" style="display:flex; align-items:center; gap:4px; background:${bgColor}; padding:6px 12px; border-radius:12px; font-size:14px; font-weight:500; border: 1px solid ${borderColor}; z-index:2; flex-shrink:0; cursor:pointer;">
                         <span class="material-symbols-outlined" style="font-size:20px;">${icon}</span> <span>${txt}</span>
                     </div>
                     <div style="position:absolute; left:0; right:0; display:flex; flex-direction:column; align-items:center; pointer-events:none;">
