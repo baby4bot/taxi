@@ -333,6 +333,9 @@
     </style>
 </head>
 <body>
+<audio id="silentAudioLoop" loop playsinline>
+    <source src="data:audio/mp3;base64,//MkxAAAD/8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MkxAAAD/8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MkxAAAD/8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" type="audio/mpeg">
+</audio>
 
 <div id="sysCustomConfirm" class="custom-confirm-overlay" style="display: none;">
     <div class="custom-confirm-box">
@@ -601,11 +604,9 @@
 </div>
 
 <script type="module">
-    // นำเข้า Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
-    // ตั้งค่า Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyAhK_yT1kbFVl3A11n_QU4BgTvHrC7YkXI",
       authDomain: "mytalkie-3955a.firebaseapp.com",
@@ -720,9 +721,7 @@
         else { overlay.style.opacity = '0'; box.style.right = '-320px'; setTimeout(() => { overlay.style.display = 'none'; }, 300); }
     };
 
-    window.openShareModal = () => {
-        window.toggleModal('shareModal', true);
-    };
+    window.openShareModal = () => { window.toggleModal('shareModal', true); };
 
     window.copyAppShareLink = () => {
         const link = "https://baby4bot.github.io/taxi/";
@@ -735,11 +734,8 @@
     };
 
     window.handleResultClick = () => {
-        if (window.isManualRunning) {
-            window.toggleModal('trackerZoomOverlay', true);
-        } else {
-            window.toggleModal('zoomOverlay', true);
-        }
+        if (window.isManualRunning) { window.toggleModal('trackerZoomOverlay', true); } 
+        else { window.toggleModal('zoomOverlay', true); }
     };
 
     window.toggleModal = (id, show) => {
@@ -816,17 +812,13 @@
 
     window.toggleTaxiTypeDB = async () => {
         window.playSound('toggle');
-        
         let newFare = window.baseFare === 35 ? 40 : 35;
         window.baseFare = newFare;
         window.setProfileTaxiType(newFare, false);
         window.showToast(newFare === 35 ? "เปลี่ยนเรทราคาเป็นรถปกติ (35฿)" : "เปลี่ยนเรทราคาเป็นรถแวน (40฿)");
         window.renderStartButton();
         if(window.isManualRunning) window.updateLiveMeterDisplay(); else window.manualInputChange();
-        
-        if(loggedInUserId) {
-            try { await updateDoc(doc(db, "users", loggedInUserId), { taxiType: newFare }); } catch(e) {}
-        }
+        if(loggedInUserId) { try { await updateDoc(doc(db, "users", loggedInUserId), { taxiType: newFare }); } catch(e) {} }
     };
 
     window.renderStartButton = () => {
@@ -852,10 +844,7 @@
         }
     };
 
-    window.addSurcharge = (amount, name) => {
-        window.surchargeList.push({ name: name, amount: amount, id: Date.now() });
-        window.updateSurchargeUI();
-    };
+    window.addSurcharge = (amount, name) => { window.surchargeList.push({ name: name, amount: amount, id: Date.now() }); window.updateSurchargeUI(); };
 
     window.promptToll = () => {
         document.getElementById('tollInput').value = '';
@@ -865,12 +854,8 @@
     
     window.confirmToll = () => {
         let amt = parseInt(document.getElementById('tollInput').value);
-        if(amt > 0) {
-            window.addSurcharge(amt, 'ค่าทางด่วน');
-            window.toggleModal('tollModal', false);
-        } else {
-            window.showToast('กรุณาระบุจำนวนเงินที่ถูกต้อง', true);
-        }
+        if(amt > 0) { window.addSurcharge(amt, 'ค่าทางด่วน'); window.toggleModal('tollModal', false); } 
+        else { window.showToast('กรุณาระบุจำนวนเงินที่ถูกต้อง', true); }
     };
 
     window.removeSurcharge = (id) => { window.surchargeList = window.surchargeList.filter(item => item.id !== id); window.updateSurchargeUI(); };
@@ -971,10 +956,26 @@
         window.startMeterAndTracking();
     };
     
+    // ======== ระบบหลอก Browser เพื่อให้คำนวณ Background ได้ ========
+    window.playSilentAudio = () => {
+        let audio = document.getElementById('silentAudioLoop');
+        if(audio) {
+            audio.play().catch(e => console.log("Audio play prevented:", e));
+        }
+    };
+    window.stopSilentAudio = () => {
+        let audio = document.getElementById('silentAudioLoop');
+        if(audio) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+    };
+
     window.startMeterAndTracking = () => {
         if (window.isManualRunning) return;
         
         window.playSound('start');
+        window.playSilentAudio(); // เริ่มเล่นเสียงเงียบกันหลับ
 
         window.isManualRunning = true; requestWakeLock();
         $('manualTimerBtn').disabled = false; $('manualTimerBtn').classList.add('active');
@@ -999,9 +1000,22 @@
         
         if(tripTimer) clearInterval(tripTimer);
         tripTimer = setInterval(() => { 
-            let now = Date.now(); let deltaSec = (now - lastCalcTime) / 1000; lastCalcTime = now; 
+            let now = Date.now(); 
+            let deltaSec = (now - lastCalcTime) / 1000; 
+            lastCalcTime = now; 
+            
+            // ถ้ารถนิ่งหรือสัญญาณหายเกิน 5 วิ ให้ถือว่าหยุดนิ่ง
             if (now - lastPosTime > 5000) currentSpeedKmh = 0; 
-            if (currentSpeedKmh <= 6) trafficSeconds += deltaSec; 
+            
+            // กรองเงื่อนไขรถติดที่ชัดเจน: ความเร็วต้อง <= 6 เท่านั้น และถ้า Browser หลับยาวจะไม่ให้บวกพรวดเดียว
+            if (currentSpeedKmh <= 6) {
+                if (deltaSec < 10) { // ป้องกันกรณี Browser หลับแล้วตื่นมาบวกเวลาเพี้ยนๆ รวดเดียว
+                    trafficSeconds += deltaSec; 
+                } else {
+                    trafficSeconds += 1; // ถ้าตื่นมาจากการโดน Suspend ให้บวกแค่ 1 วิพอ
+                }
+            }
+            
             if(currentTrueRemainSec > 0) { currentTrueRemainSec -= deltaSec; if(currentTrueRemainSec < 0) currentTrueRemainSec = 0; } 
             window.updateLiveMeterDisplay(); 
         }, 1000);
@@ -1009,6 +1023,7 @@
         if(watchId) navigator.geolocation.clearWatch(watchId);
         watchId = navigator.geolocation.watchPosition((pos) => { 
             let now = Date.now(); 
+            // ระบบกรองความแม่นยำ ถ้าเพี้ยนเกิน 30 เมตร ให้ข้ามไปเลย ไม่เอามาคิด
             if (pos.coords.accuracy > 30) return; 
 
             let OS_SpeedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
@@ -1017,16 +1032,22 @@
                 let dMoved = calcGPS(lastPos.lat, lastPos.lon, pos.coords.latitude, pos.coords.longitude); 
                 let timeHours = (now - lastPosTime) / 3600000; 
                 
-                if(OS_SpeedKmh !== -1) { currentSpeedKmh = OS_SpeedKmh; } 
-                else if (timeHours > 0) { currentSpeedKmh = dMoved / timeHours; }
+                if(OS_SpeedKmh !== -1) { 
+                    currentSpeedKmh = OS_SpeedKmh; 
+                } else if (timeHours > 0) { 
+                    currentSpeedKmh = dMoved / timeHours; 
+                }
                 
                 if (dMoved > 0.005) { 
-                    actualDrivenKm += dMoved; currentTrueRemainKm -= dMoved; 
+                    actualDrivenKm += dMoved; 
+                    currentTrueRemainKm -= dMoved; 
                     if(currentTrueRemainKm < 0) currentTrueRemainKm = 0; 
-                    lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; lastPosTime = now; 
-                } else { lastPosTime = now; }
+                    lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; 
+                }
+                lastPosTime = now; 
             } else { 
-                lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; lastPosTime = now; 
+                lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; 
+                lastPosTime = now; 
             } 
             
             if(destLoc) { 
@@ -1114,6 +1135,7 @@
         
         let targetKm = actualDrivenKm; 
         let distFare = window.calcThaiMeterDist(targetKm); 
+        // รถติดคิดนาทีละ 3 บาท
         let timeFare = trafficSeconds * (3.0 / 60); 
         let extraFare = distFare + timeFare;
         let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0);
@@ -1197,7 +1219,11 @@
         }, 10000); 
     };
     
-    window.stopTracking = () => { releaseWakeLock(); $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('surchargeRow').style.display = 'flex'; if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; };
+    window.stopTracking = () => { 
+        releaseWakeLock(); 
+        window.stopSilentAudio(); // หยุดเสียงตอนหยุดมิเตอร์
+        $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('surchargeRow').style.display = 'flex'; if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
+    };
     
     window.resetAll = () => { 
         $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; 
