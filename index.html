@@ -108,14 +108,15 @@
         input:focus, .km-input-box:focus-within { border-color: var(--neon-yellow); background: rgba(255, 255, 255, 0.15); box-shadow: 0 0 15px rgba(241, 196, 15, 0.2), inset 0 2px 5px rgba(0,0,0,0.5); }
         input.loading-state { color: var(--neon-yellow) !important; text-shadow: 0 0 10px var(--glow-yellow); }
         
-        .surcharge-row { display: flex; gap: 10px; padding-bottom: 5px; margin-bottom: 10px; justify-content: center; flex-wrap: wrap; }
+        /* ปรับ CSS ส่วนปุ่มทางด่วนให้ห่างและเล็กเรียงเป็นแถว */
+        .surcharge-row { display: flex; gap: 10px; padding-bottom: 5px; margin-top: 25px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
         .surcharge-btn { padding: 10px 20px; border-radius: 20px; background: rgba(241, 196, 15, 0.1); border: 1px solid rgba(241, 196, 15, 0.3); color: var(--neon-yellow); font-family: 'Kanit'; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .surcharge-btn:active { transform: scale(0.95); background: rgba(241, 196, 15, 0.3); }
 
-        .surcharge-list-container { width: 100%; max-width: 320px; margin: 0 auto 15px auto; display: flex; flex-direction: column; gap: 6px; }
-        .surcharge-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px 15px; border-radius: 12px; font-size: 13px; color: white; border: 1px solid rgba(255,255,255,0.1); animation: fadeIn 0.3s ease; }
-        .surcharge-item .del-btn { color: var(--text-dim); cursor: pointer; font-size: 18px; margin-left: 10px; transition: 0.2s; }
-        .surcharge-item .del-btn:active { color: var(--accent-red); transform: scale(0.9); }
+        .surcharge-list-container { width: 100%; max-width: 100%; margin: 0 auto 15px auto; display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
+        .surcharge-item { display: inline-flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 20px; font-size: 13px; color: white; border: 1px solid rgba(255,255,255,0.2); animation: fadeIn 0.3s ease; white-space: nowrap; }
+        .surcharge-item .del-btn { color: #ff4757; cursor: pointer; font-size: 18px; margin-left: 8px; transition: 0.2s; background: rgba(255,71,87,0.1); border-radius: 50%; }
+        .surcharge-item .del-btn:active { transform: scale(0.9); background: rgba(255,71,87,0.3); }
 
         .password-wrapper { position: relative; width: 100%; margin-bottom: 15px; }
         .password-wrapper input { width: 100%; margin-bottom: 0 !important; padding-right: 50px !important; }
@@ -453,6 +454,10 @@
     </div>
 
     <div id="surchargeDetails" class="surcharge-list-container" style="display:none;"></div>
+    
+    <div id="totalTollBadge" style="display:none; background: #3498db; color: white; padding: 6px 20px; border-radius: 20px; font-size: 14px; font-weight: 600; margin: 0 auto 20px auto; width: fit-content; box-shadow: 0 4px 10px rgba(52,152,219,0.4);">
+        รวมค่าทางด่วน: 0 ฿
+    </div>
                                                        
     <div class="result-container" onclick="window.handleResultClick()">
         <div class="bubble-bg-container">
@@ -876,19 +881,31 @@
 
     window.removeSurcharge = (id) => { window.surchargeList = window.surchargeList.filter(item => item.id !== id); window.updateSurchargeUI(); };
 
+    // 🟢 ระบบจัดการ UI ค่าทางด่วนและค่าบริการเพิ่มเติม 🟢
     window.updateSurchargeUI = () => {
         let container = document.getElementById('surchargeDetails');
         let hasAirport = false;
+        let totalToll = 0;
         
         if(window.surchargeList.length > 0) {
             let html = '';
             window.surchargeList.forEach(item => { 
-                html += `<div class="surcharge-item"><span>${item.name}</span><span>+${item.amount} ฿ <span class="material-symbols-outlined del-btn" onclick="window.removeSurcharge(${item.id})">cancel</span></span></div>`; 
+                html += `<div class="surcharge-item"><span>${item.name} +${item.amount}฿</span><span class="material-symbols-outlined del-btn" onclick="window.removeSurcharge(${item.id})">cancel</span></div>`; 
                 if(item.name === 'ค่าเรียกจากสนามบิน') hasAirport = true;
+                if(item.name === 'ค่าทางด่วน') totalToll += item.amount;
             });
             container.innerHTML = html; container.style.display = 'flex';
         } else {
             container.innerHTML = ''; container.style.display = 'none';
+        }
+        
+        // อัปเดตป้ายสรุปค่าทางด่วนรวม
+        let totalBadge = document.getElementById('totalTollBadge');
+        if (totalToll > 0) {
+            totalBadge.innerHTML = `รวมค่าทางด่วน: ${totalToll} ฿`;
+            totalBadge.style.display = 'block';
+        } else {
+            totalBadge.style.display = 'none';
         }
         
         document.getElementById('btnAirport').style.display = hasAirport ? 'none' : 'inline-block';
@@ -972,7 +989,6 @@
         window.startMeterAndTracking();
     };
     
-    // ======== ระบบหลอก Browser เพื่อให้คำนวณ Background ได้ ========
     window.playSilentAudio = () => {
         let audio = document.getElementById('silentAudioLoop');
         if(audio) {
@@ -991,7 +1007,7 @@
         if (window.isManualRunning) return;
         
         window.playSound('start');
-        window.playSilentAudio(); // เริ่มเล่นเสียงเงียบกันหลับ
+        window.playSilentAudio(); 
 
         window.isManualRunning = true; requestWakeLock();
         $('manualTimerBtn').disabled = false; $('manualTimerBtn').classList.add('active');
@@ -999,13 +1015,12 @@
         $('surchargeRow').style.display = 'flex'; 
         if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex';
         
-        // โชว์กรอบ Tracker ทุกครั้งที่จับเวลา (แม้ไม่มีปลายทาง)
         $('liveTracker').style.display = 'block'; 
 
         actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; 
         startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime;
         
-        $('driveCovered').innerText = "0.00"; // รีเซ็ตวิ่งแล้วเป็น 0
+        $('driveCovered').innerText = "0.00"; 
 
         let destText = $('destInput').value.trim();
         
@@ -1033,7 +1048,6 @@
                 $('tzDestNameBox').style.display = 'none';
             }
         } else {
-            // ซ่อนข้อมูลเวลาประเมินถ้าไม่มีปลายทาง
             $('ltRemainDiv').style.display = 'none';
             $('ltProgressLine').style.display = 'none';
             $('ltEtaRow').style.display = 'none';
@@ -1049,15 +1063,13 @@
             let deltaSec = (now - lastCalcTime) / 1000; 
             lastCalcTime = now; 
             
-            // ถ้ารถนิ่งหรือสัญญาณหายเกิน 5 วิ ให้ถือว่าหยุดนิ่ง
             if (now - lastPosTime > 5000) currentSpeedKmh = 0; 
             
-            // กรองเงื่อนไขรถติดที่ชัดเจน: ความเร็วต้อง <= 6 เท่านั้น และถ้า Browser หลับยาวจะไม่ให้บวกพรวดเดียว
             if (currentSpeedKmh <= 6) {
-                if (deltaSec < 10) { // ป้องกันกรณี Browser หลับแล้วตื่นมาบวกเวลาเพี้ยนๆ รวดเดียว
+                if (deltaSec < 10) { 
                     trafficSeconds += deltaSec; 
                 } else {
-                    trafficSeconds += 1; // ถ้าตื่นมาจากการโดน Suspend ให้บวกแค่ 1 วิพอ
+                    trafficSeconds += 1; 
                 }
             }
             
@@ -1068,7 +1080,6 @@
         if(watchId) navigator.geolocation.clearWatch(watchId);
         watchId = navigator.geolocation.watchPosition((pos) => { 
             let now = Date.now(); 
-            // ระบบกรองความแม่นยำ ถ้าเพี้ยนเกิน 30 เมตร ให้ข้ามไปเลย ไม่เอามาคิด
             if (pos.coords.accuracy > 30) return; 
 
             let OS_SpeedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
@@ -1095,7 +1106,6 @@
                 lastPosTime = now; 
             } 
             
-            // อัปเดตวิ่งแล้วเสมอ แม้จะไม่มีปลายทาง
             $('driveCovered').innerText = actualDrivenKm.toFixed(2);
 
             if(destLoc) { 
@@ -1181,7 +1191,6 @@
         
         let targetKm = actualDrivenKm; 
         let distFare = window.calcThaiMeterDist(targetKm); 
-        // รถติดคิดนาทีละ 3 บาท
         let timeFare = trafficSeconds * (3.0 / 60); 
         let extraFare = distFare + timeFare;
         let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0);
@@ -1211,7 +1220,6 @@
             `; 
         } 
 
-        // จัดการอัปเดตข้อมูลเวลาทั้งหมด
         let startD = new Date(startTime);
         let startTimeStr = startD.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
         $('tzStartTime').innerText = startTimeStr;
@@ -1236,7 +1244,6 @@
             $('tzEtaTime').innerText = formatDuration(remainMins);
             $('tzArrivalTime').innerText = arrTimeStr;
             
-            // อัปเดตในหน้าแรกด้วย
             if($('smallArrivalTime')) $('smallArrivalTime').innerText = arrTimeStr;
             if($('smallEtaTime')) $('smallEtaTime').innerText = formatDuration(remainMins);
             
@@ -1246,7 +1253,6 @@
             if($('tzCarIcon')) $('tzCarIcon').style.left = pct + '%';
         }
 
-        // --- Core logic: ถ้ารถวิ่งโดยไม่มีปลายทาง และ กม. = 0 ให้แสดงราคา Live บนจอใหญ่ ---
         let kmInputVal = parseFloat($('kmInput').value) || 0;
         if (window.isManualRunning && !destLoc && kmInputVal === 0) {
             $('farePrice').innerHTML = displayFare.toLocaleString('th-TH') + '<span style="font-size: 32px; font-weight:400;"> ฿</span>';
@@ -1283,7 +1289,7 @@
     
     window.stopTracking = () => { 
         releaseWakeLock(); 
-        window.stopSilentAudio(); // หยุดเสียงตอนหยุดมิเตอร์
+        window.stopSilentAudio(); 
         $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('surchargeRow').style.display = 'flex'; if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
     };
     
@@ -1297,6 +1303,7 @@
         $('tzDestNameBox').style.display = 'none';
         $('smallStartTime').innerText = '--:--';
         $('smallArrivalTime').innerText = '--:--';
+        $('totalTollBadge').style.display = 'none';
         
         window.stopTracking(); window.updateFareEstimation(0); window.checkAppStatus(); 
     };
