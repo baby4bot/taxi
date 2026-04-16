@@ -94,7 +94,7 @@
 
         .search-section { text-align: left; position: relative; flex-shrink: 0; margin-bottom: 15px; margin-top: 10px; }
         label { display: block; margin-bottom: 10px; font-size: 13px; color: var(--text-dim); text-align: center; }
-        .input-group { display: flex; gap: 10px; align-items: center; width: 100%; }
+        .input-group { display: flex; gap: 8px; align-items: center; width: 100%; margin-bottom: 15px; }
         
         input[type="text"], input[type="email"], input[type="password"], input[type="tel"], .km-input-box { 
             background: rgba(255, 255, 255, 0.1); 
@@ -104,11 +104,20 @@
             transition: 0.3s; 
         }
         
-        input[type="text"], input[type="email"], input[type="password"], input[type="tel"] { flex: 1; min-width: 0; padding: 18px 20px; font-size: 15px; outline: none; color: white; text-align: center; width: 100%; box-sizing: border-box; }
+        input[type="text"], input[type="email"], input[type="password"], input[type="tel"] { flex: 1; min-width: 0; padding: 18px 20px; font-size: 15px; outline: none; color: white; text-align: center; width: 100%; box-sizing: border-box; height: 55px;}
         input:focus, .km-input-box:focus-within { border-color: var(--neon-yellow); background: rgba(255, 255, 255, 0.15); box-shadow: 0 0 15px rgba(241, 196, 15, 0.2), inset 0 2px 5px rgba(0,0,0,0.5); }
         input.loading-state { color: var(--neon-yellow) !important; text-shadow: 0 0 10px var(--glow-yellow); }
-        
-        /* ปรับ CSS ส่วนปุ่มทางด่วนให้ห่างและเล็กเรียงเป็นแถว */
+
+        /* Small Tollway Button Switch UI */
+        .small-toll-btn {
+            width: 55px; height: 55px; border-radius: 18px; display: flex; align-items: center; justify-content: center; 
+            border: 1px solid var(--border-glass); background: rgba(255,255,255,0.08); color: var(--text-dim); 
+            transition: 0.3s; flex-shrink: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
+        }
+        .small-toll-btn.active { background: var(--neon-green); color: white; border-color: var(--neon-green); box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3); }
+        .small-toll-btn.toll-active { background: #3498db; color: white; border-color: #3498db; box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); }
+        .small-toll-btn:active { transform: scale(0.92); }
+
         .surcharge-row { display: flex; gap: 10px; padding-bottom: 5px; margin-top: 25px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
         .surcharge-btn { padding: 10px 20px; border-radius: 20px; background: rgba(241, 196, 15, 0.1); border: 1px solid rgba(241, 196, 15, 0.3); color: var(--neon-yellow); font-family: 'Kanit'; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .surcharge-btn:active { transform: scale(0.95); background: rgba(241, 196, 15, 0.3); }
@@ -291,7 +300,7 @@
 
         /* Live Tracker Zoom Big Size CSS */
         .tracker-zoom-box { background: #0b0c10; border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; padding: 30px 15px; width: 98%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); font-family: 'Kanit', sans-serif; }
-        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 0 10px; }
+        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 10px; }
         .tz-start-time { color: white; font-weight: 600; font-size: 18px; }
         .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 18px; }
         .tz-progress-container { position: relative; margin: 15px 15px 35px 15px; }
@@ -397,8 +406,11 @@
     <div id="searchSectionBox" class="search-section">
         <label>ค้นหาจุดหมาย</label>                                        
         <div class="input-group">
-            <input oninput="window.smartSearch(this.value); window.checkAppStatus();" onfocus="window.showHistory()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />                                                            
+            <input oninput="window.smartSearch(this.value); window.checkAppStatus();" onfocus="window.showHistory()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />
+            <button id="btnAvoidTollMain" class="small-toll-btn active" onclick="window.setTollMode(false)" title="เลี่ยงทางด่วน"><span class="material-symbols-outlined">route</span></button>
+            <button id="btnUseTollMain" class="small-toll-btn" onclick="window.setTollMode(true)" title="ขึ้นทางด่วน"><span class="material-symbols-outlined">add_road</span></button>
         </div>
+
         <div id="suggestionList" class="dropdown-box"></div>
         <div id="historyList" class="dropdown-box"></div>
     </div>
@@ -406,8 +418,12 @@
     <div onclick="window.toggleModal('trackerZoomOverlay', true)" id="liveTracker" class="live-tracker-box">
         <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">(แตะเพื่อเปิดมิเตอร์แบบขยายใหญ่)</div>
         
-        <div id="liveTrackerDestName" style="font-size: 15px; font-weight: 500; color: white; margin-bottom: 10px; display: none; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
-            📍 ไปที่: <span id="ltDestText" style="color: var(--neon-yellow);"></span>
+        <div id="liveTrackerDestName" style="font-size: 15px; font-weight: 500; color: white; margin-bottom: 10px; display: none; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); align-items: center; justify-content: space-between; gap: 10px;">
+            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; text-align: left;">📍 ไปที่: <span id="ltDestText" style="color: var(--neon-yellow);"></span></div>
+            <div style="display: flex; gap: 5px; flex-shrink: 0;">
+                <button id="btnAvoidTollLive" class="small-toll-btn active" style="width: 32px; height: 32px; border-radius: 8px;" onclick="event.stopPropagation(); window.setTollMode(false)" title="เลี่ยงทางด่วน"><span class="material-symbols-outlined" style="font-size: 16px;">route</span></button>
+                <button id="btnUseTollLive" class="small-toll-btn" style="width: 32px; height: 32px; border-radius: 8px;" onclick="event.stopPropagation(); window.setTollMode(true)" title="ขึ้นทางด่วน"><span class="material-symbols-outlined" style="font-size: 16px;">add_road</span></button>
+            </div>
         </div>
 
         <div class="tracker-stats" id="ltDistRow">
@@ -582,8 +598,13 @@
 
 <div id="trackerZoomOverlay" class="modal-overlay" onclick="window.toggleModal('trackerZoomOverlay', false)">
     <div class="modal-box tracker-zoom-box" onclick="event.stopPropagation()">
-        <div id="tzDestNameBox" style="text-align: center; color: white; font-size: 18px; font-weight: 500; background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 15px; margin-bottom: 15px; display: none; border: 1px solid rgba(255,255,255,0.05);">
-            📍 ไปที่: <span id="tzDestText" style="color: var(--neon-yellow);"></span>
+        
+        <div id="tzDestNameBox" style="color: white; font-size: 18px; font-weight: 500; background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 15px; margin-bottom: 15px; display: none; border: 1px solid rgba(255,255,255,0.05); align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
+            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">📍 ไปที่: <span id="tzDestText" style="color: var(--neon-yellow);"></span></div>
+            <div style="display: flex; gap: 5px; flex-shrink: 0;">
+                <button id="btnAvoidTollZoom" class="small-toll-btn active" style="width: 38px; height: 38px; border-radius: 10px;" onclick="event.stopPropagation(); window.setTollMode(false)" title="เลี่ยงทางด่วน"><span class="material-symbols-outlined" style="font-size: 20px;">route</span></button>
+                <button id="btnUseTollZoom" class="small-toll-btn" style="width: 38px; height: 38px; border-radius: 10px;" onclick="event.stopPropagation(); window.setTollMode(true)" title="ขึ้นทางด่วน"><span class="material-symbols-outlined" style="font-size: 20px;">add_road</span></button>
+            </div>
         </div>
         
         <div class="tz-header">
@@ -705,6 +726,8 @@
 
     window.baseFare = 35;
     window.surchargeList = [];
+    window.isTollwayMode = false; // ตัวแปรสถานะทางด่วน (false = เลี่ยง, true = ขึ้น)
+
     const HISTORY_KEY = 'taxi_history_v25';
     let destLoc = null, searchTimer = null, watchId = null;
     let lastPos = null, actualDrivenKm = 0, startTime = null, wakeLock = null, lastCalcTime = null;
@@ -735,6 +758,57 @@
     
     const calcGPS = (l1, n1, l2, n2) => 6371 * 2 * Math.asin(Math.sqrt(Math.sin((l2-l1)*Math.PI/360)**2 + Math.cos(l1*Math.PI/180)*Math.cos(l2*Math.PI/180)*Math.sin((n2-n1)*Math.PI/360)**2));
     function formatDuration(totalMins) { if (totalMins < 60) return totalMins + " นาที"; let h = Math.floor(totalMins / 60); let m = totalMins % 60; return h + " ชม. " + (m > 0 ? m + " นาที" : ""); }
+
+    // ฟังก์ชันจัดการปุ่มทางด่วน (อัปเดตทั้ง 3 จุดในหน้าจอ)
+    window.setTollMode = async (isToll) => {
+        if (window.isTollwayMode === isToll) return;
+        window.isTollwayMode = isToll;
+        
+        // อัปเดต UI ทุกหน้าให้ตรงกัน (หน้าค้นหา, หน้ามิเตอร์ปกติ, หน้ามิเตอร์ซูม)
+        document.getElementById('btnAvoidTollMain').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
+        document.getElementById('btnUseTollMain').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
+        
+        document.getElementById('btnAvoidTollLive').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
+        document.getElementById('btnUseTollLive').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
+        
+        document.getElementById('btnAvoidTollZoom').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
+        document.getElementById('btnUseTollZoom').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
+
+        if(destLoc) {
+            if (window.isManualRunning && lastPos) {
+                // ถ้าวิ่งอยู่ให้คำนวณแบบจำลองเส้นทางใหม่โดยไม่รีเซ็ตมิเตอร์
+                let route = await window.fetchRouteFromOSRM(destLoc.lat, destLoc.lon, lastPos.lat, lastPos.lon);
+                if (route) {
+                    currentTrueRemainKm = route.km;
+                    currentTrueRemainSec = route.sec;
+                    window.updateLiveMeterDisplay();
+                }
+            } else if (!window.isManualRunning) {
+                // ถ้ายังไม่วิ่งให้ดึงเส้นทางประเมินใหม่
+                window.getRouteData(destLoc.lat, destLoc.lon, document.getElementById('destInput').value);
+            }
+        }
+    };
+
+    // ฟังก์ชันสำหรับดึงข้อมูลและจำลองผลลัพธ์ทางด่วน/เลี่ยงทางด่วน
+    window.fetchRouteFromOSRM = async (dLat, dLon, startLat, startLon) => {
+        try {
+            let res = await fetch(`https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${dLon},${dLat}?overview=false`);
+            let data = await res.json();
+            if (data.code === 'Ok') {
+                let baseKm = data.routes[0].distance / 1000;
+                let baseSec = data.routes[0].duration;
+
+                // Simulation Logic: ปรับระยะทางและเวลาให้สมจริง
+                if (!window.isTollwayMode) {
+                    return { km: baseKm * 1.05, sec: baseSec * 1.35 }; // เลี่ยงด่วน: ระยะทางเพิ่มนิดหน่อย, เวลาเพิ่มขึ้น (รถติดไฟแดง)
+                } else {
+                    return { km: baseKm * 1.1, sec: baseSec * 0.75 }; // ขึ้นด่วน: ระยะทางเพิ่มขึ้นเพื่อไปขึ้นด่าน, เวลาลดลง (วิ่งเร็ว)
+                }
+            }
+        } catch(e) { console.error(e); }
+        return null;
+    };
 
     window.toggleSideMenu = (show) => {
         const overlay = $('sideMenuOverlay'); const box = $('sideMenuBox');
@@ -881,7 +955,6 @@
 
     window.removeSurcharge = (id) => { window.surchargeList = window.surchargeList.filter(item => item.id !== id); window.updateSurchargeUI(); };
 
-    // 🟢 ระบบจัดการ UI ค่าทางด่วนและค่าบริการเพิ่มเติม 🟢
     window.updateSurchargeUI = () => {
         let container = document.getElementById('surchargeDetails');
         let hasAirport = false;
@@ -899,7 +972,6 @@
             container.innerHTML = ''; container.style.display = 'none';
         }
         
-        // อัปเดตป้ายสรุปค่าทางด่วนรวม
         let totalBadge = document.getElementById('totalTollBadge');
         if (totalToll > 0) {
             totalBadge.innerHTML = `รวมค่าทางด่วน: ${totalToll} ฿`;
@@ -955,19 +1027,13 @@
     
     window.getRouteData = async (dLat, dLon, name) => { 
         navigator.geolocation.getCurrentPosition(async (pos) => { 
-            let startPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; 
-            try { 
-                let data = await (await fetch(`https://router.project-osrm.org/route/v1/driving/${startPos.lon},${startPos.lat};${dLon},${dLat}?overview=false`)).json(); 
-                if (data.code === 'Ok') { 
-                    currentTrueRemainKm = data.routes[0].distance / 1000; 
-                    currentTrueRemainSec = data.routes[0].duration; 
-                    window.processRoute(currentTrueRemainKm, currentTrueRemainSec, name); 
-                } else { 
-                    alert('ไม่สามารถคำนวณเส้นทางได้ กรุณาลองใหม่'); 
-                    window.resetAll(); 
-                } 
-            } catch(e) { 
-                alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์เส้นทาง'); 
+            let route = await window.fetchRouteFromOSRM(dLat, dLon, pos.coords.latitude, pos.coords.longitude);
+            if (route) { 
+                currentTrueRemainKm = route.km; 
+                currentTrueRemainSec = route.sec; 
+                window.processRoute(currentTrueRemainKm, currentTrueRemainSec, name); 
+            } else { 
+                alert('ไม่สามารถคำนวณเส้นทางได้ กรุณาลองใหม่'); 
                 window.resetAll(); 
             } 
         }, () => { 
@@ -1039,9 +1105,9 @@
             $('carIcon').style.left = '0%';
             
             if (destText !== "" && destText !== "กำลังคำนวณ...") {
-                $('liveTrackerDestName').style.display = 'block';
+                $('liveTrackerDestName').style.display = 'flex'; // แก้จาก block เป็น flex
                 $('ltDestText').innerText = destText;
-                $('tzDestNameBox').style.display = 'block';
+                $('tzDestNameBox').style.display = 'flex'; // แก้จาก block เป็น flex
                 $('tzDestText').innerText = destText;
             } else {
                 $('liveTrackerDestName').style.display = 'none';
@@ -1280,10 +1346,11 @@
         if(routeUpdateTimer) clearInterval(routeUpdateTimer); 
         routeUpdateTimer = setInterval(async () => { 
             if(!lastPos || !destLoc) return; 
-            try { 
-                let res = await fetch(`https://router.project-osrm.org/route/v1/driving/${lastPos.lon},${lastPos.lat};${destLoc.lon},${destLoc.lat}?overview=false`); 
-                if(res.ok) { let data = await res.json(); if(data.code === 'Ok') { currentTrueRemainKm = data.routes[0].distance / 1000; currentTrueRemainSec = data.routes[0].duration; } }
-            } catch(e) {} 
+            let route = await window.fetchRouteFromOSRM(destLoc.lat, destLoc.lon, lastPos.lat, lastPos.lon);
+            if(route) {
+                currentTrueRemainKm = route.km; 
+                currentTrueRemainSec = route.sec; 
+            }
         }, 10000); 
     };
     
