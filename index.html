@@ -108,7 +108,6 @@
         input:focus, .km-input-box:focus-within { border-color: var(--neon-yellow); background: rgba(255, 255, 255, 0.15); box-shadow: 0 0 15px rgba(241, 196, 15, 0.2), inset 0 2px 5px rgba(0,0,0,0.5); }
         input.loading-state { color: var(--neon-yellow) !important; text-shadow: 0 0 10px var(--glow-yellow); }
 
-        /* Small Tollway Button Switch UI */
         .small-toll-btn {
             width: 55px; height: 55px; border-radius: 18px; display: flex; align-items: center; justify-content: center; 
             border: 1px solid var(--border-glass); background: rgba(255,255,255,0.08); color: var(--text-dim); 
@@ -228,7 +227,6 @@
         .log-item { background: rgba(0,0,0,0.3); border-left: 3px solid var(--neon-yellow); padding: 10px 15px; margin-bottom: 8px; border-radius: 0 10px 10px 0; text-align: left; font-size: 13px; }
         .log-time { font-size: 11px; color: var(--text-dim); margin-bottom: 3px; }
 
-        /* Service Portal CSS */
         .sp-modal-box { background: #0f111a; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
         .sp-header { position: relative; padding: 25px 20px 20px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
         .sp-neon-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, transparent, #00bcd4, #ff4757, #f1c40f, transparent); background-size: 200% 100%; animation: spLightRun 2.5s infinite linear; }
@@ -437,7 +435,7 @@
             <div id="carIcon" class="car-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 32px; height: 32px; fill: var(--neon-yellow); filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));">
                     <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
-                </svg>                           
+                </svg>                            
             </div>
 
             <div style="right:0; border-color:var(--accent-red);" class="point-dot point-end"></div>
@@ -726,7 +724,7 @@
 
     window.baseFare = 35;
     window.surchargeList = [];
-    window.isTollwayMode = false; // ตัวแปรสถานะทางด่วน (false = เลี่ยง, true = ขึ้น)
+    window.isTollwayMode = false;
 
     const HISTORY_KEY = 'taxi_history_v25';
     let destLoc = null, searchTimer = null, watchId = null;
@@ -759,12 +757,10 @@
     const calcGPS = (l1, n1, l2, n2) => 6371 * 2 * Math.asin(Math.sqrt(Math.sin((l2-l1)*Math.PI/360)**2 + Math.cos(l1*Math.PI/180)*Math.cos(l2*Math.PI/180)*Math.sin((n2-n1)*Math.PI/360)**2));
     function formatDuration(totalMins) { if (totalMins < 60) return totalMins + " นาที"; let h = Math.floor(totalMins / 60); let m = totalMins % 60; return h + " ชม. " + (m > 0 ? m + " นาที" : ""); }
 
-    // ฟังก์ชันจัดการปุ่มทางด่วน (อัปเดตทั้ง 3 จุดในหน้าจอ)
     window.setTollMode = async (isToll) => {
         if (window.isTollwayMode === isToll) return;
         window.isTollwayMode = isToll;
         
-        // อัปเดต UI ทุกหน้าให้ตรงกัน (หน้าค้นหา, หน้ามิเตอร์ปกติ, หน้ามิเตอร์ซูม)
         document.getElementById('btnAvoidTollMain').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
         document.getElementById('btnUseTollMain').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
         
@@ -776,7 +772,6 @@
 
         if(destLoc) {
             if (window.isManualRunning && lastPos) {
-                // ถ้าวิ่งอยู่ให้คำนวณแบบจำลองเส้นทางใหม่โดยไม่รีเซ็ตมิเตอร์
                 let route = await window.fetchRouteFromOSRM(destLoc.lat, destLoc.lon, lastPos.lat, lastPos.lon);
                 if (route) {
                     currentTrueRemainKm = route.km;
@@ -784,13 +779,11 @@
                     window.updateLiveMeterDisplay();
                 }
             } else if (!window.isManualRunning) {
-                // ถ้ายังไม่วิ่งให้ดึงเส้นทางประเมินใหม่
                 window.getRouteData(destLoc.lat, destLoc.lon, document.getElementById('destInput').value);
             }
         }
     };
 
-    // ฟังก์ชันสำหรับดึงข้อมูลและจำลองผลลัพธ์ทางด่วน/เลี่ยงทางด่วน
     window.fetchRouteFromOSRM = async (dLat, dLon, startLat, startLon) => {
         try {
             let res = await fetch(`https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${dLon},${dLat}?overview=false`);
@@ -799,11 +792,10 @@
                 let baseKm = data.routes[0].distance / 1000;
                 let baseSec = data.routes[0].duration;
 
-                // Simulation Logic: ปรับระยะทางและเวลาให้สมจริง
                 if (!window.isTollwayMode) {
-                    return { km: baseKm * 1.05, sec: baseSec * 1.35 }; // เลี่ยงด่วน: ระยะทางเพิ่มนิดหน่อย, เวลาเพิ่มขึ้น (รถติดไฟแดง)
+                    return { km: baseKm * 1.05, sec: baseSec * 1.35 }; 
                 } else {
-                    return { km: baseKm * 1.1, sec: baseSec * 0.75 }; // ขึ้นด่วน: ระยะทางเพิ่มขึ้นเพื่อไปขึ้นด่าน, เวลาลดลง (วิ่งเร็ว)
+                    return { km: baseKm * 1.1, sec: baseSec * 0.75 }; 
                 }
             }
         } catch(e) { console.error(e); }
@@ -1105,9 +1097,9 @@
             $('carIcon').style.left = '0%';
             
             if (destText !== "" && destText !== "กำลังคำนวณ...") {
-                $('liveTrackerDestName').style.display = 'flex'; // แก้จาก block เป็น flex
+                $('liveTrackerDestName').style.display = 'flex'; 
                 $('ltDestText').innerText = destText;
-                $('tzDestNameBox').style.display = 'flex'; // แก้จาก block เป็น flex
+                $('tzDestNameBox').style.display = 'flex'; 
                 $('tzDestText').innerText = destText;
             } else {
                 $('liveTrackerDestName').style.display = 'none';
@@ -1160,9 +1152,11 @@
                     currentSpeedKmh = dMoved / timeHours; 
                 }
                 
-                if (dMoved > 0.005) { 
-                    actualDrivenKm += dMoved; 
-                    currentTrueRemainKm -= dMoved; 
+                // ปรับปรุงการกรองสัญญาณและการชดเชย GPS ให้สอดคล้องกับมิเตอร์จริง
+                const GPS_CALIBRATION_MULTIPLIER = 1.05; // ชดเชย GPS 5% สำหรับกันโค้งและจุดบอด
+                if (dMoved > 0.003) { // ปรับเกณฑ์ขั้นต่ำลงเป็น 3 เมตร ให้จับคลานตอนรถติดได้ไวขึ้น
+                    actualDrivenKm += (dMoved * GPS_CALIBRATION_MULTIPLIER); 
+                    currentTrueRemainKm -= (dMoved * GPS_CALIBRATION_MULTIPLIER); 
                     if(currentTrueRemainKm < 0) currentTrueRemainKm = 0; 
                     lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; 
                 }
@@ -1187,7 +1181,12 @@
 
     window.calcThaiMeterDist = (km) => { 
         if (km <= 1) return 0; let f = 0; 
-        if (km <= 10) f = (km - 1) * 6.5; else if (km <= 20) f = (9 * 6.5) + (km - 10) * 7.0; else if (km <= 40) f = (9 * 6.5) + (10 * 7.0) + (km - 20) * 8.0; else if (km <= 60) f = (9 * 6.5) + (10 * 7.0) + (20 * 8.0) + (km - 40) * 8.5; else if (km <= 80) f = (9 * 6.5) + (10 * 7.0) + (20 * 8.0) + (20 * 8.5) + (km - 60) * 9.0; else f = (9 * 6.5) + (10 * 7.0) + (20 * 8.0) + (20 * 8.5) + (20 * 9.0) + (km - 80) * 10.5; 
+        if (km <= 10) f = (km - 1) * 6.5; 
+        else if (km <= 20) f = (9 * 6.5) + (km - 10) * 7.0; 
+        else if (km <= 40) f = (9 * 6.5) + (10 * 7.0) + (km - 20) * 8.0; 
+        else if (km <= 60) f = (9 * 6.5) + (10 * 7.0) + (20 * 8.0) + (km - 40) * 8.5; 
+        else if (km <= 80) f = (9 * 6.5) + (10 * 7.0) + (20 * 8.0) + (20 * 8.5) + (km - 60) * 9.0; 
+        else f = (9 * 6.5) + (10 * 7.0) + (20 * 8.0) + (20 * 8.5) + (20 * 9.0) + (km - 80) * 10.5; 
         return f; 
     };
     
