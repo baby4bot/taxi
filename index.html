@@ -96,13 +96,20 @@
         label { display: block; margin-bottom: 10px; font-size: 13px; color: var(--text-dim); text-align: center; }
         .input-group { display: flex; gap: 8px; align-items: center; width: 100%; margin-bottom: 15px; }
         
-        input[type="text"], input[type="email"], input[type="password"], input[type="tel"], .km-input-box { 
-            background: rgba(255, 255, 255, 0.1); 
-            border: 1px solid rgba(255, 255, 255, 0.25); 
-            border-radius: 20px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3), inset 0 2px 5px rgba(0,0,0,0.3); 
-            transition: 0.3s; 
-        }
+        input[type="text"], input[type="email"], input[type="password"], input[type="tel"], 
+.km-input-box { 
+    flex: 1; 
+    height: 60px; 
+    display: flex; 
+    align-items: center; 
+    position: relative; 
+    background: rgba(255, 255, 255, 0.05); 
+    border: 1px solid rgba(255, 255, 255, 0.15); 
+    border-radius: 15px; 
+    padding: 0 15px;
+    box-shadow: none;
+}
+
         
         input[type="text"], input[type="email"], input[type="password"], input[type="tel"] { flex: 1; min-width: 0; padding: 18px 20px; font-size: 15px; outline: none; color: white; text-align: center; width: 100%; box-sizing: border-box; height: 55px;}
         input:focus, .km-input-box:focus-within { border-color: var(--neon-yellow); background: rgba(255, 255, 255, 0.15); box-shadow: 0 0 15px rgba(241, 196, 15, 0.2), inset 0 2px 5px rgba(0,0,0,0.5); }
@@ -157,7 +164,20 @@
         .btn-plus { background: var(--neon-green); box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3); }
         .btn-math:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; box-shadow: none; }
         
-        .km-input-box { flex: 1; height: 60px; display: flex; align-items: center; position: relative; overflow: hidden; transition: 0.3s; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3), inset 0 2px 5px rgba(0,0,0,0.3); }
+        
+.km-input-box { 
+    flex: 1; 
+    height: 60px; 
+    display: flex; 
+    align-items: center; 
+    position: relative; 
+    background: rgba(255, 255, 255, 0.05); 
+    border: 1px solid rgba(255, 255, 255, 0.15); 
+    border-radius: 15px; 
+    padding: 0 15px;
+    box-shadow: none;
+}
+
         input[type="number"] { width: 100%; border: none; text-align: center; font-size: 26px; outline: none; color: white; background: transparent; font-weight: 500; -moz-appearance: textfield; transition: 0.3s; padding-right: 30px; }
         input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .km-label { position: absolute; right: 20px; font-size: 16px; color: var(--text-dim); pointer-events: none; }
