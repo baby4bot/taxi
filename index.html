@@ -2,15 +2,18 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta content="dark" name="color-scheme" />
-    <meta content="#090a0f" name="theme-color" />
+    <meta content="#121212" name="theme-color" />
     <title>Taxi Fare Calculator 2026</title>
     
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Taxi 2026" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-touch-fullscreen" content="yes" />
+    <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
     
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet" />
     <link id="appleIcon" href="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" rel="apple-touch-icon" />
@@ -36,8 +39,9 @@
         }
 
         .card { 
-            background: #1a1a1a; width: 100%; max-width: 100%; min-height: 100vh; 
-            padding: 20px 20px 30px 20px; box-sizing: border-box; 
+            background: #1a1a1a; width: 100%; max-width: 100%; min-height: 100vh; min-height: 100dvh; 
+            padding: env(safe-area-inset-top, 20px) 20px env(safe-area-inset-bottom, 30px) 20px; 
+            box-sizing: border-box; 
             text-align: center; border: none; position: relative; animation: floatUp 0.8s ease-out;
             display: flex; flex-direction: column; 
         }
@@ -1963,7 +1967,7 @@
                 
                 let manifestLink = document.getElementById('dynamicManifest');
                 if (manifestLink) {
-                    let stringManifest = JSON.stringify({ "name": "Taxi: " + displayNameVal, "short_name": displayNameVal, "start_url": ".", "display": "fullscreen", "background_color": "#090a0f", "theme_color": "#090a0f", "icons": [ { "src": safeIcon, "sizes": "192x192", "type": "image/jpeg" }, { "src": safeIcon, "sizes": "512x512", "type": "image/jpeg" } ] });
+                    let stringManifest = JSON.stringify({ "name": "Taxi: " + displayNameVal, "short_name": displayNameVal, "start_url": ".", "display": "fullscreen", "orientation": "portrait", "background_color": "#121212", "theme_color": "#121212", "categories": ["utilities", "navigation"], "icons": [ { "src": safeIcon, "sizes": "192x192", "type": "image/jpeg" }, { "src": safeIcon, "sizes": "512x512", "type": "image/jpeg" } ] });
                     manifestLink.href = 'data:application/manifest+json,' + encodeURIComponent(stringManifest); 
                 }
 
