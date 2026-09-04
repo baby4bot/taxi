@@ -1177,7 +1177,7 @@
         const soiRoads = ["รามคำแหง", "ลาดพร้าว", "สุขุมวิท", "พหลโยธิน", "เพชรเกษม", "รัชดาภิเษก", "อ่อนนุช", "เอกมัย", "ทองหล่อ", "พัฒนาการ", "ศรีนครินทร์", "จรัญสนิทวงศ์", "วิภาวดีรังสิต", "นวมินทร์", "บางนา-ตราด", "รามอินทรา", "เพชรบุรี", "พระราม 1", "พระราม 2", "พระราม 3", "พระราม 4", "พระราม 5", "พระราม 6", "พระราม 7", "พระราม 8", "พระราม 9", "เจริญกรุง", "ประชาอุทิศ", "งามวงศ์วาน", "แจ้งวัฒนะ", "ติวานนท์", "ลาดกระบัง", "เสรีไทย", "รามอินทรา", "บางแค", "เพชรเกษม", "บางบอน"];
         const roadRegex = new RegExp(`(^|\\s)(${soiRoads.join('|')})\\s*(\\d+)([\\s\\/]*)`, 'g');
         t = t.replace(roadRegex, "$1ซอย$2 $3$4");
-        const dictionary = { "เซ็นทรัลปิ่นเกล้า": "เซ็นทรัล ปิ่นเกล้า", "เซนปิ่น": "เซ็นทรัล ปิ่นเกล้า", "เซนลาด": "เซ็นทรัล ลาดพร้าว", "เซ็นลาด": "เซ็นทรัล ลาดพร้าว", "เดอะมอลล์บางกะปิ": "เดอะมอลล์ บางกะปิ", "สายใต้ใหม่": "สถานีขนส่งผู้โดยสารกรุงเทพ (สายใต้ใหม่)", "หมอชิต": "สถานีขนส่งผู้โดยสารกรุงเทพ (จตุจักร)", "ฟิวเจอร์": "ฟิวเจอร์พาร์ค รังสิต", "แฟชั่น": "แฟชั่นไอส์แลนด์", "สุวรรณภูมิ": "ท่าอากาศยานสุวรรณภูมิ", "ดอนเมือง": "ท่าอากาศยานดอนเมือง", "อนุสาวรีย์": "อนุสาวรีย์ชัยสมรภูมิ" };
+        const dictionary = { "เซ็นทรัลปิ่นเกล้า": "เซ็นทรัล ปิ่นเกล้า", "เซนปิ่น": "เซ็นทรัล ปิ่นเกล้า", "เซนลาด": "เซ็นทรัล ลาดพร้าว", "เซ็นลาด": "เซ็นทรัล ลาดพร้าว", "เดอะมอลล์บางกะปิ": "เดอะมอลล์ บางกะปิ", "สายใต้ใหม่": "สถานีขนส่งผู้โดยสารกรุงเทพ (สายใต้ใหม่)", "หมอชิต": "สถานีขนส่งผู้โดยสารกรุงเทพ (จตุจักร)", "ฟิวเจอร์": "ฟิวเจอร์พาร์ค รังสิต", "แฟชั่น": "แฟชั่นไอส์แลนด์", "สุวรรณภูมิ": "ท่าอากาศยานสุวรรณภูมิ", "ดอนเมือง": "ท่าอากาศยานดอนเมือง", "อนุสาวรีย์": "อนุสาวรีย์ชัยสมรภูมิ", "เซนทรัล": "เซ็นทรัล", "เวสเกต": "เวสต์เกต", "เซนเวิลด์": "เซ็นทรัลเวิลด์", "เซนบางนา": "เซ็นทรัลบางนา" };
         for (const [key, value] of Object.entries(dictionary)) { t = t.replace(new RegExp(key, "gi"), value); }
         return t.trim();
     };
@@ -1191,7 +1191,7 @@
             try { 
                 list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--text-dim);"><span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">progress_activity</span> กำลังค้นหา...</div>';
                 list.style.display = 'block';
-                let res = await (await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(smartQuery)}.json?key=${TOMTOM_KEY}&countrySet=TH&limit=10&language=th-TH&typeahead=true&idxSet=Geo,POI`)).json(); 
+                let res = await (await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(smartQuery)}.json?key=${TOMTOM_KEY}&countrySet=TH&limit=15&language=th-TH&typeahead=true&minFuzzyLevel=2&maxFuzzyLevel=4&idxSet=Geo,Addr,PAD,POI`)).json(); 
                 if(!res.results || !res.results.length) return (list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติมนะครับ</span></div>', list.style.display = 'block'); 
                 list.innerHTML = res.results.map((item, idx) => {
                     let name = (item.poi && item.poi.name) ? item.poi.name : ((item.address && item.address.freeformAddress) ? item.address.freeformAddress.split(',')[0] : 'สถานที่');
