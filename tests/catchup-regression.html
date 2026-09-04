@@ -105,6 +105,13 @@
                 if (cw && typeof cw.resumeSavedTrip === 'function' && typeof cw.maybeShowResumeBanner === 'function' && typeof cw.startMeterAndTracking === 'function') {
                     injectStub();
                     await wait(250);
+                    // รอให้โปรไฟล์ผู้ใช้ (Firestore) โหลดเสร็จ — กันสถานการณ์ที่ 6 โดนโปรไฟล์เขียนทับ cap ที่เทสต์ตั้งไว้ (flaky race)
+                    // ตอนโปรไฟล์ยังไม่โหลด userKillCapMin จะเป็น undefined; โหลดเสร็จแล้วจะกลายเป็นตัวเลข (ค่าใน Firestore หรือค่าเริ่มต้น 15)
+                    const t1 = Date.now();
+                    while (Date.now() - t1 < 5000) {
+                        if (typeof cw.userKillCapMin === 'number') break;
+                        await wait(100);
+                    }
                     return;
                 }
                 await wait(60);

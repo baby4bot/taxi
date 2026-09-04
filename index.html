@@ -140,6 +140,17 @@
         .small-toll-btn.toll-active { background: #2196f3; color: white; border-color: #2196f3; box-shadow: none; }
         .small-toll-btn:active { transform: scale(0.92); }
 
+        /* ปุ่มกลมกากบาท (×) ล้างจุดหมาย — อยู่ท้ายช่องค้นหา */
+        .clear-dest-btn {
+            width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.08); color: var(--text-dim);
+            transition: 0.2s; flex-shrink: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; padding: 0;
+        }
+        .clear-dest-btn:hover { color: #fff; background: rgba(255,255,255,0.16); }
+        .clear-dest-btn:active { transform: scale(0.9); }
+        .clear-dest-btn .material-symbols-outlined { font-size: 18px; }
+        .clear-dest-btn.is-hidden { display: none !important; }
+
         .surcharge-btn { padding: 10px 20px; border-radius: 10px; background: #252525; border: 1px solid #444; color: #ffd600; font-family: 'Kanit'; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: none; }
         .surcharge-btn:active { transform: scale(0.95); background: #333; }
 
@@ -523,6 +534,7 @@
             box-shadow: 0 0 16px rgba(255,181,46,0.24), inset 0 1px 0 rgba(255,255,255,0.08);
         }
         .small-toll-btn.is-hidden { display: none !important; }
+        .clear-dest-btn.is-hidden { display: none !important; }
         @keyframes tollFadeSlideIn { from { opacity: 0; transform: translateY(5px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
         .small-toll-btn.toll-pop-in { animation: tollFadeSlideIn 0.28s ease-out both; }
         .trip-resume-banner { display: none; align-items: center; gap: 10px; background: linear-gradient(135deg, rgba(250,204,21,0.14), rgba(250,204,21,0.04)); border: 1px solid rgba(250,204,21,0.4); border-radius: 16px; padding: 10px 12px; margin: 0 2px 10px 2px; box-shadow: 0 4px 18px rgba(0,0,0,0.35); cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -1064,7 +1076,8 @@
             <button id="btnTollToggleMain" class="small-toll-btn is-hidden active" onclick="window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 18px;">route</span></button>
         </div>
         <div class="input-group">
-            <input oninput="window.smartSearch(this.value); window.checkAppStatus();" onfocus="window.showHistory()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />
+            <input oninput="window.smartSearch(this.value); window.checkAppStatus(); window.updateClearDestBtn();" onfocus="window.showHistory()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />
+            <button id="btnClearDest" class="clear-dest-btn is-hidden" onclick="window.clearDestination()" title="ล้างจุดหมาย" aria-label="ล้างจุดหมาย"><span class="material-symbols-outlined">close</span></button>
         </div>
 
         <div id="suggestionList" class="dropdown-box"></div>
@@ -2322,6 +2335,37 @@
         window.syncTollToggleVisibility(true);
         window.saveHistory(name, lat, lon); 
         window.getRouteData(lat, lon, name); 
+        window.updateClearDestBtn();
+    };
+
+    // 🧹 ปุ่มกากบาท (×) ล้างจุดหมาย — โผล่เมื่อมีข้อความ/ปลายทางในช่องค้นหา, กดแล้วล้างทุกอย่างกลับสถานะเริ่มต้น
+    window.updateClearDestBtn = () => {
+        const btn = $('btnClearDest');
+        if (!btn) return;
+        const hasVal = !!($('destInput').value || '').trim();
+        btn.classList.toggle('is-hidden', !hasVal && !destLoc);
+    };
+    window.clearDestination = () => {
+        $('destInput').value = '';
+        $('destInput').classList.remove('loading-state');
+        destLoc = null;
+        currentTrueRemainKm = 0; currentTrueRemainSec = 0;
+        window.currentTollInfo = null;
+        const s = $('suggestionList'), h = $('historyList');
+        if (s) s.style.display = 'none';
+        if (h) h.style.display = 'none';
+        window.syncTollToggleVisibility(); // destLoc = null → ซ่อนปุ่มทางด่วน
+        const ltd = $('liveTrackerDestName'); if (ltd) ltd.style.display = 'none';
+        const tz = $('tzDestNameBox'); if (tz) tz.style.display = 'none';
+        const tr = $('routeTollInfo'); if (tr) tr.style.display = 'none';
+        const tb = $('totalTollBadge'); if (tb) tb.style.display = 'none';
+        const st = $('smallStartTime'); if (st) st.innerText = '--:--';
+        const at = $('smallArrivalTime'); if (at) at.innerText = '--:--';
+        const r = $('driveRemain'); if (r) r.innerText = '0.00';
+        window.hideMap(); // ลบเส้นทาง/แผนที่เก่าออก
+        window.updateFareEstimation(0);
+        window.checkAppStatus();
+        window.updateClearDestBtn();
     };
     
     window.currentTollInfo = null;
