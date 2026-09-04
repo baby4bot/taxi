@@ -947,7 +947,9 @@
         try {
             // ใช้ TomTom Routing API — traffic=true + departAt=now ทำให้เวลารวมรถติดสดจริง (เหมือน Google Maps)
             const avoidParam = window.isTollwayMode ? '' : '&avoid=tollRoads';
-            const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=fastest&routeRepresentation=polyline&language=th-TH&sectionType=toll${avoidParam}`;
+            // routeType=shortest (โหมดเลี่ยงด่วน) = เส้นทางที่ใกล้ที่สุด ตรงกับ Google Maps 24 กม. / routeType=fastest (โหมดขึ้นด่วน) = ให้เลือกทางด่วนจริง ๆ
+            const routeType = window.isTollwayMode ? 'fastest' : 'shortest';
+            const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=${routeType}&routeRepresentation=polyline&language=th-TH&sectionType=toll${avoidParam}`;
             
             let res = await fetch(url);
             let data = await res.json();
