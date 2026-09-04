@@ -512,6 +512,7 @@
             color: #ffce6b;
             box-shadow: 0 0 16px rgba(255,181,46,0.24), inset 0 1px 0 rgba(255,255,255,0.08);
         }
+        .small-toll-btn.is-hidden { display: none !important; }
 
         /* Dropdown results */
         .dropdown-box {
@@ -972,7 +973,7 @@
     <div id="searchSectionBox" class="search-section">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 6px 8px 6px;">
             <label style="margin: 0; flex: 1; min-width: 0;">ค้นหาจุดหมาย</label>
-            <button id="btnTollToggleMain" class="small-toll-btn active" onclick="window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 18px;">route</span></button>
+            <button id="btnTollToggleMain" class="small-toll-btn is-hidden active" onclick="window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 18px;">route</span></button>
         </div>
         <div class="input-group">
             <input oninput="window.smartSearch(this.value); window.checkAppStatus();" onfocus="window.showHistory()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />
@@ -1323,7 +1324,16 @@
     const offlineAudio = new Audio('https://actions.google.com/sounds/v1/ui/pop.ogg');
 
     const $ = id => document.getElementById(id);
-    
+
+    // ปุ่มเลี่ยงด่วน/ขึ้นด่วน จะแสดงเฉพาะเมื่อมีผลค้นหาจุดหมายปรากฏ (ซ่อนตอนยังไม่ได้ค้นหา/เลือกแล้ว)
+    window.syncTollToggleVisibility = () => {
+        const btn = $('btnTollToggleMain');
+        if (!btn) return;
+        const list = $('suggestionList');
+        const show = !!(list && list.style.display === 'block' && list.innerHTML.trim());
+        btn.classList.toggle('is-hidden', !show);
+    };
+
     async function requestWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
     function releaseWakeLock() { if (wakeLock !== null) { wakeLock.release().catch(()=>{}); wakeLock = null; } }
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && window.isManualRunning) requestWakeLock(); });
@@ -1769,15 +1779,15 @@
 
     window.smartSearch = (q) => { 
         clearTimeout(searchTimer); const list = $('suggestionList'); $('historyList').style.display = 'none'; 
-        if (!(q = q.trim())) return list.style.display = 'none'; 
-        if (q.trim().length < 2) return list.style.display = 'none';
+        if (!(q = q.trim())) { list.style.display = 'none'; window.syncTollToggleVisibility(); return; }
+        if (q.trim().length < 2) { list.style.display = 'none'; window.syncTollToggleVisibility(); return; }
         const smartQuery = formatSearchText(q);
         searchTimer = setTimeout(async () => { 
             try { 
                 list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--text-dim);"><span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">progress_activity</span> กำลังค้นหา...</div>';
                 list.style.display = 'block';
                 let res = await (await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(smartQuery)}.json?key=${TOMTOM_KEY}&countrySet=TH&limit=15&language=th-TH&typeahead=true&minFuzzyLevel=2&maxFuzzyLevel=4&idxSet=Geo,Addr,PAD,POI`)).json(); 
-                if(!res.results || !res.results.length) return (list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติมนะครับ</span></div>', list.style.display = 'block'); 
+                if(!res.results || !res.results.length) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติมนะครับ</span></div>'; list.style.display = 'block'; window.syncTollToggleVisibility(); return; }
                 list.innerHTML = res.results.map((item, idx) => {
                     let name = (item.poi && item.poi.name) ? item.poi.name : ((item.address && item.address.freeformAddress) ? item.address.freeformAddress.split(',')[0] : 'สถานที่');
                     let addr = (item.address && item.address.freeformAddress) ? item.address.freeformAddress : '';
@@ -1796,7 +1806,8 @@
                     </div>`;
                 }).join(''); 
                 list.style.display = 'block'; 
-            } catch(e) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--accent-red);">เกิดข้อผิดพลาดในการเชื่อมต่อ</div>'; list.style.display = 'block'; } 
+                window.syncTollToggleVisibility(); 
+            } catch(e) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--accent-red);">เกิดข้อผิดพลาดในการเชื่อมต่อ</div>'; list.style.display = 'block'; window.syncTollToggleVisibility(); } 
         }, 300); 
     };
 
@@ -1933,6 +1944,7 @@
         $('destInput').classList.add('loading-state'); 
         $('historyList').style.display = 'none'; 
         $('suggestionList').style.display = 'none'; 
+        window.syncTollToggleVisibility();
         destLoc = { lat, lon }; 
         window.saveHistory(name, lat, lon); 
         window.getRouteData(lat, lon, name); 
@@ -2324,6 +2336,7 @@
     
     window.resetAll = () => { 
         $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; 
+        window.syncTollToggleVisibility();
         window.isManualRunning = false; window.surchargeList = []; trafficSeconds = 0; window.updateSurchargeUI();
         window.renderStartButton();
         $('manualTimerBtn').classList.remove('active');
