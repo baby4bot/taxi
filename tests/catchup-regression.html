@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบอัตโนมัติ — เบิกคืนหลังแอปปิด/คิล</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.6; max-width: 860px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    #summary { margin: 14px 0 10px; font-size: 15px; font-weight: 700; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 860px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.5; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; }
+    li.fail .detail { color: #ffb3b3; white-space: pre-wrap; }
+    iframe { display: none; }
+</style>
+</head>
+<body>
+    <h1>🧪 ทดสอบอัตโนมัติ: เบิกคืนหลังปิด/คิลแอป → เปิดใหม่ → เริ่มต่อ</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html</code>) ใน iframe แล้วจำลองสถานการณ์: มีเที่ยวค้างในเครื่อง → เปิดแอปใหม่ → ระบบเบิกคืน
+        เวลารถติด/กิโลเมตร/ค่าโดยสาร (fix มาไว / มาเร็ว / ไม่มา) แล้วตรวจตัวเลขมิเตอร์ กัน regression ในอนาคต<br>
+        <b>วิธีเปิด:</b> ต้องผ่าน HTTP เท่านั้น เช่น <code>https://baby4bot.github.io/taxi/tests/catchup-regression.html</code>
+        (เปิดจาก file:// ตรง ๆ ไม่ได้ เพราะ iframe ถูกบล็อก cross-origin) — เปิดแล้วรันอัตโนมัติ หรือกดปุ่มด้านล่างเพื่อรันใหม่
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (6 สถานการณ์)</button>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <iframe id="appFrame" src="../index.html"></iframe>
+
+<script>
+    (function () {
+        const frame = document.getElementById('appFrame');
+        const resultsEl = document.getElementById('results');
+        const summaryEl = document.getElementById('summary');
+        let passCount = 0, failCount = 0;
+        const failures = [];
+
+        const w = () => frame.contentWindow;
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+
+        // ---------- จุดพิกัดทดสอบ ----------
+        const P0 = { lat: 13.7563, lon: 100.5018 };          // จุดก่อน "ปิดแอป"
+        const P_FAR = { lat: 13.7600, lon: 100.5100 };       // จุดที่รถไปถึงช่วงแอปตาย
+        const WIND_PATH = [                                  // เส้นทางจริงคด (หักมุมเป็นสามเหลี่ยม)
+            { lat: 13.7500, lon: 100.5000 },
+            { lat: 13.7650, lon: 100.5000 },
+            { lat: 13.7600, lon: 100.5100 }
+        ];
+
+        // ---------- ตัวช่วย ----------
+        function haversine(a, b) {
+            const R = 6371;
+            const dLat = (b.lat - a.lat) * Math.PI / 180;
+            const dLon = (b.lon - a.lon) * Math.PI / 180;
+            const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+            return 2 * R * Math.asin(Math.sqrt(h));
+        }
+
+        function makePayload(overrides) {
+            return Object.assign({
+                v: 1, savedAt: Date.now() - 90000,   // "ปิดแอป" ไปแล้ว 90 วิ
+                startTime: Date.now() - 120000,
+                km: 0.5, trafficSec: 10, remainKm: 0, remainSec: 0,
+                lastPos: { lat: P0.lat, lon: P0.lon },
+                lastPath: [{ lat: P0.lat, lon: P0.lon }],
+                dest: null, destName: '', surcharges: [], baseFare: 35,
+                pauseLog: [], pauseOpenAt: null, paused: false
+            }, overrides || {});
+        }
+
+        // ปล่อย fix ที่ค้างในคิว (count ตัว) → จำลอง GPS ตอบกลับ
+        function releaseFix(count, lat, lon, acc) {
+            const cw = frame.contentWindow;
+            let n = 0;
+            while (count > 0 && cw.__q && cw.__q.length > 0) {
+                const cb = cw.__q.shift();
+                try { cb.ok({ coords: { latitude: lat, longitude: lon, accuracy: acc || 8, speed: null }, timestamp: Date.now() }); n++; } catch (e) {}
+                count--;
+            }
+            return n;
+        }
+
+        function injectStub() {
+            const cw = frame.contentWindow;
+            cw.__q = [];
+            const g = cw.navigator.geolocation;
+            g.getCurrentPosition = (ok, err, opts) => { cw.__q.push({ kind: 'cur', ok: ok }); };
+            g.watchPosition = (ok, err, opts) => { cw.__q.push({ kind: 'watch', ok: ok }); return 777; };
+            g.clearWatch = () => {};
+        }
+
+        async function loadApp() {
+            // รอให้ module ของแอป (firebase CDN + สคริปต์หลัก) โหลดเสร็จ — เช็คว่าฟังก์ชันสำคัญพร้อม
+            const t0 = Date.now();
+            while (Date.now() - t0 < 25000) {
+                const cw = frame.contentWindow;
+                if (cw && typeof cw.resumeSavedTrip === 'function' && typeof cw.maybeShowResumeBanner === 'function' && typeof cw.startMeterAndTracking === 'function') {
+                    injectStub();
+                    await wait(250);
+                    return;
+                }
+                await wait(60);
+            }
+            throw new Error('แอปโหลดไม่ทันใน 25 วิ — ต้องเปิดผ่าน HTTP (GitHub Pages / localhost) ให้ firebase CDN เข้าถึงได้');
+        }
+
+        async function freshApp() {
+            const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+            frame.src = frame.src; // โหลดแอปใหม่ (จำลอง "เปิดแอปใหม่")
+            await Promise.race([loaded, wait(25000).then(() => { throw new Error('iframe โหลดไม่ทัน (ต้องเปิดผ่าน HTTP)'); })]);
+            await loadApp();
+            frame.contentWindow.userKillCapMin = 15; // ค่าเริ่มต้น cap เบิกจอด 15 นาที (สถานการณ์ที่ 6 จะเปลี่ยนเอง)
+        }
+
+        function readDisplay() {
+            const cw = frame.contentWindow;
+            const $ = id => cw.document.getElementById(id);
+            const kmEl = $('driveCovered');
+            const trEl = $('smallTrafficTime');
+            // ค่าโดยสารที่วิ่งอยู่โชว์ในปุ่ม "สิ้นสุดเดินทาง" (เช่น "... 41 ฿") — farePrice ใหญ่จะอัปเดตเฉพาะเที่ยว 0 กม.
+            const btnEl = $('manualTimerBtn');
+            const km = kmEl ? parseFloat(kmEl.innerText) : NaN;
+            const m = trEl ? trEl.innerText.match(/(\d+)น\.\s*(\d+)ว\./) : null;
+            const traffic = m ? parseInt(m[1]) * 60 + parseInt(m[2]) : NaN;
+            const fm = btnEl ? btnEl.innerText.match(/(\d+)\s*฿/) : null;
+            const fare = fm ? parseInt(fm[1], 10) : NaN;
+            return { km: km, traffic: traffic, fare: fare };
+        }
+
+        // ค่าโดยสารที่คาดหวัง — คิดด้วยสูตรเดียวกับแอป (window.calcThaiMeterDist มีให้จากแอป)
+        function expectedFare(km, trafficSec) {
+            const cw = frame.contentWindow;
+            const base = (typeof cw.baseFare === 'number') ? cw.baseFare : 35;
+            return base + Math.floor((cw.calcThaiMeterDist(km) + trafficSec * (3 / 60)) / 2) * 2;
+        }
+
+        // ---------- ชุด assert ----------
+        function assert(cond, msg) { if (!cond) throw new Error(msg); }
+        function near(actual, expected, tol, label) {
+            if (!(Math.abs(actual - expected) <= tol)) throw new Error(label + ': ได้ ' + actual + ' คาด ' + expected + ' (±' + tol + ')');
+            return actual;
+        }
+        function checkFareRange(km, trafficLo, trafficHi, label) {
+            const lo = expectedFare(km, trafficLo), hi = expectedFare(km, trafficHi);
+            const actual = readDisplay().fare;
+            if (!(actual >= lo && actual <= hi)) throw new Error(label + ': ค่าโดยสาร ' + actual + ' ฿ อยู่นอกช่วงที่คาด [' + lo + ', ' + hi + '] ฿ (กม. ' + km + ' / รถติด ' + trafficLo + '-' + trafficHi + ' วิ)');
+            return actual;
+        }
+
+        // ---------- รัน 1 สถานการณ์ ----------
+        async function runScenario(name, fn) {
+            const row = document.createElement('li');
+            row.innerHTML = '<span class="st">⏳</span> ' + name;
+            resultsEl.appendChild(row);
+            try {
+                await freshApp();
+                const out = await Promise.race([
+                    fn(),
+                    wait(60000).then(() => { throw new Error('สถานการณ์ timeout 60 วิ'); })
+                ]);
+                row.classList.add('pass');
+                row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + ' <span class="detail">' + (out || '') + '</span>';
+                passCount++;
+            } catch (e) {
+                row.classList.add('fail');
+                row.innerHTML = '<span class="st">❌ ล้มเหลว</span> ' + name + '\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span>';
+                failures.push({ name: name, error: e && e.message ? e.message : String(e) });
+                failCount++;
+            }
+            renderSummary();
+        }
+
+        function renderSummary() {
+            summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / <span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+                (failCount ? ' — <span style="color:var(--red)">ล้มเหลว ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        }
+
+        // ---------- สถานการณ์ ----------
+        async function runAll() {
+            resultsEl.innerHTML = '';
+            passCount = 0; failCount = 0; failures.length = 0;
+            renderSummary();
+
+            // 1) fix มาไว + จอดนิ่ง — เบิกทางแบนเนอร์ (ยังไม่กดเริ่มต่อ) แล้วเริ่มต่อ
+            await runScenario('1. Fix มาไว + จอดนิ่ง (เบิกตอนเปิดแอป ก่อนเริ่มต่อ)', async () => {
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(makePayload()));
+                w().maybeShowResumeBanner();
+                await wait(400);
+                releaseFix(5, P0.lat, P0.lon, 8); // fix มาไว
+                await wait(1200);
+                const p = JSON.parse(w().localStorage.getItem('taxi_active_trip_v1'));
+                assert(p.caughtUpAt, 'payload ต้องมี caughtUpAt (เบิกแล้ว)');
+                near(p.trafficSec, 10 + 90, 7, 'เวลารถติดใน payload (10 + ช่วงปิด 90 วิ)');
+                near(p.km, 0.5, 0.01, 'กิโลเมตรใน payload (จอดนิ่ง ไม่ควรเพิ่ม)');
+                w().resumeSavedTrip(); // กดเริ่มต่อ → ต่อจากเลขที่เบิกแล้ว
+                await wait(1500); // รอ tick แรกของมิเตอร์ (อัปเดตค่าโดยสารในปุ่ม) ให้ทัน
+                // ไม่ปล่อย fix หลังเริ่มต่อ → ไม่มีตัวเลขเพิ่มระหว่าง assert (กำหนดค่าได้)
+                const d = readDisplay();
+                near(d.km, 0.5, 0.01, 'กิโลเมตรบนจอ');
+                near(d.traffic, p.trafficSec, 2, 'เวลารถติดบนจอ');
+                checkFareRange(0.5, p.trafficSec - 2, p.trafficSec + 2, 'ค่าโดยสารบนจอ');
+                return 'รถติด ' + Math.round(p.trafficSec) + ' วิ / ' + d.km.toFixed(2) + ' กม. / ' + d.fare + '฿';
+            });
+
+            // 2) fix มาช้า + จอดนิ่ง — กดเริ่มต่อไปก่อน fix (race) → เบิกเข้ามิเตอร์ที่วิ่งอยู่ + แถบ + toast ทอง
+            await runScenario('2. Fix มาช้า + จอดนิ่ง (กดเริ่มต่อไปก่อน fix → เบิกเข้มมิเตอร์ + แถบ + toast ทอง)', async () => {
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(makePayload()));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip(); // เริ่มต่อไปก่อน fix มา
+                await wait(300);
+                const bar = w().document.getElementById('catchUpStatusBar');
+                assert(bar && bar.style.display === 'flex', 'ต้องมีแถบ "กำลังตรวจสอบ GPS…" หลังกดเริ่มต่อ');
+                await wait(1500); // fix ยังมาไม่ถึงช่วงนี้
+                releaseFix(5, P0.lat, P0.lon, 8); // fix มาทีหลัง
+                await wait(1000);
+                const bar2 = w().document.getElementById('catchUpStatusBar');
+                assert(bar2 && bar2.style.display === 'none', 'แถบต้องปิดหลังเบิกเสร็จ');
+                const tb = w().document.getElementById('toastBox');
+                assert(tb && tb.classList.contains('toast-gold') && tb.style.display !== 'none', 'ต้องมี toast ทอง "กลับจากเบื้องหลัง"');
+                const d = readDisplay();
+                near(d.traffic, 10 + 90, 8, 'เวลารถติดบนจอ (เบิกทั้งช่วงปิด 90 วิ)');
+                near(d.km, 0.5, 0.01, 'กิโลเมตรบนจอ');
+                checkFareRange(0.5, 10 + 90 - 8, 10 + 90 + 8, 'ค่าโดยสารบนจอ');
+                return 'รถติด ' + d.traffic + ' วิ (คาด ~100) / ' + d.km.toFixed(2) + ' กม. / ' + d.fare + '฿';
+            });
+
+            // 3) วิ่งช่วงปิด ไม่มีปลายทาง — ประเมินกิโลจากเส้นทางจริง (คด) แทนเส้นตรง
+            await runScenario('3. วิ่งช่วงปิด ไม่มีปลายทาง (ประมาณกิโลจากเส้นทางจริงคด)', async () => {
+                const p = makePayload({ lastPos: WIND_PATH[0], lastPath: WIND_PATH });
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(1200);
+                releaseFix(5, P_FAR.lat, P_FAR.lon, 8); // fix ที่จุดที่รถไปถึง
+                await wait(1000);
+                const straight = haversine(WIND_PATH[0], P_FAR);
+                const poly = haversine(WIND_PATH[0], WIND_PATH[1]) + haversine(WIND_PATH[1], WIND_PATH[2]);
+                const firstStraight = haversine(WIND_PATH[0], WIND_PATH[2]);
+                let factor = 1.05;
+                if (firstStraight > 0.02) factor = Math.min(1.6, Math.max(1.05, poly / firstStraight));
+                const expKm = 0.5 + straight * factor;
+                const d = readDisplay();
+                near(d.km, expKm, 0.07, 'กิโลเมตรบนจอ (เส้นตรง ' + straight.toFixed(2) + ' × คดเคี้ยว ' + factor.toFixed(2) + ')');
+                near(d.traffic, 10, 4, 'เวลารถติดบนจอ (วิ่ง ไม่เบิกจอด)');
+                checkFareRange(d.km, 8, 14, 'ค่าโดยสารบนจอ');
+                return d.km.toFixed(2) + ' กม. (คาด ' + expKm.toFixed(2) + ') / รถติด ' + d.traffic + ' วิ / ' + d.fare + '฿';
+            });
+
+            // 4) fix ไม่มาสักพัก → ยังไม่เบิกก่อนมีหลักฐาน → fix มาทีหลัง เบิกครบ
+            await runScenario('4. Fix ยังไม่มา 4 วิ → ไม่เบิกก่อนหลักฐาน → fix มาแล้วเบิกครบ', async () => {
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(makePayload()));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(4000); // fix ยังไม่มา
+                assert(w().isManualRunning === true, 'มิเตอร์ต้องยังวิ่งอยู่ (ไม่แฮงก์)');
+                let d = readDisplay();
+                near(d.traffic, 10, 2, 'ยังไม่ควรเบิกก่อนมี fix ยืนยัน');
+                near(d.km, 0.5, 0.01, 'กิโลเมตรยังคงเดิม');
+                releaseFix(5, P0.lat, P0.lon, 8); // fix มาทีหลัง
+                await wait(1000);
+                d = readDisplay();
+                near(d.traffic, 10 + 90, 8, 'เบิกครบหลัง fix มา');
+                checkFareRange(0.5, 10 + 90 - 8, 10 + 90 + 8, 'ค่าโดยสารบนจอ');
+                return 'หลัง fix: รถติด ' + d.traffic + ' วิ (คาด ~100) / ' + d.fare + '฿';
+            });
+
+            // 5) เปิดใหม่ซ้ำอีกรอบ → ไม่เบิกซ้ำ (กัน double-bill)
+            await runScenario('5. เปิดใหม่ซ้ำอีกรอบ → ไม่เบิกซ้ำ (double-bill guard)', async () => {
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(makePayload()));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(1200);
+                releaseFix(5, P0.lat, P0.lon, 8);
+                await wait(1000);
+                const billed = Math.round(JSON.parse(w().localStorage.getItem('taxi_active_trip_v1')).trafficSec);
+                assert(Math.abs(billed - 100) <= 8, 'รอบแรกต้องเบิก ~90 วิ (ได้ ' + billed + ')');
+                // จำลองเปิดแอปใหม่ (reload) — ช่วงปิดใหม่สั้นมาก (<8 วิ) → ต้องไม่เบิกซ้ำ
+                await freshApp();
+                const savedTraffic = JSON.parse(w().localStorage.getItem('taxi_active_trip_v1')).trafficSec;
+                w().maybeShowResumeBanner();
+                await wait(1200);
+                const p2 = JSON.parse(w().localStorage.getItem('taxi_active_trip_v1'));
+                near(p2.trafficSec, savedTraffic, 1, 'ไม่เบิกซ้ำหลังเปิดใหม่ (ช่วงปิดใหม่ < 8 วิ)');
+                w().resumeSavedTrip();
+                await wait(800);
+                const d = readDisplay();
+                near(d.traffic, Math.round(savedTraffic), 2, 'เวลาบนจอหลังเริ่มต่อ');
+                return 'รอบแรกเบิก ' + billed + ' วิ → เปิดใหม่ไม่เพิ่ม (' + Math.round(savedTraffic) + ' วิ)';
+            });
+
+            // 6) cap เบิกจอด 1 นาที — ช่วงปิด 90 วิ เบิกแค่ 60 วิ
+            await runScenario('6. ตั้ง cap เบิกจอด 1 นาที (ช่วงปิด 90 วิ → เบิกแค่ 60 วิ)', async () => {
+                frame.contentWindow.userKillCapMin = 1; // ผู้ใช้ตั้ง cap 1 นาที (ค่าเริ่มต้น 15)
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(makePayload()));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(1200);
+                releaseFix(5, P0.lat, P0.lon, 8);
+                await wait(1000);
+                const d = readDisplay();
+                near(d.traffic, 10 + 60, 8, 'เบิกจอดจำกัดที่ 60 วิ (cap 1 นาที ไม่ใช่ 90)');
+                near(d.km, 0.5, 0.01, 'กิโลเมตรไม่เพิ่ม');
+                checkFareRange(0.5, 10 + 60 - 8, 10 + 60 + 8, 'ค่าโดยสารบนจอ');
+                return 'รถติด ' + d.traffic + ' วิ (คาด ~70 = 10 + 60) / ' + d.fare + '฿';
+            });
+
+            window.__testResults = { pass: passCount, fail: failCount, failures: failures, at: new Date().toISOString() };
+        }
+
+        document.getElementById('runBtn').addEventListener('click', runAll);
+        runAll(); // รันอัตโนมัติเมื่อเปิดหน้า
+    })();
+</script>
+</body>
+</html>
