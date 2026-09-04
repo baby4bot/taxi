@@ -1297,7 +1297,8 @@
 
     window.baseFare = 35;
     window.surchargeList = [];
-    window.isTollwayMode = false;
+    const TOLL_MODE_KEY = 'taxi_toll_mode_v1';
+    try { window.isTollwayMode = localStorage.getItem(TOLL_MODE_KEY) === '1'; } catch(e) { window.isTollwayMode = false; }
 
     const HISTORY_KEY = 'taxi_history_v25';
     const FAVORITES_KEY = 'taxi_favorites_v1';
@@ -1341,11 +1342,8 @@
     const calcGPS = (l1, n1, l2, n2) => 6371 * 2 * Math.asin(Math.sqrt(Math.sin((l2-l1)*Math.PI/360)**2 + Math.cos(l1*Math.PI/180)*Math.cos(l2*Math.PI/180)*Math.sin((n2-n1)*Math.PI/360)**2));
     function formatDuration(totalMins) { if (totalMins < 60) return totalMins + " นาที"; let h = Math.floor(totalMins / 60); let m = totalMins % 60; return h + " ชม. " + (m > 0 ? m + " นาที" : ""); }
 
-    window.setTollMode = async (isToll) => {
-        if (window.isTollwayMode === isToll) return;
-        window.isTollwayMode = isToll;
-        
-        // Update button states: Main = single toggle switch; Live & Zoom keep two-button pairs
+    // อัปเดตสี/ไอคอนของปุ่มทั้งหมดตามโหมด (Main = สวิตช์เดียว, Live & Zoom = ปุ่มคู่)
+    const applyTollModeUI = (isToll) => {
         const tollToggleMain = document.getElementById('btnTollToggleMain');
         if (tollToggleMain) {
             tollToggleMain.className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn active';
@@ -1357,7 +1355,6 @@
             document.getElementById('btnAvoidTollLive').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
             document.getElementById('btnUseTollLive').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
         }
-        
         const tollToggleZoom = document.getElementById('btnTollToggleZoom');
         if (tollToggleZoom) {
             tollToggleZoom.className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn active';
@@ -1365,6 +1362,16 @@
             if (zIcon) zIcon.innerText = isToll ? 'add_road' : 'route';
             tollToggleZoom.title = isToll ? 'ขึ้นทางด่วน (แตะเพื่อเลี่ยงทางด่วน)' : 'เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)';
         }
+    };
+
+    // ตั้งค่าโหมดทางด่วน + จำค่าที่เลือกไว้ (localStorage) เพื่อใช้ในครั้งถัดไป
+    window.applySavedTollMode = () => { window.isTollwayMode = localStorage.getItem(TOLL_MODE_KEY) === '1'; applyTollModeUI(window.isTollwayMode); };
+
+    window.setTollMode = async (isToll) => {
+        if (window.isTollwayMode === isToll) return;
+        window.isTollwayMode = isToll;
+        try { localStorage.setItem(TOLL_MODE_KEY, isToll ? '1' : '0'); } catch(e) {}
+        applyTollModeUI(isToll);
         
         // Show toast
         window.showToast(isToll ? '🛣️ ขึ้นทางด่วน' : '🚗 เลี่ยงทางด่วน');
@@ -2536,6 +2543,7 @@
                 }
 
                 window.applyPermissionsUI(); startGlobalUserListener(); 
+                window.applySavedTollMode(); // เรียกใช้โหมดทางด่วนที่จำไว้ (ถ้าเคยเลือกไว้)
             } else { window.logoutApp(true); }
         });
     };
