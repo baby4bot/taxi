@@ -970,11 +970,15 @@
     </div>
                                                        
     <div id="searchSectionBox" class="search-section">
-        <label>ค้นหาจุดหมาย</label>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 6px 8px 6px;">
+            <label style="margin: 0; flex: 1; min-width: 0;">ค้นหาจุดหมาย</label>
+            <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                <button id="btnAvoidTollMain" class="small-toll-btn active" onclick="window.setTollMode(false)" title="เลี่ยงทางด่วน" style="width: 34px; height: 34px; border-radius: 11px;"><span class="material-symbols-outlined" style="font-size: 17px;">route</span></button>
+                <button id="btnUseTollMain" class="small-toll-btn" onclick="window.setTollMode(true)" title="ขึ้นทางด่วน" style="width: 34px; height: 34px; border-radius: 11px;"><span class="material-symbols-outlined" style="font-size: 17px;">add_road</span></button>
+            </div>
+        </div>
         <div class="input-group">
             <input oninput="window.smartSearch(this.value); window.checkAppStatus();" onfocus="window.showHistory()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />
-            <button id="btnAvoidTollMain" class="small-toll-btn active" onclick="window.setTollMode(false)" title="เลี่ยงทางด่วน" style="flex-direction: column; gap: 2px;"><span style="font-size: 9px; font-weight: 600;">เลี่ยงด่วน</span><span class="material-symbols-outlined" style="font-size: 20px;">route</span></button>
-            <button id="btnUseTollMain" class="small-toll-btn" onclick="window.setTollMode(true)" title="ขึ้นทางด่วน" style="flex-direction: column; gap: 2px;"><span style="font-size: 9px; font-weight: 600;">ขึ้นด่วน</span><span class="material-symbols-outlined" style="font-size: 20px;">add_road</span></button>
         </div>
 
         <div id="suggestionList" class="dropdown-box"></div>
