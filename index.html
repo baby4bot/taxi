@@ -1895,6 +1895,7 @@
         if (imgUrl && imgUrl.length > 10) { img.src = imgUrl; img.style.display = 'block'; icon.style.display = 'none'; } 
         else { img.style.display = 'none'; icon.style.display = 'block'; if(gold) { icon.innerText = 'sync'; icon.style.color = '#f1c40f'; } else if(isError) { icon.innerText = 'error'; icon.style.color = 'var(--accent-red)'; } else { icon.innerText = 'notifications_active'; icon.style.color = 'var(--neon-green)'; } }
         toast.style.borderColor = gold ? '#f1c40f' : (isError ? 'var(--accent-red)' : 'var(--neon-green)'); toast.style.display = 'flex';
+        if (gold && navigator.vibrate) { try { navigator.vibrate([60, 40, 60]); } catch(e) {} } // สั่นเบา ๆ (เฉพาะ toast ทอง) ให้คนขับสะดุ้งมองจอ
         if (window.__toastHideTimer) clearTimeout(window.__toastHideTimer);
         window.__toastHideTimer = setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('toast-gold'); toast.style.cursor = 'default'; toast.onclick = null; }, gold ? 6500 : 4000); // toast ทองอยู่นานกว่า ให้คนขับอ่านทัน
         // แตะ toast ที่ส่ง onClick มา (เช่น toast ทอง "กลับจากเบื้องหลัง" = เปิดสรุปยอดที่เบิก) → ผูก handler ให้
