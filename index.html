@@ -63,6 +63,12 @@
             to { opacity: 1; transform: translate(-50%, 0); } 
         }
         .toast-img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; display: none; border: 1px solid rgba(255,255,255,0.2); }
+        /* toast "กลับจากเบื้องหลัง" — สีทองเด่นกว่าข้อความปกติ + ไอคอนพิเศษ ให้คนขับเห็นชัด */
+        @keyframes toastGoldPop { 0% { opacity: 0; transform: translate(-50%, 24px) scale(0.9); } 45% { opacity: 1; transform: translate(-50%, -4px) scale(1.05); box-shadow: 0 0 34px rgba(241,196,15,0.65), 0 10px 30px rgba(0,0,0,0.8); } 100% { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+        #toastBox.toast-gold { background: linear-gradient(135deg, rgba(255,193,7,0.2), rgba(120,90,10,0.28)); border: 1px solid #f1c40f; box-shadow: 0 0 22px rgba(241,196,15,0.4), 0 10px 30px rgba(0,0,0,0.8); animation: toastGoldPop 0.5s ease-out forwards; }
+        #toastBox.toast-gold #toastIcon { color: #f1c40f; filter: drop-shadow(0 0 7px rgba(241,196,15,0.85)); animation: spinPulse 1.4s ease-in-out infinite; }
+        @keyframes spinPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.22) rotate(15deg); } }
+        #toastBox.toast-gold #toastMsg { font-weight: 700; color: #ffe9a8; text-shadow: 0 0 10px rgba(241,196,15,0.35); }
 
         .hamburger-btn {
             background: transparent; border: none; color: var(--neon-yellow); cursor: pointer; 
@@ -1818,12 +1824,15 @@
         if(id === 'adminMenuModal' && window.handleAdminModalState) window.handleAdminModalState(show);
     };
 
-    window.showToast = (msg, isError = false, imgUrl = null) => {
+    window.showToast = (msg, isError = false, imgUrl = null, gold = false) => {
         const toast = document.getElementById('toastBox'); const icon = document.getElementById('toastIcon'); const img = document.getElementById('toastImg');
         document.getElementById('toastMsg').innerText = msg;
+        toast.classList.toggle('toast-gold', !!gold);
         if (imgUrl && imgUrl.length > 10) { img.src = imgUrl; img.style.display = 'block'; icon.style.display = 'none'; } 
-        else { img.style.display = 'none'; icon.style.display = 'block'; if(isError) { icon.innerText = 'error'; icon.style.color = 'var(--accent-red)'; toast.style.borderColor = 'var(--accent-red)'; } else { icon.innerText = 'notifications_active'; icon.style.color = 'var(--neon-green)'; toast.style.borderColor = 'var(--neon-green)'; } }
-        toast.style.borderColor = isError ? 'var(--accent-red)' : 'var(--neon-green)'; toast.style.display = 'flex'; setTimeout(() => { toast.style.display = 'none'; }, 4000);
+        else { img.style.display = 'none'; icon.style.display = 'block'; if(gold) { icon.innerText = 'sync'; icon.style.color = '#f1c40f'; } else if(isError) { icon.innerText = 'error'; icon.style.color = 'var(--accent-red)'; } else { icon.innerText = 'notifications_active'; icon.style.color = 'var(--neon-green)'; } }
+        toast.style.borderColor = gold ? '#f1c40f' : (isError ? 'var(--accent-red)' : 'var(--neon-green)'); toast.style.display = 'flex';
+        if (window.__toastHideTimer) clearTimeout(window.__toastHideTimer);
+        window.__toastHideTimer = setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('toast-gold'); }, gold ? 6500 : 4000); // toast ทองอยู่นานกว่า ให้คนขับอ่านทัน
     };
 
     window.showCustomConfirm = function(title, desc, type = 'warning', okText = 'ยืนยัน') {
@@ -2336,7 +2345,7 @@
                 let parts = [];
                 if (caughtTimeSec >= 1) parts.push('เบิกเวลา ' + Math.round(caughtTimeSec) + ' วิ');
                 if (caughtKm > 0.02) parts.push(caughtKm.toFixed(2) + ' กม.');
-                window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '));
+                window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true); // ทองเด่นกว่า toast ปกติ
             }
         } catch(e) {}
         finally { kmCatchUpBusy = false; }
@@ -2513,7 +2522,7 @@
             let parts = [];
             if (caughtTimeSec >= 1) parts.push('เบิกเวลา ' + Math.round(caughtTimeSec) + ' วิ');
             if (caughtKm > 0.02) parts.push(caughtKm.toFixed(2) + ' กม.');
-            window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '));
+            window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true); // ทองเด่นกว่า toast ปกติ
         } catch(e) {}
         finally { window.crashCatchUpBusy = false; }
     };
