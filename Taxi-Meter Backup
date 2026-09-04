@@ -2,15 +2,18 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta content="dark" name="color-scheme" />
-    <meta content="#090a0f" name="theme-color" />
+    <meta content="#121212" name="theme-color" />
     <title>Taxi Fare Calculator 2026</title>
     
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Taxi 2026" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-touch-fullscreen" content="yes" />
+    <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
     
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet" />
     <link id="appleIcon" href="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" rel="apple-touch-icon" />
@@ -23,21 +26,22 @@
     <style>
         :root {
             color-scheme: dark;
-            --bg-dark: #090a0f; --card-glass: rgba(22, 24, 35, 0.65); --input-bg: rgba(0, 0, 0, 0.4);
-            --neon-green: #2ecc71; --neon-yellow: #f1c40f; --accent-red: #ff4757; --accent-orange: #ff9800;
-            --text-main: #ffffff; --text-dim: #a0a5b5; --border-glass: rgba(255, 255, 255, 0.08);
-            --glow-green: rgba(46, 204, 113, 0.4); --glow-yellow: rgba(241, 196, 15, 0.4);
+            --bg-dark: #121212; --card-glass: #1a1a1a; --input-bg: #252525;
+            --neon-green: #4caf50; --neon-yellow: #ffd600; --accent-red: #ef4444; --accent-orange: #ff9800;
+            --text-main: #e0e0e0; --text-dim: #888; --border-glass: #333;
+            --glow-green: rgba(76, 175, 80, 0.3); --glow-yellow: rgba(255, 214, 0, 0.3);
         }
 
         body { 
             font-family: 'Kanit', sans-serif; background-color: var(--bg-dark); margin: 0; min-height: 100vh; 
             color: var(--text-main); box-sizing: border-box; overflow-x: hidden;
-            background-image: radial-gradient(circle at 15% 50%, rgba(46, 204, 113, 0.08), transparent 25%), radial-gradient(circle at 85% 30%, rgba(241, 196, 15, 0.08), transparent 25%);
+            background: #121212;
         }
 
         .card { 
-            background: var(--card-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            width: 100%; max-width: 100%; min-height: 100vh; padding: 20px 20px 30px 20px; box-sizing: border-box; 
+            background: #1a1a1a; width: 100%; max-width: 100%; min-height: 100vh; min-height: 100dvh; 
+            padding: env(safe-area-inset-top, 20px) 20px env(safe-area-inset-bottom, 30px) 20px; 
+            box-sizing: border-box; 
             text-align: center; border: none; position: relative; animation: floatUp 0.8s ease-out;
             display: flex; flex-direction: column; 
         }
@@ -48,10 +52,10 @@
         
         #toastBox {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            background: rgba(22, 24, 35, 0.95); border: 1px solid var(--border-glass);
-            color: white; padding: 12px 25px; border-radius: 50px; z-index: 100000;
+            background: #2a2a2a; border: 1px solid #444;
+            color: white; padding: 12px 25px; border-radius: 12px; z-index: 100000;
             display: none; align-items: center; gap: 10px; font-size: 14px; font-weight: 500;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             animation: toastFade 0.3s ease forwards; white-space: nowrap;
         }
         @keyframes toastFade { 
@@ -69,7 +73,7 @@
         .hamburger-btn .material-symbols-outlined { font-size: 38px !important; }
 
         .side-menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100000; display: none; opacity: 0; transition: opacity 0.3s; backdrop-filter: blur(5px); }
-        .side-menu { position: fixed; top: 0; right: -320px; width: 280px; height: 100%; background: #0d0f17; border-left: 1px solid rgba(255,255,255,0.05); box-shadow: -10px 0 40px rgba(0,0,0,0.9); transition: right 0.3s ease-in-out; display: flex; flex-direction: column; padding: 40px 20px; box-sizing: border-box; }
+        .side-menu { position: fixed; top: 0; right: -320px; width: 280px; height: 100%; background: #1a1a1a; border-left: 1px solid #333; box-shadow: -10px 0 40px rgba(0,0,0,0.9); transition: right 0.3s ease-in-out; display: flex; flex-direction: column; padding: 40px 20px; box-sizing: border-box; }
         .side-menu-header { text-align: center; margin-bottom: 25px; }
         .side-profile-pic { width: 90px; height: 90px; border-radius: 50%; border: 3px solid #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.4); object-fit: cover; cursor: pointer; margin-bottom: 15px; transition: 0.3s; background: rgba(0,0,0,0.3); }
         .side-profile-pic:active { transform: scale(0.95); }
@@ -92,44 +96,44 @@
         .taxi-type-option .material-symbols-outlined { font-size: 20px; }
         .taxi-type-option.active { background: var(--neon-green); color: white; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3); }
 
-        .search-section { text-align: left; position: relative; flex-shrink: 0; margin-bottom: 15px; margin-top: 10px; }
-        label { display: block; margin-bottom: 10px; font-size: 13px; color: var(--text-dim); text-align: center; }
-        .input-group { display: flex; gap: 8px; align-items: center; width: 100%; margin-bottom: 15px; }
+        .search-section { text-align: center; position: relative; flex-shrink: 0; margin-bottom: 0px; margin-top: 0px; }
+        label { display: block; margin-bottom: 5px; font-size: 13px; color: var(--text-dim); text-align: center; width: 100%; }
+        .input-group { display: flex; gap: 8px; align-items: center; width: 100%; margin-bottom: 0px; }
         
         input[type="text"], input[type="email"], input[type="password"], input[type="tel"], 
 .km-input-box {
     flex: 1;
-    height: 60px;
+    height: 55px;
     display: flex;
     align-items: center;
     position: relative;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 15px;
+    background: #252525;
+    border: 1px solid #333;
+    border-radius: 12px;
     padding: 0 15px;
     box-shadow: none;
 }
 
         
-        input[type="text"], input[type="email"], input[type="password"], input[type="tel"] { flex: 1; min-width: 0; padding: 18px 20px; font-size: 15px; outline: none; color: white; text-align: center; width: 100%; box-sizing: border-box; height: 55px;}
-        input:focus, .km-input-box:focus-within { border-color: var(--neon-yellow); background: rgba(255, 255, 255, 0.15); box-shadow: 0 0 15px rgba(241, 196, 15, 0.2), inset 0 2px 5px rgba(0,0,0,0.5); }
+        input[type="text"], input[type="email"], input[type="password"], input[type="tel"] { flex: 1; min-width: 0; padding: 0 15px; font-size: 15px; outline: none; color: white; text-align: center; width: 100%; box-sizing: border-box; height: 55px; border-radius: 12px; background: #252525; border: 1px solid #333;}
+        input:focus, .km-input-box:focus-within { border-color: #ffd600; background: #2a2a2a; box-shadow: none; }
         input.loading-state { color: var(--neon-yellow) !important; text-shadow: 0 0 10px var(--glow-yellow); }
 
         .small-toll-btn {
-            width: 55px; height: 55px; border-radius: 18px; display: flex; align-items: center; justify-content: center; 
-            border: 1px solid var(--border-glass); background: rgba(255,255,255,0.08); color: var(--text-dim); 
+            width: 55px; height: 55px; border-radius: 12px; display: flex; align-items: center; justify-content: center; 
+            border: 1px solid #333; background: #252525; color: var(--text-dim); 
             transition: 0.3s; flex-shrink: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
         }
-        .small-toll-btn.active { background: var(--neon-green); color: white; border-color: var(--neon-green); box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3); }
-        .small-toll-btn.toll-active { background: #3498db; color: white; border-color: #3498db; box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); }
+        .small-toll-btn.active { background: #4caf50; color: white; border-color: #4caf50; box-shadow: none; }
+        .small-toll-btn.toll-active { background: #2196f3; color: white; border-color: #2196f3; box-shadow: none; }
         .small-toll-btn:active { transform: scale(0.92); }
 
-        .surcharge-row { display: flex; gap: 10px; padding-bottom: 5px; margin-top: 25px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
-        .surcharge-btn { padding: 10px 20px; border-radius: 20px; background: rgba(241, 196, 15, 0.1); border: 1px solid rgba(241, 196, 15, 0.3); color: var(--neon-yellow); font-family: 'Kanit'; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .surcharge-btn:active { transform: scale(0.95); background: rgba(241, 196, 15, 0.3); }
+        .surcharge-row { display: flex; gap: 10px; padding-bottom: 5px; margin-top: 10px; margin-bottom: 5px; justify-content: center; flex-wrap: wrap; }
+        .surcharge-btn { padding: 10px 20px; border-radius: 10px; background: #252525; border: 1px solid #444; color: #ffd600; font-family: 'Kanit'; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: none; }
+        .surcharge-btn:active { transform: scale(0.95); background: #333; }
 
         .surcharge-list-container { width: 100%; max-width: 100%; margin: 0 auto 15px auto; display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
-        .surcharge-item { display: inline-flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 20px; font-size: 13px; color: white; border: 1px solid rgba(255,255,255,0.2); animation: fadeIn 0.3s ease; white-space: nowrap; }
+        .surcharge-item { display: inline-flex; justify-content: space-between; align-items: center; background: #252525; padding: 6px 12px; border-radius: 10px; font-size: 13px; color: white; border: 1px solid #333; animation: fadeIn 0.3s ease; white-space: nowrap; }
         .surcharge-item .del-btn { color: #ff4757; cursor: pointer; font-size: 18px; margin-left: 8px; transition: 0.2s; background: rgba(255,71,87,0.1); border-radius: 50%; }
         .surcharge-item .del-btn:active { transform: scale(0.9); background: rgba(255,71,87,0.3); }
 
@@ -146,8 +150,8 @@
         .list-item:hover { background: rgba(255,255,255,0.05); }
         .item-icon { font-size: 20px !important; color: var(--neon-green); text-shadow: 0 0 10px rgba(46, 204, 113, 0.4); flex-shrink: 0; }
 
-        .live-tracker-box { flex-shrink: 0; display: none; cursor: pointer; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 20px; padding: 15px; margin-top: 10px; text-align: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); transition: 0.3s; animation: fadeIn 0.5s ease; }
-        .live-tracker-box:active { transform: scale(0.97); }
+        .live-tracker-box { flex-shrink: 0; display: none; cursor: pointer; background: #1a1a1a; border: 1px solid #444; border-radius: 16px; padding: 15px; margin-top: 10px; text-align: center; transition: 0.3s; animation: fadeIn 0.5s ease; }
+        .live-tracker-box:active { transform: scale(0.98); }
         .tracker-stats { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
         .highlight { color: var(--neon-green); font-weight: 600; text-shadow: 0 0 5px var(--glow-green); }
         
@@ -157,23 +161,23 @@
         .car-icon { position: absolute; top: -16px; left: 0%; transform: translateX(-50%); transition: left 1s ease-out; z-index: 2; display: flex; justify-content: center; align-items: center; }
         .point-dot { position: absolute; top: -3px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg-dark); border: 2px solid; z-index: 1; }
         
-        .manual-section { flex-shrink: 0; display: flex; align-items: center; gap: 12px; margin: 10px auto; width: 100%; justify-content: center; position: relative; z-index: 20; }
-        .btn-math { width: 60px; height: 60px; border-radius: 20px; font-size: 30px; cursor: pointer; flex-shrink: 0; border: none; color: white; transition: 0.2s; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .manual-section { flex-shrink: 0; display: flex; align-items: center; gap: 8px; margin: 10px auto; width: 100%; justify-content: center; position: relative; z-index: 20; }
+        .btn-math { width: 55px; height: 55px; border-radius: 12px; font-size: 28px; cursor: pointer; flex-shrink: 0; border: none; color: white; transition: 0.2s; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
         .btn-math:active { transform: scale(0.95); }
-        .btn-minus { background: var(--accent-red); box-shadow: 0 4px 10px rgba(255, 71, 87, 0.3); }
-        .btn-plus { background: var(--neon-green); box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3); }
+        .btn-minus { background: #ef4444; box-shadow: none; }
+        .btn-plus { background: #4caf50; box-shadow: none; }
         .btn-math:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; box-shadow: none; }
         
         
 .km-input-box {
     flex: 1;
-    height: 60px;
+    height: 55px;
     display: flex;
     align-items: center;
     position: relative;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 15px;
+    background: #252525;
+    border: 1px solid #333;
+    border-radius: 12px;
     padding: 0 15px;
     box-shadow: none;
 }
@@ -182,25 +186,18 @@
         input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .km-label { position: absolute; right: 20px; font-size: 16px; color: var(--text-dim); pointer-events: none; }
 
-        .result-container { flex: 1; position: relative; margin: 10px 0 20px 0; padding: 30px 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 180px; }
-        .bubble-bg-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: visible; }
-        .bubble { position: absolute; border-radius: 50%; animation: floatBubble 8s ease-in-out infinite; mix-blend-mode: screen; filter: blur(15px); }
-        .bubble-1 { width: 180px; height: 180px; top: -30px; left: 5%; background: rgba(46, 204, 113, 0.8); }
-        .bubble-2 { width: 200px; height: 200px; bottom: -40px; right: -5%; background: rgba(255, 71, 87, 0.8); animation-delay: -2s; }
-        .bubble-3 { width: 160px; height: 160px; top: 40px; left: 40%; background: rgba(241, 196, 15, 0.8); animation-delay: -4s; }
-        .bubble-4 { width: 170px; height: 170px; top: -10px; right: 15%; background: rgba(255, 152, 0, 0.8); animation-delay: -1s; }
-        .bubble-5 { width: 190px; height: 190px; bottom: 0px; left: 20%; background: rgba(0, 191, 255, 0.8); animation-delay: -3s; }
-        .bubble-6 { width: 170px; height: 170px; top: 45%; left: -10%; background: rgba(155, 89, 182, 0.8); animation-delay: -5s; }
-        @keyframes floatBubble { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-15px) scale(1.05); } }
+        .result-container { flex: 1; position: relative; margin: 5px 0 15px 0; padding: 30px 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 180px; background: #1a1a1a; border-radius: 16px; border: 1px solid #333; box-shadow: none; overflow: hidden; }
+        .result-container.has-map { padding: 15px; min-height: 280px; }
+
         
-        .result-content { position: relative; z-index: 10; text-align: center; transition: 0.3s; }
-        .price { font-size: 68px; font-weight: 600; line-height: 1; color: #fff; text-shadow: 0 4px 15px rgba(0,0,0,0.8), 0 0 20px rgba(46, 204, 113, 0.5); }
-        .sub-info { font-size: 15px; font-weight: 500; margin-top: 15px; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.8); background: rgba(10, 12, 18, 0.7); border: 1px solid rgba(255,255,255,0.15); padding: 6px 18px; border-radius: 20px; display: inline-block; backdrop-filter: blur(8px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .result-content { position: relative; z-index: 10; text-align: center; transition: 0.3s; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .price { font-size: 72px; font-weight: 700; line-height: 1; color: #fff; letter-spacing: -2px; }
+        .sub-info { font-size: 14px; font-weight: 500; margin-top: 15px; color: #ccc; background: #2a2a2a; border: 1px solid #444; padding: 8px 20px; border-radius: 20px; display: inline-block; }
 
         .action-row { display: flex; gap: 10px; margin-bottom: 12px; width: 100%; flex-shrink: 0; }
-        .manual-timer-btn { flex: 1; padding: 12px 15px; border-radius: 20px; background: var(--neon-green); color: white; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 600; transition: 0.3s; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); -webkit-user-select: none; user-select: none; }
-        .manual-timer-btn:active { transform: scale(0.98); }
-        .manual-timer-btn.active { background: var(--accent-red); box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
+        .manual-timer-btn { flex: 1; padding: 14px 15px; border-radius: 12px; background: #4caf50; color: white; border: none; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 600; transition: 0.2s; box-shadow: none; -webkit-user-select: none; user-select: none; }
+        .manual-timer-btn:active { transform: scale(0.98); background: #388e3c; }
+        .manual-timer-btn.active { background: #ef4444; }
 
         .small-nav-btn { width: 60px; height: 60px; border-radius: 20px; background: #4285F4; border: none; cursor: pointer; flex-shrink: 0; display: none; justify-content: center; align-items: center; box-shadow: 0 4px 15px rgba(66, 133, 244, 0.4); transition: 0.3s; }
         .small-nav-btn:active { transform: scale(0.95); }
@@ -215,7 +212,7 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(15px); animation: fadeIn 0.3s; overflow: hidden; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        .modal-box.flex-col-box { background: var(--bg-dark); border: 1px solid var(--border-glass); border-radius: 30px; width: 95%; max-width: 500px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; padding: 0; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; }
+        .modal-box.flex-col-box { background: #1a1a1a; border: 1px solid #333; border-radius: 20px; width: 95%; max-width: 500px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; padding: 0; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; }
         @keyframes popIn { to { transform: scale(1); } }
         
         .modal-header { position: relative; padding: 20px; flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; }
@@ -307,7 +304,7 @@
         .modal-content-scroll { padding: 20px; flex: 1; overflow-y: auto; overflow-x: hidden; -ms-overflow-style: none; scrollbar-width: none; text-align: center; }
         .modal-content-scroll::-webkit-scrollbar { display: none; }
 
-        .modal-box.standard-box { background: var(--bg-dark); border: 1px solid var(--border-glass); border-radius: 30px; padding: 30px 20px; width: 90%; max-width: 400px; text-align: center; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; }
+        .modal-box.standard-box { background: #1a1a1a; border: 1px solid #333; border-radius: 20px; padding: 30px 20px; width: 90%; max-width: 400px; text-align: center; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; }
 
         /* New Zoom Card Style */
         .zoom-card-new { background: #161823; border: 1px solid var(--border-glass); border-radius: 30px; width: 90%; max-width: 400px; overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.9); animation: popIn 0.3s forwards; padding: 0; }
@@ -358,7 +355,41 @@
         .btn-cc-ok { flex: 1; padding: 12px; border-radius: 15px; border: none; background: var(--neon-green); color: white; cursor: pointer; font-family: 'Kanit'; font-weight: 500; font-size: 15px; transition: 0.2s; }
         .btn-cc-ok:active { transform: scale(0.95); }
         .btn-cc-ok.danger { background: var(--accent-red); }
+        
+        /* Map styles */
+        #taxiMap { width: 100%; height: 280px; border-radius: 16px; border: 1px solid #333; display: none; margin-top: 10px; }
+        .map-container { flex-shrink: 0; display: none; background: #1a1a1a; border-radius: 16px; padding: 12px; margin-bottom: 10px; border: 1px solid #333; }
+        .map-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+        .map-header-icon { width: 32px; height: 32px; background: #4caf50; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .map-header-text { flex: 1; }
+        .map-header-title { color: white; font-size: 14px; font-weight: 600; }
+        .map-header-subtitle { color: #888; font-size: 11px; }
+        .map-legend { display: flex; gap: 15px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #333; justify-content: center; }
+        .map-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #888; }
+        .map-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        
+        /* Navigation info inside result container */
+        .nav-info-overlay { position: absolute; top: 0; left: 0; right: 0; z-index: 20; padding: 10px; background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%); border-radius: 16px 16px 0 0; display: none; }
+        .nav-info-overlay.active { display: block; }
+        .nav-top-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .nav-close-btn { width: 32px; height: 32px; background: rgba(255,255,255,0.15); border: none; border-radius: 50%; color: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .nav-dest-box { flex: 1; background: rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+        .nav-dest-label { font-size: 9px; color: #4caf50; font-weight: 600; }
+        .nav-dest-name { font-size: 13px; color: white; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .nav-info-row { display: flex; gap: 6px; }
+        .nav-info-card { flex: 1; background: rgba(0,0,0,0.6); border-radius: 8px; padding: 6px; text-align: center; }
+        .nav-info-value { font-size: 16px; font-weight: 800; color: #4caf50; }
+        .nav-info-label { font-size: 9px; color: #aaa; }
+        .nav-eta-box { background: #4caf50; border-radius: 8px; padding: 6px 10px; text-align: center; }
+        .nav-eta-value { font-size: 14px; font-weight: 800; color: white; }
+        .nav-eta-label { font-size: 9px; color: rgba(255,255,255,0.8); }
+        #navMap { width: 100%; height: 100%; border-radius: 16px; }
+        .nav-car-marker { width: 36px; height: 36px; background: #4caf50; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(76,175,80,0.9); transition: transform 0.3s ease; font-size: 18px; }
+        .nav-dest-marker { width: 28px; height: 28px; background: #ef4444; border: 3px solid white; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(239,68,68,0.8); font-size: 12px; }
     </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 <audio id="silentAudioLoop" loop playsinline>
@@ -422,11 +453,11 @@
     </div>
                                                        
     <div id="searchSectionBox" class="search-section">
-        <label>ค้นหาจุดหมาย</label>                                        
+        <label>ค้นหาจุดหมาย</label>
         <div class="input-group">
             <input oninput="window.smartSearch(this.value); window.checkAppStatus();" onfocus="window.showHistory()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />
-            <button id="btnAvoidTollMain" class="small-toll-btn active" onclick="window.setTollMode(false)" title="เลี่ยงทางด่วน"><span class="material-symbols-outlined">route</span></button>
-            <button id="btnUseTollMain" class="small-toll-btn" onclick="window.setTollMode(true)" title="ขึ้นทางด่วน"><span class="material-symbols-outlined">add_road</span></button>
+            <button id="btnAvoidTollMain" class="small-toll-btn active" onclick="window.setTollMode(false)" title="เลี่ยงทางด่วน" style="flex-direction: column; gap: 2px;"><span style="font-size: 9px; font-weight: 600;">เลี่ยงด่วน</span><span class="material-symbols-outlined" style="font-size: 20px;">route</span></button>
+            <button id="btnUseTollMain" class="small-toll-btn" onclick="window.setTollMode(true)" title="ขึ้นทางด่วน" style="flex-direction: column; gap: 2px;"><span style="font-size: 9px; font-weight: 600;">ขึ้นด่วน</span><span class="material-symbols-outlined" style="font-size: 20px;">add_road</span></button>
         </div>
 
         <div id="suggestionList" class="dropdown-box"></div>
@@ -474,12 +505,12 @@
     </div>
                                                        
     <div id="manualSectionBox" class="manual-section">
-        <button class="btn-math btn-minus flex-center" onclick="window.adjustKm(-1)" id="btnMinus">−</button>
         <div class="km-input-box">
             <input type="number" step="0.1" inputmode="decimal" value="0" onfocus="if(this.value=='0') this.value=''" onblur="if(this.value=='') this.value='0'" oninput="window.manualInputChange()" id="kmInput" style="background:transparent; border:none; color:white; width:100%; font-size:20px; text-align:center; outline:none;" />
             <span class="km-label">กม.</span>                    
         </div>
         <button class="btn-math btn-plus flex-center" onclick="window.adjustKm(1)" id="btnPlus">+</button>
+        <button class="btn-math btn-minus flex-center" onclick="window.adjustKm(-1)" id="btnMinus">−</button>
     </div>
 
     <div class="surcharge-row" id="surchargeRow" style="display: none;">
@@ -493,15 +524,51 @@
         รวมค่าทางด่วน: 0 ฿
     </div>
                                                        
-    <div class="result-container" onclick="window.handleResultClick()">
-        <div class="bubble-bg-container">
-            <div class="bubble bubble-1"></div><div class="bubble bubble-2"></div>
-            <div class="bubble bubble-3"></div><div class="bubble bubble-4"></div>
-            <div class="bubble bubble-5"></div><div class="bubble bubble-6"></div>
+    <div class="result-container">
+
+        <!-- Navigation Info Overlay -->
+        <div class="nav-info-overlay" id="navInfoOverlay">
+            <div class="nav-top-row">
+                <button class="nav-close-btn" onclick="window.closeNavigation()">✕</button>
+                <div class="nav-dest-box">
+                    <div class="nav-dest-label">📍 ไปที่</div>
+                    <div class="nav-dest-name" id="navDestName">-</div>
+                </div>
+            </div>
+            <div class="nav-info-row">
+                <div class="nav-info-card">
+                    <div class="nav-info-value" id="navDistance">0</div>
+                    <div class="nav-info-label">กม. เหลือ</div>
+                </div>
+                <div class="nav-info-card">
+                    <div class="nav-info-value" id="navSpeed">0</div>
+                    <div class="nav-info-label">กม./ชม.</div>
+                </div>
+                <div class="nav-eta-box">
+                    <div class="nav-info-value" id="navETA">0 น.</div>
+                    <div class="nav-eta-label">ถึงประมาณ</div>
+                </div>
+            </div>
         </div>
-        <div class="result-content">
-            <div id="farePrice" class="price">0<span style="font-size: 32px; font-weight:400;"> ฿</span></div>
-            <div id="infoText" class="sub-info">ประเมินระยะทาง 0 กม.</div>
+        
+        <div class="result-content" id="resultContent" style="width:100%; height:100%; position:absolute; top:0; left:0; right:0; bottom:0;">
+            <div id="fareDisplay">
+                <div id="farePrice" class="price">0<span style="font-size: 32px; font-weight:400;"> ฿</span></div>
+                <div id="infoText" class="sub-info">ประเมินระยะทาง 0 กม.</div>
+            </div>
+            <div id="navMapContainer" style="display:none; width:100%; height:100%; position:absolute; top:0; left:0;">
+                <div id="navMap" style="width:100%; height:100%;"></div>
+                <button id="recenterBtn" onclick="window.recenterMap()" style="position:absolute; bottom:60px; right:10px; z-index:1000; width:40px; height:40px; background:#252525; border:1px solid #444; border-radius:50%; color:#4caf50; font-size:18px; cursor:pointer; display:none; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.5);">
+                    <span class="material-symbols-outlined">my_location</span>
+                </button>
+                <div id="navTollInfo" style="display:none; position:absolute; bottom:0; left:0; right:0; z-index:1000; background:rgba(0,0,0,0.85); padding:8px 12px; border-radius:0 0 16px 16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:11px; color:#ffd700;">🛣️ ค่าทางด่วน</span>
+                        <span style="font-size:13px; color:#ffd700; font-weight:700;" id="navTollTotal">0 ฿</span>
+                    </div>
+                    <div id="navTollBooths" style="font-size:10px; color:#aaa; margin-top:4px;"></div>
+                </div>
+            </div>
         </div>
     </div>
                  
@@ -747,6 +814,8 @@
     window.isTollwayMode = false;
 
     const HISTORY_KEY = 'taxi_history_v25';
+    const FAVORITES_KEY = 'taxi_favorites_v1';
+
     let destLoc = null, searchTimer = null, watchId = null;
     let lastPos = null, actualDrivenKm = 0, startTime = null, wakeLock = null, lastCalcTime = null;
     let tripTimer = null, routeUpdateTimer = null, trafficSeconds = 0;
@@ -781,42 +850,189 @@
         if (window.isTollwayMode === isToll) return;
         window.isTollwayMode = isToll;
         
+        // Update button states on ALL locations (Main, Live, Zoom)
         document.getElementById('btnAvoidTollMain').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
         document.getElementById('btnUseTollMain').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
         
-        document.getElementById('btnAvoidTollLive').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
-        document.getElementById('btnUseTollLive').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
+        if (document.getElementById('btnAvoidTollLive')) {
+            document.getElementById('btnAvoidTollLive').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
+            document.getElementById('btnUseTollLive').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
+        }
         
-        document.getElementById('btnAvoidTollZoom').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
-        document.getElementById('btnUseTollZoom').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
-
+        if (document.getElementById('btnAvoidTollZoom')) {
+            document.getElementById('btnAvoidTollZoom').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
+            document.getElementById('btnUseTollZoom').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
+        }
+        
+        // Show toast
+        window.showToast(isToll ? '🛣️ ขึ้นทางด่วน' : '🚗 เลี่ยงทางด่วน');
+        
         if(destLoc) {
-            if (window.isManualRunning && lastPos) {
-                let route = await window.fetchRouteFromOSRM(destLoc.lat, destLoc.lon, lastPos.lat, lastPos.lon);
+            let startLat, startLon;
+            if (lastPos) {
+                startLat = lastPos.lat;
+                startLon = lastPos.lon;
+            } else if (navLastPosition) {
+                startLat = navLastPosition.lat;
+                startLon = navLastPosition.lng;
+            }
+            
+            if (startLat && startLon) {
+                let route = await window.fetchRouteFromOSRM(destLoc.lat, destLoc.lon, startLat, startLon);
                 if (route) {
                     currentTrueRemainKm = route.km;
                     currentTrueRemainSec = route.sec;
+                    window.currentTollInfo = route.tolls || null;
+                    
+                    // Update nav distance
+                    if (document.getElementById('navDistance')) {
+                        document.getElementById('navDistance').innerText = route.km.toFixed(1);
+                    }
+                    
+                    // Update remaining km display
+                    if (document.getElementById('tzRemainKm')) {
+                        document.getElementById('tzRemainKm').innerText = route.km.toFixed(1);
+                    }
+                    
+                    // Update toll display
+                    window.updateTollDisplay();
+                    window.updateNavTollDisplay();
+                    
+                    // Redraw route on map if navigation is active
+                    if (navMap && navRouteCoords && navRouteCoords.length > 0) {
+                        try {
+                            if (navRoute) navMap.removeLayer(navRoute);
+                            let newCoords = route.coords || navRouteCoords;
+                            navRouteCoords = newCoords;
+                            navRoute = L.polyline(newCoords, { color: '#4caf50', weight: 5, opacity: 0.9 }).addTo(navMap);
+                        } catch(e) {}
+                    }
+                    
+                    // Update live tracker display
                     window.updateLiveMeterDisplay();
                 }
-            } else if (!window.isManualRunning) {
-                window.getRouteData(destLoc.lat, destLoc.lon, document.getElementById('destInput').value);
+            }
+        }
+    };
+    
+    window.updateTollDisplay = () => {
+        window.updateNavTollDisplay();
+    };
+    
+    window.updateNavTollDisplay = () => {
+        let navTollInfo = document.getElementById('navTollInfo');
+        let navTollTotal = document.getElementById('navTollTotal');
+        let navTollBooths = document.getElementById('navTollBooths');
+        
+        if (navTollInfo) {
+            if (window.currentTollInfo && window.currentTollInfo.booths && window.currentTollInfo.booths.length > 0) {
+                navTollInfo.style.display = 'block';
+                navTollTotal.innerText = window.currentTollInfo.total + ' ฿';
+                navTollBooths.innerHTML = window.currentTollInfo.booths.map(b => `${b.name}: ${b.price}฿`).join(' → ');
+            } else {
+                navTollInfo.style.display = 'none';
             }
         }
     };
 
+    // Decode OSRM polyline
+    window.decodePolyline = (encoded) => {
+        var poly = [];
+        var index = 0, len = encoded.length;
+        var lat = 0, lng = 0;
+        while (index < len) {
+            var b, shift = 0, result = 0;
+            do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+            var dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+            shift = 0; result = 0;
+            do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+            var dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+            poly.push([lat / 1e5, lng / 1e5]);
+        }
+        return poly;
+    };
+
+    // Estimate toll booths based on distance and route type
+    window.estimateTolls = (km) => {
+        let booths = [];
+        let totalCost = 0;
+        
+        // Estimate toll booths: 1 booth every 8-12 km on expressways
+        if (km >= 8) {
+            let boothCount = Math.floor(km / 10);
+            if (boothCount < 1) boothCount = 1;
+            if (boothCount > 6) boothCount = 6; // max 6 booths
+            
+            // Realistic Bangkok expressway prices
+            let prices = [25, 30, 35, 40, 45, 50];
+            for (let i = 0; i < boothCount; i++) {
+                let price = prices[i];
+                booths.push({
+                    name: `ด่านที่ ${i + 1}`,
+                    price: price
+                });
+                totalCost += price;
+            }
+        }
+        
+        return { booths, total: totalCost };
+    };
+    
     window.fetchRouteFromOSRM = async (dLat, dLon, startLat, startLon) => {
         try {
-            let res = await fetch(`https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${dLon},${dLat}?overview=false`);
-            let data = await res.json();
-            if (data.code === 'Ok') {
-                let baseKm = data.routes[0].distance / 1000;
-                let baseSec = data.routes[0].duration;
-
-                if (!window.isTollwayMode) {
-                    return { km: baseKm * 1.05, sec: baseSec * 1.35 }; 
-                } else {
-                    return { km: baseKm * 1.1, sec: baseSec * 0.75 }; 
+            // ดึงเส้นทางหลายเส้นแล้วเลือกสั้นที่สุด + เลี่ยงทางด่วน
+            const params = `overview=full&geometries=polyline&alternatives=true`;
+            const baseUrl = `https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${dLon},${dLat}?${params}`;
+            
+            // 1. ดึงเส้นทางทั้งหมด (รวม alternatives)
+            let allRes = await fetch(baseUrl);
+            let allData = await allRes.json();
+            
+            if (allData.code !== 'Ok' || !allData.routes || allData.routes.length === 0) return null;
+            
+            // เรียงลำดับจากสั้นที่สุด
+            let sorted = allData.routes.map(r => ({
+                km: r.distance / 1000,
+                sec: r.duration,
+                coords: window.decodePolyline(r.geometry)
+            })).sort((a, b) => a.km - b.km);
+            
+            let bestRoute = sorted[0]; // เส้นทางสั้นที่สุด
+            
+            // 2. ดึงเส้นทางเลี่ยงทางด่วน
+            let avoidKm, avoidSec, avoidCoords;
+            try {
+                let avoidRes = await fetch(baseUrl + '&exclude=toll');
+                let avoidData = await avoidRes.json();
+                if (avoidData.code === 'Ok' && avoidData.routes && avoidData.routes.length > 0) {
+                    let avoidRoutes = avoidData.routes.map(r => ({
+                        km: r.distance / 1000,
+                        sec: r.duration,
+                        coords: window.decodePolyline(r.geometry)
+                    })).sort((a, b) => a.km - b.km);
+                    let bestAvoid = avoidRoutes[0];
+                    avoidKm = bestAvoid.km;
+                    avoidSec = bestAvoid.sec;
+                    avoidCoords = bestAvoid.coords;
                 }
+            } catch(e) {}
+            
+            // ถ้าหาเส้นทางเลี่ยงไม่ได้ คำนวณประมาณ
+            if (!avoidKm || avoidKm <= bestRoute.km) {
+                avoidKm = bestRoute.km * 1.3;
+                avoidSec = bestRoute.sec * 1.5;
+                avoidCoords = bestRoute.coords;
+            }
+            
+            if (window.isTollwayMode) {
+                // ขึ้นทางด่วน: เส้นทางสั้นที่สุด
+                let tollInfo = window.estimateTolls(bestRoute.km);
+                return { km: bestRoute.km, sec: bestRoute.sec, coords: bestRoute.coords, tolls: tollInfo };
+            } else {
+                // เลี่ยงทางด่วน: เส้นทางที่ไม่ผ่านทางด่วน
+                return { km: avoidKm, sec: avoidSec, coords: avoidCoords, tolls: { booths: [], total: 0 } };
             }
         } catch(e) { console.error(e); }
         return null;
@@ -997,7 +1213,39 @@
     };
 
     window.saveHistory = (name, lat, lon) => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]').filter(i => i.name !== name); h.unshift({ name, lat, lon }); localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 10))); };
+    
     window.showHistory = () => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); if (!h.length) return $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; $('historyList').innerHTML = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ประวัติล่าสุด</span><button class="clear-history-btn" onclick="event.stopPropagation(); localStorage.removeItem('${HISTORY_KEY}'); $('historyList').style.display='none';">ล้าง</button></div>` + h.map(i => `<div class="list-item" onclick="window.selectLocation('${i.name}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span>${i.name}</div>`).join(''); $('historyList').style.display = 'block'; };
+    
+    // ===== Favorites System =====
+    window.getFavorites = () => JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+    
+    window.toggleFavorite = (name, lat, lon) => {
+        let favs = window.getFavorites();
+        let exists = favs.findIndex(f => f.name === name);
+        if (exists >= 0) {
+            favs.splice(exists, 1);
+            window.showToast('ลบออกจากรายการโปรดแล้ว', false);
+        } else {
+            favs.unshift({ name, lat, lon });
+            window.showToast('⭐ บันทึกรายการโปรดสำเร็จ!', false);
+        }
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs.slice(0, 15)));
+    };
+    
+    window.isFavorite = (name) => window.getFavorites().some(f => f.name === name);
+    
+    window.showFavorites = () => {
+        let favs = window.getFavorites();
+        let list = $('suggestionList');
+        $('historyList').style.display = 'none';
+        if (!favs.length) {
+            list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-dim);"><span class="material-symbols-outlined" style="font-size:40px; color:#ffd600; display:block; margin-bottom:10px;">star</span>ยังไม่มีรายการโปรด<br><span style="font-size:12px;">กด ⭐ ที่ผลการค้นหาเพื่อบันทึก</span></div>';
+            list.style.display = 'block';
+            return;
+        }
+        list.innerHTML = `<div class="history-header"><span style="color:#ffd600;"><span class="material-symbols-outlined">star</span> รายการโปรด</span></div>` + favs.map(i => `<div class="list-item" onclick="window.selectLocation('${i.name}', ${i.lat}, ${i.lon})" style="display:flex; align-items:center; gap:10px;"><span style="color:#ffd600; font-size:18px;">⭐</span><div style="flex:1;"><div style="font-weight:600; color:white;">${i.name}</div></div><button onclick="event.stopPropagation(); window.toggleFavorite('${i.name}', ${i.lat}, ${i.lon}); window.showFavorites();" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:5px;"><span class="material-symbols-outlined" style="font-size:18px;">delete</span></button></div>`).join('');
+        list.style.display = 'block';
+    };
     
     const formatSearchText = (text) => {
         let t = text.trim();
@@ -1015,17 +1263,162 @@
     window.smartSearch = (q) => { 
         clearTimeout(searchTimer); const list = $('suggestionList'); $('historyList').style.display = 'none'; 
         if (!(q = q.trim())) return list.style.display = 'none'; 
+        if (q.trim().length < 2) return list.style.display = 'none';
         const smartQuery = formatSearchText(q);
         searchTimer = setTimeout(async () => { 
             try { 
-                let res = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(smartQuery)}&countrycodes=th&limit=8&accept-language=th`)).json(); 
+                list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--text-dim);"><span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">progress_activity</span> กำลังค้นหา...</div>';
+                list.style.display = 'block';
+                let res = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(smartQuery)}&countrycodes=th&limit=10&accept-language=th`)).json(); 
                 if(!res.length) return (list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติมนะครับ</span></div>', list.style.display = 'block'); 
-                list.innerHTML = res.map(i => `<div class="list-item" onclick="window.selectLocation('${i.display_name.split(',')[0]}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span><div style="flex:1;">${i.display_name}</div></div>`).join(''); 
+                list.innerHTML = res.map((item, idx) => {
+                    let name = item.display_name.split(',')[0];
+                    let addr = item.display_name.split(',').slice(1, 3).join(',');
+                    let icon = item.type === 'road' ? 'road' : item.type === 'house' ? 'home' : 'location_on';
+                    let isFav = window.isFavorite(name);
+                    return `<div class="list-item" onclick="window.selectLocation('${name}', ${item.lat}, ${item.lon})" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <span class="material-symbols-outlined item-icon">${icon}</span>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight: 600; color: white; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
+                            <div style="font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${addr}</div>
+                        </div>
+                        <button onclick="event.stopPropagation(); window.toggleFavorite('${name}', ${item.lat}, ${item.lon}); window.smartSearch($('destInput').value);" style="background:none; border:none; cursor:pointer; padding:5px; z-index:10;">
+                            <span style="font-size:18px; color:${isFav ? '#ffd600' : '#555'};">${isFav ? '⭐' : '☆'}</span>
+                        </button>
+                    </div>`;
+                }).join(''); 
                 list.style.display = 'block'; 
-            } catch(e) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--accent-red);">เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์ค้นหา</div>'; list.style.display = 'block'; } 
-        }, 800); 
+            } catch(e) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--accent-red);">เกิดข้อผิดพลาดในการเชื่อมต่อ</div>'; list.style.display = 'block'; } 
+        }, 300); 
     };
 
+    let taxiMap = null;
+    let mapMarker = null;
+    let mapRoute = null;
+    let mapDestMarker = null;
+    
+    window.hideMap = () => {
+        const resultContainer = document.querySelector('.result-container');
+        const fareDisplay = document.getElementById('fareDisplay');
+        const navInfoOverlay = document.getElementById('navInfoOverlay');
+        const navMapContainer = document.getElementById('navMapContainer');
+        
+        resultContainer.classList.remove('has-map');
+        fareDisplay.style.display = 'block';
+        if (navInfoOverlay) navInfoOverlay.classList.remove('active');
+        if (navMapContainer) navMapContainer.style.display = 'none';
+        
+        if (taxiMap) { taxiMap.remove(); taxiMap = null; mapMarker = null; mapDestMarker = null; mapRoute = null; }
+        if (navMap) { navMap.remove(); navMap = null; navCarMarker = null; navDestMarker = null; navRoute = null; }
+    };
+    
+    window.initMap = (startLat, startLon, destLat, destLon, routeKm, routeCoords) => {
+        const mapContainer = document.getElementById('mapContainer');
+        const mapDiv = document.getElementById('taxiMap');
+        const resultContainer = document.querySelector('.result-container');
+        const fareDisplay = document.getElementById('fareDisplay');
+        const bubbleBg = document.querySelector('.bubble-bg-container');
+        
+        // Show map, hide price display
+        mapContainer.style.display = 'block';
+        resultContainer.classList.add('has-map');
+        fareDisplay.classList.add('hidden');
+        bubbleBg.style.display = 'none';
+        
+        // Update distance info
+        if (routeKm) {
+            document.getElementById('mapDistance').innerText = routeKm.toFixed(1) + ' กม.';
+        }
+        
+        // Store route for tracking
+        window.currentRouteCoords = routeCoords || [];
+        window.currentRouteIndex = 0;
+        
+        if (!taxiMap) {
+            taxiMap = L.map('taxiMap', {
+                zoomControl: false,
+                attributionControl: false,
+                dragging: true
+            }).setView([startLat, startLon], 16);
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(taxiMap);
+        }
+        
+        // Clear previous markers
+        if (mapMarker) taxiMap.removeLayer(mapMarker);
+        if (mapDestMarker) taxiMap.removeLayer(mapDestMarker);
+        if (mapRoute) taxiMap.removeLayer(mapRoute);
+        
+        // Start marker (car) - with rotation support
+        let carIcon = L.divIcon({
+            className: '',
+            html: '<div id="carMarker" style="width:32px; height:32px; background:linear-gradient(135deg, #4caf50, #2e7d32); border-radius:50%; border:3px solid white; display:flex; align-items:center; justify-content:center; box-shadow: 0 0 20px rgba(76,175,80,0.9), 0 4px 8px rgba(0,0,0,0.3); transition: transform 0.3s;"><span style="font-size:16px;">🚕</span></div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
+        mapMarker = L.marker([startLat, startLon], {icon: carIcon}).addTo(taxiMap);
+        
+        // Destination marker
+        let destIcon = L.divIcon({
+            className: '',
+            html: '<div style="width:28px; height:28px; background:linear-gradient(135deg, #ef4444, #b91c1c); border-radius:50%; border:3px solid white; display:flex; align-items:center; justify-content:center; box-shadow: 0 0 15px rgba(239,68,68,0.9);"><span style="font-size:14px;">📍</span></div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+        });
+        mapDestMarker = L.marker([destLat, destLon], {icon: destIcon}).addTo(taxiMap);
+        
+        // Draw actual route from OSRM
+        let routePoints = routeCoords && routeCoords.length > 0 ? routeCoords : [[startLat, startLon], [destLat, destLon]];
+        mapRoute = L.polyline(routePoints, {
+            color: '#4caf50',
+            weight: 4,
+            opacity: 0.8,
+            lineCap: 'round'
+        }).addTo(taxiMap);
+        
+        // Zoom in close to start point
+        taxiMap.setView([startLat, startLon], 16);
+        
+        // Invalidate size after display change
+        setTimeout(() => { taxiMap.invalidateSize(); }, 100);
+    };
+    
+    // Update car marker with rotation based on direction
+    window.updateCarDirection = (lat, lon) => {
+        if (!mapMarker || !window.currentRouteCoords || window.currentRouteCoords.length === 0) return;
+        
+        // Find nearest point on route and calculate heading
+        let minDist = Infinity;
+        let nearestIdx = 0;
+        for (let i = 0; i < window.currentRouteCoords.length; i++) {
+            let d = Math.abs(window.currentRouteCoords[i][0] - lat) + Math.abs(window.currentRouteCoords[i][1] - lon);
+            if (d < minDist) { minDist = d; nearestIdx = i; }
+        }
+        
+        // Calculate heading from current to next point
+        if (nearestIdx < window.currentRouteCoords.length - 1) {
+            let curr = window.currentRouteCoords[nearestIdx];
+            let next = window.currentRouteCoords[Math.min(nearestIdx + 5, window.currentRouteCoords.length - 1)];
+            let angle = Math.atan2(next[1] - curr[1], next[0] - curr[0]) * 180 / Math.PI;
+            let carEl = document.getElementById('carMarker');
+            if (carEl) carEl.style.transform = `rotate(${90 - angle}deg)`;
+        }
+    };
+    
+    window.updateMapPosition = (lat, lon) => {
+        if (mapMarker && taxiMap) {
+            mapMarker.setLatLng([lat, lon]);
+            taxiMap.setView([lat, lon], 17);
+            window.updateCarDirection(lat, lon);
+        }
+        // Update full-screen navigation map
+        if (navMap && navCarMarker) {
+            window.updateNavPosition(lat, lon, currentSpeedKmh / 3.6);
+        }
+    };
+    
     window.selectLocation = (name, lat, lon) => { 
         clearTimeout(searchTimer); 
         $('destInput').value = "กำลังคำนวณ..."; 
@@ -1037,20 +1430,28 @@
         window.getRouteData(lat, lon, name); 
     };
     
+    window.currentTollInfo = null;
+    
     window.getRouteData = async (dLat, dLon, name) => { 
         navigator.geolocation.getCurrentPosition(async (pos) => { 
             let route = await window.fetchRouteFromOSRM(dLat, dLon, pos.coords.latitude, pos.coords.longitude);
             if (route) { 
                 currentTrueRemainKm = route.km; 
-                currentTrueRemainSec = route.sec; 
-                window.processRoute(currentTrueRemainKm, currentTrueRemainSec, name); 
+                currentTrueRemainSec = route.sec;
+                window.currentTollInfo = route.tolls || null;
+                window.processRoute(currentTrueRemainKm, currentTrueRemainSec, name);
+                window.startNavigationMap(pos.coords.latitude, pos.coords.longitude, dLat, dLon, name, route.km, route.coords);
             } else { 
-                alert('ไม่สามารถคำนวณเส้นทางได้ กรุณาลองใหม่'); 
-                window.resetAll(); 
+                window.showToast('ไม่สามารถคำนวณเส้นทางได้ กรุณากรอกระยะทางเอง', true);
+                $('destInput').value = name;
+                $('destInput').classList.remove('loading-state');
+                $('kmInput').focus();
             } 
         }, () => { 
-            alert('กรุณาเปิด GPS'); 
-            window.resetAll(); 
+            window.showToast('📍 พบสถานที่: ' + name + ' - กรุณากรอกระยะทางเอง', false);
+            $('destInput').value = name;
+            $('destInput').classList.remove('loading-state');
+            $('kmInput').focus();
         }, { enableHighAccuracy: true }); 
     };
     
@@ -1178,11 +1579,13 @@
                     actualDrivenKm += (dMoved * GPS_CALIBRATION_MULTIPLIER); 
                     currentTrueRemainKm -= (dMoved * GPS_CALIBRATION_MULTIPLIER); 
                     if(currentTrueRemainKm < 0) currentTrueRemainKm = 0; 
-                    lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; 
+                    lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                    window.updateMapPosition(pos.coords.latitude, pos.coords.longitude);
                 }
                 lastPosTime = now; 
             } else { 
-                lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; 
+                lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                window.updateMapPosition(pos.coords.latitude, pos.coords.longitude);
                 lastPosTime = now; 
             } 
             
@@ -1376,6 +1779,7 @@
     window.stopTracking = () => { 
         releaseWakeLock(); 
         window.stopSilentAudio(); 
+        window.hideMap(); // Hide map when tracking stops
         $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('surchargeRow').style.display = 'flex'; if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
     };
     
@@ -1391,6 +1795,7 @@
         $('smallArrivalTime').innerText = '--:--';
         $('totalTollBadge').style.display = 'none';
         
+        window.hideMap(); // Hide map when trip ends
         window.stopTracking(); window.updateFareEstimation(0); window.checkAppStatus(); 
     };
 
@@ -1562,7 +1967,7 @@
                 
                 let manifestLink = document.getElementById('dynamicManifest');
                 if (manifestLink) {
-                    let stringManifest = JSON.stringify({ "name": "Taxi: " + displayNameVal, "short_name": displayNameVal, "start_url": ".", "display": "fullscreen", "background_color": "#090a0f", "theme_color": "#090a0f", "icons": [ { "src": safeIcon, "sizes": "192x192", "type": "image/jpeg" }, { "src": safeIcon, "sizes": "512x512", "type": "image/jpeg" } ] });
+                    let stringManifest = JSON.stringify({ "name": "Taxi: " + displayNameVal, "short_name": displayNameVal, "start_url": ".", "display": "fullscreen", "orientation": "portrait", "background_color": "#121212", "theme_color": "#121212", "categories": ["utilities", "navigation"], "icons": [ { "src": safeIcon, "sizes": "192x192", "type": "image/jpeg" }, { "src": safeIcon, "sizes": "512x512", "type": "image/jpeg" } ] });
                     manifestLink.href = 'data:application/manifest+json,' + encodeURIComponent(stringManifest); 
                 }
 
@@ -1975,6 +2380,185 @@
             if(catIndex !== -1) { newData[catIndex].items = newData[catIndex].items.filter(i => i.id !== itemId); if(newData[catIndex].items.length === 0) { newData.splice(catIndex, 1); } }
             try { await setDoc(doc(db, "system", "service_data"), { categories: newData }); window.showToast("ลบเรียบร้อย"); window.cancelEditService(); } catch(e) {}
         }
+    };
+</script>
+
+<!-- Full-screen Navigation Map -->
+
+
+<script>
+    let navMap = null;
+    let navCarMarker = null;
+    let navDestMarker = null;
+    let navRoute = null;
+    let navRouteCoords = [];
+    let navCurrentIndex = 0;
+    
+    window.startNavigationMap = (startLat, startLon, destLat, destLon, destName, routeKm, routeCoords) => {
+        // Show navigation inside result container
+        const resultContainer = document.querySelector('.result-container');
+        const navInfoOverlay = document.getElementById('navInfoOverlay');
+        const navMapContainer = document.getElementById('navMapContainer');
+        const fareDisplay = document.getElementById('fareDisplay');
+        
+        resultContainer.classList.add('has-map');
+        navInfoOverlay.classList.add('active');
+        navMapContainer.style.display = 'block';
+        fareDisplay.style.display = 'none';
+        
+        document.getElementById('navDestName').innerText = destName;
+        document.getElementById('navDistance').innerText = routeKm.toFixed(1);
+        navRouteCoords = routeCoords || [];
+        navCurrentIndex = 0;
+        navLastPosition = {lat: startLat, lng: startLon};
+        
+        // Display toll info on all displays
+        window.updateTollDisplay();
+        window.updateNavTollDisplay();
+        
+        setTimeout(() => {
+            if (!navMap) {
+                navMap = L.map('navMap', {
+                    zoomControl: false,
+                    attributionControl: false,
+                    dragging: true,
+                    touchZoom: true
+                }).setView([startLat, startLon], 17);
+                
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19
+                }).addTo(navMap);
+            } else {
+                navMap.setView([startLat, startLon], 17);
+            }
+            
+            // Clear previous
+            if (navCarMarker) navMap.removeLayer(navCarMarker);
+            if (navDestMarker) navMap.removeLayer(navDestMarker);
+            if (navRoute) navMap.removeLayer(navRoute);
+            
+            // Car marker
+            let carIcon = L.divIcon({
+                className: '',
+                html: '<div class="nav-car-marker" id="navCarIcon">🚕</div>',
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
+            navCarMarker = L.marker([startLat, startLon], {icon: carIcon}).addTo(navMap);
+            
+            // Destination marker
+            let destIcon = L.divIcon({
+                className: '',
+                html: '<div class="nav-dest-marker">📍</div>',
+                iconSize: [32, 32],
+                iconAnchor: [16, 32]
+            });
+            navDestMarker = L.marker([destLat, destLon], {icon: destIcon}).addTo(navMap);
+            
+            // Draw route
+            if (navRouteCoords.length > 0) {
+                navRoute = L.polyline(navRouteCoords, {
+                    color: '#4caf50',
+                    weight: 5,
+                    opacity: 0.9
+                }).addTo(navMap);
+            }
+            
+            navMap.setView([startLat, startLon], 16);
+            navMap.invalidateSize();
+            
+            // Show recenter button when user drags the map
+            navMap.on('dragstart', () => {
+                document.getElementById('recenterBtn').style.display = 'flex';
+            });
+            
+            // Hide recenter button when map is centered
+            navMap.on('moveend', () => {
+                if (navLastPosition) {
+                    let center = navMap.getCenter();
+                    let dist = Math.sqrt(Math.pow(center.lat - navLastPosition.lat, 2) + Math.pow(center.lng - navLastPosition.lng, 2));
+                    if (dist < 0.0001) {
+                        document.getElementById('recenterBtn').style.display = 'none';
+                    }
+                }
+            });
+        }, 200);
+    };
+    
+    let navLastPosition = null;
+    
+    window.recenterMap = () => {
+        if (navMap) {
+            // Use car marker position if available, otherwise use lastPosition
+            let pos = navCarMarker ? navCarMarker.getLatLng() : navLastPosition;
+            if (pos) {
+                navMap.setView([pos.lat, pos.lng], 17);
+                document.getElementById('recenterBtn').style.display = 'none';
+            }
+        }
+    };
+    
+    window.updateNavPosition = (lat, lon, speed) => {
+        if (!navMap || !navCarMarker) return;
+        
+        navLastPosition = {lat: lat, lng: lon};
+        navCarMarker.setLatLng([lat, lon]);
+        navMap.setView([lat, lon], 17);
+        
+        // Update speed
+        let speedKmh = speed ? (speed * 3.6).toFixed(0) : '0';
+        document.getElementById('navSpeed').innerText = speedKmh;
+        
+        // Calculate remaining distance
+        if (navRouteCoords.length > 0) {
+            let minDist = Infinity;
+            let nearestIdx = 0;
+            for (let i = 0; i < navRouteCoords.length; i++) {
+                let d = Math.sqrt(Math.pow(navRouteCoords[i][0] - lat, 2) + Math.pow(navRouteCoords[i][1] - lon, 2));
+                if (d < minDist) { minDist = d; nearestIdx = i; }
+            }
+            navCurrentIndex = nearestIdx;
+            
+            // Calculate remaining distance in km
+            let remainMeters = 0;
+            for (let i = nearestIdx; i < navRouteCoords.length - 1; i++) {
+                let d = Math.sqrt(Math.pow(navRouteCoords[i+1][0] - navRouteCoords[i][0], 2) + Math.pow(navRouteCoords[i+1][1] - navRouteCoords[i][1], 2));
+                remainMeters += d * 111000; // approx meters
+            }
+            document.getElementById('navDistance').innerText = (remainMeters / 1000).toFixed(1);
+            
+            // ETA
+            let etaMin = speed > 0 ? Math.ceil((remainMeters / 1000) / (speed * 3.6) * 60) : '-';
+            document.getElementById('navETA').innerText = etaMin + ' น.';
+            
+            // Rotate car
+            if (nearestIdx < navRouteCoords.length - 1) {
+                let curr = navRouteCoords[nearestIdx];
+                let next = navRouteCoords[Math.min(nearestIdx + 3, navRouteCoords.length - 1)];
+                let angle = Math.atan2(next[1] - curr[1], next[0] - curr[0]) * 180 / Math.PI;
+                let carEl = document.getElementById('navCarIcon');
+                if (carEl) carEl.style.transform = `rotate(${90 - angle}deg)`;
+            }
+        }
+    };
+    
+    window.closeNavigation = () => {
+        const resultContainer = document.querySelector('.result-container');
+        const navInfoOverlay = document.getElementById('navInfoOverlay');
+        const navMapContainer = document.getElementById('navMapContainer');
+        const fareDisplay = document.getElementById('fareDisplay');
+        
+        resultContainer.classList.remove('has-map');
+        navInfoOverlay.classList.remove('active');
+        navMapContainer.style.display = 'none';
+        fareDisplay.style.display = 'block';
+        
+        if (navMap) { navMap.remove(); navMap = null; navCarMarker = null; navDestMarker = null; navRoute = null; }
+    };
+    
+    window.endNavigation = () => {
+        window.closeNavigation();
+        window.stopTracking();
     };
 </script>
 </body>
