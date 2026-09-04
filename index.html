@@ -1992,6 +1992,8 @@
             }
             if (await doRoute(13.7563, 100.5018, '📍 พบสถานที่: ' + name + ' - ใช้ศูนย์กลางกรุงเทพฯ เป็นจุดเริ่มต้น')) return;
             window.showToast('ไม่สามารถคำนวณเส้นทางได้ กรุณากรอกระยะทางเอง', true);
+            destLoc = null; // หาเส้นทางไม่เจอ = ยังไม่มีปลายทางจริง (ซ่อนสวิตช์ทางด่วน Live/Zoom)
+            window.syncTollToggleVisibility();
             $('destInput').value = name;
             $('destInput').classList.remove('loading-state');
             $('kmInput').focus();
