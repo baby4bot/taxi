@@ -1326,13 +1326,11 @@
 
     const $ = id => document.getElementById(id);
 
-    // ปุ่มเลี่ยงด่วน/ขึ้นด่วน จะแสดงเฉพาะเมื่อมีผลค้นหาจุดหมายปรากฏ (ซ่อนตอนยังไม่ได้ค้นหา/เลือกแล้ว)
+    // ปุ่มเลี่ยงด่วน/ขึ้นด่วน จะแสดงเฉพาะเมื่อมีจุดหมายปลายทางแล้ว (ซ่อนตอนยังไม่เลือกปลายทาง)
     window.syncTollToggleVisibility = () => {
         const btn = $('btnTollToggleMain');
         if (!btn) return;
-        const list = $('suggestionList');
-        const show = !!(list && list.style.display === 'block' && list.innerHTML.trim());
-        btn.classList.toggle('is-hidden', !show);
+        btn.classList.toggle('is-hidden', !destLoc);
     };
 
     async function requestWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
@@ -1362,6 +1360,7 @@
             if (zIcon) zIcon.innerText = isToll ? 'add_road' : 'route';
             tollToggleZoom.title = isToll ? 'ขึ้นทางด่วน (แตะเพื่อเลี่ยงทางด่วน)' : 'เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)';
         }
+        window.syncTollToggleVisibility();
     };
 
     // ตั้งค่าโหมดทางด่วน + จำค่าที่เลือกไว้ (localStorage) เพื่อใช้ในครั้งถัดไป
@@ -1786,15 +1785,15 @@
 
     window.smartSearch = (q) => { 
         clearTimeout(searchTimer); const list = $('suggestionList'); $('historyList').style.display = 'none'; 
-        if (!(q = q.trim())) { list.style.display = 'none'; window.syncTollToggleVisibility(); return; }
-        if (q.trim().length < 2) { list.style.display = 'none'; window.syncTollToggleVisibility(); return; }
+        if (!(q = q.trim())) return list.style.display = 'none'; 
+        if (q.trim().length < 2) return list.style.display = 'none';
         const smartQuery = formatSearchText(q);
         searchTimer = setTimeout(async () => { 
             try { 
                 list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--text-dim);"><span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">progress_activity</span> กำลังค้นหา...</div>';
                 list.style.display = 'block';
                 let res = await (await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(smartQuery)}.json?key=${TOMTOM_KEY}&countrySet=TH&limit=15&language=th-TH&typeahead=true&minFuzzyLevel=2&maxFuzzyLevel=4&idxSet=Geo,Addr,PAD,POI`)).json(); 
-                if(!res.results || !res.results.length) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติมนะครับ</span></div>'; list.style.display = 'block'; window.syncTollToggleVisibility(); return; }
+                if(!res.results || !res.results.length) return (list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติมนะครับ</span></div>', list.style.display = 'block'); 
                 list.innerHTML = res.results.map((item, idx) => {
                     let name = (item.poi && item.poi.name) ? item.poi.name : ((item.address && item.address.freeformAddress) ? item.address.freeformAddress.split(',')[0] : 'สถานที่');
                     let addr = (item.address && item.address.freeformAddress) ? item.address.freeformAddress : '';
@@ -1813,8 +1812,7 @@
                     </div>`;
                 }).join(''); 
                 list.style.display = 'block'; 
-                window.syncTollToggleVisibility(); 
-            } catch(e) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--accent-red);">เกิดข้อผิดพลาดในการเชื่อมต่อ</div>'; list.style.display = 'block'; window.syncTollToggleVisibility(); } 
+            } catch(e) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--accent-red);">เกิดข้อผิดพลาดในการเชื่อมต่อ</div>'; list.style.display = 'block'; } 
         }, 300); 
     };
 
@@ -1951,8 +1949,8 @@
         $('destInput').classList.add('loading-state'); 
         $('historyList').style.display = 'none'; 
         $('suggestionList').style.display = 'none'; 
-        window.syncTollToggleVisibility();
         destLoc = { lat, lon }; 
+        window.syncTollToggleVisibility();
         window.saveHistory(name, lat, lon); 
         window.getRouteData(lat, lon, name); 
     };
@@ -2338,12 +2336,12 @@
         releaseWakeLock(); 
         window.stopSilentAudio(); 
         window.hideMap(); // Hide map when tracking stops
-        $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('surchargeRow').style.display = 'flex'; if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
+        $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('surchargeRow').style.display = 'flex'; if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false;        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
+        window.syncTollToggleVisibility();
     };
     
-    window.resetAll = () => { 
+    window.resetAll = () => {  
         $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; 
-        window.syncTollToggleVisibility();
         window.isManualRunning = false; window.surchargeList = []; trafficSeconds = 0; window.updateSurchargeUI();
         window.renderStartButton();
         $('manualTimerBtn').classList.remove('active');
