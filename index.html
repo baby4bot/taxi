@@ -206,6 +206,11 @@
         .small-nav-btn { width: 60px; height: 60px; border-radius: 20px; background: #4285F4; border: none; cursor: pointer; flex-shrink: 0; display: none; justify-content: center; align-items: center; box-shadow: 0 4px 15px rgba(66, 133, 244, 0.4); transition: 0.3s; }
         .small-nav-btn:active { transform: scale(0.95); }
         .small-nav-btn img { width: 30px; height: 30px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); }
+        /* ปุ่ม หยุดมิเตอร์ชั่วคราว / เริ่มต่อ (คนขับกดเองกลางเที่ยว) */
+        .meter-pause-btn { width: 60px; height: 60px; border-radius: 20px; border: none; cursor: pointer; flex-shrink: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-family: 'Kanit', sans-serif; color: #fff; transition: 0.3s; -webkit-user-select: none; user-select: none; }
+        .meter-pause-btn.idle { background: linear-gradient(135deg, #f1c40f, #e67e22); box-shadow: 0 4px 15px rgba(241,196,15,0.35); }
+        .meter-pause-btn.paused { background: linear-gradient(135deg, #2ecc71, #27ae60); box-shadow: 0 4px 15px rgba(46,204,113,0.45); animation: tollFadeSlideIn 0.25s ease-out; }
+        .meter-pause-btn.idle:active, .meter-pause-btn.paused:active { transform: scale(0.95); }
 
         .btn-reset { flex-shrink: 0; width: 100%; padding: 18px; border: none; border-radius: 20px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; background: var(--accent-red); color: white; box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3); margin-bottom: 20px; }
 
@@ -1125,6 +1130,10 @@
     <div class="action-row">
         <button onclick="window.toggleManualTimer()" class="manual-timer-btn" id="manualTimerBtn">
             </button>
+        <button onclick="window.toggleMeterPause()" class="meter-pause-btn idle" id="meterPauseBtn" title="หยุดมิเตอร์ชั่วคราว">
+            <span class="material-symbols-outlined" style="font-size:24px;">pause</span>
+            <span style="font-size:10px; font-weight:600; line-height:1.1;">หยุด</span>
+        </button>
         <button onclick="window.startNavigation()" class="small-nav-btn" id="smallNavBtn">
             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" />            
         </button>
@@ -1264,6 +1273,8 @@
         
         <button onclick="window.modalStopTripClick();" class="manual-timer-btn" id="modalStopBtn" style="background: var(--accent-red); width: 100%; justify-content: space-between; margin-bottom: 15px; font-size: 18px; padding: 12px 20px;">
             </button>
+        
+        <button onclick="window.toggleMeterPause()" class="manual-timer-btn" id="zoomPauseBtn" style="display:none; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); width:100%; justify-content:center; align-items:center; gap:4px; margin-bottom:12px; font-size:15px; padding:11px 16px;"><span class="material-symbols-outlined" style="font-size:18px;">pause</span> หยุดมิเตอร์ชั่วคราว</button>
         
         <div class="tz-close-text" onclick="window.toggleModal('trackerZoomOverlay', false)">แตะที่นี่เพื่อย่อหน้าจอ</div>
     </div>
@@ -1407,7 +1418,10 @@
     let pauseLog = [], pauseOpenAt = null; // รายการที่ปิดแล้ว {s: เวลาหยุด, r: เวลากลับมา} + เวลาหยุดของรายการที่ยังไม่ปิด
     const openPause = (t) => { if (pauseOpenAt === null) pauseOpenAt = t; };
     const closePause = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 8000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } };
+    const closePauseManual = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 2000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } }; // กด "หยุดมิเตอร์ชั่วคราว" เอง → ลงรายการแม้สั้นแค่ 2 วิ (แตะพลาด < 2 วิ ไม่รก)
     window.isManualRunning = false;
+    window.isMeterPaused = false; // ⏸️ คนขับกด "หยุดมิเตอร์ชั่วคราว" เองกลางเที่ยว (เหมือนลงธง: ไม้นับเวลา/กิโลเพิ่ม)
+    let meterPauseToastAt = 0;
 
     let loggedInUserId = localStorage.getItem('taxi_user_id');
     let currentUserRole = "User";
@@ -1450,8 +1464,15 @@
     };
     const resumeFromHidden = () => {
         if (!window.isManualRunning) return;
-        closePause(Date.now()); // ปิดรายการหยุดพัก (เฉพาะ >= 8 วิ กันรายการรกจากสลับแอปสั้นๆ)
         requestWakeLock();
+        if (window.isMeterPaused) {
+            // ⏸️ ยังกด "หยุดมิเตอร์ชั่วคราว" ค้างไว้ → ไม่ปิดรายการหยุด / ไม่เบิกเวลาจอด-ระยะทาง (ธงลงแล้ว)
+            hiddenGapStart = null; hiddenLastPos = null;
+            window.saveActiveTrip(true);
+            if (typeof window.updateLiveMeterDisplay === 'function') window.updateLiveMeterDisplay();
+            return;
+        }
+        closePause(Date.now()); // ปิดรายการหยุดพัก (เฉพาะ >= 8 วิ กันรายการรกจากสลับแอปสั้นๆ)
         // ข้ามการคิดเวลาช่วงที่ซ่อนไว้ก่อน (ยังไม่รู้ว่ารถจอดหรือวิ่ง) → ให้ catchUp ตัดสินใจเบิกทีเดียวเมื่อได้ตำแหน่งจริง
         if (hiddenGapStart !== null && Date.now() - hiddenGapStart >= 8000) {
             lastCalcTime = Date.now();
@@ -2228,6 +2249,7 @@
     // => แม้เบราว์เซอร์ลดความถี่ตอนซ่อนหน้าต่าง เวลาก็ยังตรงกับมิเตอร์จริง ไม่เพี้ยน
     window.advanceMeterTime = (now) => {
         if (!window.isManualRunning || !startTime) return;
+        if (window.isMeterPaused) { lastCalcTime = now; return; } // ⏸️ หยุดมิเตอร์ชั่วคราว = ไม้นับเวลาจอด/ไม่ลด ETA
         if (lastCalcTime === null) lastCalcTime = startTime;
         const deltaSec = (now - lastCalcTime) / 1000;
         if (deltaSec <= 0) { lastCalcTime = now; return; }
@@ -2252,6 +2274,7 @@
     // - วิ่งไปช่วงซ่อน (เที่ยวมีปลายทาง) → ขอเส้นทางใหม่ เบิกระยะทางที่วิ่งจริง; ขอเส้นทางไม่ได้ → ใช้เส้นตรงสำรอง
     window.catchUpDrivenKmAfterHidden = async () => {
         if (!window.isManualRunning || kmCatchUpBusy) return;
+        if (window.isMeterPaused) { hiddenGapStart = null; hiddenLastPos = null; return; } // ⏸️ ธงลง (หยุดมิเตอร์) → ไม่เบิกอะไร
         if (hiddenGapStart === null) return;
         const gapSec = (Date.now() - hiddenGapStart) / 1000;
         const gpsPausedSec = (Date.now() - (lastPosTime || 0)) / 1000;
@@ -2333,7 +2356,8 @@
             destName: destLoc ? $('destInput').value.trim() : '',
             surcharges: window.surchargeList.slice(),
             baseFare: window.baseFare,
-            pauseLog: pauseLog.slice(), pauseOpenAt: pauseOpenAt
+            pauseLog: pauseLog.slice(), pauseOpenAt: pauseOpenAt,
+            paused: window.isMeterPaused ? true : false
         };
         try { localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(payload)); } catch(e) {}
     };
@@ -2415,6 +2439,7 @@
         if (!gapStart) return;
         const gapSec = (Date.now() - gapStart) / 1000;
         if (gapSec < 8) return; // ปิดไปแป๊บเดียว ไม่ต้องเบิก
+        if (data.paused) return; // ⏸️ กด "หยุดมิเตอร์ชั่วคราว" ไว้ก่อนแอปตาย → ธงลงแล้ว ไม่เบิกเวลาจอด/ระยะทางตอนเปิดใหม่
         window.crashCatchUpBusy = true;
         let caughtTimeSec = 0, caughtKm = 0;
         try {
@@ -2513,6 +2538,52 @@
     };
     window.addEventListener('pagehide', () => { if (window.isManualRunning) window.saveActiveTrip(true); });
 
+    // ⏸️▶️ หยุดมิเตอร์ชั่วคราว / เริ่มต่อ — คนขับกดเองกลางเที่ยว (เหมือนลงธง): ไม้นับเวลา/กิโลเพิ่ม แต่ยังอยู่กลางเที่ยว
+    // ช่วงที่หยุดจะถูกบันทึกลง pauseLog และโผล่เป็นรายการ "หยุด-เริ่มต่อ" ในหน้าสรุปหลังจบเที่ยว
+    window.updatePauseBtnUI = () => {
+        const running = !!window.isManualRunning;
+        const paused = !!window.isMeterPaused;
+        const b = document.getElementById('meterPauseBtn');
+        if (b) {
+            b.style.display = running ? 'flex' : 'none';
+            b.className = 'meter-pause-btn ' + (paused ? 'paused' : 'idle');
+            b.title = paused ? 'เริ่มต่อมิเตอร์' : 'หยุดมิเตอร์ชั่วคราว';
+            b.innerHTML = paused
+                ? '<span class="material-symbols-outlined" style="font-size:24px;">play_arrow</span><span style="font-size:10px; font-weight:600; line-height:1.1;">เริ่มต่อ</span>'
+                : '<span class="material-symbols-outlined" style="font-size:24px;">pause</span><span style="font-size:10px; font-weight:600; line-height:1.1;">หยุด</span>';
+        }
+        const zb = document.getElementById('zoomPauseBtn');
+        if (zb) {
+            zb.style.display = running ? 'flex' : 'none';
+            zb.innerHTML = paused
+                ? '<span class="material-symbols-outlined" style="font-size:18px;">play_arrow</span> เริ่มต่อมิเตอร์'
+                : '<span class="material-symbols-outlined" style="font-size:18px;">pause</span> หยุดมิเตอร์ชั่วคราว';
+            zb.style.background = paused ? 'linear-gradient(135deg, #2ecc71, #27ae60)' : 'rgba(255,255,255,0.08)';
+            zb.style.border = '1px solid ' + (paused ? 'rgba(46,204,113,0.6)' : 'rgba(255,255,255,0.2)');
+            zb.style.color = '#fff';
+        }
+    };
+    window.toggleMeterPause = () => {
+        if (!window.isManualRunning) return;
+        window.playSound('toggle');
+        if (window.isMeterPaused) {
+            // ▶️ เริ่มต่อมิเตอร์
+            window.isMeterPaused = false;
+            lastCalcTime = Date.now(); // ห้ามคิดค่าเวลาช่วงที่หยุดค้าง
+            closePauseManual(Date.now()); // บันทึกรายการ "หยุด → เริ่มต่อ" (>= 2 วิ กันแตะพลาด) ให้โผล่ในหน้าสรุป
+            window.showToast('เริ่มต่อมิเตอร์แล้ว ▶️');
+        } else {
+            // ⏸️ หยุดมิเตอร์ชั่วคราว
+            openPause(Date.now());
+            window.isMeterPaused = true;
+            window.showToast('⏸️ หยุดมิเตอร์ชั่วคราว (แตะปุ่มเขียวเมื่อพร้อมเริ่มต่อ)');
+        }
+        window.saveActiveTrip(true);
+        window.updatePauseBtnUI();
+        if (window.isManualRunning) window.updateLiveMeterDisplay();
+        window.checkAppStatus();
+    };
+
     window.startMeterAndTracking = (seed) => { 
         if (window.isManualRunning) return;
         
@@ -2532,6 +2603,7 @@
             // ⏯️ เริ่มต่อจากเที่ยวที่บันทึกไว้ (แอปปิด/รีเฟรชกระทันหัน): คงเวลาเริ่ม กม. เวลาจอด ค่าทางด่วน เดิมไว้
             actualDrivenKm = seed.km || 0;
             trafficSeconds = seed.trafficSec || 0;
+            window.isMeterPaused = !!seed.paused; // คงสถานะ "หยุดมิเตอร์ชั่วคราว" ไว้ ถ้าแอปตายตอนกำลังหยุด
             currentTrueRemainKm = seed.remainKm || 0;
             currentTrueRemainSec = seed.remainSec || 0;
             currentSpeedKmh = 0; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; // รอ fix ใหม่ยืนยันจอดก่อน ค่อยคิดเวลาจอด
@@ -2550,7 +2622,7 @@
         } else {
             actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; trafficCharging = true; lastFixSpeedKmh = null;
             startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime; lastStopFixAt = startTime;
-            pauseLog = []; pauseOpenAt = null;
+            pauseLog = []; pauseOpenAt = null; window.isMeterPaused = false;
         }
         
         $('driveCovered').innerText = actualDrivenKm.toFixed(2); 
@@ -2624,7 +2696,14 @@
                 
                 // ปรับปรุงการกรองสัญญาณและการชดเชย GPS ให้สอดคล้องกับมิเตอร์จริง
                 const GPS_CALIBRATION_MULTIPLIER = 1.05; // ชดเชย GPS 5% สำหรับกันโค้งและจุดบอด
-                if (dMoved > 0.003) { // ปรับเกณฑ์ขั้นต่ำลงเป็น 3 เมตร ให้จับคลานตอนรถติดได้ไวขึ้น
+                if (window.isMeterPaused) {
+                    // ⏸️ ธงลง (หยุดมิเตอร์): ขยับตำแหน่งอ้างอิง/แผนที่ตามจริง แต่ไม่นับกิโล
+                    // => ตอนเริ่มต่อจะได้ไม่โดนคิดระยะทางย้อนกลับช่วงที่หยุด
+                    if (dMoved > 0.003 || !lastPos) {
+                        lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                        window.updateMapPosition(pos.coords.latitude, pos.coords.longitude);
+                    }
+                } else if (dMoved > 0.003) { // ปรับเกณฑ์ขั้นต่ำลงเป็น 3 เมตร ให้จับคลานตอนรถติดได้ไวขึ้น
                     actualDrivenKm += (dMoved * GPS_CALIBRATION_MULTIPLIER); 
                     currentTrueRemainKm -= (dMoved * GPS_CALIBRATION_MULTIPLIER); 
                     if(currentTrueRemainKm < 0) currentTrueRemainKm = 0; 
@@ -2648,6 +2727,7 @@
             } 
         }, null, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
         
+        window.updatePauseBtnUI();
         window.updateLiveMeterDisplay();
     };
 
@@ -2720,6 +2800,7 @@
     window.finishTripWithSummary = () => {
         window.playSound('stop');
         if (typeof window.advanceMeterTime === 'function') window.advanceMeterTime(Date.now()); // ให้วินาทีสุดท้ายครบก่อนสรุป
+        if (pauseOpenAt !== null) closePauseManual(Date.now()); // ปิดรายการ "หยุดมิเตอร์ชั่วคราว" ที่ค้างอยู่ ให้ขึ้นในสรุปเป็นรายการหยุด-เริ่มต่อ
         const snap = {
             startTime: startTime,
             endTime: Date.now(),
@@ -2862,7 +2943,7 @@
                     </div>
                     <div style="position:absolute; left:0; right:0; display:flex; flex-direction:column; align-items:center; pointer-events:none;">
                         <div style="display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div>
-                        <div style="font-size:11px; font-weight:400; color:rgba(255,255,255,0.8);">${Math.floor(elapsed/60)} นาที ${elapsed%60} วิ</div>
+                        <div style="font-size:11px; font-weight:400; color:rgba(255,255,255,0.8);">${window.isMeterPaused ? '⏸️ หยุดชั่วคราว' : Math.floor(elapsed/60) + ' นาที ' + elapsed%60 + ' วิ'}</div>
                     </div>
                     <div style="font-size:22px; font-weight:700; z-index:2;">${displayFare} ฿</div>
                 </div>
@@ -2895,7 +2976,7 @@
             
             let eMins = Math.floor(elapsed / 60); let eSecs = elapsed % 60;
             let hStr = Math.floor(eMins/60) > 0 ? `${Math.floor(eMins/60)} ชม. ` : "";
-            $('tzElapsedTime').innerText = `${hStr}${eMins%60} นาที ${eSecs} วิ`;
+            $('tzElapsedTime').innerText = window.isMeterPaused ? '⏸️ หยุดชั่วคราว' : `${hStr}${eMins%60} นาที ${eSecs} วิ`;
 
             let remainMins = Math.ceil(currentTrueRemainSec / 60); if(remainMins < 1) remainMins = 1;
             let arrTimeStr = new Date(Date.now() + remainMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
@@ -2927,7 +3008,7 @@
                     </div>
                     <div style="position:absolute; left:0; right:0; display:flex; flex-direction:column; align-items:center; pointer-events:none;">
                         <div style="display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div>
-                        <div style="font-size:12px; font-weight:400; color:rgba(255,255,255,0.8);">${Math.floor(elapsed/60)} นาที ${elapsed%60} วิ</div>
+                        <div style="font-size:12px; font-weight:400; color:rgba(255,255,255,0.8);">${window.isMeterPaused ? '⏸️ หยุดชั่วคราว' : Math.floor(elapsed/60) + ' นาที ' + elapsed%60 + ' วิ'}</div>
                     </div>
                     <div style="font-size:24px; font-weight:700; z-index:2;">${displayFare} ฿</div>
                 </div>
@@ -2939,6 +3020,7 @@
         if(routeUpdateTimer) clearInterval(routeUpdateTimer); 
         routeUpdateTimer = setInterval(async () => { 
             if(!lastPos || !destLoc) return; 
+            if (window.isMeterPaused) return; // ⏸️ หยุดมิเตอร์ชั่วคราว = ไม้อัปเดต ETA/เส้นทาง (ธงลง)
             let route = await window.fetchRouteFromTomTom(destLoc.lat, destLoc.lon, lastPos.lat, lastPos.lon);
             if(route) {
                 currentTrueRemainKm = route.km; 
@@ -2957,6 +3039,8 @@
         window.hideMap(); // Hide map when tracking stops
         $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; window.syncFareTollBtn(); if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false;        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
         lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null;
+        window.isMeterPaused = false;
+        window.updatePauseBtnUI();
         window.syncTollToggleVisibility();
     };
     
