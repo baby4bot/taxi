@@ -1378,6 +1378,7 @@
             tollToggleZoom.title = isToll ? 'ขึ้นทางด่วน (แตะเพื่อเลี่ยงทางด่วน)' : 'เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)';
         }
         window.syncTollToggleVisibility();
+        if (window.updateFareTollBtnText) window.updateFareTollBtnText();
     };
 
     // ตั้งค่าโหมดทางด่วนตามค่าจาก Firestore (บันทึกต่อบัญชี) + เก็บ localStorage เป็นแคช
@@ -1484,6 +1485,27 @@
             el.innerHTML = `🛣️ ค่าทางด่วน (โดยประมาณ) ${t.booths.length} ช่วง: ${t.booths.map(b => `${b.price}฿`).join(' + ')} = <b>${t.total} ฿</b>`;
         } else {
             el.style.display = 'none';
+        }
+        window.updateFareTollBtnText();
+    };
+
+    // ยอดรวมค่าทางด่วนจริงของเส้นทางปัจจุบัน (เฉพาะโหมดขึ้นทางด่วน + มีปลายทาง + เส้นทางมีช่วงทางด่วน)
+    window.getRouteTollTotal = () => {
+        const t = window.currentTollInfo;
+        return (destLoc && window.isTollwayMode && t && t.hasTolls && t.booths && t.booths.length > 0 && t.total > 0) ? t.total : 0;
+    };
+
+    // แสดงยอดรวมทางด่วนจริงบนปุ่ม "+ ค่าทางด่วน" ในช่องประเมินราคา (เช่น "ทางด่วน 155฿") เมื่อเส้นทางมีทางด่วน
+    window.updateFareTollBtnText = () => {
+        const btn = document.getElementById('fareTollBtn');
+        if (!btn) return;
+        const total = window.getRouteTollTotal();
+        if (total > 0) {
+            btn.innerHTML = `<span class="material-symbols-outlined">toll</span> ทางด่วน ${total}฿`;
+            btn.title = `เส้นทางนี้มีค่าทางด่วนโดยประมาณรวม ${total}฿ — แตะเพื่อเพิ่มเข้ากับค่าโดยสาร`;
+        } else {
+            btn.innerHTML = `<span class="material-symbols-outlined">toll</span> + ค่าทางด่วน`;
+            btn.title = 'เพิ่มค่าทางด่วน (บวกเพิ่มจากมิเตอร์)';
         }
     };
     
@@ -1730,7 +1752,8 @@
     window.addSurcharge = (amount, name) => { window.surchargeList.push({ name: name, amount: amount, id: Date.now() }); window.updateSurchargeUI(); };
 
     window.promptToll = () => {
-        document.getElementById('tollInput').value = '';
+        const total = window.getRouteTollTotal ? window.getRouteTollTotal() : 0;
+        document.getElementById('tollInput').value = total > 0 ? total : '';
         window.toggleModal('tollModal', true);
         setTimeout(() => document.getElementById('tollInput').focus(), 300);
     };
@@ -2027,6 +2050,7 @@
             if (await doRoute(13.7563, 100.5018, '📍 พบสถานที่: ' + name + ' - ใช้ศูนย์กลางกรุงเทพฯ เป็นจุดเริ่มต้น')) return;
             window.showToast('ไม่สามารถคำนวณเส้นทางได้ กรุณากรอกระยะทางเอง', true);
             destLoc = null; // หาเส้นทางไม่เจอ = ยังไม่มีปลายทางจริง (ซ่อนสวิตช์ทางด่วน Live/Zoom)
+            window.currentTollInfo = null;
             window.syncTollToggleVisibility();
             $('destInput').value = name;
             $('destInput').classList.remove('loading-state');
@@ -2218,6 +2242,7 @@
         if (!btn) return;
         let km = parseFloat($('kmInput').value) || 0;
         btn.style.display = (window.isManualRunning || km > 0) ? 'flex' : 'none';
+        window.updateFareTollBtnText();
     };
 
     window.checkAppStatus = () => { 
@@ -2391,6 +2416,7 @@
         $('smallArrivalTime').innerText = '--:--';
         $('totalTollBadge').style.display = 'none';
         $('routeTollInfo').style.display = 'none';
+        window.currentTollInfo = null;
         
         window.hideMap(); // Hide map when trip ends
         window.stopTracking(); window.updateFareEstimation(0); window.checkAppStatus(); 
