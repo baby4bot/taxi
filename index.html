@@ -542,6 +542,13 @@
         .trip-resume-banner.trb-compact .trb-btn.discard { display: none; }
         .trip-resume-banner.trb-compact .trb-btn.resume { padding: 5px 10px; font-size: 12px; border-radius: 9px; }
         .trip-resume-banner.trb-compact .trb-icon { font-size: 17px !important; }
+        /* 🛰️ แถบ "กำลังตรวจสอบ GPS เพื่อเบิกเวลาช่วงที่แอปปิด…" (โชว์หลังกดเริ่มต่อ จนกว่าเบิกคืนเสร็จแล้วถึงมี toast ทอง) */
+        .catchup-status-bar { display: none; align-items: center; gap: 8px; position: fixed; top: 62px; left: 50%; transform: translateX(-50%); z-index: 220; background: linear-gradient(135deg, rgba(20,26,40,0.96), rgba(28,36,54,0.96)); border: 1px solid rgba(250,204,21,0.5); border-radius: 12px; padding: 8px 14px; box-shadow: 0 4px 18px rgba(0,0,0,0.45); font-size: 12.5px; font-weight: 600; color: #ffe08a; white-space: nowrap; animation: catchupStatusIn 0.25s ease-out both; -webkit-tap-highlight-color: transparent; }
+        @keyframes catchupStatusIn { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        .catchup-status-bar.catchup-status-fadeout { animation: catchupStatusOut 0.3s ease-in both; pointer-events: none; }
+        @keyframes catchupStatusOut { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -8px); } }
+        .catchup-spinner { width: 14px; height: 14px; border: 2px solid rgba(250,204,21,0.25); border-top-color: #facc15; border-radius: 50%; animation: catchupSpin 0.8s linear infinite; flex-shrink: 0; }
+        @keyframes catchupSpin { to { transform: rotate(360deg); } }
 
         /* Dropdown results */
         .dropdown-box {
@@ -1044,6 +1051,11 @@
         </div>
         <button onclick="event.stopPropagation(); window.resumeSavedTrip()" class="trb-btn resume">เริ่มต่อ</button>
         <button onclick="event.stopPropagation(); window.discardSavedTrip()" class="trb-btn discard" title="ลบทิ้ง">✕</button>
+    </div>
+    
+    <div id="catchUpStatusBar" class="catchup-status-bar" role="status">
+        <span class="catchup-spinner"></span>
+        <span>กำลังตรวจสอบ GPS เพื่อเบิกเวลาช่วงที่แอปปิด…</span>
     </div>
     
     <div id="searchSectionBox" class="search-section">
@@ -2718,8 +2730,27 @@
             const fareDelta = Math.max(0, calcFareOf(km, trafficSec) - calcFareOf(data.km || 0, data.trafficSec || 0));
             window.lastCatchUpInfo = { type: 'kill', timeSec: caughtTimeSec, km: caughtKm, fareDelta: fareDelta, at: Date.now() };
             window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true, () => { if (typeof window.showCatchUpDetails === 'function') window.showCatchUpDetails(); }); // ทองเด่น + แตะเปิดสรุปยอดที่เบิก
+            window.hideCatchUpStatus(); // เบิกเสร็จแล้ว (มิเตอร์อัปเดต + toast ทอง) → ปิดแถบ "กำลังตรวจสอบ GPS…"
         } catch(e) {}
         finally { window.crashCatchUpBusy = false; }
+    };
+
+    // 🛰️ แถบสถานะ "กำลังตรวจสอบ GPS เพื่อเบิกเวลาช่วงที่แอปปิด…" — โชว์ตอนกดเริ่มต่อจากเที่ยวค้าง ขณะที่ระบบขอ fix แล้วเบิกเวลาจอด/ระยะทาง
+    window.showCatchUpStatus = () => {
+        window.__catchUpStatusRef = (window.__catchUpStatusRef || 0) + 1;
+        const el = document.getElementById('catchUpStatusBar');
+        if (!el) return;
+        clearTimeout(window.__catchUpStatusHideT);
+        el.classList.remove('catchup-status-fadeout');
+        el.style.display = 'flex';
+    };
+    window.hideCatchUpStatus = () => {
+        window.__catchUpStatusRef = Math.max(0, (window.__catchUpStatusRef || 0) - 1);
+        if (window.__catchUpStatusRef > 0) return;
+        const el = document.getElementById('catchUpStatusBar');
+        if (!el) return;
+        el.classList.add('catchup-status-fadeout');
+        window.__catchUpStatusHideT = setTimeout(() => { if (window.__catchUpStatusRef <= 0) el.style.display = 'none'; }, 350);
     };
 
     // ▶️ กด "เริ่มต่อ": เดินมิเตอร์ต่อจากจุดที่ค้างไว้ (เวลาเริ่ม/กม./เวลาจอด/ค่าทางด่วน เดิมทั้งหมด)
@@ -2735,10 +2766,15 @@
         const needDeferredCatchUp = !data.caughtUpAt && !data.paused && gapRef && (Date.now() - gapRef) > 8000;
         window.startMeterAndTracking(data);
         if (needDeferredCatchUp && typeof window.autoCatchUpSavedTrip === 'function') {
+            // ยังมีช่วงที่แอปปิดต้องเบิกคืน → โชว์แถบ "กำลังตรวจสอบ GPS…" สั้น ๆ แล้วปิดเมื่อเบิกเสร็จ (มิเตอร์อัปเดต + toast ทอง)
+            window.showCatchUpStatus();
             let tries = 0;
             (function retryDeferredCatchUp() {
                 if (window.crashCatchUpBusy && tries++ < 12) return setTimeout(retryDeferredCatchUp, 1000); // รอรอบแรก (ตอนโชว์แบนเนอร์) เสร็จก่อน กันซ้ำ
-                if (!window.crashCatchUpBusy) window.autoCatchUpSavedTrip(data);
+                if (window.crashCatchUpBusy) { window.hideCatchUpStatus(); return; } // รอเกิน 12 วิ แล้ว fix ยังไม่มา → ปิดแถบ ไม่ค้างคา
+                const pr = window.autoCatchUpSavedTrip(data);
+                if (pr && typeof pr.finally === 'function') pr.finally(() => window.hideCatchUpStatus()); // เบิกเสร็จ (มี/ไม่มีผล) → ปิดแถบ
+                else window.hideCatchUpStatus();
             })();
         }
         window.showToast('เริ่มต่อจากเที่ยวเดิมแล้ว 🚕');
@@ -2747,6 +2783,7 @@
         const ok = await window.showCustomConfirm('ลบทิ้งเที่ยวที่ค้างอยู่?', 'ข้อมูลเที่ยวที่บันทึกไว้ (ระยะทาง เวลา ค่าทางด่วน) จะถูกลบออกจากเครื่องนี้ กด "เริ่มต่อ" ถ้ายังต้องการใช้', 'danger', 'ลบทิ้ง');
         if (!ok) return;
         window.clearActiveTrip();
+        window.hideCatchUpStatus();
         hideResumeBanner();
         window.showToast('ลบข้อมูลเที่ยวค้างแล้ว');
     };
@@ -3022,6 +3059,7 @@
     // 🧾 จบเที่ยว (จากปุ่มหลัก หรือหน้าจอขยาย): ถ่ายข้อมูลสรุป → รีเซ็ตระบบ → เปิดหน้าสรุปค่าโดยสาร
     // หน้าสรุปโชว์ช่วง "หยุด/เริ่มต่อ" ระหว่างเที่ยว (แอปปิด/สลับหน้าจอ) ให้ผู้โดยสารเห็นอย่างโปร่งใส
     window.finishTripWithSummary = () => {
+        window.hideCatchUpStatus(); // จบเที่ยวแล้ว ไม่ต้องตรวจสอบ GPS ต่อ
         window.playSound('stop');
         if (typeof window.advanceMeterTime === 'function') window.advanceMeterTime(Date.now()); // ให้วินาทีสุดท้ายครบก่อนสรุป
         if (pauseOpenAt !== null) closePauseManual(Date.now()); // ปิดรายการ "หยุดมิเตอร์ชั่วคราว" ที่ค้างอยู่ ให้ขึ้นในสรุปเป็นรายการหยุด-เริ่มต่อ
@@ -3287,6 +3325,7 @@
     window.resetAll = () => {  
         $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; 
         window.isManualRunning = false; window.surchargeList = []; trafficSeconds = 0; pauseLog = []; pauseOpenAt = null; window.updateSurchargeUI(); window.clearActiveTrip();
+        window.hideCatchUpStatus();
         window.renderStartButton();
         $('manualTimerBtn').classList.remove('active');
         
