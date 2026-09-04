@@ -514,10 +514,23 @@
         .small-toll-btn.is-hidden { display: none !important; }
         @keyframes tollFadeSlideIn { from { opacity: 0; transform: translateY(5px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
         .small-toll-btn.toll-pop-in { animation: tollFadeSlideIn 0.28s ease-out both; }
-        .trip-resume-banner { display: none; align-items: center; gap: 10px; background: linear-gradient(135deg, rgba(250,204,21,0.14), rgba(250,204,21,0.04)); border: 1px solid rgba(250,204,21,0.4); border-radius: 16px; padding: 10px 12px; margin: 0 2px 10px 2px; box-shadow: 0 4px 18px rgba(0,0,0,0.35); animation: tollFadeSlideIn 0.28s ease-out; }
+        .trip-resume-banner { display: none; align-items: center; gap: 10px; background: linear-gradient(135deg, rgba(250,204,21,0.14), rgba(250,204,21,0.04)); border: 1px solid rgba(250,204,21,0.4); border-radius: 16px; padding: 10px 12px; margin: 0 2px 10px 2px; box-shadow: 0 4px 18px rgba(0,0,0,0.35); cursor: pointer; -webkit-tap-highlight-color: transparent; }
         .trip-resume-banner .trb-btn { border: none; border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0; font-family: inherit; }
         .trip-resume-banner .trb-btn.resume { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; }
         .trip-resume-banner .trb-btn.discard { background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.75); width: 36px; padding: 8px 0; }
+        /* แบนเนอร์เริ่มต่อ: เลื่อนขึ้นจอเด่น ๆ พร้อมเสียง + สั่นตอนโผล่ */
+        @keyframes trbPop { 0% { opacity: 0; transform: translateY(80px) scale(0.95); } 55% { opacity: 1; transform: translateY(-7px) scale(1.015); box-shadow: 0 0 26px rgba(250,204,21,0.55); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+        .trip-resume-banner.trb-pop { animation: trbPop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+        /* ค่อย ๆ จาง/ย่อลง ก่อนเปลี่ยนเป็นแถบเล็ก */
+        @keyframes trbShrink { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-16px) scale(0.55); } }
+        .trip-resume-banner.trb-collapsing { animation: trbShrink 0.4s ease-in both; pointer-events: none; }
+        /* แถบเล็กหลังยังไม่กดเริ่มต่อใน 30 วิ (แตะเพื่อขยายกลับ) */
+        @keyframes trbCompactIn { from { opacity: 0; transform: translateY(4px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .trip-resume-banner.trb-compact { width: fit-content; max-width: 94%; padding: 6px 8px 6px 10px; border-radius: 12px; margin-bottom: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); animation: trbCompactIn 0.25s ease-out both; }
+        .trip-resume-banner.trb-compact .trb-details { display: none; }
+        .trip-resume-banner.trb-compact .trb-btn.discard { display: none; }
+        .trip-resume-banner.trb-compact .trb-btn.resume { padding: 5px 10px; font-size: 12px; border-radius: 9px; }
+        .trip-resume-banner.trb-compact .trb-icon { font-size: 17px !important; }
 
         /* Dropdown results */
         .dropdown-box {
@@ -1012,14 +1025,14 @@
                                                 
     </div>
                                                        
-    <div id="tripResumeBanner" class="trip-resume-banner">
-        <span class="material-symbols-outlined" style="font-size: 20px; color: var(--neon-yellow); flex-shrink: 0;">local_taxi</span>
-        <div style="flex: 1; min-width: 0;">
+    <div id="tripResumeBanner" class="trip-resume-banner" onclick="window.tapResumeBanner()" title="แตะเพื่อขยาย/ย่อ">
+        <span class="material-symbols-outlined trb-icon" style="font-size: 20px; color: var(--neon-yellow); flex-shrink: 0;">local_taxi</span>
+        <div class="trb-details" style="flex: 1; min-width: 0;">
             <div style="font-size: 13px; font-weight: 700; color: var(--neon-yellow);">มีเที่ยวที่ยังไม่สิ้นสุด</div>
             <div id="trbInfo" style="font-size: 11.5px; color: rgba(255,255,255,0.75); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
         </div>
-        <button onclick="window.resumeSavedTrip()" class="trb-btn resume">เริ่มต่อ</button>
-        <button onclick="window.discardSavedTrip()" class="trb-btn discard" title="ลบทิ้ง">✕</button>
+        <button onclick="event.stopPropagation(); window.resumeSavedTrip()" class="trb-btn resume">เริ่มต่อ</button>
+        <button onclick="event.stopPropagation(); window.discardSavedTrip()" class="trb-btn discard" title="ลบทิ้ง">✕</button>
     </div>
     
     <div id="searchSectionBox" class="search-section">
@@ -1358,6 +1371,18 @@
             gainNode.gain.setValueAtTime(0.3, now);
             gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
             osc.start(now); osc.stop(now + 0.1);
+        } else if (type === 'resume') {
+            // เสียงเตือน 2 จังหวะ "มีเที่ยวค้าง เริ่มต่อ"
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(620, now);
+            osc.frequency.setValueAtTime(880, now + 0.18);
+            gainNode.gain.setValueAtTime(0.001, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.5, now + 0.04);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            gainNode.gain.setValueAtTime(0.001, now + 0.18);
+            gainNode.gain.exponentialRampToValueAtTime(0.45, now + 0.22);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+            osc.start(now); osc.stop(now + 0.36);
         }
     };
 
@@ -2303,14 +2328,49 @@
     };
     window.clearActiveTrip = () => { try { localStorage.removeItem(ACTIVE_TRIP_KEY); } catch(e) {} };
 
-    // 🚕 แสดงแบนเนอร์ "เริ่มต่อ" เมื่อเปิดแอปแล้วพบเที่ยวที่ยังไม่สิ้นสุด (แอปปิด/รีเฟรชค้าง)
+    // 🚕 แบนเนอร์ "เริ่มต่อ": เด่น ๆ ตอนเปิดแอปกลับมา (เลื่อนขึ้นจอ + เสียง + สั่น) และถ้ายังไม่กดเริ่มต่อใน 30 วิ จะย่อเป็นแถบเล็ก (แตะขยายกลับได้)
+    const hideResumeBanner = () => {
+        const banner = document.getElementById('tripResumeBanner');
+        if (banner) banner.style.display = 'none';
+        window.cancelTrbCompact();
+    };
+    window.cancelTrbCompact = () => { if (window.trbCompactTimer) { clearTimeout(window.trbCompactTimer); window.trbCompactTimer = null; } };
+    window.scheduleTrbCompact = () => {
+        window.cancelTrbCompact();
+        window.trbCompactTimer = setTimeout(() => window.collapseResumeBanner(), 30000); // ยังไม่กดเริ่มต่อใน 30 วิ → ค่อย ๆ จางเป็นแถบเล็ก
+    };
+    window.collapseResumeBanner = () => {
+        const banner = document.getElementById('tripResumeBanner');
+        if (!banner || banner.style.display === 'none' || window.isManualRunning) return;
+        if (banner.classList.contains('trb-compact') || banner.classList.contains('trb-collapsing')) return;
+        banner.classList.add('trb-collapsing'); // จาง/ย่อลง แล้วเปลี่ยนเป็นแถบเล็ก
+        setTimeout(() => {
+            banner.classList.remove('trb-collapsing');
+            banner.classList.add('trb-compact');
+        }, 400);
+    };
+    window.expandResumeBanner = () => {
+        const banner = document.getElementById('tripResumeBanner');
+        if (!banner || banner.style.display === 'none') return;
+        banner.classList.remove('trb-collapsing', 'trb-compact');
+        banner.classList.remove('trb-pop'); void banner.offsetWidth; banner.classList.add('trb-pop'); // เลื่อนขึ้นอีกครั้ง
+        window.playSound('toggle');
+        window.scheduleTrbCompact();
+    };
+    window.tapResumeBanner = () => {
+        const banner = document.getElementById('tripResumeBanner');
+        if (!banner) return;
+        if (banner.classList.contains('trb-compact')) window.expandResumeBanner(); // แตะแถบเล็ก = ขยายกลับ
+    };
+
+    // แสดงแบนเนอร์เมื่อเปิดแอปแล้วพบเที่ยวที่ยังไม่สิ้นสุด (แอปปิด/รีเฟรชค้าง)
     window.maybeShowResumeBanner = () => {
         if (window.isManualRunning) return;
         const banner = document.getElementById('tripResumeBanner');
         if (!banner) return;
         let data = null;
         try { data = JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY) || 'null'); } catch(e) {}
-        if (!data || !data.startTime) { banner.style.display = 'none'; return; }
+        if (!data || !data.startTime) { hideResumeBanner(); return; }
         const info = document.getElementById('trbInfo');
         if (info) {
             const started = new Date(data.startTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
@@ -2319,7 +2379,16 @@
             if (data.destName) txt += ` · ไป ${data.destName}`;
             info.innerText = txt;
         }
+        const alreadyShown = banner.style.display === 'flex';
+        banner.classList.remove('trb-collapsing', 'trb-compact');
         banner.style.display = 'flex';
+        if (!alreadyShown) {
+            // เลื่อนขึ้นจอเด่น ๆ พร้อมเสียง + สั่น (เฉพาะตอนโผล่ครั้งแรก)
+            banner.classList.remove('trb-pop'); void banner.offsetWidth; banner.classList.add('trb-pop');
+            window.playSound('resume');
+            if (navigator.vibrate) { try { navigator.vibrate([130, 70, 130]); } catch(e) {} }
+            window.scheduleTrbCompact();
+        }
     };
 
     // ▶️ กด "เริ่มต่อ": เดินมิเตอร์ต่อจากจุดที่ค้างไว้ (เวลาเริ่ม/กม./เวลาจอด/ค่าทางด่วน เดิมทั้งหมด)
@@ -2329,6 +2398,7 @@
         if (!data || !data.startTime) return;
         const banner = document.getElementById('tripResumeBanner');
         if (banner) banner.style.display = 'none';
+        window.cancelTrbCompact();
         window.startMeterAndTracking(data);
         window.showToast('เริ่มต่อจากเที่ยวเดิมแล้ว 🚕');
     };
@@ -2336,8 +2406,7 @@
         const ok = await window.showCustomConfirm('ลบทิ้งเที่ยวที่ค้างอยู่?', 'ข้อมูลเที่ยวที่บันทึกไว้ (ระยะทาง เวลา ค่าทางด่วน) จะถูกลบออกจากเครื่องนี้ กด "เริ่มต่อ" ถ้ายังต้องการใช้', 'danger', 'ลบทิ้ง');
         if (!ok) return;
         window.clearActiveTrip();
-        const banner = document.getElementById('tripResumeBanner');
-        if (banner) banner.style.display = 'none';
+        hideResumeBanner();
         window.showToast('ลบข้อมูลเที่ยวค้างแล้ว');
     };
     window.addEventListener('pagehide', () => { if (window.isManualRunning) window.saveActiveTrip(true); });
