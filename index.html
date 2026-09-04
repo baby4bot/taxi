@@ -1504,6 +1504,29 @@
     window.addEventListener('pageshow', resumeFromHidden);
     
     const calcGPS = (l1, n1, l2, n2) => 6371 * 2 * Math.asin(Math.sqrt(Math.sin((l2-l1)*Math.PI/360)**2 + Math.cos(l1*Math.PI/180)*Math.cos(l2*Math.PI/180)*Math.sin((n2-n1)*Math.PI/360)**2));
+    // ขอ fix GPS แบบลองหลายรอบ (ตอนกลับมาเปิดแอปครั้งแรก fix อาจยังไม่นิ่ง/หลุด) → ใช้รอบที่แม่นสุด
+    const getBestFix = async (maxAttempts = 3) => {
+        let best = null, bestAcc = Infinity;
+        for (let i = 0; i < maxAttempts; i++) {
+            try {
+                const pos = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
+                });
+                const acc = pos.coords.accuracy || 999;
+                if (acc < bestAcc) { bestAcc = acc; best = pos; }
+                if (acc <= 40) break;
+            } catch(e) {}
+            if (i < maxAttempts - 1) await new Promise(r => setTimeout(r, 900));
+        }
+        return best;
+    };
+    // เกณฑ์ "จอดนิ่งทั้งช่วงที่แอปปิด/ซ่อน": ถ้าแอปเปิดค้างอยู่ รถที่เคลื่อน ≤ ~6 กม./ชม. ก็ถูกคิดเป็นเวลาจอดอยู่แล้ว
+    // => เบิกช่วงปิดเป็นเวลาจอดเมื่อขยับรวมจากจุดก่อนปิดไม่เกินเกณฑ์ (เผื่อ GPS ลอยตอนเปิดใหม่ + คลานช้าๆ ยาวๆ ตามช่วงเวลา)
+    const stoppedGapKm = (movedKm, accM, gapSec) => {
+        if (!(movedKm >= 0)) return false;
+        const acc = (accM && accM > 0) ? accM : 30;
+        return movedKm < Math.min(0.15, 0.03 + acc * 0.0005 + gapSec * 0.0004);
+    };
     function formatDuration(totalMins) { if (totalMins < 60) return totalMins + " นาที"; let h = Math.floor(totalMins / 60); let m = totalMins % 60; return h + " ชม. " + (m > 0 ? m + " นาที" : ""); }
 
     // อัปเดตสี/ไอคอนของปุ่มทั้งหมดตามโหมด (Main = สวิตช์เดียว, Live & Zoom = ปุ่มคู่)
@@ -2310,12 +2333,10 @@
         kmCatchUpBusy = true;
         let caughtTimeSec = 0, caughtKm = 0; // ยอดที่เบิกคืนจริงตอนกลับจากเบื้องหลัง (สำหรับ toast แจ้งคนขับ)
         try {
-            const pos = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 });
-            });
-            if (!window.isManualRunning) return;
+            const pos = await getBestFix();
+            if (!window.isManualRunning || !pos) return;
             const p = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-            if ((Math.abs(p.lat) < 1 && Math.abs(p.lon) < 1) || pos.coords.accuracy > 40) return;
+            if ((Math.abs(p.lat) < 1 && Math.abs(p.lon) < 1) || pos.coords.accuracy > 60) return;
             const prevPos = lastPos; // ตำแหน่งก่อนซ่อน (ถ้ายังไม่มี fix ใหม่แทรกมา) — กันการนับระยะซ้ำซ้อน
             lastPos = p;
             lastPosTime = Date.now();
@@ -2324,7 +2345,7 @@
             // ตรวจว่าจอดนิ่งตลอดช่วงที่ซ่อนหรือไม่ (ตำแหน่งแทบไม่ขยับ + ความเร็ว <= 6)
             const speedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
             const movedKm = hidePos ? calcGPS(hidePos.lat, hidePos.lon, p.lat, p.lon) : -1;
-            const stoppedWholeTime = hidePos !== null && movedKm >= 0 && movedKm < 0.03 && (speedKmh === -1 || speedKmh <= 6);
+            const stoppedWholeTime = hidePos !== null && stoppedGapKm(movedKm, pos.coords.accuracy, gapSec) && (speedKmh === -1 || speedKmh <= 6);
 
             if (stoppedWholeTime) {
                 // จอดนิ่งทั้งช่วง → เบิกเวลาจอดให้ครบ (มิเตอร์จริงคิดเวลารอต่อเนื่อง ไม่ใช่แค่หลักฐาน 6 วิ)
@@ -2390,7 +2411,7 @@
         };
         try { localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(payload)); } catch(e) {}
     };
-    window.clearActiveTrip = () => { try { localStorage.removeItem(ACTIVE_TRIP_KEY); } catch(e) {} };
+    window.clearActiveTrip = () => { try { localStorage.removeItem(ACTIVE_TRIP_KEY); } catch(e) {} window.__liveCaughtUpKey = null; };
 
     // 👆 แตะ toast ทอง "กลับจากเบื้องหลัง" → เปิดสรุปย่อ: เบิกเวลา/กิโล/เงินไปเท่าไร
     window.showCatchUpDetails = () => {
@@ -2498,28 +2519,31 @@
     // - ⚠️ ช่วงที่ไม่มี GPS ยืนยันเลย (แอปตายสนิท) การเบิก "เวลาจอด" จำกัดสูงสุด 15 นาที กันค่าโดยสารบวมเกินจริงถ้าปล่อยค้างข้ามคืน
     const KILL_IDLE_CAP_SEC = 15 * 60;
     window.autoCatchUpSavedTrip = async (data) => {
-        if (window.isManualRunning || window.crashCatchUpBusy) return;
+        // เรียกได้ทั้งตอนยังไม่เริ่ม (โชว์แบนเนอร์ → เขียนลง payload) และตอนเริ่มต่อไปแล้ว (กดเริ่มต่อก่อน fix จะมา → บวกเข้าเที่ยวที่วิ่งอยู่)
+        // กันซ้อน: crashCatchUpBusy + episode key (__liveCaughtUpKey) + เช็ค startTime ซ้ำอีกทีตอน commit
+        if (window.crashCatchUpBusy) return;
         const gapStart = data.pauseOpenAt || data.savedAt || data.startTime;
         if (!gapStart) return;
         const gapSec = (Date.now() - gapStart) / 1000;
         if (gapSec < 8) return; // ปิดไปแป๊บเดียว ไม่ต้องเบิก
         if (data.paused) return; // ⏸️ กด "หยุดมิเตอร์ชั่วคราว" ไว้ก่อนแอปตาย → ธงลงแล้ว ไม่เบิกเวลาจอด/ระยะทางตอนเปิดใหม่
+        // เบิกคืนให้แล้วสำหรับรอบการปิดนี้ (ตอนกด "เริ่มต่อ" ระหว่างที่แอปกำลังตรวจสอบ fix) → ข้าม กันนับซ้ำ
+        if (window.__liveCaughtUpKey === data.startTime + '|' + (data.pauseOpenAt || data.savedAt || 0)) return;
         window.crashCatchUpBusy = true;
         let caughtTimeSec = 0, caughtKm = 0;
         try {
-            const pos = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 });
-            });
+            const pos = await getBestFix();
+            if (!pos) return; // ไม่มี fix เลย → ข้าม (ยังเริ่มต่อได้ตามปกติ; เที่ยวที่วิ่งอยู่จะเบิกเองเมื่อมี fix ยืนยัน)
             const p = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-            if ((Math.abs(p.lat) < 1 && Math.abs(p.lon) < 1) || pos.coords.accuracy > 40) return; // fix ไม่ดี → ข้าม (ยังเริ่มต่อได้ตามปกติ)
-            // ผู้ใช้เริ่มต่อ/ลบทิ้ง/เปิดเที่ยวใหม่ระหว่างรอ fix → หยุด (อย่าเขียนทับ payload ปัจจุบัน)
+            if ((Math.abs(p.lat) < 1 && Math.abs(p.lon) < 1) || pos.coords.accuracy > 60) return; // fix ไม่ดี → ข้าม (ยังเริ่มต่อได้ตามปกติ)
+            // ผู้ใช้เริ่มต่อ/ลบทิ้ง/เปิดเที่ยวใหม่ระหว่างรอ fix → ถ้ากำลังวิ่งอยู่จะบวกยอดเข้าเที่ยวปัจจุบันแทน (ไม่ทิ้งช่วงปิด)
             const cur = (() => { try { return JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY) || 'null'); } catch(e) { return null; } })();
-            if (window.isManualRunning || !cur || cur.startTime !== data.startTime) return;
+            if (!cur || cur.startTime !== data.startTime) return;
 
-            const hidePos = cur.lastPos || null;
+            const hidePos = (data.lastPos || cur.lastPos) || null; // ตำแหน่ง "ก่อน" ปิดแอป (อ้างอิงเทียบกับ fix ปัจจุบัน)
             const speedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
             const movedKm = hidePos ? calcGPS(hidePos.lat, hidePos.lon, p.lat, p.lon) : -1;
-            const stoppedWholeTime = hidePos !== null && movedKm >= 0 && movedKm < 0.03 && (speedKmh === -1 || speedKmh <= 6);
+            const stoppedWholeTime = hidePos !== null && stoppedGapKm(movedKm, pos.coords.accuracy, gapSec) && (speedKmh === -1 || speedKmh <= 6);
 
             let km = cur.km || 0, trafficSec = cur.trafficSec || 0;
             let remainKm = cur.remainKm || 0, remainSec = cur.remainSec || 0;
@@ -2555,23 +2579,37 @@
                 }
             }
             if (caughtTimeSec < 1 && caughtKm <= 0.02) return; // ไม่มีอะไรต้องเบิกจริง
-            // ตรวจซ้ำก่อนเขียน (กันจังหวะที่เริ่มต่อ/ลบทิ้งไปแล้วระหว่างคำนวณเส้นทาง)
-            const cur2 = (() => { try { return JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY) || 'null'); } catch(e) { return null; } })();
-            if (window.isManualRunning || !cur2 || cur2.startTime !== data.startTime) return;
-
-            // เขียนยอดที่เบิกแล้วกลับลง payload → กด "เริ่มต่อ" จะต่อจากตัวเลขที่ถูกต้องทันที
-            cur2.km = km; cur2.trafficSec = trafficSec;
-            cur2.remainKm = remainKm; cur2.remainSec = remainSec;
-            cur2.lastPos = p;
-            cur2.savedAt = Date.now(); cur2.caughtUpAt = Date.now();
-            if (cur2.pauseOpenAt) {
-                // ปิดรายการหยุดพักช่วงแอปปิด → จะได้โผล่ในหน้าสรุปตอนจบเที่ยว (ความโปร่งใสกับผู้โดยสาร)
-                if (!Array.isArray(cur2.pauseLog)) cur2.pauseLog = [];
-                if (Date.now() - cur2.pauseOpenAt >= 8000) cur2.pauseLog.push({ s: cur2.pauseOpenAt, r: Date.now() });
+            if (window.isManualRunning) {
+                // ผู้ใช้กด "เริ่มต่อ" ระหว่างกำลังตรวจสอบ fix → เอา fix นี้ตัดสินแล้วบวกยอดที่เบิกเข้ามิเตอร์ที่กำลังวิ่งทันที
+                // (คนขับจอดนิ่งอยู่แล้วแตะเริ่มต่อไว ก่อนที่ระบบจะขอ fix เสร็จ — ช่วงที่แอปปิดต้องไม่หายไปจากเวลารถติด)
+                window.__liveCaughtUpKey = data.startTime + '|' + (data.pauseOpenAt || data.savedAt || 0); // กันเบิกซ้ำรอบเดิม
+                trafficSeconds += caughtTimeSec;
+                if (caughtTimeSec >= 1) { trafficCharging = true; lastStopFixAt = Date.now(); }
+                if (caughtKm > 0.02) {
+                    actualDrivenKm += caughtKm;
+                    currentTrueRemainKm = Math.max(0, remainKm); // ระยะเหลือใหม่จากเส้นทาง/เส้นตรงที่คำนวณไว้
+                    if (remainSec !== undefined && remainSec > 0) currentTrueRemainSec = remainSec;
+                }
+                window.saveActiveTrip(true); // อัปเดต payload ให้ตรงกับมิเตอร์
+                window.updateLiveMeterDisplay();
+            } else {
+                // ตรวจซ้ำก่อนเขียน payload (กันจังหวะที่เริ่มต่อ/ลบทิ้งไปแล้วระหว่างคำนวณเส้นทาง)
+                const cur2 = (() => { try { return JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY) || 'null'); } catch(e) { return null; } })();
+                if (!cur2 || cur2.startTime !== data.startTime) return;
+                // เขียนยอดที่เบิกแล้วกลับลง payload → กด "เริ่มต่อ" จะต่อจากตัวเลขที่ถูกต้องทันที
+                cur2.km = km; cur2.trafficSec = trafficSec;
+                cur2.remainKm = remainKm; cur2.remainSec = remainSec;
+                cur2.lastPos = p;
+                cur2.savedAt = Date.now(); cur2.caughtUpAt = Date.now();
+                if (cur2.pauseOpenAt) {
+                    // ปิดรายการหยุดพักช่วงแอปปิด → จะได้โผล่ในหน้าสรุปตอนจบเที่ยว (ความโปร่งใสกับผู้โดยสาร)
+                    if (!Array.isArray(cur2.pauseLog)) cur2.pauseLog = [];
+                    if (Date.now() - cur2.pauseOpenAt >= 8000) cur2.pauseLog.push({ s: cur2.pauseOpenAt, r: Date.now() });
+                }
+                cur2.pauseOpenAt = null;
+                try { localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(cur2)); } catch(e) {}
+                window.maybeShowResumeBanner(); // รีเฟรชข้อความบนแบนเนอร์เป็นตัวเลขใหม่
             }
-            cur2.pauseOpenAt = null;
-            try { localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(cur2)); } catch(e) {}
-            window.maybeShowResumeBanner(); // รีเฟรชข้อความบนแบนเนอร์เป็นตัวเลขใหม่
 
             // 🔔 แจ้งคนขับว่ามิเตอร์ถูกเบิกคืนให้แล้ว (แตะ toast เพื่อดูรายละเอียดว่าเบิกเวลา/กิโล/เงินเท่าไร)
             let parts = [];
@@ -2592,7 +2630,17 @@
         const banner = document.getElementById('tripResumeBanner');
         if (banner) banner.style.display = 'none';
         window.cancelTrbCompact();
+        // ยังไม่เคยเบิกช่วงที่แอปปิด (fix ตอนเปิดแอปยังไม่ทัน/หลุด หรือแตะเริ่มต่อไวไป) → หลังเริ่มต่อ ให้ลองเบิกอีกครั้งบนมิเตอร์ที่กำลังวิ่ง
+        const gapRef = data.pauseOpenAt || data.savedAt || 0;
+        const needDeferredCatchUp = !data.caughtUpAt && !data.paused && gapRef && (Date.now() - gapRef) > 8000;
         window.startMeterAndTracking(data);
+        if (needDeferredCatchUp && typeof window.autoCatchUpSavedTrip === 'function') {
+            let tries = 0;
+            (function retryDeferredCatchUp() {
+                if (window.crashCatchUpBusy && tries++ < 12) return setTimeout(retryDeferredCatchUp, 1000); // รอรอบแรก (ตอนโชว์แบนเนอร์) เสร็จก่อน กันซ้ำ
+                if (!window.crashCatchUpBusy) window.autoCatchUpSavedTrip(data);
+            })();
+        }
         window.showToast('เริ่มต่อจากเที่ยวเดิมแล้ว 🚕');
     };
     window.discardSavedTrip = async () => {
