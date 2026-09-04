@@ -499,6 +499,9 @@
     <div id="totalTollBadge" style="display:none; background: #3498db; color: white; padding: 6px 20px; border-radius: 20px; font-size: 14px; font-weight: 600; margin: 0 auto 20px auto; width: fit-content; box-shadow: 0 4px 10px rgba(52,152,219,0.4);">
         รวมค่าทางด่วน: 0 ฿
     </div>
+
+    <div id="routeTollInfo" style="display:none; background: rgba(255, 152, 0, 0.12); border: 1px solid rgba(255, 152, 0, 0.5); color: #ffb74d; padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 500; margin: 0 auto 12px auto; width: fit-content; max-width: 100%; text-align: center; box-shadow: 0 4px 10px rgba(255,152,0,0.2);">
+    </div>
                                                        
     <div class="result-container">
 
@@ -839,6 +842,15 @@
                     window.updateTollDisplay();
                     window.updateNavTollDisplay();
                     
+                    // แจ้งข้อมูลทางด่วนจริงของเส้นทาง
+                    if (isToll) {
+                        if (route.tolls && route.tolls.hasTolls) {
+                            window.showToast(`🛣️ ทางด่วน ${route.tolls.booths.length} ช่วง รวม ${route.tolls.total}฿`, false);
+                        } else {
+                            window.showToast('เส้นทางนี้ไม่มีทางด่วน ใช้ถนนปกติ', false);
+                        }
+                    }
+                    
                     // Redraw route on map if navigation is active
                     if (navMap && navRouteCoords && navRouteCoords.length > 0) {
                         try {
@@ -858,6 +870,20 @@
     
     window.updateTollDisplay = () => {
         window.updateNavTollDisplay();
+        window.updateRouteTollInfo();
+    };
+
+    // แสดงแบนเนอร์ค่าทางด่วนของเส้นทาง (เฉพาะเมื่อขึ้นทางด่วน)
+    window.updateRouteTollInfo = () => {
+        const el = document.getElementById('routeTollInfo');
+        if (!el) return;
+        const t = window.currentTollInfo;
+        if (t && t.hasTolls && t.booths && t.booths.length > 0) {
+            el.style.display = 'block';
+            el.innerHTML = `🛣️ ค่าทางด่วน (โดยประมาณ) ${t.booths.length} ช่วง: ${t.booths.map(b => `${b.price}฿`).join(' + ')} = <b>${t.total} ฿</b>`;
+        } else {
+            el.style.display = 'none';
+        }
     };
     
     window.updateNavTollDisplay = () => {
@@ -895,30 +921,24 @@
         return poly;
     };
 
-    // Estimate toll booths based on distance and route type
-    window.estimateTolls = (km) => {
+    // คำนวณค่าทางด่วนจากโซนทางด่วนจริงในเส้นทาง (TomTom sectionType=TOLL)
+    // ราคาต่อช่วงเป็นค่าประมาณจากระยะทางทางด่วนจริงตามอัตราโดยประมาณของกรุงเทพฯ
+    window.calcTollsFromSections = (route, coords) => {
+        const dist = (a, b) => { const R = 6371000; const toRad = x => x * Math.PI / 180; const dLat = toRad(b[0] - a[0]); const dLon = toRad(b[1] - a[1]); const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLon / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+        const tollPrice = (km) => { if (km < 5) return 25; if (km < 10) return 30; if (km < 15) return 40; if (km < 20) return 50; if (km < 30) return 60; if (km < 50) return 70; if (km < 80) return 85; return 100; };
+        
+        let sections = (route.sections || []).filter(s => s.sectionType === 'TOLL');
+        if (!sections.length) return { hasTolls: false, booths: [], total: 0 };
+        
         let booths = [];
         let totalCost = 0;
-        
-        // Estimate toll booths: 1 booth every 8-12 km on expressways
-        if (km >= 8) {
-            let boothCount = Math.floor(km / 10);
-            if (boothCount < 1) boothCount = 1;
-            if (boothCount > 6) boothCount = 6; // max 6 booths
-            
-            // Realistic Bangkok expressway prices
-            let prices = [25, 30, 35, 40, 45, 50];
-            for (let i = 0; i < boothCount; i++) {
-                let price = prices[i];
-                booths.push({
-                    name: `ด่านที่ ${i + 1}`,
-                    price: price
-                });
-                totalCost += price;
-            }
-        }
-        
-        return { booths, total: totalCost };
+        sections.forEach((s, i) => {
+            let segKm = (coords[s.startPointIndex] && coords[s.endPointIndex]) ? Math.round(dist(coords[s.startPointIndex], coords[s.endPointIndex]) / 100) / 10 : 0;
+            let price = tollPrice(segKm);
+            booths.push({ name: `ด่านที่ ${i + 1} (${segKm} กม.)`, price, km: segKm });
+            totalCost += price;
+        });
+        return { hasTolls: true, booths, total: totalCost };
     };
     
     // เวลาคำนวณจาก TomTom Routing API แบบรถติดสด (traffic=true) แล้ว ไม่ต้องใช้ตัวคูณประมาณอีกต่อไป
@@ -927,7 +947,7 @@
         try {
             // ใช้ TomTom Routing API — traffic=true + departAt=now ทำให้เวลารวมรถติดสดจริง (เหมือน Google Maps)
             const avoidParam = window.isTollwayMode ? '' : '&avoid=tollRoads';
-            const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=fastest&routeRepresentation=polyline&language=th-TH${avoidParam}`;
+            const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=fastest&routeRepresentation=polyline&language=th-TH&sectionType=toll${avoidParam}`;
             
             let res = await fetch(url);
             let data = await res.json();
@@ -949,12 +969,13 @@
                     }
                 }
             }
-            
+
+            // คำนวณค่าทางด่วนจากเส้นทางจริง (ต้องขอ sectionType=toll)
+            let tollInfo = window.calcTollsFromSections(r, coords);
             if (window.isTollwayMode) {
-                let tollInfo = window.estimateTolls(km);
                 return { km, sec, coords, tolls: tollInfo };
             } else {
-                return { km, sec, coords, tolls: { booths: [], total: 0 } };
+                return { km, sec, coords, tolls: { hasTolls: false, booths: [], total: 0 } };
             }
         } catch(e) { console.error(e); }
         return null;
@@ -1362,6 +1383,10 @@
                 currentTrueRemainKm = route.km;
                 currentTrueRemainSec = route.sec;
                 window.currentTollInfo = route.tolls || null;
+                window.updateTollDisplay();
+                if (window.isTollwayMode && route.tolls && route.tolls.hasTolls) {
+                    window.showToast(`🛣️ ทางด่วน ${route.tolls.booths.length} ช่วง รวม ${route.tolls.total}฿`, false);
+                }
                 window.processRoute(currentTrueRemainKm, currentTrueRemainSec, name);
                 window.startNavigationMap(sLat, sLon, dLat, dLon, name, route.km, route.coords);
                 if (label) window.showToast(label, false);
@@ -1718,6 +1743,10 @@
             if(route) {
                 currentTrueRemainKm = route.km; 
                 currentTrueRemainSec = route.sec; 
+                if (window.isTollwayMode) {
+                    window.currentTollInfo = route.tolls || null;
+                    window.updateTollDisplay();
+                }
             }
         }, 120000); // โพล TomTom ทุก 120 วิ (ประหยัดโควตา 2,500 ครั้ง/วัน เมื่อใช้กันหลายคน)
     };
@@ -1740,6 +1769,7 @@
         $('smallStartTime').innerText = '--:--';
         $('smallArrivalTime').innerText = '--:--';
         $('totalTollBadge').style.display = 'none';
+        $('routeTollInfo').style.display = 'none';
         
         window.hideMap(); // Hide map when trip ends
         window.stopTracking(); window.updateFareEstimation(0); window.checkAppStatus(); 
