@@ -87,8 +87,14 @@
         .side-menu-item.logout-item { color: #ff4757; margin-top: auto; }
         .side-menu-item.logout-item .material-symbols-outlined { color: #ff4757; }
 
-        .header-container { margin-bottom: 15px; margin-top: 15px; gap: 15px; flex-shrink: 0; }
-        .header-icon { width: 40px; height: 40px; border-radius: 12px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); object-fit: cover; }
+        .app-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0 16px 0; flex-shrink: 0; }
+        .header-left, .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .header-center { flex: 1; min-width: 0; display: flex; justify-content: center; padding: 0 2px; }
+        .header-center h2 { font-size: clamp(15px, calc((100vw - 250px) * 0.12), 21px); white-space: nowrap; }
+        .header-avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--neon-green); background: rgba(0,0,0,0.3); box-shadow: 0 2px 10px rgba(0,0,0,0.5); flex-shrink: 0; }
+        #userMenu .hamburger-btn { width: 44px; height: 44px; }
+        #userMenu .hamburger-btn .material-symbols-outlined { font-size: 30px !important; }
+        .header-icon { width: 40px; height: 40px; border-radius: 12px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); object-fit: cover; flex-shrink: 0; }
         h2 { font-size: 24px; font-weight: 500; margin: 0; background: linear-gradient(90deg, #fff, #a0a5b5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
         .taxi-type-selector { display: inline-flex; background: var(--input-bg); border-radius: 30px; padding: 5px; border: 1px solid var(--border-glass); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
@@ -187,7 +193,6 @@
         .km-label { position: absolute; right: 20px; font-size: 16px; color: var(--text-dim); pointer-events: none; }
 
         .result-container { flex: 1; position: relative; margin: 5px 0 15px 0; padding: 30px 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 180px; background: #1a1a1a; border-radius: 16px; border: 1px solid #333; box-shadow: none; overflow: hidden; }
-        .result-container.has-map { padding: 15px; min-height: 280px; }
 
         
         .result-content { position: relative; z-index: 10; text-align: center; transition: 0.3s; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -356,40 +361,10 @@
         .btn-cc-ok:active { transform: scale(0.95); }
         .btn-cc-ok.danger { background: var(--accent-red); }
         
-        /* Map styles */
-        #taxiMap { width: 100%; height: 280px; border-radius: 16px; border: 1px solid #333; display: none; margin-top: 10px; }
-        .map-container { flex-shrink: 0; display: none; background: #1a1a1a; border-radius: 16px; padding: 12px; margin-bottom: 10px; border: 1px solid #333; }
-        .map-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #333; }
-        .map-header-icon { width: 32px; height: 32px; background: #4caf50; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-        .map-header-text { flex: 1; }
-        .map-header-title { color: white; font-size: 14px; font-weight: 600; }
-        .map-header-subtitle { color: #888; font-size: 11px; }
-        .map-legend { display: flex; gap: 15px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #333; justify-content: center; }
-        .map-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #888; }
-        .map-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+        /* แผนที่ถูกปิดใช้งานแล้ว */
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         
-        /* Navigation info inside result container */
-        .nav-info-overlay { position: absolute; top: 0; left: 0; right: 0; z-index: 20; padding: 10px; background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%); border-radius: 16px 16px 0 0; display: none; }
-        .nav-info-overlay.active { display: block; }
-        .nav-top-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .nav-close-btn { width: 32px; height: 32px; background: rgba(255,255,255,0.15); border: none; border-radius: 50%; color: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .nav-dest-box { flex: 1; background: rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 10px; min-width: 0; }
-        .nav-dest-label { font-size: 9px; color: #4caf50; font-weight: 600; }
-        .nav-dest-name { font-size: 13px; color: white; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .nav-info-row { display: flex; gap: 6px; }
-        .nav-info-card { flex: 1; background: rgba(0,0,0,0.6); border-radius: 8px; padding: 6px; text-align: center; }
-        .nav-info-value { font-size: 16px; font-weight: 800; color: #4caf50; }
-        .nav-info-label { font-size: 9px; color: #aaa; }
-        .nav-eta-box { background: #4caf50; border-radius: 8px; padding: 6px 10px; text-align: center; }
-        .nav-eta-value { font-size: 14px; font-weight: 800; color: white; }
-        .nav-eta-label { font-size: 9px; color: rgba(255,255,255,0.8); }
-        #navMap { width: 100%; height: 100%; border-radius: 16px; }
-        .nav-car-marker { width: 36px; height: 36px; background: #4caf50; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(76,175,80,0.9); transition: transform 0.3s ease; font-size: 18px; }
-        .nav-dest-marker { width: 28px; height: 28px; background: #ef4444; border: 3px solid white; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(239,68,68,0.8); font-size: 12px; }
     </style>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 <audio id="silentAudioLoop" loop playsinline>
@@ -432,24 +407,25 @@
 
 <div class="card" id="mainApp" style="display: none;">
     
-    <div id="mainUserInfo" style="position: absolute; top: 20px; left: 20px; z-index: 100; display: none; align-items: center; gap: 10px;">
-        <img id="mainProfilePic" src="" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--neon-green); background: rgba(0,0,0,0.3); box-shadow: 0 2px 10px rgba(0,0,0,0.5);" />
-        <div style="text-align: left; display: none;"> 
-            <div id="mainUserName" style="font-size: 15px; font-weight: 600; color: white; line-height: 1;">กำลังโหลด...</div>
-            <div id="mainUserRole" style="font-size: 12px; font-weight: 500; color: var(--neon-yellow); margin-top: 4px;">...</div>
+    <div class="app-header">
+        <div id="mainUserInfo" class="header-left" style="display: none;">
+            <img id="mainProfilePic" src="" class="header-avatar" alt="profile" />
+            <img id="appHeaderIcon" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" class="header-icon" alt="logo" />
+            <div style="text-align: left; display: none;">
+                <div id="mainUserName" style="font-size: 15px; font-weight: 600; color: white; line-height: 1;">กำลังโหลด...</div>
+                <div id="mainUserRole" style="font-size: 12px; font-weight: 500; color: var(--neon-yellow); margin-top: 4px;">...</div>
+            </div>
         </div>
-    </div>
 
-    <div id="userMenu" style="position: fixed; top: 15px; right: 15px; z-index: 9999; display: none;">
-        <div style="display: flex; gap: 5px; align-items: center;">
-            <button class="hamburger-btn" onclick="window.openShareModal()" title="แชร์แอปพลิเคชัน" style="width: 40px; height: 40px;"><span class="material-symbols-outlined" style="font-size: 28px !important;">share</span></button>
+        <div class="header-center">
+            <h2>คำนวณค่าแท็กซี่</h2>
+        </div>
+
+        <div id="userMenu" class="header-right" style="display: none;">
+            <button class="hamburger-btn" onclick="window.openShareModal()" title="แชร์แอปพลิเคชัน"><span class="material-symbols-outlined">share</span></button>
             <button class="hamburger-btn" onclick="window.toggleSideMenu(true)"><span class="material-symbols-outlined">menu</span></button>
         </div>
-    </div>
-
-    <div class="header-container flex-center">
-        <img id="appHeaderIcon" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" class="header-icon" style="object-fit: cover;" />                                        
-        <h2>คำนวณค่าแท็กซี่</h2>
+                                                
     </div>
                                                        
     <div id="searchSectionBox" class="search-section">
@@ -526,48 +502,10 @@
                                                        
     <div class="result-container">
 
-        <!-- Navigation Info Overlay -->
-        <div class="nav-info-overlay" id="navInfoOverlay">
-            <div class="nav-top-row">
-                <button class="nav-close-btn" onclick="window.closeNavigation()">✕</button>
-                <div class="nav-dest-box">
-                    <div class="nav-dest-label">📍 ไปที่</div>
-                    <div class="nav-dest-name" id="navDestName">-</div>
-                </div>
-            </div>
-            <div class="nav-info-row">
-                <div class="nav-info-card">
-                    <div class="nav-info-value" id="navDistance">0</div>
-                    <div class="nav-info-label">กม. เหลือ</div>
-                </div>
-                <div class="nav-info-card">
-                    <div class="nav-info-value" id="navSpeed">0</div>
-                    <div class="nav-info-label">กม./ชม.</div>
-                </div>
-                <div class="nav-eta-box">
-                    <div class="nav-info-value" id="navETA">0 น.</div>
-                    <div class="nav-eta-label">ถึงประมาณ</div>
-                </div>
-            </div>
-        </div>
-        
         <div class="result-content" id="resultContent" style="width:100%; height:100%; position:absolute; top:0; left:0; right:0; bottom:0;">
             <div id="fareDisplay">
                 <div id="farePrice" class="price">0<span style="font-size: 32px; font-weight:400;"> ฿</span></div>
                 <div id="infoText" class="sub-info">ประเมินระยะทาง 0 กม.</div>
-            </div>
-            <div id="navMapContainer" style="display:none; width:100%; height:100%; position:absolute; top:0; left:0;">
-                <div id="navMap" style="width:100%; height:100%;"></div>
-                <button id="recenterBtn" onclick="window.recenterMap()" style="position:absolute; bottom:60px; right:10px; z-index:1000; width:40px; height:40px; background:#252525; border:1px solid #444; border-radius:50%; color:#4caf50; font-size:18px; cursor:pointer; display:none; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,0.5);">
-                    <span class="material-symbols-outlined">my_location</span>
-                </button>
-                <div id="navTollInfo" style="display:none; position:absolute; bottom:0; left:0; right:0; z-index:1000; background:rgba(0,0,0,0.85); padding:8px 12px; border-radius:0 0 16px 16px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:11px; color:#ffd700;">🛣️ ค่าทางด่วน</span>
-                        <span style="font-size:13px; color:#ffd700; font-weight:700;" id="navTollTotal">0 ฿</span>
-                    </div>
-                    <div id="navTollBooths" style="font-size:10px; color:#aaa; margin-top:4px;"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -980,9 +918,19 @@
         return { booths, total: totalCost };
     };
     
+    // ปัจจัยรถติดตามช่วงเวลา (ประมาณกรุงเทพฯ) — OSRM สาธารณะคืนเวลารถโล่ง ไม่มีข้อมูลรถติดสดแบบ Google
+    window.bangkokTrafficFactor = () => {
+        const d = new Date(); const h = d.getHours(); const day = d.getDay();
+        if (day === 0 || day === 6) return (h >= 9 && h < 21) ? 1.1 : 1.0; // เสาร์-อาทิตย์
+        if (h >= 6 && h < 10) return 1.5;    // ชั่วโมงเร่งด่วนเช้า
+        if (h >= 16 && h < 21) return 1.6;   // ชั่วโมงเร่งด่วนเย็น
+        if (h >= 10 && h < 16) return 1.15;  // กลางวัน
+        return 1.0;                          // ดึก-เช้ามืด
+    };
+
     window.fetchRouteFromOSRM = async (dLat, dLon, startLat, startLon) => {
         try {
-            // ดึงเส้นทางหลายเส้นแล้วเลือกสั้นที่สุด + เลี่ยงทางด่วน
+            // เลือกเส้นทางที่เร็วที่สุด (ใช้เวลาเป็นหลัก เหมือน Google Maps)
             const params = `overview=full&geometries=polyline&alternatives=true`;
             const baseUrl = `https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${dLon},${dLat}?${params}`;
             
@@ -992,47 +940,54 @@
             
             if (allData.code !== 'Ok' || !allData.routes || allData.routes.length === 0) return null;
             
-            // เรียงลำดับจากสั้นที่สุด
-            let sorted = allData.routes.map(r => ({
+            const parseRoutes = (routes) => routes.map(r => ({
                 km: r.distance / 1000,
                 sec: r.duration,
                 coords: window.decodePolyline(r.geometry)
-            })).sort((a, b) => a.km - b.km);
+            })).sort((a, b) => a.sec - b.sec); // เรียงจากเร็วสุด
             
-            let bestRoute = sorted[0]; // เส้นทางสั้นที่สุด
+            let sorted = parseRoutes(allData.routes);
+            let bestRoute = sorted[0]; // เส้นทางเร็วที่สุด
             
-            // 2. ดึงเส้นทางเลี่ยงทางด่วน
-            let avoidKm, avoidSec, avoidCoords;
+            // 2. ลองดึงเส้นทางเลี่ยงทางด่วนจริง (OSRM สาธารณะอาจไม่รองรับ exclude=toll → ตอบ 400)
+            let avoidKm = null, avoidSec = null, avoidCoords = null;
             try {
                 let avoidRes = await fetch(baseUrl + '&exclude=toll');
-                let avoidData = await avoidRes.json();
-                if (avoidData.code === 'Ok' && avoidData.routes && avoidData.routes.length > 0) {
-                    let avoidRoutes = avoidData.routes.map(r => ({
-                        km: r.distance / 1000,
-                        sec: r.duration,
-                        coords: window.decodePolyline(r.geometry)
-                    })).sort((a, b) => a.km - b.km);
-                    let bestAvoid = avoidRoutes[0];
-                    avoidKm = bestAvoid.km;
-                    avoidSec = bestAvoid.sec;
-                    avoidCoords = bestAvoid.coords;
+                if (avoidRes.ok) {
+                    let avoidData = await avoidRes.json();
+                    if (avoidData.code === 'Ok' && avoidData.routes && avoidData.routes.length > 0) {
+                        let avoidRoutes = parseRoutes(avoidData.routes);
+                        let bestAvoid = avoidRoutes[0];
+                        avoidKm = bestAvoid.km;
+                        avoidSec = bestAvoid.sec;
+                        avoidCoords = bestAvoid.coords;
+                    }
                 }
             } catch(e) {}
             
-            // ถ้าหาเส้นทางเลี่ยงไม่ได้ คำนวณประมาณ
-            if (!avoidKm || avoidKm <= bestRoute.km) {
-                avoidKm = bestRoute.km * 1.3;
-                avoidSec = bestRoute.sec * 1.5;
-                avoidCoords = bestRoute.coords;
+            // เลือกเส้นทางตามโหมดที่ผู้ใช้เลือก
+            let finalKm, finalSec, finalCoords;
+            if (window.isTollwayMode) {
+                finalKm = bestRoute.km; finalSec = bestRoute.sec; finalCoords = bestRoute.coords;
+            } else if (avoidKm !== null && avoidSec !== null) {
+                finalKm = avoidKm; finalSec = avoidSec; finalCoords = avoidCoords;
+            } else {
+                // เซิร์ฟเวอร์ไม่รองรับการเลี่ยงทางด่วน → ประมาณเพิ่มจากเส้นทางหลักเล็กน้อย
+                // (แทนการคูณ 1.3/1.5 แบบเดิมที่เพี้ยนมาก ใช้ค่าที่ใกล้เคียงจริงในกรุงเทพฯ)
+                finalKm = bestRoute.km * 1.06;
+                finalSec = bestRoute.sec * 1.2;
+                finalCoords = bestRoute.coords;
             }
             
+            // 3. คิดรถติดตามช่วงเวลา ให้ใกล้เคียง Google Maps มากขึ้น
+            const trafficFactor = window.bangkokTrafficFactor();
+            finalSec = Math.round(finalSec * trafficFactor);
+            
             if (window.isTollwayMode) {
-                // ขึ้นทางด่วน: เส้นทางสั้นที่สุด
-                let tollInfo = window.estimateTolls(bestRoute.km);
-                return { km: bestRoute.km, sec: bestRoute.sec, coords: bestRoute.coords, tolls: tollInfo };
+                let tollInfo = window.estimateTolls(finalKm);
+                return { km: finalKm, sec: finalSec, coords: finalCoords, tolls: tollInfo };
             } else {
-                // เลี่ยงทางด่วน: เส้นทางที่ไม่ผ่านทางด่วน
-                return { km: avoidKm, sec: avoidSec, coords: avoidCoords, tolls: { booths: [], total: 0 } };
+                return { km: finalKm, sec: finalSec, coords: finalCoords, tolls: { booths: [], total: 0 } };
             }
         } catch(e) { console.error(e); }
         return null;
@@ -1432,27 +1387,50 @@
     
     window.currentTollInfo = null;
     
-    window.getRouteData = async (dLat, dLon, name) => { 
-        navigator.geolocation.getCurrentPosition(async (pos) => { 
-            let route = await window.fetchRouteFromOSRM(dLat, dLon, pos.coords.latitude, pos.coords.longitude);
-            if (route) { 
-                currentTrueRemainKm = route.km; 
+    window.getRouteData = async (dLat, dLon, name) => {
+        const doRoute = async (sLat, sLon, label) => {
+            let route = await window.fetchRouteFromOSRM(dLat, dLon, sLat, sLon);
+            if (route) {
+                currentTrueRemainKm = route.km;
                 currentTrueRemainSec = route.sec;
                 window.currentTollInfo = route.tolls || null;
                 window.processRoute(currentTrueRemainKm, currentTrueRemainSec, name);
-                window.startNavigationMap(pos.coords.latitude, pos.coords.longitude, dLat, dLon, name, route.km, route.coords);
-            } else { 
-                window.showToast('ไม่สามารถคำนวณเส้นทางได้ กรุณากรอกระยะทางเอง', true);
-                $('destInput').value = name;
-                $('destInput').classList.remove('loading-state');
-                $('kmInput').focus();
-            } 
-        }, () => { 
-            window.showToast('📍 พบสถานที่: ' + name + ' - กรุณากรอกระยะทางเอง', false);
+                window.startNavigationMap(sLat, sLon, dLat, dLon, name, route.km, route.coords);
+                if (label) window.showToast(label, false);
+                return true;
+            }
+            return false;
+        };
+
+        const fallbackChain = async () => {
+            const ipServices = ['https://ipapi.co/json/', 'https://ipwho.is/'];
+            for (const url of ipServices) {
+                try {
+                    const ctrl = new AbortController();
+                    const timer = setTimeout(() => ctrl.abort(), 6000);
+                    const res = await fetch(url, { signal: ctrl.signal });
+                    clearTimeout(timer);
+                    const data = await res.json();
+                    if (data && typeof data.latitude === 'number' && typeof data.longitude === 'number' && data.latitude !== 0 && data.longitude !== 0) {
+                        if (await doRoute(data.latitude, data.longitude, '📍 พบสถานที่: ' + name + ' - ใช้ตำแหน่งโดยประมาณ (เปิด GPS เพื่อความแม่นยำ)')) return;
+                    }
+                } catch(e) {}
+            }
+            if (await doRoute(13.7563, 100.5018, '📍 พบสถานที่: ' + name + ' - ใช้ศูนย์กลางกรุงเทพฯ เป็นจุดเริ่มต้น')) return;
+            window.showToast('ไม่สามารถคำนวณเส้นทางได้ กรุณากรอกระยะทางเอง', true);
             $('destInput').value = name;
             $('destInput').classList.remove('loading-state');
             $('kmInput').focus();
-        }, { enableHighAccuracy: true }); 
+        };
+
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            if (!(await doRoute(pos.coords.latitude, pos.coords.longitude))) {
+                await fallbackChain();
+            }
+        }, () => {
+            window.showToast('📍 พบสถานที่: ' + name + ' - GPS ใช้ไม่ได้ กำลังคำนวณด้วยตำแหน่งโดยประมาณ', false);
+            fallbackChain();
+        }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
     };
     
     window.processRoute = (km, sec, name) => { 
@@ -1948,7 +1926,7 @@
                 document.getElementById('appLoader').style.display = 'none'; 
                 document.getElementById('loginOverlay').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'flex'; 
-                document.getElementById('userMenu').style.display = 'block'; 
+                document.getElementById('userMenu').style.display = 'flex'; 
                 document.getElementById('mainUserInfo').style.display = 'flex';
                 
                 currentUserRole = data.role || "User"; let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
@@ -2401,21 +2379,19 @@
         const navMapContainer = document.getElementById('navMapContainer');
         const fareDisplay = document.getElementById('fareDisplay');
         
-        resultContainer.classList.add('has-map');
-        navInfoOverlay.classList.add('active');
-        navMapContainer.style.display = 'block';
-        fareDisplay.style.display = 'none';
-        
-        document.getElementById('navDestName').innerText = destName;
-        document.getElementById('navDistance').innerText = routeKm.toFixed(1);
-        navRouteCoords = routeCoords || [];
+        // แผนที่ถูกปิดใช้งานแล้ว — แสดงราคาค่าโดยสารตามปกติ
+        if (resultContainer) resultContainer.classList.remove('has-map');
+        if (navInfoOverlay) navInfoOverlay.classList.remove('active');
+        if (navMapContainer) navMapContainer.style.display = 'none';
+        if (fareDisplay) fareDisplay.style.display = 'block';
+        navRouteCoords = [];
         navCurrentIndex = 0;
-        navLastPosition = {lat: startLat, lng: startLon};
+        navLastPosition = null;
         
         // Display toll info on all displays
         window.updateTollDisplay();
         window.updateNavTollDisplay();
-        
+        return; // แผนที่ถูกปิดใช้งานแล้ว — ไม่สร้างแผนที่อีกต่อไป
         setTimeout(() => {
             if (!navMap) {
                 navMap = L.map('navMap', {
@@ -2544,16 +2520,9 @@
     
     window.closeNavigation = () => {
         const resultContainer = document.querySelector('.result-container');
-        const navInfoOverlay = document.getElementById('navInfoOverlay');
-        const navMapContainer = document.getElementById('navMapContainer');
         const fareDisplay = document.getElementById('fareDisplay');
-        
-        resultContainer.classList.remove('has-map');
-        navInfoOverlay.classList.remove('active');
-        navMapContainer.style.display = 'none';
-        fareDisplay.style.display = 'block';
-        
-        if (navMap) { navMap.remove(); navMap = null; navCarMarker = null; navDestMarker = null; navRoute = null; }
+        if (resultContainer) resultContainer.classList.remove('has-map');
+        if (fareDisplay) fareDisplay.style.display = 'block';
     };
     
     window.endNavigation = () => {
