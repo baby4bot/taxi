@@ -1345,6 +1345,7 @@
     let lastPos = null, actualDrivenKm = 0, startTime = null, wakeLock = null, lastCalcTime = null;
     let tripTimer = null, routeUpdateTimer = null, trafficSeconds = 0;
     let kmCatchUpBusy = false;
+    let trafficCharging = false, lastFixSpeedKmh = null, lastStopFixAt = null; // กำลังคิดค่าเวลาจอด? / ความเร็วจาก GPS ล่าสุด / เวลา fix สุดท้ายที่ยืนยันจอดจริง
     let lastPosTime = null, currentSpeedKmh = 0, currentTrueRemainKm = 0, currentTrueRemainSec = 0; 
     window.isManualRunning = false;
 
@@ -2154,15 +2155,16 @@
         const deltaSec = (now - lastCalcTime) / 1000;
         if (deltaSec <= 0) { lastCalcTime = now; return; }
 
-        // ไม่มีสัญญาณ GPS เกิน 5 วิ = ถือว่าจอด/รถติด (กันความเร็วค้างจาก fix เก่า)
-        if (now - lastPosTime > 5000) currentSpeedKmh = 0;
-
-        // คิดค่าเวลาตอนความเร็ว <= 6 กม./ชม. (เหมือนมิเตอร์แท็กซี่) ตามเวลาจริงที่ผ่านไป
-        if (currentSpeedKmh <= 6) {
-            trafficSeconds += deltaSec;
+        // คิดค่าเวลาเฉพาะตอนรู้ว่ารถจอด/เคลื่อนช้า (<= 6 กม./ชม.) — ต้องมี fix สดยืนยัน
+        // "หลักฐานจอดจริง" (lastStopFixAt) อายุ 6 วิ: ถ้า GPS หลุด/ขาด หรือซ่อนแอปนานเกิน
+        // โดยที่ fix ถัดไปยังไม่ยืนยันว่ารถจอด ก็หยุดคิดค่าเวลาจอดทันที (รถอาจวิ่งต่อแล้ว)
+        // => ไม่คิดค่าเวลาจอดเกินจริงจากสัญญาณค้างตอน GPS หลุด
+        if (trafficCharging && lastStopFixAt) {
+            const billUntil = Math.min(now, lastStopFixAt + 6000);
+            if (billUntil > lastCalcTime) trafficSeconds += (billUntil - lastCalcTime) / 1000;
         }
 
-        // เวลาที่เหลือของเส้นทางลดลงตามเวลาจริง
+        // เวลาที่เหลือของเส้นทางลดลงตามเวลาจริง (อัปเดต ETA)
         if (currentTrueRemainSec > 0) { currentTrueRemainSec = Math.max(0, currentTrueRemainSec - deltaSec); }
         lastCalcTime = now;
     };
@@ -2210,8 +2212,8 @@
         
         $('liveTracker').style.display = 'block'; 
 
-        actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; 
-        startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime;
+        actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; trafficCharging = true; lastFixSpeedKmh = null; 
+        startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime; lastStopFixAt = startTime;
         
         $('driveCovered').innerText = "0.00"; 
 
@@ -2273,6 +2275,12 @@
                 } else if (timeHours > 0) { 
                     currentSpeedKmh = dMoved / timeHours; 
                 }
+                
+                // อัปเดตสถานะจอด/วิ่ง จากความเร็ว GPS สดล่าสุดเท่านั้น
+                // fix ที่ยืนยัน "จอดจริง" จะต่ออายุหลักฐานให้คิดค่าเวลาจอดต่อไปได้
+                lastFixSpeedKmh = currentSpeedKmh;
+                trafficCharging = (currentSpeedKmh <= 6);
+                lastStopFixAt = trafficCharging ? now : null;
                 
                 // ปรับปรุงการกรองสัญญาณและการชดเชย GPS ให้สอดคล้องกับมิเตอร์จริง
                 const GPS_CALIBRATION_MULTIPLIER = 1.05; // ชดเชย GPS 5% สำหรับกันโค้งและจุดบอด
@@ -2499,7 +2507,7 @@
         window.stopSilentAudio(); 
         window.hideMap(); // Hide map when tracking stops
         $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; window.syncFareTollBtn(); if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false;        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
-        lastCalcTime = null; kmCatchUpBusy = false;
+        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null;
         window.syncTollToggleVisibility();
     };
     
