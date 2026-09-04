@@ -686,6 +686,9 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // TomTom API key — ใช้คำนวณเส้นทางแบบรถติดสด (Routing API) + ค้นหาสถานที่ (Search API)
+    const TOMTOM_KEY = "SA8pNpsaSKlTglSLWKwclRYArnFmWsyW";
+
     window.DEFAULT_AVATAR = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a5b5'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
     window.DEFAULT_QR = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a5b5'%3E%3Cpath d='M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4V5h-4zM13 13h8v8H3v-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z'></path></svg>";
     
@@ -816,7 +819,7 @@
             }
             
             if (startLat && startLon) {
-                let route = await window.fetchRouteFromOSRM(destLoc.lat, destLoc.lon, startLat, startLon);
+                let route = await window.fetchRouteFromTomTom(destLoc.lat, destLoc.lon, startLat, startLon);
                 if (route) {
                     currentTrueRemainKm = route.km;
                     currentTrueRemainSec = route.sec;
@@ -873,7 +876,7 @@
         }
     };
 
-    // Decode OSRM polyline
+    // Decode polyline (Google/TomTom รูปแบบเดียวกัน)
     window.decodePolyline = (encoded) => {
         var poly = [];
         var index = 0, len = encoded.length;
@@ -918,78 +921,40 @@
         return { booths, total: totalCost };
     };
     
-    // ปัจจัยรถติดตามช่วงเวลา (ประมาณกรุงเทพฯ) — OSRM สาธารณะคืนเวลารถโล่ง ไม่มีข้อมูลรถติดสดแบบ Google
-    // ปัจจัยรถติดตามช่วงเวลา (ค่าประมาณกลาง ๆ สำหรับกรุงเทพฯ — OSRM ไม่มีรถติดสดแบบ Google)
-    window.bangkokTrafficFactor = () => {
-        const d = new Date(); const h = d.getHours(); const day = d.getDay();
-        if (day === 0 || day === 6) return (h >= 9 && h < 21) ? 1.05 : 1.0; // เสาร์-อาทิตย์
-        if (h >= 6 && h < 9) return 1.35;    // เร่งด่วนเช้า
-        if (h >= 16 && h < 20) return 1.5;   // เร่งด่วนเย็น (รถติดจริง ๆ)
-        if (h >= 20 && h < 23) return 1.1;   // หลัง 2 ทุ่ม รถเริ่มบาง
-        if (h >= 9 && h < 16) return 1.1;    // กลางวัน
-        return 1.0;                          // ดึก-เช้ามืด
-    };
+    // เวลาคำนวณจาก TomTom Routing API แบบรถติดสด (traffic=true) แล้ว ไม่ต้องใช้ตัวคูณประมาณอีกต่อไป
 
-    window.fetchRouteFromOSRM = async (dLat, dLon, startLat, startLon) => {
+    window.fetchRouteFromTomTom = async (dLat, dLon, startLat, startLon) => {
         try {
-            // เลือกเส้นทางที่เร็วที่สุด (ใช้เวลาเป็นหลัก เหมือน Google Maps)
-            const params = `overview=full&geometries=polyline&alternatives=true`;
-            const baseUrl = `https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${dLon},${dLat}?${params}`;
+            // ใช้ TomTom Routing API — traffic=true + departAt=now ทำให้เวลารวมรถติดสดจริง (เหมือน Google Maps)
+            const avoidParam = window.isTollwayMode ? '' : '&avoid=tollRoads';
+            const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=fastest&routeRepresentation=polyline&language=th-TH${avoidParam}`;
             
-            // 1. ดึงเส้นทางทั้งหมด (รวม alternatives)
-            let allRes = await fetch(baseUrl);
-            let allData = await allRes.json();
+            let res = await fetch(url);
+            let data = await res.json();
             
-            if (allData.code !== 'Ok' || !allData.routes || allData.routes.length === 0) return null;
+            if (!data.routes || data.routes.length === 0) return null;
             
-            const parseRoutes = (routes) => routes.map(r => ({
-                km: r.distance / 1000,
-                sec: r.duration,
-                coords: window.decodePolyline(r.geometry)
-            })).sort((a, b) => a.sec - b.sec); // เรียงจากเร็วสุด
+            let r = data.routes[0];
+            let km = r.summary.lengthInMeters / 1000;
+            let sec = r.summary.travelTimeInSeconds; // รวมรถติดจริงแล้ว (trafficDelayInSeconds คือเวลาที่เสียไปกับรถติด)
             
-            let sorted = parseRoutes(allData.routes);
-            let bestRoute = sorted[0]; // เส้นทางเร็วที่สุด
-            
-            // 2. ลองดึงเส้นทางเลี่ยงทางด่วนจริง (OSRM สาธารณะอาจไม่รองรับ exclude=toll → ตอบ 400)
-            let avoidKm = null, avoidSec = null, avoidCoords = null;
-            try {
-                let avoidRes = await fetch(baseUrl + '&exclude=toll');
-                if (avoidRes.ok) {
-                    let avoidData = await avoidRes.json();
-                    if (avoidData.code === 'Ok' && avoidData.routes && avoidData.routes.length > 0) {
-                        let avoidRoutes = parseRoutes(avoidData.routes);
-                        let bestAvoid = avoidRoutes[0];
-                        avoidKm = bestAvoid.km;
-                        avoidSec = bestAvoid.sec;
-                        avoidCoords = bestAvoid.coords;
+            // ดึงพิกัดเส้นทาง (TomTom คืน polyline ใช้ decode ฟังก์ชันเดิมได้)
+            let coords = [];
+            if (r.legs) {
+                for (let leg of r.legs) {
+                    if (typeof leg.points === 'string') {
+                        coords = coords.concat(window.decodePolyline(leg.points));
+                    } else if (leg.points) {
+                        coords = coords.concat(leg.points.map(p => [p.latitude, p.longitude]));
                     }
                 }
-            } catch(e) {}
-            
-            // เลือกเส้นทางตามโหมดที่ผู้ใช้เลือก
-            let finalKm, finalSec, finalCoords;
-            if (window.isTollwayMode) {
-                finalKm = bestRoute.km; finalSec = bestRoute.sec; finalCoords = bestRoute.coords;
-            } else if (avoidKm !== null && avoidSec !== null) {
-                finalKm = avoidKm; finalSec = avoidSec; finalCoords = avoidCoords;
-            } else {
-                // เซิร์ฟเวอร์ไม่รองรับการเลี่ยงทางด่วน → ประมาณเพิ่มจากเส้นทางหลักเล็กน้อย
-                // (แทนการคูณ 1.3/1.5 แบบเดิมที่เพี้ยนมาก ใช้ค่าที่ใกล้เคียงจริงในกรุงเทพฯ)
-                finalKm = bestRoute.km * 1.06;
-                finalSec = bestRoute.sec * 1.2;
-                finalCoords = bestRoute.coords;
             }
             
-            // 3. คิดรถติดตามช่วงเวลา ให้ใกล้เคียง Google Maps มากขึ้น
-            const trafficFactor = window.bangkokTrafficFactor();
-            finalSec = Math.round(finalSec * trafficFactor);
-            
             if (window.isTollwayMode) {
-                let tollInfo = window.estimateTolls(finalKm);
-                return { km: finalKm, sec: finalSec, coords: finalCoords, tolls: tollInfo };
+                let tollInfo = window.estimateTolls(km);
+                return { km, sec, coords, tolls: tollInfo };
             } else {
-                return { km: finalKm, sec: finalSec, coords: finalCoords, tolls: { booths: [], total: 0 } };
+                return { km, sec, coords, tolls: { booths: [], total: 0 } };
             }
         } catch(e) { console.error(e); }
         return null;
@@ -1226,20 +1191,21 @@
             try { 
                 list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--text-dim);"><span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">progress_activity</span> กำลังค้นหา...</div>';
                 list.style.display = 'block';
-                let res = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(smartQuery)}&countrycodes=th&limit=10&accept-language=th`)).json(); 
-                if(!res.length) return (list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติมนะครับ</span></div>', list.style.display = 'block'); 
-                list.innerHTML = res.map((item, idx) => {
-                    let name = item.display_name.split(',')[0];
-                    let addr = item.display_name.split(',').slice(1, 3).join(',');
-                    let icon = item.type === 'road' ? 'road' : item.type === 'house' ? 'home' : 'location_on';
+                let res = await (await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(smartQuery)}.json?key=${TOMTOM_KEY}&countrySet=TH&limit=10&language=th-TH&typeahead=true&idxSet=Geo,POI`)).json(); 
+                if(!res.results || !res.results.length) return (list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติมนะครับ</span></div>', list.style.display = 'block'); 
+                list.innerHTML = res.results.map((item, idx) => {
+                    let name = (item.poi && item.poi.name) ? item.poi.name : ((item.address && item.address.freeformAddress) ? item.address.freeformAddress.split(',')[0] : 'สถานที่');
+                    let addr = (item.address && item.address.freeformAddress) ? item.address.freeformAddress : '';
+                    let safeName = name.replace(/'/g, "\\'");
+                    let icon = (item.type === 'Street' || item.type === 'Road') ? 'road' : (item.type === 'POI' ? 'location_on' : 'location_city');
                     let isFav = window.isFavorite(name);
-                    return `<div class="list-item" onclick="window.selectLocation('${name}', ${item.lat}, ${item.lon})" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    return `<div class="list-item" onclick="window.selectLocation('${safeName}', ${item.position.lat}, ${item.position.lon})" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                         <span class="material-symbols-outlined item-icon">${icon}</span>
                         <div style="flex:1; min-width:0;">
                             <div style="font-weight: 600; color: white; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
                             <div style="font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${addr}</div>
                         </div>
-                        <button onclick="event.stopPropagation(); window.toggleFavorite('${name}', ${item.lat}, ${item.lon}); window.smartSearch($('destInput').value);" style="background:none; border:none; cursor:pointer; padding:5px; z-index:10;">
+                        <button onclick="event.stopPropagation(); window.toggleFavorite('${safeName}', ${item.position.lat}, ${item.position.lon}); window.smartSearch($('destInput').value);" style="background:none; border:none; cursor:pointer; padding:5px; z-index:10;">
                             <span style="font-size:18px; color:${isFav ? '#ffd600' : '#555'};">${isFav ? '⭐' : '☆'}</span>
                         </button>
                     </div>`;
@@ -1326,7 +1292,7 @@
         });
         mapDestMarker = L.marker([destLat, destLon], {icon: destIcon}).addTo(taxiMap);
         
-        // Draw actual route from OSRM
+        // Draw actual route on map
         let routePoints = routeCoords && routeCoords.length > 0 ? routeCoords : [[startLat, startLon], [destLat, destLon]];
         mapRoute = L.polyline(routePoints, {
             color: '#4caf50',
@@ -1391,7 +1357,7 @@
     
     window.getRouteData = async (dLat, dLon, name) => {
         const doRoute = async (sLat, sLon, label) => {
-            let route = await window.fetchRouteFromOSRM(dLat, dLon, sLat, sLon);
+            let route = await window.fetchRouteFromTomTom(dLat, dLon, sLat, sLon);
             if (route) {
                 currentTrueRemainKm = route.km;
                 currentTrueRemainSec = route.sec;
@@ -1748,12 +1714,12 @@
         if(routeUpdateTimer) clearInterval(routeUpdateTimer); 
         routeUpdateTimer = setInterval(async () => { 
             if(!lastPos || !destLoc) return; 
-            let route = await window.fetchRouteFromOSRM(destLoc.lat, destLoc.lon, lastPos.lat, lastPos.lon);
+            let route = await window.fetchRouteFromTomTom(destLoc.lat, destLoc.lon, lastPos.lat, lastPos.lon);
             if(route) {
                 currentTrueRemainKm = route.km; 
                 currentTrueRemainSec = route.sec; 
             }
-        }, 10000); 
+        }, 120000); // โพล TomTom ทุก 120 วิ (ประหยัดโควตา 2,500 ครั้ง/วัน เมื่อใช้กันหลายคน)
     };
     
     window.stopTracking = () => { 
