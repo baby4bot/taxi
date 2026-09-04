@@ -513,6 +513,8 @@
             box-shadow: 0 0 16px rgba(255,181,46,0.24), inset 0 1px 0 rgba(255,255,255,0.08);
         }
         .small-toll-btn.is-hidden { display: none !important; }
+        @keyframes tollFadeSlideIn { from { opacity: 0; transform: translateY(5px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .small-toll-btn.toll-pop-in { animation: tollFadeSlideIn 0.28s ease-out both; }
 
         /* Dropdown results */
         .dropdown-box {
@@ -1172,7 +1174,7 @@
         
         <div id="tzDestNameBox" style="color: white; font-size: 18px; font-weight: 500; background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 15px; margin-bottom: 15px; display: none; border: 1px solid rgba(255,255,255,0.05); align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
             <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">📍 ไปที่: <span id="tzDestText" style="color: var(--neon-yellow);"></span></div>
-            <button id="btnTollToggleZoom" class="small-toll-btn active" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;" onclick="event.stopPropagation(); window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)"><span class="material-symbols-outlined" style="font-size: 18px;">route</span></button>
+            <button id="btnTollToggleZoom" class="small-toll-btn toll-pop-in active" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;" onclick="event.stopPropagation(); window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)"><span class="material-symbols-outlined" style="font-size: 18px;">route</span></button>
         </div>
         
         <div class="tz-header">
@@ -1327,10 +1329,16 @@
     const $ = id => document.getElementById(id);
 
     // ปุ่มเลี่ยงด่วน/ขึ้นด่วน จะแสดงเฉพาะเมื่อมีจุดหมายปลายทางแล้ว (ซ่อนตอนยังไม่เลือกปลายทาง)
-    window.syncTollToggleVisibility = () => {
+    window.syncTollToggleVisibility = (pop = false) => {
         const btn = $('btnTollToggleMain');
         if (!btn) return;
+        const wasHidden = btn.classList.contains('is-hidden');
         btn.classList.toggle('is-hidden', !destLoc);
+        if ((pop || wasHidden) && destLoc) {
+            btn.classList.remove('toll-pop-in');
+            void btn.offsetWidth; // รีสตาร์ท animation ทุกครั้งที่ปุ่มโผล่
+            btn.classList.add('toll-pop-in');
+        }
     };
 
     async function requestWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
@@ -1341,21 +1349,25 @@
     function formatDuration(totalMins) { if (totalMins < 60) return totalMins + " นาที"; let h = Math.floor(totalMins / 60); let m = totalMins % 60; return h + " ชม. " + (m > 0 ? m + " นาที" : ""); }
 
     // อัปเดตสี/ไอคอนของปุ่มทั้งหมดตามโหมด (Main = สวิตช์เดียว, Live & Zoom = ปุ่มคู่)
+    const tollBtnClass = (modeCls, el) => {
+        const pop = el.classList.contains('toll-pop-in') ? ' toll-pop-in' : '';
+        el.className = 'small-toll-btn ' + modeCls + pop;
+    };
     const applyTollModeUI = (isToll) => {
         const tollToggleMain = document.getElementById('btnTollToggleMain');
         if (tollToggleMain) {
-            tollToggleMain.className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn active';
+            tollBtnClass(isToll ? 'toll-active' : 'active', tollToggleMain);
             const tglIcon = tollToggleMain.querySelector('.material-symbols-outlined');
             if (tglIcon) tglIcon.innerText = isToll ? 'add_road' : 'route';
             tollToggleMain.title = isToll ? 'ขึ้นทางด่วน (แตะเพื่อเลี่ยงทางด่วน)' : 'เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)';
         }
         if (document.getElementById('btnAvoidTollLive')) {
-            document.getElementById('btnAvoidTollLive').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
-            document.getElementById('btnUseTollLive').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
+            tollBtnClass(isToll ? '' : 'active', document.getElementById('btnAvoidTollLive'));
+            tollBtnClass(isToll ? 'toll-active' : '', document.getElementById('btnUseTollLive'));
         }
         const tollToggleZoom = document.getElementById('btnTollToggleZoom');
         if (tollToggleZoom) {
-            tollToggleZoom.className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn active';
+            tollBtnClass(isToll ? 'toll-active' : 'active', tollToggleZoom);
             const zIcon = tollToggleZoom.querySelector('.material-symbols-outlined');
             if (zIcon) zIcon.innerText = isToll ? 'add_road' : 'route';
             tollToggleZoom.title = isToll ? 'ขึ้นทางด่วน (แตะเพื่อเลี่ยงทางด่วน)' : 'เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)';
@@ -1950,7 +1962,7 @@
         $('historyList').style.display = 'none'; 
         $('suggestionList').style.display = 'none'; 
         destLoc = { lat, lon }; 
-        window.syncTollToggleVisibility();
+        window.syncTollToggleVisibility(true);
         window.saveHistory(name, lat, lon); 
         window.getRouteData(lat, lon, name); 
     };
