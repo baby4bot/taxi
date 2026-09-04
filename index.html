@@ -1432,6 +1432,7 @@
     let pauseLog = [], pauseOpenAt = null; // รายการที่ปิดแล้ว {s: เวลาหยุด, r: เวลากลับมา} + เวลาหยุดของรายการที่ยังไม่ปิด
     // 🚩 เตือน "ใกล้ถึงปลายทาง" (ทอง, ครั้งเดียวต่อเที่ยว) — จดระยะทางรวมตอนเริ่มเที่ยว + ว่าปล่อยเสียง/โชว์ไปแล้วหรือยัง
     let nearDestInitRemain = 0, nearDestWarned = false;
+    let arriveAsked = false; // ถาม "ถึงปลายทางแล้วหรือยัง?" (ครั้งเดียว/เที่ยว) หลังเบิกคืนพบเหลือระยะทาง < 100 ม.
     const openPause = (t) => { if (pauseOpenAt === null) pauseOpenAt = t; };
     const closePause = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 8000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } };
     const closePauseManual = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 2000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } }; // กด "หยุดมิเตอร์ชั่วคราว" เอง → ลงรายการแม้สั้นแค่ 2 วิ (แตะพลาด < 2 วิ ไม่รก)
@@ -2424,6 +2425,10 @@
                 window.lastCatchUpInfo = { type: 'hidden', timeSec: caughtTimeSec, km: caughtKm, fareDelta: fareDelta, at: Date.now() };
                 window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true, () => { if (typeof window.showCatchUpDetails === 'function') window.showCatchUpDetails(); }); // ทองเด่น + แตะเปิดสรุปยอดที่เบิก
             }
+            // 🚩 กลับจากเบื้องหลังแล้วเหลือระยะทางถึงปลายทาง < 100 ม. → ถามจบเที่ยวทันที
+            if (destLoc && typeof currentTrueRemainKm === 'number' && currentTrueRemainKm <= 0.1) {
+                askArrivalEndTrip(currentTrueRemainKm, ($('destInput').value || '').trim() || '');
+            }
         } catch(e) {}
         finally { kmCatchUpBusy = false; }
     };
@@ -2519,6 +2524,27 @@
         if (banner.classList.contains('trb-compact')) window.expandResumeBanner(); // แตะแถบเล็ก = ขยายกลับ
     };
 
+    // 🚩 หลังเบิกคืน (เปิดแอปใหม่/กลับจากเบื้องหลัง) พบว่าเหลือระยะทางถึงปลายทาง < 100 ม.
+    // → ถามคนขับว่าถึงปลายทางแล้วหรือยัง และเสนอ "จบเที่ยวทันที" (ครั้งเดียว/เที่ยว)
+    const askArrivalEndTrip = async (remainKm, destName) => {
+        if (arriveAsked || window.isMeterPaused) return;
+        if (typeof remainKm !== 'number' || remainKm > 0.1) return;
+        arriveAsked = true;
+        const meters = Math.max(1, Math.round(remainKm * 1000));
+        const ok = await window.showCustomConfirm('ถึงปลายทางแล้วหรือยัง?', 'ระบบตรวจพบว่าเหลือระยะทางถึง ' + (destName ? '“' + destName + '”' : 'ปลายทาง') + ' เพียง ~' + meters + ' เมตร — จบเที่ยวเลยไหม? (ถ้ายังไม่ถึง กดยกเลิกแล้วกดเริ่มต่อได้)', 'warning', 'จบเที่ยวทันที');
+        if (!ok) return;
+        // ยังไม่ได้กด "เริ่มต่อ" (เพิ่งเปิดแอป) → เริ่มจากข้อมูล payload ที่เบิกคืนแล้ว แล้วจบเที่ยวเลย
+        if (!window.isManualRunning) {
+            const b = document.getElementById('tripResumeBanner');
+            if (b) b.style.display = 'none';
+            window.cancelTrbCompact();
+            let data = null;
+            try { data = JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY) || 'null'); } catch(e) {}
+            if (data && data.startTime) window.startMeterAndTracking(data);
+        }
+        if (window.isManualRunning) window.finishTripWithSummary();
+    };
+
     // แสดงแบนเนอร์เมื่อเปิดแอปแล้วพบเที่ยวที่ยังไม่สิ้นสุด (แอปปิด/รีเฟรชค้าง)
     window.maybeShowResumeBanner = () => {
         if (window.isManualRunning) return;
@@ -2546,6 +2572,10 @@
             window.playSound('resume');
             if (navigator.vibrate) { try { navigator.vibrate([130, 70, 130]); } catch(e) {} }
             window.scheduleTrbCompact();
+        }
+        // 🚩 เปิดแอปแล้วพบว่าเหลือระยะทางถึงปลายทาง < 100 ม. → ถามจบเที่ยวทันที (กันรบกวนเมื่อยังวิ่งไกล)
+        if (data.dest && typeof data.remainKm === 'number' && data.remainKm <= 0.1) {
+            askArrivalEndTrip(data.remainKm, data.destName || '');
         }
     };
 
@@ -2628,6 +2658,10 @@
                 }
                 window.saveActiveTrip(true); // อัปเดต payload ให้ตรงกับมิเตอร์
                 window.updateLiveMeterDisplay();
+                // 🚩 เบิกคืนแล้วเหลือระยะทางถึงปลายทาง < 100 ม. (กดเริ่มต่อไปแล้วระหว่างตรวจสอบ) → ถามจบเที่ยวทันที
+                if (cur.dest && typeof currentTrueRemainKm === 'number' && currentTrueRemainKm <= 0.1) {
+                    askArrivalEndTrip(currentTrueRemainKm, data.destName || cur.destName || '');
+                }
             } else {
                 // ตรวจซ้ำก่อนเขียน payload (กันจังหวะที่เริ่มต่อ/ลบทิ้งไปแล้วระหว่างคำนวณเส้นทาง)
                 const cur2 = (() => { try { return JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY) || 'null'); } catch(e) { return null; } })();
@@ -2775,7 +2809,7 @@
             pauseLog = []; pauseOpenAt = null; window.isMeterPaused = false;
         }
         
-        nearDestInitRemain = 0; nearDestWarned = false; window.__tripLiveAt = Date.now(); // รีเซ็ตเตือน "ใกล้ถึงปลายทาง" สำหรับเที่ยวนี้ (เริ่มนับเวลาหลังเริ่ม/เริ่มต่อ)
+        nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; window.__tripLiveAt = Date.now(); // รีเซ็ตเตือน "ใกล้ถึงปลายทาง"/ถามจบเที่ยว สำหรับเที่ยวนี้ (เริ่มนับเวลาหลังเริ่ม/เริ่มต่อ)
         $('driveCovered').innerText = actualDrivenKm.toFixed(2); 
         window.saveActiveTrip(true);
 
@@ -3205,7 +3239,7 @@
         window.stopSilentAudio(); 
         window.hideMap(); // Hide map when tracking stops
         $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; window.syncFareTollBtn(); if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false;        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
-        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false;
+        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false;
         window.isMeterPaused = false;
         window.updatePauseBtnUI();
         window.syncTollToggleVisibility();
