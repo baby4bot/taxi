@@ -1344,6 +1344,7 @@
     let destLoc = null, searchTimer = null, watchId = null;
     let lastPos = null, actualDrivenKm = 0, startTime = null, wakeLock = null, lastCalcTime = null;
     let tripTimer = null, routeUpdateTimer = null, trafficSeconds = 0;
+    let kmCatchUpBusy = false;
     let lastPosTime = null, currentSpeedKmh = 0, currentTrueRemainKm = 0, currentTrueRemainSec = 0; 
     window.isManualRunning = false;
 
@@ -1379,7 +1380,15 @@
 
     async function requestWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
     function releaseWakeLock() { if (wakeLock !== null) { wakeLock.release().catch(()=>{}); wakeLock = null; } }
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && window.isManualRunning) requestWakeLock(); });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && window.isManualRunning) {
+            requestWakeLock();
+            // กลับมาจากเบื้องหลัง: นับเวลาตามนาฬิกาจริงทันที + อัปเดตหน้าจอ + ทายระยะทางที่หายไป
+            if (typeof window.advanceMeterTime === 'function') window.advanceMeterTime(Date.now());
+            if (typeof window.updateLiveMeterDisplay === 'function') window.updateLiveMeterDisplay();
+            if (typeof window.catchUpDrivenKmAfterHidden === 'function') window.catchUpDrivenKmAfterHidden();
+        }
+    });
     
     const calcGPS = (l1, n1, l2, n2) => 6371 * 2 * Math.asin(Math.sqrt(Math.sin((l2-l1)*Math.PI/360)**2 + Math.cos(l1*Math.PI/180)*Math.cos(l2*Math.PI/180)*Math.sin((n2-n1)*Math.PI/360)**2));
     function formatDuration(totalMins) { if (totalMins < 60) return totalMins + " นาที"; let h = Math.floor(totalMins / 60); let m = totalMins % 60; return h + " ชม. " + (m > 0 ? m + " นาที" : ""); }
@@ -2137,6 +2146,55 @@
         }
     };
 
+    // ⏱️ เดินเวลามิเตอร์จากนาฬิกาจริง (Date.now) ไม่ใช่นับรอบ setInterval
+    // => แม้เบราว์เซอร์ลดความถี่ตอนซ่อนหน้าต่าง เวลาก็ยังตรงกับมิเตอร์จริง ไม่เพี้ยน
+    window.advanceMeterTime = (now) => {
+        if (!window.isManualRunning || !startTime) return;
+        if (lastCalcTime === null) lastCalcTime = startTime;
+        const deltaSec = (now - lastCalcTime) / 1000;
+        if (deltaSec <= 0) { lastCalcTime = now; return; }
+
+        // ไม่มีสัญญาณ GPS เกิน 5 วิ = ถือว่าจอด/รถติด (กันความเร็วค้างจาก fix เก่า)
+        if (now - lastPosTime > 5000) currentSpeedKmh = 0;
+
+        // คิดค่าเวลาตอนความเร็ว <= 6 กม./ชม. (เหมือนมิเตอร์แท็กซี่) ตามเวลาจริงที่ผ่านไป
+        if (currentSpeedKmh <= 6) {
+            trafficSeconds += deltaSec;
+        }
+
+        // เวลาที่เหลือของเส้นทางลดลงตามเวลาจริง
+        if (currentTrueRemainSec > 0) { currentTrueRemainSec = Math.max(0, currentTrueRemainSec - deltaSec); }
+        lastCalcTime = now;
+    };
+
+    // 📍 กลับมาจากการซ่อนหน้าต่าง: ขอตำแหน่งใหม่ + คำนวณเส้นทางที่เหลือใหม่
+    // เพื่อทายระยะทางที่วิ่งไประหว่างที่ GPS ถูกพัก (เฉพาะเที่ยวที่มีปลายทาง)
+    window.catchUpDrivenKmAfterHidden = async () => {
+        if (!window.isManualRunning || !destLoc || kmCatchUpBusy) return;
+        if (Date.now() - lastPosTime < 20000) return; // ซ่อนไม่นานพอ ไม่ต้องคำนวณ
+        kmCatchUpBusy = true;
+        try {
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 6000, maximumAge: 20000 });
+            });
+            const p = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+            if (Math.abs(p.lat) < 1 && Math.abs(p.lon) < 1) return;
+            lastPos = p;
+            lastPosTime = Date.now();
+            const route = await window.fetchRouteFromTomTom(destLoc.lat, destLoc.lon, p.lat, p.lon);
+            if (route && route.km !== undefined) {
+                const missing = currentTrueRemainKm - route.km;
+                if (missing > 0.02 && missing < 100) {
+                    actualDrivenKm += missing;
+                    currentTrueRemainKm = Math.max(0, route.km);
+                    if (route.sec !== undefined) currentTrueRemainSec = route.sec;
+                }
+            }
+            window.updateLiveMeterDisplay();
+        } catch(e) {}
+        finally { kmCatchUpBusy = false; }
+    };
+
     window.startMeterAndTracking = () => {
         if (window.isManualRunning) return;
         
@@ -2193,22 +2251,9 @@
         navigator.geolocation.getCurrentPosition(pos => { lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude }; }, null, { enableHighAccuracy: true });
         
         if(tripTimer) clearInterval(tripTimer);
+        // ตัวจับเวลานี้ใช้แค่ "เตือนให้อัปเดตหน้าจอ" — การนับเวลาจริงอยู่ใน advanceMeterTime (อิง Date.now)
         tripTimer = setInterval(() => { 
-            let now = Date.now(); 
-            let deltaSec = (now - lastCalcTime) / 1000; 
-            lastCalcTime = now; 
-            
-            if (now - lastPosTime > 5000) currentSpeedKmh = 0; 
-            
-            if (currentSpeedKmh <= 6) {
-                if (deltaSec < 10) { 
-                    trafficSeconds += deltaSec; 
-                } else {
-                    trafficSeconds += 1; 
-                }
-            }
-            
-            if(currentTrueRemainSec > 0) { currentTrueRemainSec -= deltaSec; if(currentTrueRemainSec < 0) currentTrueRemainSec = 0; } 
+            window.advanceMeterTime(Date.now());
             window.updateLiveMeterDisplay(); 
         }, 1000);
         
@@ -2454,6 +2499,7 @@
         window.stopSilentAudio(); 
         window.hideMap(); // Hide map when tracking stops
         $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; window.syncFareTollBtn(); if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false;        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
+        lastCalcTime = null; kmCatchUpBusy = false;
         window.syncTollToggleVisibility();
     };
     
