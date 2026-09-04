@@ -1324,6 +1324,7 @@
 
     const HISTORY_KEY = 'taxi_history_v25';
     const FAVORITES_KEY = 'taxi_favorites_v1';
+    const LAST_TOLL_KEY = 'taxi_last_toll_v1';
 
     let destLoc = null, searchTimer = null, watchId = null;
     let lastPos = null, actualDrivenKm = 0, startTime = null, wakeLock = null, lastCalcTime = null;
@@ -1414,6 +1415,7 @@
         if(!isOk) return;
         try { localStorage.removeItem(HISTORY_KEY); } catch(e) {}
         try { localStorage.removeItem(FAVORITES_KEY); } catch(e) {}
+        try { localStorage.removeItem(LAST_TOLL_KEY); } catch(e) {}
         const his = $('historyList'); if(his) { his.innerHTML = ''; his.style.display = 'none'; }
         const sug = $('suggestionList'); if(sug) { sug.innerHTML = ''; sug.style.display = 'none'; }
         applyTollModeState(false, true); // กลับเป็นค่าเริ่มต้น เลี่ยงทางด่วน + ซิงก์กลับบัญชี (Firestore)
@@ -1767,16 +1769,24 @@
     window.addSurcharge = (amount, name) => { window.surchargeList.push({ name: name, amount: amount, id: Date.now() }); window.updateSurchargeUI(); };
 
     window.promptToll = () => {
+        // เน้นยอดรวมทางด่วนจริงของเส้นทางก่อน ถ้าไม่มีให้ใช้จำนวนที่กรอกครั้งล่าสุดที่จำไว้
         const total = window.getRouteTollTotal ? window.getRouteTollTotal() : 0;
-        document.getElementById('tollInput').value = total > 0 ? total : '';
+        let last = 0;
+        try { last = parseInt(localStorage.getItem(LAST_TOLL_KEY) || '0', 10) || 0; } catch(e) {}
+        document.getElementById('tollInput').value = (total > 0 ? total : last) || '';
         window.toggleModal('tollModal', true);
         setTimeout(() => document.getElementById('tollInput').focus(), 300);
     };
     
     window.confirmToll = () => {
         let amt = parseInt(document.getElementById('tollInput').value);
-        if(amt > 0) { window.addSurcharge(amt, 'ค่าทางด่วน'); window.toggleModal('tollModal', false); } 
-        else { window.showToast('กรุณาระบุจำนวนเงินที่ถูกต้อง', true); }
+        if(amt > 0) {
+            window.addSurcharge(amt, 'ค่าทางด่วน');
+            try { localStorage.setItem(LAST_TOLL_KEY, String(amt)); } catch(e) {}
+            window.toggleModal('tollModal', false);
+        } else {
+            window.showToast('กรุณาระบุจำนวนเงินที่ถูกต้อง', true);
+        }
     };
 
     window.removeSurcharge = (id) => { window.surchargeList = window.surchargeList.filter(item => item.id !== id); window.updateSurchargeUI(); };
