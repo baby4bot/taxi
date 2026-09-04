@@ -1256,6 +1256,21 @@
     </div>
 </div>
 
+<div id="tripSummaryOverlay" class="modal-overlay" style="z-index: 10060;" onclick="window.toggleModal('tripSummaryOverlay', false)">
+    <div class="modal-box flex-col-box" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 style="display:flex; align-items:center; justify-content:center; gap:8px;"><span class="material-symbols-outlined" style="color: var(--neon-green);">receipt_long</span> สรุปค่าโดยสาร</h3>
+            <button class="btn-close-floating" onclick="window.toggleModal('tripSummaryOverlay', false)"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="modal-content-scroll" style="text-align:left; padding:12px 16px 8px; width:100%; box-sizing:border-box;">
+            <div id="tsSummaryContent"></div>
+        </div>
+        <div style="padding:14px 18px; border-top:1px solid rgba(255,255,255,0.07); width:100%; box-sizing:border-box; background:rgba(0,0,0,0.25); flex-shrink:0;">
+            <button onclick="window.toggleModal('tripSummaryOverlay', false)" class="manual-timer-btn" style="background: var(--neon-green); width:100%; justify-content:center; color:white;"><span class="material-symbols-outlined" style="font-size:20px;">check_circle</span> เสร็จสิ้น / กลับหน้าหลัก</button>
+        </div>
+    </div>
+</div>
+
 <div onclick="window.toggleModal('qrOverlay', false)" id="qrOverlay" class="modal-overlay">
     <div onclick="event.stopPropagation()" style="position: relative; display: inline-flex; flex-direction: column; align-items: center;">
         <div onclick="window.toggleModal('qrOverlay', false)" class="btn-close-floating" style="top: -15px; right: -15px;"><span class="material-symbols-outlined">close</span></div>
@@ -1363,6 +1378,10 @@
     let trafficCharging = false, lastFixSpeedKmh = null, lastStopFixAt = null; // กำลังคิดค่าเวลาจอด? / ความเร็วจาก GPS ล่าสุด / เวลา fix สุดท้ายที่ยืนยันจอดจริง
     let lastPosTime = null, currentSpeedKmh = 0, currentTrueRemainKm = 0, currentTrueRemainSec = 0; 
     let hiddenGapStart = null, hiddenLastPos = null; // จดตอนแอปซ่อน/สลับแอป เพื่อเบิกเวลาจอด + ระยะทางที่หายกลับคืนเมื่อกลับมา
+    // ⏸️ บันทึกช่วงที่มิเตอร์ "หยุด" ระหว่างเที่ยว (แอปถูกปิด/ซ่อนหน้าจอ) เพื่อโชว์ในหน้าสรุปหลังจบเที่ยว (ความโปร่งใสกับผู้โดยสาร)
+    let pauseLog = [], pauseOpenAt = null; // รายการที่ปิดแล้ว {s: เวลาหยุด, r: เวลากลับมา} + เวลาหยุดของรายการที่ยังไม่ปิด
+    const openPause = (t) => { if (pauseOpenAt === null) pauseOpenAt = t; };
+    const closePause = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 8000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } };
     window.isManualRunning = false;
 
     let loggedInUserId = localStorage.getItem('taxi_user_id');
@@ -1401,10 +1420,12 @@
     const captureHiddenGap = () => {
         if (!window.isManualRunning) return;
         if (hiddenGapStart === null) { hiddenGapStart = Date.now(); hiddenLastPos = lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null; }
+        openPause(Date.now()); // เริ่มจับเวลาช่วงที่มิเตอร์หยุด (แอปซ่อน/ปิดหน้าจอ)
         window.saveActiveTrip(true);
     };
     const resumeFromHidden = () => {
         if (!window.isManualRunning) return;
+        closePause(Date.now()); // ปิดรายการหยุดพัก (เฉพาะ >= 8 วิ กันรายการรกจากสลับแอปสั้นๆ)
         requestWakeLock();
         // ข้ามการคิดเวลาช่วงที่ซ่อนไว้ก่อน (ยังไม่รู้ว่ารถจอดหรือวิ่ง) → ให้ catchUp ตัดสินใจเบิกทีเดียวเมื่อได้ตำแหน่งจริง
         if (hiddenGapStart !== null && Date.now() - hiddenGapStart >= 8000) {
@@ -2275,7 +2296,8 @@
             dest: destLoc ? { lat: destLoc.lat, lon: destLoc.lon } : null,
             destName: destLoc ? $('destInput').value.trim() : '',
             surcharges: window.surchargeList.slice(),
-            baseFare: window.baseFare
+            baseFare: window.baseFare,
+            pauseLog: pauseLog.slice(), pauseOpenAt: pauseOpenAt
         };
         try { localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(payload)); } catch(e) {}
     };
@@ -2348,12 +2370,16 @@
             if (seed.destName) $('destInput').value = seed.destName;
             if (seed.baseFare) window.baseFare = seed.baseFare;
             window.surchargeList = (seed.surcharges && seed.surcharges.length) ? seed.surcharges : [];
+            pauseLog = (seed.pauseLog || []).slice();
+            pauseOpenAt = seed.pauseOpenAt || null;
+            closePause(Date.now()); // ปิดรายการหยุดค้าง = ช่วงที่แอปปิด/รีเฟรช (เฉพาะ >= 8 วิ) ให้โผล่ในสรุปตอนจบเที่ยว
             $('kmInput').value = actualDrivenKm.toFixed(2);
             window.updateFareEstimation(actualDrivenKm);
             window.updateSurchargeUI();
         } else {
             actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; trafficCharging = true; lastFixSpeedKmh = null;
             startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime; lastStopFixAt = startTime;
+            pauseLog = []; pauseOpenAt = null;
         }
         
         $('driveCovered').innerText = actualDrivenKm.toFixed(2); 
@@ -2518,13 +2544,31 @@
     };
     window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; window.updateFareEstimation(km); window.checkAppStatus(); };
     
+    // 🧾 จบเที่ยว (จากปุ่มหลัก หรือหน้าจอขยาย): ถ่ายข้อมูลสรุป → รีเซ็ตระบบ → เปิดหน้าสรุปค่าโดยสาร
+    // หน้าสรุปโชว์ช่วง "หยุด/เริ่มต่อ" ระหว่างเที่ยว (แอปปิด/สลับหน้าจอ) ให้ผู้โดยสารเห็นอย่างโปร่งใส
+    window.finishTripWithSummary = () => {
+        window.playSound('stop');
+        if (typeof window.advanceMeterTime === 'function') window.advanceMeterTime(Date.now()); // ให้วินาทีสุดท้ายครบก่อนสรุป
+        const snap = {
+            startTime: startTime,
+            endTime: Date.now(),
+            destName: ($('destInput').value || '').trim(),
+            km: actualDrivenKm,
+            trafficSec: trafficSeconds,
+            baseFare: window.baseFare,
+            surcharges: window.surchargeList.slice(),
+            pauses: pauseLog.slice()
+        };
+        window.resetAll();
+        window.toggleModal('trackerZoomOverlay', false);
+        window.renderTripSummary(snap);
+        window.toggleModal('tripSummaryOverlay', true);
+    };
+
     window.toggleManualTimer = async () => { 
         if(window.isManualRunning) { 
             let isOk = await window.showCustomConfirm("สิ้นสุดการเดินทาง", "ระบบจะทำการหยุดมิเตอร์และสรุปยอด\nคุณต้องการสิ้นสุดการเดินทางใช่หรือไม่?", "danger", "สิ้นสุดเดินทาง");
-            if(isOk) {
-                window.playSound('stop');
-                window.resetAll();
-            }
+            if(isOk) window.finishTripWithSummary();
         } else { 
             window.startMeterAndTracking(); 
         } 
@@ -2532,11 +2576,92 @@
 
     window.modalStopTripClick = async () => {
         let isOk = await window.showCustomConfirm("สิ้นสุดการเดินทาง", "ระบบจะทำการหยุดมิเตอร์และสรุปยอด\nคุณต้องการสิ้นสุดการเดินทางใช่หรือไม่?", "danger", "สิ้นสุดเดินทาง");
-        if(isOk) {
-            window.playSound('stop');
-            window.resetAll();
-            window.toggleModal('trackerZoomOverlay', false);
+        if(isOk) window.finishTripWithSummary();
+    };
+
+    // สร้างเนื้อหาหน้าสรุป (ใบเสร็จ) ลงใน #tsSummaryContent
+    window.renderTripSummary = (s) => {
+        const el = (id) => document.getElementById(id);
+        const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const clock = (ms) => new Date(ms).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        const dur = (sec) => {
+            sec = Math.max(0, Math.round(sec));
+            const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), ss = sec % 60;
+            if (h > 0) return h + ' ชม. ' + m + ' นาที';
+            if (m > 0) return ss > 0 ? m + ' นาที ' + ss + ' วิ' : m + ' นาที';
+            return ss + ' วิ';
+        };
+        const thb = (n) => Math.round(n).toLocaleString('th-TH') + ' ฿';
+
+        // คิดราคาแบบเดียวกับมิเตอร์บนหน้าจอ (ค่าแรกเข้า + ค่าระยะทาง&เวลารถติด ปัดเป็นเลขคู่ + ค่าเพิ่ม)
+        const distFare = window.calcThaiMeterDist(s.km);
+        const meterTravel = Math.floor((distFare + s.trafficSec * (3.0 / 60)) / 2) * 2;
+        const surchargeTotal = s.surcharges.reduce((sum, it) => sum + it.amount, 0);
+        const total = s.baseFare + meterTravel + surchargeTotal;
+
+        const wallSec = (s.endTime - s.startTime) / 1000;
+        const pauseSec = s.pauses.reduce((sum, p) => sum + (p.r - p.s), 0) / 1000;
+
+        const fareRow = (label, amount, note, strong) => `
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:11px 2px 9px; ${strong ? 'border-top:1px solid rgba(255,255,255,0.15); margin-top:6px;' : 'border-bottom:1px dashed rgba(255,255,255,0.08);'}">
+                <div>
+                    <div style="font-size:${strong ? '17px' : '14px'}; font-weight:${strong ? '700' : '400'}; color:${strong ? 'white' : 'var(--text-dim)'};">${label}</div>
+                    ${note ? `<div style="font-size:11px; color:var(--text-dim); margin-top:2px;">${note}</div>` : ''}
+                </div>
+                <div style="font-size:${strong ? '24px' : '17px'}; font-weight:700; color:${strong ? 'var(--neon-green)' : 'white'}; white-space:nowrap;">${thb(amount)}</div>
+            </div>`;
+
+        let html = '';
+        if (s.destName) {
+            html += `<div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:9px 14px; border-radius:14px; font-size:14px; margin-bottom:12px;">
+                <span class="material-symbols-outlined" style="font-size:18px; color:var(--neon-yellow);">flag</span>
+                <span style="color:white;">ไปที่: ${esc(s.destName)}</span>
+            </div>`;
         }
+
+        html += `
+            <div style="display:flex; justify-content:space-between; font-size:12.5px; color:var(--text-dim); margin-bottom:12px;">
+                <span>เริ่ม <b style="color:#2ecc71;">${clock(s.startTime)}</b> น.</span>
+                <span>สิ้นสุด <b style="color:#e74c3c;">${clock(s.endTime)}</b> น.</span>
+            </div>
+            <div style="text-align:center; margin-bottom:14px;">
+                <div style="font-size:62px; line-height:1.15; font-weight:700; color:var(--neon-green); text-shadow:0 0 20px rgba(46,204,113,0.35);">${thb(total)}</div>
+                <div style="font-size:12px; color:var(--text-dim); margin-top:2px;">ค่าโดยสารรวม (ตามมิเตอร์)</div>
+            </div>
+            <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+                <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:6px 12px; border-radius:12px; font-size:12.5px; color:white;">⏱️ ${dur(wallSec)}</div>
+                <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:6px 12px; border-radius:12px; font-size:12.5px; color:white;">📏 ${s.km.toFixed(2)} กม.</div>
+                <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:6px 12px; border-radius:12px; font-size:12.5px; color:white;">🚦 รถติด ${dur(s.trafficSec)}</div>
+            </div>`;
+
+        html += `<div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:6px 14px 8px; margin-bottom:14px;">
+            ${fareRow('ค่าแรกเข้า', s.baseFare)}
+            ${fareRow('ค่าระยะทาง + เวลารถติด', meterTravel, s.km.toFixed(2) + ' กม. · รถติด ' + dur(s.trafficSec))}
+            ${s.surcharges.map((it) => fareRow(esc(it.name), it.amount)).join('')}
+            ${fareRow('รวมค่าโดยสาร', total, '', true)}
+        </div>`;
+
+        if (s.pauses.length > 0) {
+            html += `<div style="background:rgba(255,193,7,0.05); border:1px solid rgba(255,193,7,0.22); border-radius:16px; padding:13px 14px;">
+                <div style="display:flex; align-items:center; gap:7px; font-size:14px; font-weight:600; color:var(--neon-yellow);">
+                    <span class="material-symbols-outlined" style="font-size:19px;">pause_circle</span> หยุด / เริ่มต่อระหว่างเที่ยว
+                    <span style="font-size:11px; font-weight:400; color:var(--text-dim); margin-left:auto;">${s.pauses.length} ครั้ง · รวม ${dur(pauseSec)}</span>
+                </div>
+                <div style="font-size:11.5px; color:var(--text-dim); line-height:1.5; margin:7px 0 5px; text-align:left;">ช่วงที่แอปถูกปิด / สลับหน้าจอระหว่างทาง มิเตอร์จะหยุดนับชั่วคราว (ไม่คิดระยะทางและเวลาช่วงนั้น) — แจ้งผู้โดยสารเพื่อความโปร่งใส</div>
+                ${s.pauses.map((p, i) => {
+                    const durSec = (p.r - p.s) / 1000;
+                    return `<div style="display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:${i < s.pauses.length - 1 ? '1px dashed rgba(255,255,255,0.09)' : 'none'}; font-size:13px;">
+                        <span style="color:var(--text-dim); width:16px;">${i + 1}.</span>
+                        <span style="background:rgba(231,76,60,0.16); color:#ff8a80; padding:2px 9px; border-radius:9px; font-size:12px;">หยุด ${clock(p.s)} น.</span>
+                        <span style="color:var(--text-dim);">→</span>
+                        <span style="background:rgba(46,204,113,0.16); color:#7bed9f; padding:2px 9px; border-radius:9px; font-size:12px;">ต่อ ${clock(p.r)} น.</span>
+                        <span style="margin-left:auto; color:var(--neon-yellow); font-weight:600; white-space:nowrap;">${dur(durSec)}</span>
+                    </div>`;
+                }).join('')}
+            </div>`;
+        }
+        const c = el('tsSummaryContent');
+        if (c) c.innerHTML = html;
     };
     
     window.updateLiveMeterDisplay = () => { 
@@ -2666,7 +2791,7 @@
     
     window.resetAll = () => {  
         $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; 
-        window.isManualRunning = false; window.surchargeList = []; trafficSeconds = 0; window.updateSurchargeUI(); window.clearActiveTrip();
+        window.isManualRunning = false; window.surchargeList = []; trafficSeconds = 0; pauseLog = []; pauseOpenAt = null; window.updateSurchargeUI(); window.clearActiveTrip();
         window.renderStartButton();
         $('manualTimerBtn').classList.remove('active');
         
