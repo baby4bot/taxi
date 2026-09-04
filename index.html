@@ -609,13 +609,26 @@
             pointer-events: none;
         }
         #fareTollBtn {
-            position: absolute; top: 9px; right: 10px; z-index: 50;
+            position: absolute; top: 9px; left: 10px; z-index: 50;
             display: none; align-items: center; justify-content: center; gap: 5px;
             padding: 6px 13px; border-radius: 20px;
             font-size: 13px; font-weight: 600; line-height: 1;
             white-space: nowrap;
         }
         #fareTollBtn .material-symbols-outlined { font-size: 16px; }
+
+        #fareResetBtn {
+            position: absolute; top: 9px; right: 10px; z-index: 50;
+            display: none; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%; padding: 0;
+            border: 1px solid rgba(255,107,122,0.5);
+            background: rgba(244,63,94,0.15);
+            color: #ff6b7a;
+            cursor: pointer; -webkit-tap-highlight-color: transparent;
+            transition: 0.2s;
+        }
+        #fareResetBtn .material-symbols-outlined { font-size: 17px; }
+        #fareResetBtn:active { transform: scale(0.9); background: rgba(244,63,94,0.3); }
         .price {
             font-size: 62px; font-weight: 700;
             letter-spacing: -3px;
@@ -918,8 +931,10 @@
 
             /* การ์ดประเมินราคาเตี้ยลงบนจอแคบ */
             .result-container { min-height: 84px; max-height: 116px; padding: 6px 12px 4px; margin: 0 0 6px 0; }
-            #fareTollBtn { top: 4px; right: 6px; padding: 4px 9px; font-size: 12px; border-radius: 15px; }
+            #fareTollBtn { top: 4px; left: 6px; padding: 4px 9px; font-size: 12px; border-radius: 15px; }
             #fareTollBtn .material-symbols-outlined { font-size: 14px; }
+            #fareResetBtn { top: 4px; right: 6px; width: 22px; height: 22px; }
+            #fareResetBtn .material-symbols-outlined { font-size: 14px; }
             .sub-info { margin-top: 3px; padding: 3px 10px; font-size: 11px; border-radius: 12px; }
 
             /* กระชับระยะห่างระหว่างปุ่มเริ่มมิเตอร์กับแถวไอคอนล่าง */
@@ -976,7 +991,6 @@
     <div class="app-header">
         <div id="mainUserInfo" class="header-left" style="display: none;">
             <img id="mainProfilePic" src="" class="header-avatar" alt="profile" />
-            <img id="appHeaderIcon" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" class="header-icon" alt="logo" />
             <div style="text-align: left; display: none;">
                 <div id="mainUserName" style="font-size: 15px; font-weight: 600; color: white; line-height: 1;">กำลังโหลด...</div>
                 <div id="mainUserRole" style="font-size: 12px; font-weight: 500; color: var(--neon-yellow); margin-top: 4px;">...</div>
@@ -1013,8 +1027,7 @@
         <div id="liveTrackerDestName" style="font-size: 15px; font-weight: 500; color: white; margin-bottom: 10px; display: none; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); align-items: center; justify-content: space-between; gap: 10px;">
             <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; text-align: left;">📍 ไปที่: <span id="ltDestText" style="color: var(--neon-yellow);"></span></div>
             <div style="display: flex; gap: 5px; flex-shrink: 0;">
-                <button id="btnAvoidTollLive" class="small-toll-btn active" style="width: 32px; height: 32px; border-radius: 8px;" onclick="event.stopPropagation(); window.setTollMode(false)" title="เลี่ยงทางด่วน"><span class="material-symbols-outlined" style="font-size: 16px;">route</span></button>
-                <button id="btnUseTollLive" class="small-toll-btn" style="width: 32px; height: 32px; border-radius: 8px;" onclick="event.stopPropagation(); window.setTollMode(true)" title="ขึ้นทางด่วน"><span class="material-symbols-outlined" style="font-size: 16px;">add_road</span></button>
+                <button id="btnTollToggleLive" class="small-toll-btn active" style="width: 32px; height: 32px; border-radius: 8px;" onclick="event.stopPropagation(); window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)"><span class="material-symbols-outlined" style="font-size: 16px;">route</span></button>
             </div>
         </div>
 
@@ -1070,6 +1083,10 @@
             <span class="material-symbols-outlined">toll</span> + ค่าทางด่วน
         </button>
 
+        <button id="fareResetBtn" onclick="event.stopPropagation(); window.resetAll()" title="ล้างข้อมูลทั้งหมด">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+
         <div class="result-content" id="resultContent" style="width:100%; height:100%; position:absolute; top:0; left:0; right:0; bottom:0;">
             <div id="fareDisplay">
                 <div id="farePrice" class="price">0<span style="font-size: 32px; font-weight:400;"> ฿</span></div>
@@ -1086,8 +1103,6 @@
         </button>
     </div>
                          
-    <button style="display: none;" class="btn-reset" onclick="window.resetAll()" id="resetBtn">ล้างค่าข้อมูลทั้งหมด</button>
-                             
     <div style="gap:15px; margin-bottom: 20px; flex-shrink: 0;" class="flex-center">
         <button onclick="window.shareToPlatform('messenger')" class="btn-icon-base flex-center">
             <svg viewbox="0 0 24 24" fill="#0084FF" style="width:28px; height:28px;"><path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.908 1.463 5.483 3.75 7.182V22l3.414-1.874A10.322 10.322 0 0012 20.516c5.523 0 10-4.145 10-9.258S17.523 2 12 2zm1.09 12.83l-2.774-2.954-5.414 2.954 5.952-6.32 2.844 2.954 5.344-2.954-5.952 6.32z"></path></svg>                        
@@ -1382,9 +1397,12 @@
             if (tglIcon) tglIcon.innerText = isToll ? 'add_road' : 'route';
             tollToggleMain.title = isToll ? 'ขึ้นทางด่วน (แตะเพื่อเลี่ยงทางด่วน)' : 'เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)';
         }
-        if (document.getElementById('btnAvoidTollLive')) {
-            tollBtnClass(isToll ? '' : 'active', document.getElementById('btnAvoidTollLive'));
-            tollBtnClass(isToll ? 'toll-active' : '', document.getElementById('btnUseTollLive'));
+        const tollToggleLive = document.getElementById('btnTollToggleLive');
+        if (tollToggleLive) {
+            tollBtnClass(isToll ? 'toll-active' : 'active', tollToggleLive);
+            const lIcon = tollToggleLive.querySelector('.material-symbols-outlined');
+            if (lIcon) lIcon.innerText = isToll ? 'add_road' : 'route';
+            tollToggleLive.title = isToll ? 'ขึ้นทางด่วน (แตะเพื่อเลี่ยงทางด่วน)' : 'เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)';
         }
         const tollToggleZoom = document.getElementById('btnTollToggleZoom');
         if (tollToggleZoom) {
@@ -2127,7 +2145,8 @@
 
         window.isManualRunning = true; requestWakeLock();
         $('manualTimerBtn').disabled = false; $('manualTimerBtn').classList.add('active');
-        $('searchSectionBox').style.display = 'none'; $('manualSectionBox').style.display = 'none'; $('resetBtn').style.display = 'none';
+        $('searchSectionBox').style.display = 'none'; $('manualSectionBox').style.display = 'none';
+        window.syncFareResetBtn();
         window.syncFareTollBtn();
         if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex';
         
@@ -2270,18 +2289,27 @@
         window.updateFareTollBtnText();
     };
 
+    // ปุ่ม X (ล้างข้อมูลทั้งหมด) มุมบนขวาของการ์ด — แสดงเฉพาะตอนมีข้อมูลให้ล้างและยังไม่ได้เริ่มวิ่ง
+    window.syncFareResetBtn = () => {
+        const btn = document.getElementById('fareResetBtn');
+        if (!btn) return;
+        let km = parseFloat($('kmInput').value) || 0;
+        let destText = $('destInput').value.trim();
+        let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0);
+        btn.style.display = (!window.isManualRunning && (km > 0 || destText !== "" || extraSurcharge > 0)) ? 'flex' : 'none';
+    };
+
     window.checkAppStatus = () => { 
         let km = parseFloat($('kmInput').value) || 0; 
         let destText = $('destInput').value.trim(); 
         let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0); 
         
         window.syncFareTollBtn();
+        window.syncFareResetBtn();
 
         if (!window.isManualRunning) { 
             $('manualTimerBtn').disabled = false; 
         } 
-        
-        $('resetBtn').style.display = (!window.isManualRunning && (km > 0 || destText !== "" || extraSurcharge > 0)) ? 'block' : 'none'; 
     };
 
     window.adjustKm = (val) => { 
