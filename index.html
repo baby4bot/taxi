@@ -514,6 +514,10 @@
         .small-toll-btn.is-hidden { display: none !important; }
         @keyframes tollFadeSlideIn { from { opacity: 0; transform: translateY(5px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
         .small-toll-btn.toll-pop-in { animation: tollFadeSlideIn 0.28s ease-out both; }
+        .trip-resume-banner { display: none; align-items: center; gap: 10px; background: linear-gradient(135deg, rgba(250,204,21,0.14), rgba(250,204,21,0.04)); border: 1px solid rgba(250,204,21,0.4); border-radius: 16px; padding: 10px 12px; margin: 0 2px 10px 2px; box-shadow: 0 4px 18px rgba(0,0,0,0.35); animation: tollFadeSlideIn 0.28s ease-out; }
+        .trip-resume-banner .trb-btn { border: none; border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0; font-family: inherit; }
+        .trip-resume-banner .trb-btn.resume { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; }
+        .trip-resume-banner .trb-btn.discard { background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.75); width: 36px; padding: 8px 0; }
 
         /* Dropdown results */
         .dropdown-box {
@@ -1008,6 +1012,16 @@
                                                 
     </div>
                                                        
+    <div id="tripResumeBanner" class="trip-resume-banner">
+        <span class="material-symbols-outlined" style="font-size: 20px; color: var(--neon-yellow); flex-shrink: 0;">local_taxi</span>
+        <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 13px; font-weight: 700; color: var(--neon-yellow);">มีเที่ยวที่ยังไม่สิ้นสุด</div>
+            <div id="trbInfo" style="font-size: 11.5px; color: rgba(255,255,255,0.75); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+        </div>
+        <button onclick="window.resumeSavedTrip()" class="trb-btn resume">เริ่มต่อ</button>
+        <button onclick="window.discardSavedTrip()" class="trb-btn discard" title="ลบทิ้ง">✕</button>
+    </div>
+    
     <div id="searchSectionBox" class="search-section">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 6px 8px 6px;">
             <label style="margin: 0; flex: 1; min-width: 0;">ค้นหาจุดหมาย</label>
@@ -1340,10 +1354,11 @@
     const HISTORY_KEY = 'taxi_history_v25';
     const FAVORITES_KEY = 'taxi_favorites_v1';
     const LAST_TOLL_KEY = 'taxi_last_toll_v1';
+    const ACTIVE_TRIP_KEY = 'taxi_active_trip_v1';
 
     let destLoc = null, searchTimer = null, watchId = null;
     let lastPos = null, actualDrivenKm = 0, startTime = null, wakeLock = null, lastCalcTime = null;
-    let tripTimer = null, routeUpdateTimer = null, trafficSeconds = 0;
+    let tripTimer = null, routeUpdateTimer = null, trafficSeconds = 0, lastTripSaveAt = 0;
     let kmCatchUpBusy = false;
     let trafficCharging = false, lastFixSpeedKmh = null, lastStopFixAt = null; // กำลังคิดค่าเวลาจอด? / ความเร็วจาก GPS ล่าสุด / เวลา fix สุดท้ายที่ยืนยันจอดจริง
     let lastPosTime = null, currentSpeedKmh = 0, currentTrueRemainKm = 0, currentTrueRemainSec = 0; 
@@ -2197,7 +2212,64 @@
         finally { kmCatchUpBusy = false; }
     };
 
-    window.startMeterAndTracking = () => {
+    window.saveActiveTrip = (force = false) => {
+        if (!window.isManualRunning || !startTime) return;
+        const nowT = Date.now();
+        if (!force && nowT - lastTripSaveAt < 2000) return; // เซฟทุก ~2 วิ พอเพียงกับที่มิเตอร์เปลี่ยน
+        lastTripSaveAt = nowT;
+        const payload = {
+            v: 1, savedAt: nowT, startTime: startTime,
+            km: actualDrivenKm, trafficSec: trafficSeconds,
+            remainKm: currentTrueRemainKm, remainSec: currentTrueRemainSec,
+            dest: destLoc ? { lat: destLoc.lat, lon: destLoc.lon } : null,
+            destName: destLoc ? $('destInput').value.trim() : '',
+            surcharges: window.surchargeList.slice(),
+            baseFare: window.baseFare
+        };
+        try { localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(payload)); } catch(e) {}
+    };
+    window.clearActiveTrip = () => { try { localStorage.removeItem(ACTIVE_TRIP_KEY); } catch(e) {} };
+
+    // 🚕 แสดงแบนเนอร์ "เริ่มต่อ" เมื่อเปิดแอปแล้วพบเที่ยวที่ยังไม่สิ้นสุด (แอปปิด/รีเฟรชค้าง)
+    window.maybeShowResumeBanner = () => {
+        if (window.isManualRunning) return;
+        const banner = document.getElementById('tripResumeBanner');
+        if (!banner) return;
+        let data = null;
+        try { data = JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY) || 'null'); } catch(e) {}
+        if (!data || !data.startTime) { banner.style.display = 'none'; return; }
+        const info = document.getElementById('trbInfo');
+        if (info) {
+            const started = new Date(data.startTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            const mins = Math.max(1, Math.floor((Date.now() - data.startTime) / 60000));
+            let txt = `เริ่ม ${started} · ผ่านไป ${mins} นาที · วิ่งแล้ว ${(data.km || 0).toFixed(2)} กม.`;
+            if (data.destName) txt += ` · ไป ${data.destName}`;
+            info.innerText = txt;
+        }
+        banner.style.display = 'flex';
+    };
+
+    // ▶️ กด "เริ่มต่อ": เดินมิเตอร์ต่อจากจุดที่ค้างไว้ (เวลาเริ่ม/กม./เวลาจอด/ค่าทางด่วน เดิมทั้งหมด)
+    window.resumeSavedTrip = () => {
+        let data = null;
+        try { data = JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY) || 'null'); } catch(e) {}
+        if (!data || !data.startTime) return;
+        const banner = document.getElementById('tripResumeBanner');
+        if (banner) banner.style.display = 'none';
+        window.startMeterAndTracking(data);
+        window.showToast('เริ่มต่อจากเที่ยวเดิมแล้ว 🚕');
+    };
+    window.discardSavedTrip = async () => {
+        const ok = await window.showCustomConfirm('ลบทิ้งเที่ยวที่ค้างอยู่?', 'ข้อมูลเที่ยวที่บันทึกไว้ (ระยะทาง เวลา ค่าทางด่วน) จะถูกลบออกจากเครื่องนี้ กด "เริ่มต่อ" ถ้ายังต้องการใช้', 'danger', 'ลบทิ้ง');
+        if (!ok) return;
+        window.clearActiveTrip();
+        const banner = document.getElementById('tripResumeBanner');
+        if (banner) banner.style.display = 'none';
+        window.showToast('ลบข้อมูลเที่ยวค้างแล้ว');
+    };
+    window.addEventListener('pagehide', () => { if (window.isManualRunning) window.saveActiveTrip(true); });
+
+    window.startMeterAndTracking = (seed) => { 
         if (window.isManualRunning) return;
         
         window.playSound('start');
@@ -2212,10 +2284,29 @@
         
         $('liveTracker').style.display = 'block'; 
 
-        actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; trafficCharging = true; lastFixSpeedKmh = null; 
-        startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime; lastStopFixAt = startTime;
+        if (seed) {
+            // ⏯️ เริ่มต่อจากเที่ยวที่บันทึกไว้ (แอปปิด/รีเฟรชกระทันหัน): คงเวลาเริ่ม กม. เวลาจอด ค่าทางด่วน เดิมไว้
+            actualDrivenKm = seed.km || 0;
+            trafficSeconds = seed.trafficSec || 0;
+            currentTrueRemainKm = seed.remainKm || 0;
+            currentTrueRemainSec = seed.remainSec || 0;
+            currentSpeedKmh = 0; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; // รอ fix ใหม่ยืนยันจอดก่อน ค่อยคิดเวลาจอด
+            startTime = seed.startTime || Date.now();
+            lastPosTime = Date.now(); lastCalcTime = Date.now(); // ไม่คิดค่าเวลาช่วงที่แอปปิด (ตามกฎหลักฐานจอดจริง)
+            if (seed.dest) destLoc = { lat: seed.dest.lat, lon: seed.dest.lon };
+            if (seed.destName) $('destInput').value = seed.destName;
+            if (seed.baseFare) window.baseFare = seed.baseFare;
+            window.surchargeList = (seed.surcharges && seed.surcharges.length) ? seed.surcharges : [];
+            $('kmInput').value = actualDrivenKm.toFixed(2);
+            window.updateFareEstimation(actualDrivenKm);
+            window.updateSurchargeUI();
+        } else {
+            actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; trafficCharging = true; lastFixSpeedKmh = null;
+            startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime; lastStopFixAt = startTime;
+        }
         
-        $('driveCovered').innerText = "0.00"; 
+        $('driveCovered').innerText = actualDrivenKm.toFixed(2); 
+        window.saveActiveTrip(true);
 
         let destText = $('destInput').value.trim();
         
@@ -2257,6 +2348,7 @@
         tripTimer = setInterval(() => { 
             window.advanceMeterTime(Date.now());
             window.updateLiveMeterDisplay(); 
+            window.saveActiveTrip(); 
         }, 1000);
         
         if(watchId) navigator.geolocation.clearWatch(watchId);
@@ -2513,7 +2605,7 @@
     
     window.resetAll = () => {  
         $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; 
-        window.isManualRunning = false; window.surchargeList = []; trafficSeconds = 0; window.updateSurchargeUI();
+        window.isManualRunning = false; window.surchargeList = []; trafficSeconds = 0; window.updateSurchargeUI(); window.clearActiveTrip();
         window.renderStartButton();
         $('manualTimerBtn').classList.remove('active');
         
@@ -2720,6 +2812,7 @@
                     if (data.tollwayMode === true || data.tollwayMode === false) { window.setUserTollMode(data.tollwayMode); }
                     else { window.applySavedTollMode(); }
                 }
+                if (typeof window.maybeShowResumeBanner === 'function') window.maybeShowResumeBanner();
             } else { window.logoutApp(true); }
         });
     };
