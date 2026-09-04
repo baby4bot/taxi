@@ -134,7 +134,6 @@
         .small-toll-btn.toll-active { background: #2196f3; color: white; border-color: #2196f3; box-shadow: none; }
         .small-toll-btn:active { transform: scale(0.92); }
 
-        .surcharge-row { display: flex; gap: 10px; padding-bottom: 5px; margin-top: 10px; margin-bottom: 5px; justify-content: center; flex-wrap: wrap; }
         .surcharge-btn { padding: 10px 20px; border-radius: 10px; background: #252525; border: 1px solid #444; color: #ffd600; font-family: 'Kanit'; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: none; }
         .surcharge-btn:active { transform: scale(0.95); background: #333; }
 
@@ -192,7 +191,7 @@
         input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .km-label { position: absolute; right: 20px; font-size: 16px; color: var(--text-dim); pointer-events: none; }
 
-        .result-container { flex: 1; position: relative; margin: 5px 0 15px 0; padding: 30px 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 180px; background: #1a1a1a; border-radius: 16px; border: 1px solid #333; box-shadow: none; overflow: hidden; }
+        .result-container { flex: 1; position: relative; margin: 2px 0 12px 0; padding: 14px 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 108px; max-height: 152px; background: #1a1a1a; border-radius: 16px; border: 1px solid #333; box-shadow: none; overflow: hidden; }
 
         
         .result-content { position: relative; z-index: 10; text-align: center; transition: 0.3s; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -561,7 +560,6 @@
         .btn-minus { background: linear-gradient(135deg, #ff7a88, #f43f5e); }
 
         /* ---------- Surcharge ---------- */
-        .surcharge-row { gap: 10px; margin-top: 12px; }
         .surcharge-btn {
             padding: 11px 18px;
             border-radius: 16px;
@@ -610,8 +608,16 @@
             background: radial-gradient(circle, rgba(255,210,77,0.10), transparent 65%);
             pointer-events: none;
         }
+        #fareTollBtn {
+            position: absolute; top: 9px; right: 10px; z-index: 50;
+            display: none; align-items: center; justify-content: center; gap: 5px;
+            padding: 6px 13px; border-radius: 20px;
+            font-size: 13px; font-weight: 600; line-height: 1;
+            white-space: nowrap;
+        }
+        #fareTollBtn .material-symbols-outlined { font-size: 16px; }
         .price {
-            font-size: 84px; font-weight: 700;
+            font-size: 62px; font-weight: 700;
             letter-spacing: -3px;
             background: linear-gradient(180deg, #ffffff 18%, #b9c3d8 95%);
             -webkit-background-clip: text; background-clip: text;
@@ -624,11 +630,12 @@
             font-weight: 600;
         }
         .sub-info {
-            margin-top: 16px;
+            margin-top: 8px;
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 22px;
-            padding: 9px 22px;
+            border-radius: 18px;
+            padding: 6px 16px;
+            font-size: 13px;
             color: #c3cbdc;
             font-weight: 500;
         }
@@ -904,7 +911,7 @@
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
 
         @media (max-width: 380px) {
-            .price { font-size: 70px; }
+            .price { font-size: 54px; }
             .header-center h2 { font-size: 16px; }
             .side-menu { width: 86vw; }
         }
@@ -1030,13 +1037,8 @@
             <input type="number" step="0.1" inputmode="decimal" value="0" onfocus="if(this.value=='0') this.value=''" onblur="if(this.value=='') this.value='0'" oninput="window.manualInputChange()" id="kmInput" style="background:transparent; border:none; color:white; width:100%; font-size:20px; text-align:center; outline:none;" />
             <span class="km-label">กม.</span>                    
         </div>
-        <button class="btn-math btn-plus flex-center" onclick="window.adjustKm(1)" id="btnPlus">+</button>
         <button class="btn-math btn-minus flex-center" onclick="window.adjustKm(-1)" id="btnMinus">−</button>
-    </div>
-
-    <div class="surcharge-row" id="surchargeRow" style="display: none;">
-        <button onclick="window.promptToll()" class="surcharge-btn">+ ค่าทางด่วน</button>
-        <button id="btnAirport" onclick="window.addSurcharge(50, 'ค่าเรียกจากสนามบิน')" class="surcharge-btn">+ สนามบิน (50฿)</button>
+        <button class="btn-math btn-plus flex-center" onclick="window.adjustKm(1)" id="btnPlus">+</button>
     </div>
 
     <div id="surchargeDetails" class="surcharge-list-container" style="display:none;"></div>
@@ -1049,6 +1051,9 @@
     </div>
                                                        
     <div class="result-container">
+        <button class="surcharge-btn" id="fareTollBtn" onclick="event.stopPropagation(); window.promptToll()" title="เพิ่มค่าทางด่วน (บวกเพิ่มจากมิเตอร์)">
+            <span class="material-symbols-outlined">toll</span> + ค่าทางด่วน
+        </button>
 
         <div class="result-content" id="resultContent" style="width:100%; height:100%; position:absolute; top:0; left:0; right:0; bottom:0;">
             <div id="fareDisplay">
@@ -1740,14 +1745,12 @@
 
     window.updateSurchargeUI = () => {
         let container = document.getElementById('surchargeDetails');
-        let hasAirport = false;
         let totalToll = 0;
         
         if(window.surchargeList.length > 0) {
             let html = '';
             window.surchargeList.forEach(item => { 
                 html += `<div class="surcharge-item"><span>${item.name} +${item.amount}฿</span><span class="material-symbols-outlined del-btn" onclick="window.removeSurcharge(${item.id})">cancel</span></div>`; 
-                if(item.name === 'ค่าเรียกจากสนามบิน') hasAirport = true;
                 if(item.name === 'ค่าทางด่วน') totalToll += item.amount;
             });
             container.innerHTML = html; container.style.display = 'flex';
@@ -1763,7 +1766,6 @@
             totalBadge.style.display = 'none';
         }
         
-        document.getElementById('btnAirport').style.display = hasAirport ? 'none' : 'inline-block';
         if(window.isManualRunning) window.updateLiveMeterDisplay(); else window.manualInputChange();
     };
 
@@ -2077,7 +2079,7 @@
         window.isManualRunning = true; requestWakeLock();
         $('manualTimerBtn').disabled = false; $('manualTimerBtn').classList.add('active');
         $('searchSectionBox').style.display = 'none'; $('manualSectionBox').style.display = 'none'; $('resetBtn').style.display = 'none';
-        $('surchargeRow').style.display = 'flex'; 
+        window.syncFareTollBtn();
         if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex';
         
         $('liveTracker').style.display = 'block'; 
@@ -2211,16 +2213,19 @@
         $('infoText').innerText = "ประเมินระยะทาง " + (km.toFixed(2)) + " กม." + extraText; 
     };
     
+    window.syncFareTollBtn = () => {
+        const btn = document.getElementById('fareTollBtn');
+        if (!btn) return;
+        let km = parseFloat($('kmInput').value) || 0;
+        btn.style.display = (window.isManualRunning || km > 0) ? 'flex' : 'none';
+    };
+
     window.checkAppStatus = () => { 
         let km = parseFloat($('kmInput').value) || 0; 
         let destText = $('destInput').value.trim(); 
         let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0); 
         
-        if (!window.isManualRunning && km === 0) {
-            $('surchargeRow').style.display = 'none';
-        } else {
-            $('surchargeRow').style.display = 'flex';
-        }
+        window.syncFareTollBtn();
 
         if (!window.isManualRunning) { 
             $('manualTimerBtn').disabled = false; 
@@ -2370,7 +2375,7 @@
         releaseWakeLock(); 
         window.stopSilentAudio(); 
         window.hideMap(); // Hide map when tracking stops
-        $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; $('surchargeRow').style.display = 'flex'; if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false;        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
+        $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; window.syncFareTollBtn(); if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false;        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
         window.syncTollToggleVisibility();
     };
     
