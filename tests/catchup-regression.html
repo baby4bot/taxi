@@ -30,7 +30,7 @@
         <b>วิธีเปิด:</b> ต้องผ่าน HTTP เท่านั้น เช่น <code>https://baby4bot.github.io/taxi/tests/catchup-regression.html</code>
         (เปิดจาก file:// ตรง ๆ ไม่ได้ เพราะ iframe ถูกบล็อก cross-origin) — เปิดแล้วรันอัตโนมัติ หรือกดปุ่มด้านล่างเพื่อรันใหม่
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (6 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (8 สถานการณ์)</button>
     <div id="summary"></div>
     <ol id="results"></ol>
     <iframe id="appFrame" src="../index.html"></iframe>
@@ -315,6 +315,48 @@
                 near(d.km, 0.5, 0.01, 'กิโลเมตรไม่เพิ่ม');
                 checkFareRange(0.5, 10 + 60 - 8, 10 + 60 + 8, 'ค่าโดยสารบนจอ');
                 return 'รถติด ' + d.traffic + ' วิ (คาด ~70 = 10 + 60) / ' + d.fare + '฿';
+            });
+
+            // 8) มีปลายทาง + วิ่งช่วงปิด → เบิกกิโลด้วย polyline เส้นทางจริง (snap จุดก่อนปิด+จุดปัจจุบันลงเส้นทางเดียวกัน)
+            await runScenario('8. มีปลายทาง: เบิกกิโลด้วย polyline เส้นทางจริง (snap จุดก่อนปิด+ปัจจุบัน)', async () => {
+                const DEST = { lat: 13.8000, lon: 100.5500 };
+                const A = { lat: 13.7500, lon: 100.5000 }; // จุดก่อนปิดแอป (ไกลจากปลายทาง)
+                const B = { lat: 13.7650, lon: 100.5150 }; // จุดปัจจุบัน (วิ่งเข้าใกล้ปลายทางแล้ว 30% ของเส้นทาง — อยู่บนเส้น A→D พอดี)
+                // polyline สังเคราะห์: 5 จุดเรียงจาก A ไป D (เส้นตรง) ความยาวรวม = haversine(A,D)
+                const N = 5;
+                const coords = [];
+                for (let i = 0; i < N; i++) coords.push([A.lat + (DEST.lat - A.lat) * i / (N - 1), A.lon + (DEST.lon - A.lon) * i / (N - 1)]);
+                const totalKm = haversine(A, DEST);
+                const remainNow = totalKm * 0.7; // ระยะจาก B ถึง D ตาม polyline
+                const gapKm = totalKm * 0.3;   // ระยะที่วิ่งไปช่วงปิด (ตามเส้นทางจริง)
+                // stub เส้นทาง: จำการเรียก + คืน polyline สังเคราะห์ (ไม่กินโควตา TomTom จริง)
+                frame.contentWindow.fetchRouteFromTomTom = async (dLat, dLon, sLat, sLon) => {
+                    frame.contentWindow.__routeCalls = (frame.contentWindow.__routeCalls || 0) + 1;
+                    frame.contentWindow.__routeCallArgs = [dLat, dLon, sLat, sLon];
+                    return { km: totalKm, sec: 1800, coords: coords, tolls: { hasTolls: false, booths: [], total: 0 } };
+                };
+                const payload = makePayload({
+                    km: 0.5, trafficSec: 10, remainKm: totalKm, remainSec: 1800,
+                    lastPos: A, lastPath: [A], dest: DEST, destName: 'สนามบินดอนเมือง'
+                });
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(payload));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(1200);
+                releaseFix(5, B.lat, B.lon, 8); // fix ที่จุด B (วิ่งมาแล้ว 30% ของเส้นทาง)
+                await wait(1000);
+                const d = readDisplay();
+                near(d.km, 0.5 + gapKm, 0.06, 'กิโลเมตรบนจอ (0.5 + ส่วนต่างตามเส้นทางจริง)');
+                const p = JSON.parse(w().localStorage.getItem('taxi_active_trip_v1'));
+                near(p.remainKm, remainNow, 0.1, 'remainKm หลังเบิก (ระยะเหลือตาม polyline)');
+                const calls = frame.contentWindow.__routeCalls || 0;
+                assert(calls >= 1, 'ต้องเรียกเส้นทาง (stub) อย่างน้อย 1 ครั้ง');
+                const args = frame.contentWindow.__routeCallArgs;
+                near(args[0], DEST.lat, 0.0001, 'dLat = ปลายทาง'); near(args[1], DEST.lon, 0.0001, 'dLon = ปลายทาง');
+                near(args[2], A.lat, 0.0001, 'sLat = จุดก่อนปิด'); near(args[3], A.lon, 0.0001, 'sLon = จุดก่อนปิด');
+                assert(p.catchUpLog && p.catchUpLog.length === 1 && p.catchUpLog[0].via === 'polyline', 'catchUpLog ต้องบันทึก via=polyline');
+                return d.km.toFixed(2) + ' กม. (คาด ' + (0.5 + gapKm).toFixed(2) + ') · เหลือ ' + p.remainKm.toFixed(2) + ' กม. · via polyline';
             });
 
             // 7) ประวัติการเบิกคืน: ลง payload (catchUpLog) + โชว์ในหน้าสรุปหลังจบเที่ยว

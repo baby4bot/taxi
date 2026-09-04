@@ -1559,6 +1559,48 @@
         }
         return straight * factor;
     };
+    // 📏 projectToPolyline: snap ตำแหน่งลงบนเส้นทางจริง (polyline) → { perpKm: ระยะตั้งฉาก, remainKm: ระยะที่เหลือถึงปลายทางตามเส้นทาง }
+    const projectToPolyline = (coords, pos) => {
+        if (!Array.isArray(coords) || coords.length < 2 || !pos) return null;
+        const n = coords.length;
+        const suffix = new Array(n).fill(0); // suffix[i] = ระยะตามเส้นทางจากจุด i ถึงปลายทาง
+        for (let i = n - 2; i >= 0; i--) suffix[i] = suffix[i + 1] + calcGPS(coords[i][0], coords[i][1], coords[i + 1][0], coords[i + 1][1]);
+        let best = null;
+        for (let i = 0; i < n - 1; i++) {
+            const a = { lat: coords[i][0], lon: coords[i][1] };
+            const b = { lat: coords[i + 1][0], lon: coords[i + 1][1] };
+            const abLat = b.lat - a.lat, abLon = b.lon - a.lon;
+            const lenSq = abLat * abLat + abLon * abLon;
+            const t = lenSq > 0 ? ((pos.lat - a.lat) * abLat + (pos.lon - a.lon) * abLon) / lenSq : 0;
+            const cl = Math.max(0, Math.min(1, t));
+            const proj = { lat: a.lat + abLat * cl, lon: a.lon + abLon * cl };
+            const perpKm = calcGPS(pos.lat, pos.lon, proj.lat, proj.lon);
+            if (!best || perpKm < best.perpKm) {
+                best = { perpKm, remainKm: (cl < 1 ? calcGPS(proj.lat, proj.lon, b.lat, b.lon) : 0) + suffix[i + 1] };
+            }
+        }
+        return best;
+    };
+    // 📏 catchUpKmViaRoutePolyline: เบิกคืนระยะทางช่วงปิด/ซ่อนด้วยเส้นทางจริง — ขอเส้นทางจากจุดก่อนปิด → ปลายทาง
+    // แล้ว snap ทั้งจุดก่อนปิดและจุดปัจจุบันลงบนเส้นทางเดียวกัน หักส่วนต่างของระยะที่เหลือถึงปลายทาง (แม่นกว่าเส้นตรง
+    // และไม่ต้องพึ่งค่า remainKm ที่อาจเก่าเพราะโพลทุก 120 วิ) — คืน null ถ้าใช้ไม่ได้ ให้หลุดไปวิธีเดิม
+    window.catchUpKmViaRoutePolyline = async (destPos, savedPos, curPos) => {
+        try {
+            if (!destPos || !savedPos || !curPos) return null;
+            const route = await window.fetchRouteFromTomTom(destPos.lat, destPos.lon, savedPos.lat, savedPos.lon);
+            if (!route || !route.coords || route.coords.length < 2) return null;
+            const projA = projectToPolyline(route.coords, savedPos);
+            const projB = projectToPolyline(route.coords, curPos);
+            if (!projA || !projB) return null;
+            // กัน snap ผิดถนน: ตำแหน่งควรอยู่บน/ใกล้เส้นทางจริง (ไกลเกิน 1.5 กม. = ออกนอกเส้นทางจริง → ใช้วิธีเดิม)
+            if (projA.perpKm > 1.5 || projB.perpKm > 1.5) return null;
+            const gapKm = Math.max(0, projA.remainKm - projB.remainKm);
+            if (!(gapKm > 0.02 && gapKm < 100)) return null;
+            let remainSec = null;
+            if (route.sec && route.km > 0) remainSec = Math.round(route.sec * (projB.remainKm / route.km)); // ประมาณเวลาที่เหลือตามสัดส่วนระยะทาง
+            return { gapKm, remainKm: Math.max(0, projB.remainKm), remainSec, via: 'polyline' };
+        } catch(e) { return null; }
+    };
     const TOMTOM_DAILY_LIMIT = 2500; // แผนฟรี TomTom Developer: ~2,500 ครั้ง/วัน (นับในเครื่อง เพื่อเตือนก่อนโควตาจะหมด)
     // นับจำนวนครั้งที่เรียก TomTom ในวันนี้ (หาเส้นทาง + ค้นหาสถานที่) แล้วเตือนทองเมื่อใช้ใกล้เต็ม (ครั้งเดียวต่อเกณฑ์/วัน)
     const countTomTomCall = () => {
@@ -2404,7 +2446,7 @@
         hiddenGapStart = null; hiddenLastPos = null; // ใช้ครั้งเดียว กันเบิกซ้ำ
         if (gapSec < 8 || gpsPausedSec < 8) return; // ซ่อนสั้นๆ / สัญญาณยังมา = กลไกปกติคิดให้อยู่แล้ว
         kmCatchUpBusy = true;
-        let caughtTimeSec = 0, caughtKm = 0; // ยอดที่เบิกคืนจริงตอนกลับจากเบื้องหลัง (สำหรับ toast แจ้งคนขับ)
+        let caughtTimeSec = 0, caughtKm = 0, kmVia = 'straight'; // ยอดที่เบิกคืนจริงตอนกลับจากเบื้องหลัง (สำหรับ toast แจ้งคนขับ) + วิธีที่ใช้หักระยะ
         try {
             const pos = await getBestFix();
             if (!window.isManualRunning || !pos) return;
@@ -2426,17 +2468,27 @@
                 trafficCharging = true; lastStopFixAt = Date.now();
                 caughtTimeSec += gapSec;
             } else {
-                // 1) เบิกระยะที่วิ่งช่วงซ่อน: ขอเส้นทางใหม่จากจุดปัจจุบัน (เฉพาะเที่ยวมีปลายทาง + ซ่อน > 20 วิ กันโควตา)
+                // 1) เบิกระยะที่วิ่งช่วงซ่อน: ใช้ polyline เส้นทางจริงจากจุดก่อนซ่อน (snap จุดก่อนซ่อน+จุดปัจจุบันลงเส้นทางเดียวกัน)
+                // หักส่วนต่างระยะเหลือถึงปลายทาง — แม่นกว่าเส้นตรง (เฉพาะเที่ยวมีปลายทาง + ซ่อน > 20 วิ กันโควตา)
                 let distanceAdded = false;
-                if (destLoc && gapSec > 20) {
+                if (destLoc && gapSec > 20 && hidePos) {
                     try {
-                        const route = await window.fetchRouteFromTomTom(destLoc.lat, destLoc.lon, p.lat, p.lon);
-                        if (route && route.km !== undefined) {
-                            const missing = currentTrueRemainKm - route.km;
-                            if (missing > 0.02 && missing < 100) { actualDrivenKm += missing; caughtKm += missing; distanceAdded = true; }
-                            else if (missing >= -0.02) { distanceAdded = true; } // ไม่ได้วิ่งเพิ่ม หรือนับครบแล้ว (กันเส้นตรงซ้ำ)
-                            currentTrueRemainKm = Math.max(0, route.km);
-                            if (route.sec !== undefined) currentTrueRemainSec = route.sec;
+                        const polyRes = await window.catchUpKmViaRoutePolyline(destLoc, hidePos, p);
+                        if (polyRes) {
+                            actualDrivenKm += polyRes.gapKm; caughtKm += polyRes.gapKm;
+                            currentTrueRemainKm = polyRes.remainKm;
+                            if (polyRes.remainSec !== null) currentTrueRemainSec = polyRes.remainSec;
+                            distanceAdded = true; kmVia = 'polyline';
+                        } else {
+                            // สำรอง: ขอเส้นทางใหม่จากจุดปัจจุบัน แล้วหักจาก remainKm เดิม (พฤติกรรมเดิม)
+                            const route = await window.fetchRouteFromTomTom(destLoc.lat, destLoc.lon, p.lat, p.lon);
+                            if (route && route.km !== undefined) {
+                                const missing = currentTrueRemainKm - route.km;
+                                if (missing > 0.02 && missing < 100) { actualDrivenKm += missing; caughtKm += missing; distanceAdded = true; kmVia = 'route'; }
+                                else if (missing >= -0.02) { distanceAdded = true; kmVia = 'route'; } // ไม่ได้วิ่งเพิ่ม หรือนับครบแล้ว (กันเส้นตรงซ้ำ)
+                                currentTrueRemainKm = Math.max(0, route.km);
+                                if (route.sec !== undefined) currentTrueRemainSec = route.sec;
+                            }
                         }
                     } catch(e) {}
                 }
@@ -2460,7 +2512,7 @@
                 if (caughtKm > 0.02) parts.push(caughtKm.toFixed(2) + ' กม.');
                 const fareDelta = Math.max(0, calcFareOf(actualDrivenKm, trafficSeconds) - calcFareOf(preKm, preTraffic));
                 window.lastCatchUpInfo = { type: 'hidden', timeSec: caughtTimeSec, km: caughtKm, fareDelta: fareDelta, at: Date.now() };
-                catchUpLog.push({ type: 'hidden', from: Date.now() - gapSec * 1000, to: Date.now(), idleSec: caughtTimeSec, km: caughtKm, fareDelta: fareDelta }); // 📒 จดประวัติรอบนี้ (ช่วงปิด เริ่ม-จบ + ยอดที่เบิก)
+                catchUpLog.push({ type: 'hidden', from: Date.now() - gapSec * 1000, to: Date.now(), idleSec: caughtTimeSec, km: caughtKm, fareDelta: fareDelta, via: caughtKm > 0.02 ? kmVia : 'idle' }); // 📒 จดประวัติรอบนี้ (ช่วงปิด เริ่ม-จบ + ยอดที่เบิก + วิธีหักระยะ)
                 window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true, () => { if (typeof window.showCatchUpDetails === 'function') window.showCatchUpDetails(); }); // ทองเด่น + แตะเปิดสรุปยอดที่เบิก
             }
             // 🚩 กลับจากเบื้องหลังแล้วเหลือระยะทางถึงปลายทาง < 100 ม. → ถามจบเที่ยวทันที
@@ -2642,7 +2694,7 @@
         // เบิกคืนให้แล้วสำหรับรอบการปิดนี้ (ตอนกด "เริ่มต่อ" ระหว่างที่แอปกำลังตรวจสอบ fix) → ข้าม กันนับซ้ำ
         if (window.__liveCaughtUpKey === data.startTime + '|' + (data.pauseOpenAt || data.savedAt || 0)) return;
         window.crashCatchUpBusy = true;
-        let caughtTimeSec = 0, caughtKm = 0;
+        let caughtTimeSec = 0, caughtKm = 0, kmVia = 'straight';
         try {
             const pos = await getBestFix();
             if (!pos) return; // ไม่มี fix เลย → ข้าม (ยังเริ่มต่อได้ตามปกติ; เที่ยวที่วิ่งอยู่จะเบิกเองเมื่อมี fix ยืนยัน)
@@ -2666,17 +2718,27 @@
                 trafficSec += idleBill;
                 caughtTimeSec += idleBill;
             } else {
-                // วิ่งไปช่วงที่ปิดแอป → ขอเส้นทางใหม่จากจุดปัจจุบันไปปลายทางเดิม แล้วเอาระยะที่วิ่งเพิ่ม (เหมือนตอนซ่อนแอป)
+                // วิ่งไปช่วงที่ปิดแอป → ใช้ polyline เส้นทางจริงจากจุดก่อนปิดไปปลายทางเดิม (snap จุดก่อนปิด+จุดปัจจุบันลงเส้นทางเดียวกัน)
+                // หักส่วนต่างระยะเหลือถึงปลายทาง — แม่นกว่าเส้นตรง (เหมือนตอนซ่อนแอป)
                 let distanceAdded = false;
-                if (cur.dest && gapSec > 20) {
+                if (cur.dest && gapSec > 20 && hidePos) {
                     try {
-                        const route = await window.fetchRouteFromTomTom(cur.dest.lat, cur.dest.lon, p.lat, p.lon);
-                        if (route && route.km !== undefined) {
-                            const missing = remainKm - route.km;
-                            if (missing > 0.02 && missing < 100) { km += missing; caughtKm += missing; distanceAdded = true; }
-                            else if (missing >= -0.02) { distanceAdded = true; } // ถึงแล้ว / นับครบแล้ว (กันเส้นตรงซ้ำ)
-                            remainKm = Math.max(0, route.km);
-                            if (route.sec !== undefined) remainSec = route.sec;
+                        const polyRes = await window.catchUpKmViaRoutePolyline(cur.dest, hidePos, p);
+                        if (polyRes) {
+                            km += polyRes.gapKm; caughtKm += polyRes.gapKm;
+                            remainKm = polyRes.remainKm;
+                            if (polyRes.remainSec !== null) remainSec = polyRes.remainSec;
+                            distanceAdded = true; kmVia = 'polyline';
+                        } else {
+                            // สำรอง: ขอเส้นทางใหม่จากจุดปัจจุบัน แล้วหักจาก remainKm เดิม (พฤติกรรมเดิม)
+                            const route = await window.fetchRouteFromTomTom(cur.dest.lat, cur.dest.lon, p.lat, p.lon);
+                            if (route && route.km !== undefined) {
+                                const missing = remainKm - route.km;
+                                if (missing > 0.02 && missing < 100) { km += missing; caughtKm += missing; distanceAdded = true; kmVia = 'route'; }
+                                else if (missing >= -0.02) { distanceAdded = true; kmVia = 'route'; } // ถึงแล้ว / นับครบแล้ว (กันเส้นตรงซ้ำ)
+                                remainKm = Math.max(0, route.km);
+                                if (route.sec !== undefined) remainSec = route.sec;
+                            }
                         }
                     } catch(e) {}
                 }
@@ -2703,7 +2765,7 @@
                     currentTrueRemainKm = Math.max(0, remainKm); // ระยะเหลือใหม่จากเส้นทาง/เส้นตรงที่คำนวณไว้
                     if (remainSec !== undefined && remainSec > 0) currentTrueRemainSec = remainSec;
                 }
-                catchUpLog.push({ type: 'kill', from: gapStart, to: Date.now(), idleSec: caughtTimeSec, km: caughtKm, fareDelta: Math.max(0, calcFareOf(actualDrivenKm, trafficSeconds) - calcFareOf(data.km || 0, data.trafficSec || 0)) }); // 📒 จดประวัติการเบิกคืนรอบนี้ (ช่วงปิด เริ่ม-จบ + ยอดที่เบิก)
+                catchUpLog.push({ type: 'kill', from: gapStart, to: Date.now(), idleSec: caughtTimeSec, km: caughtKm, fareDelta: Math.max(0, calcFareOf(actualDrivenKm, trafficSeconds) - calcFareOf(data.km || 0, data.trafficSec || 0)), via: caughtKm > 0.02 ? kmVia : 'idle' }); // 📒 จดประวัติการเบิกคืนรอบนี้ (ช่วงปิด เริ่ม-จบ + ยอดที่เบิก + วิธีหักระยะ)
                 window.saveActiveTrip(true); // อัปเดต payload ให้ตรงกับมิเตอร์
                 window.updateLiveMeterDisplay();
                 // 🚩 เบิกคืนแล้วเหลือระยะทางถึงปลายทาง < 100 ม. (กดเริ่มต่อไปแล้วระหว่างตรวจสอบ) → ถามจบเที่ยวทันที
@@ -2726,7 +2788,7 @@
                 }
                 // 📒 จดประวัติการเบิกคืนรอบนี้ลง payload (เบิกทางแบนเนอร์ ยังไม่เริ่มมิเตอร์) → โชว์สรุป + เซฟ Firestore ตอนจบเที่ยว
                 if (!Array.isArray(cur2.catchUpLog)) cur2.catchUpLog = [];
-                cur2.catchUpLog.push({ type: 'kill', from: gapStart, to: Date.now(), idleSec: caughtTimeSec, km: caughtKm, fareDelta: Math.max(0, calcFareOf(km, trafficSec) - calcFareOf(data.km || 0, data.trafficSec || 0)) });
+                cur2.catchUpLog.push({ type: 'kill', from: gapStart, to: Date.now(), idleSec: caughtTimeSec, km: caughtKm, fareDelta: Math.max(0, calcFareOf(km, trafficSec) - calcFareOf(data.km || 0, data.trafficSec || 0)), via: caughtKm > 0.02 ? kmVia : 'idle' });
                 cur2.pauseOpenAt = null;
                 try { localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(cur2)); } catch(e) {}
                 window.maybeShowResumeBanner(); // รีเฟรชข้อความบนแบนเนอร์เป็นตัวเลขใหม่
@@ -3223,6 +3285,7 @@
                     const parts = [];
                     if (c.idleSec >= 1) parts.push('จอด ' + dur(c.idleSec));
                     if (c.km > 0.02) parts.push('+ ' + c.km.toFixed(2) + ' กม.');
+                    if (c.via === 'polyline') parts.push('ตามเส้นทางจริง');
                     if (c.fareDelta > 0) parts.push('+' + c.fareDelta + '฿');
                     return `<div style="display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:${i < s.catchUps.length - 1 ? '1px dashed rgba(255,255,255,0.09)' : 'none'}; font-size:13px;">
                         <span style="color:var(--text-dim); width:16px;">${i + 1}.</span>
