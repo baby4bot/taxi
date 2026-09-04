@@ -30,7 +30,7 @@
         <b>วิธีเปิด:</b> ต้องผ่าน HTTP เท่านั้น เช่น <code>https://baby4bot.github.io/taxi/tests/catchup-regression.html</code>
         (เปิดจาก file:// ตรง ๆ ไม่ได้ เพราะ iframe ถูกบล็อก cross-origin) — เปิดแล้วรันอัตโนมัติ หรือกดปุ่มด้านล่างเพื่อรันใหม่
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (8 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (9 สถานการณ์)</button>
     <div id="summary"></div>
     <ol id="results"></ol>
     <iframe id="appFrame" src="../index.html"></iframe>
@@ -357,6 +357,54 @@
                 near(args[2], A.lat, 0.0001, 'sLat = จุดก่อนปิด'); near(args[3], A.lon, 0.0001, 'sLon = จุดก่อนปิด');
                 assert(p.catchUpLog && p.catchUpLog.length === 1 && p.catchUpLog[0].via === 'polyline', 'catchUpLog ต้องบันทึก via=polyline');
                 return d.km.toFixed(2) + ' กม. (คาด ' + (0.5 + gapKm).toFixed(2) + ') · เหลือ ' + p.remainKm.toFixed(2) + ' กม. · via polyline';
+            });
+
+            // 9) มีปลายทาง + ทางลัด (polyline ทางด่วนสั้นกว่าเส้นทางปกติ) → snap ยังแม่น: เบิกตามระยะที่วิ่งบนทางด่วนจริง ไม่บวกตามเส้นทางยาวเดิม
+            await runScenario('9. มีปลายทาง + ทางด่วนลัด: snap เบิกกิโลตาม polyline ทางด่วน (สั้นกว่าเส้นทางปกติ)', async () => {
+                const DEST = { lat: 13.8000, lon: 100.5500 };
+                const A = { lat: 13.7500, lon: 100.5000 }; // จุดก่อนปิดแอป (ต้นทางของทางด่วน)
+                const C = { lat: 13.7720, lon: 100.5220 }; // จุดโค้งของทางด่วน (ลัดกว่าถนนปกติ)
+                // เส้นทางปกติ (ถนนทั่วไป) อ้อมซิกแซก ยาวกว่า → ตัวเปรียบเทียบว่า "ทางด่วนคือทางลัดจริง"
+                const NORMAL = [
+                    { lat: 13.7600, lon: 100.5080 },
+                    { lat: 13.7760, lon: 100.5300 },
+                    { lat: 13.7780, lon: 100.5150 }
+                ];
+                const normalKm = haversine(A, NORMAL[0]) + haversine(NORMAL[0], NORMAL[1]) + haversine(NORMAL[1], NORMAL[2]) + haversine(NORMAL[2], DEST);
+                // polyline ทางด่วน: A → C → D (2 ท่อน) สั้นกว่าเส้นทางปกติชัดเจน
+                const coords = [[A.lat, A.lon], [C.lat, C.lon], [DEST.lat, DEST.lon]];
+                const tollKm = haversine(A, C) + haversine(C, DEST);
+                const F = 0.3; // วิ่งไปแล้ว 30% ของท่อน A→C
+                const B = { lat: A.lat + (C.lat - A.lat) * F, lon: A.lon + (C.lon - A.lon) * F }; // จุดปัจจุบัน (อยู่บนทางด่วนจริง → snap perp=0)
+                const gapKm = haversine(A, B); // ระยะบนทางด่วนจาก A ถึง B
+                const remainExp = haversine(B, C) + haversine(C, DEST); // ระยะเหลือตามทางด่วน (ทางลัด)
+                const oldRemain = normalKm * 0.7; // remainKm เก่าที่โพลจากเส้นทางปกติ (ยาว) — ต้องถูกแก้ลง
+                frame.contentWindow.fetchRouteFromTomTom = async (dLat, dLon, sLat, sLon) => {
+                    frame.contentWindow.__routeCalls = (frame.contentWindow.__routeCalls || 0) + 1;
+                    frame.contentWindow.__routeCallArgs = [dLat, dLon, sLat, sLon];
+                    return { km: tollKm, sec: 1500, coords: coords, tolls: { hasTolls: true, booths: [{ name: 'ทางด่วน', price: 50 }], total: 50 } };
+                };
+                const payload = makePayload({
+                    km: 0.5, trafficSec: 10, remainKm: oldRemain, remainSec: 1800,
+                    lastPos: A, lastPath: [A], dest: DEST, destName: 'สนามบินดอนเมือง'
+                });
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(payload));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(1200);
+                releaseFix(5, B.lat, B.lon, 8); // fix ที่จุด B (บนทางด่วน วิ่งมาแล้ว 30% ของท่อนแรก)
+                await wait(1000);
+                const d = readDisplay();
+                near(d.km, 0.5 + gapKm, 0.06, 'กิโลเมตรบนจอ = 0.5 + ระยะบนทางด่วนจริง (ไม่บวกตามเส้นทางยาวเดิม)');
+                const p = JSON.parse(w().localStorage.getItem('taxi_active_trip_v1'));
+                near(p.remainKm, remainExp, 0.1, 'remainKm หลังเบิก = ระยะเหลือตามทางด่วนลัด');
+                assert(p.remainKm < oldRemain - 0.4, 'remainKm ต้องถูกแก้ลงตามทางลัด (จาก ' + oldRemain.toFixed(2) + ' → ' + p.remainKm.toFixed(2) + ' กม.)');
+                assert(tollKm < normalKm - 1.5, 'ทางด่วนต้องสั้นกว่าเส้นทางปกติจริง (' + tollKm.toFixed(2) + ' < ' + normalKm.toFixed(2) + ')');
+                const calls = frame.contentWindow.__routeCalls || 0;
+                assert(calls >= 1, 'ต้องเรียกเส้นทาง (stub) อย่างน้อย 1 ครั้ง');
+                assert(p.catchUpLog && p.catchUpLog.length === 1 && p.catchUpLog[0].via === 'polyline', 'catchUpLog ต้องบันทึก via=polyline');
+                return 'ทางด่วนลัด: เบิก ' + d.km.toFixed(2) + ' กม. (คาด ' + (0.5 + gapKm).toFixed(2) + ') · เหลือ ' + p.remainKm.toFixed(2) + ' (จากเดิม ' + oldRemain.toFixed(2) + ') · ทางด่วน ' + tollKm.toFixed(2) + ' < ปกติ ' + normalKm.toFixed(2) + ' กม.';
             });
 
             // 7) ประวัติการเบิกคืน: ลง payload (catchUpLog) + โชว์ในหน้าสรุปหลังจบเที่ยว
