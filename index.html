@@ -922,10 +922,23 @@
     };
 
     // คำนวณค่าทางด่วนจากโซนทางด่วนจริงในเส้นทาง (TomTom sectionType=TOLL)
-    // ราคาต่อช่วงเป็นค่าประมาณจากระยะทางทางด่วนจริงตามอัตราโดยประมาณของกรุงเทพฯ
+    // นับระยะทางที่วิ่งบนทางด่วนจริง (รวมตามเส้นโค้งของถนน) แล้วประมาณราคาตามอัตราทางด่วนไทย
+    // หมายเหตุ: TomTom คืนแค่ช่วงทางด่วน (จุดเริ่ม-จุดจบ) ไม่มีราคาต่อด่านจริง จึงแสดงเป็น "โดยประมาณ"
     window.calcTollsFromSections = (route, coords) => {
         const dist = (a, b) => { const R = 6371000; const toRad = x => x * Math.PI / 180; const dLat = toRad(b[0] - a[0]); const dLon = toRad(b[1] - a[1]); const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLon / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
-        const tollPrice = (km) => { if (km < 5) return 25; if (km < 10) return 30; if (km < 15) return 40; if (km < 20) return 50; if (km < 30) return 60; if (km < 50) return 70; if (km < 80) return 85; return 100; };
+        // ระยะทางจริงบนทางด่วน = รวมระยะห่างระหว่างจุดพิกัดทุกจุดในช่วงนั้น (ไม่ใช่เส้นตรงระหว่างปลาย 2 ข้าง)
+        const pathKm = (si, ei) => {
+            if (!coords || !coords.length) return 0;
+            if (!coords[si] || !coords[ei]) return 0;
+            let total = 0;
+            const end = Math.min(ei, coords.length - 1);
+            for (let i = si; i < end; i++) {
+                if (coords[i] && coords[i + 1]) total += dist(coords[i], coords[i + 1]);
+            }
+            return Math.round(total / 100) / 10;
+        };
+        // อัตราโดยประมาณของทางด่วนไทย (บาทต่อช่วงทางด่วน ตามระยะทางจริง) — ปรับให้ใกล้เคียงค่าโทลล์เวย์จริง
+        const tollPrice = (km) => { if (km < 3) return 25; if (km < 6) return 30; if (km < 10) return 40; if (km < 14) return 50; if (km < 18) return 60; if (km < 22) return 70; if (km < 26) return 85; if (km < 31) return 100; if (km < 38) return 115; return 130; };
         
         let sections = (route.sections || []).filter(s => s.sectionType === 'TOLL');
         if (!sections.length) return { hasTolls: false, booths: [], total: 0 };
@@ -933,9 +946,9 @@
         let booths = [];
         let totalCost = 0;
         sections.forEach((s, i) => {
-            let segKm = (coords[s.startPointIndex] && coords[s.endPointIndex]) ? Math.round(dist(coords[s.startPointIndex], coords[s.endPointIndex]) / 100) / 10 : 0;
+            let segKm = pathKm(s.startPointIndex, s.endPointIndex);
             let price = tollPrice(segKm);
-            booths.push({ name: `ด่านที่ ${i + 1} (${segKm} กม.)`, price, km: segKm });
+            booths.push({ name: `ทางด่วนช่วงที่ ${i + 1} (${segKm} กม.)`, price, km: segKm });
             totalCost += price;
         });
         return { hasTolls: true, booths, total: totalCost };
@@ -946,9 +959,10 @@
     window.fetchRouteFromTomTom = async (dLat, dLon, startLat, startLon) => {
         try {
             // ใช้ TomTom Routing API — traffic=true + departAt=now ทำให้เวลารวมรถติดสดจริง (เหมือน Google Maps)
+            // โหมดปกติ (เลี่ยงด่วน): fastest + avoid=tollRoads → เส้นทางเร็วสุดแบบไม่ขึ้นทางด่วน ตรงกับที่ Google Maps แสดง (เช่น 26.5 กม./29 นาที)
+            // โหมดขึ้นด่วน: fastest + ให้ใช้ทางด่วนได้ → ระบบเลือกทางด่วนจริง ๆ
             const avoidParam = window.isTollwayMode ? '' : '&avoid=tollRoads';
-            // routeType=shortest (โหมดเลี่ยงด่วน) = เส้นทางที่ใกล้ที่สุด ตรงกับ Google Maps 24 กม. / routeType=fastest (โหมดขึ้นด่วน) = ให้เลือกทางด่วนจริง ๆ
-            const routeType = window.isTollwayMode ? 'fastest' : 'shortest';
+            const routeType = 'fastest';
             const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=${routeType}&routeRepresentation=polyline&language=th-TH&sectionType=toll${avoidParam}`;
             
             let res = await fetch(url);
