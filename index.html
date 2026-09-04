@@ -1375,14 +1375,21 @@
         window.syncTollToggleVisibility();
     };
 
-    // ตั้งค่าโหมดทางด่วน + จำค่าที่เลือกไว้ (localStorage) เพื่อใช้ในครั้งถัดไป
-    window.applySavedTollMode = () => { window.isTollwayMode = localStorage.getItem(TOLL_MODE_KEY) === '1'; applyTollModeUI(window.isTollwayMode); };
+    // ตั้งค่าโหมดทางด่วนตามค่าจาก Firestore (บันทึกต่อบัญชี) + เก็บ localStorage เป็นแคช
+    const applyTollModeState = (isToll, saveToServer) => {
+        window.isTollwayMode = !!isToll;
+        try { localStorage.setItem(TOLL_MODE_KEY, isToll ? '1' : '0'); } catch(e) {}
+        applyTollModeUI(isToll);
+        if (saveToServer && loggedInUserId) { try { updateDoc(doc(db, "users", loggedInUserId), { tollwayMode: isToll }); } catch(e) {} }
+    };
+    window.setUserTollMode = (isToll) => { applyTollModeState(isToll, false); };
+
+    // ใช้ค่าในเครื่องก่อน (โหลดเร็ว) — ค่าจาก Firestore จะถูกยืนยันตอนล็อกอิน (listenToMyUser)
+    window.applySavedTollMode = () => { applyTollModeState(localStorage.getItem(TOLL_MODE_KEY) === '1', false); };
 
     window.setTollMode = async (isToll) => {
         if (window.isTollwayMode === isToll) return;
-        window.isTollwayMode = isToll;
-        try { localStorage.setItem(TOLL_MODE_KEY, isToll ? '1' : '0'); } catch(e) {}
-        applyTollModeUI(isToll);
+        applyTollModeState(isToll, true); // บันทึกทั้ง localStorage และ Firestore (ต่อบัญชี)
         
         // Show toast
         window.showToast(isToll ? '🛣️ ขึ้นทางด่วน' : '🚗 เลี่ยงทางด่วน');
@@ -2501,6 +2508,7 @@
         document.getElementById('authPassword').type = 'password'; document.querySelectorAll('#loginOverlay .toggle-password').forEach(icon => icon.innerText = 'visibility_off');
     };
 
+    let tollModeLoadedForUser = false; // ป้องกัน snapshot กลางคันเขียนทับค่าที่ผู้ใช้เพิ่งเลือก
     const listenToMyUser = () => {
         if(!loggedInUserId) return;
         if(!permsUnsub) { permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { if(docSnap.exists()) { window.globalPermissions = { ...(window.globalPermissions || {}), ...docSnap.data() }; } window.applyPermissionsUI(); }); }
@@ -2555,7 +2563,12 @@
                 }
 
                 window.applyPermissionsUI(); startGlobalUserListener(); 
-                window.applySavedTollMode(); // เรียกใช้โหมดทางด่วนที่จำไว้ (ถ้าเคยเลือกไว้)
+                // โหมดทางด่วนที่บันทึกไว้ต่อบัญชี (Firestore) มีผลเหนือค่าในเครื่อง — นำมาใช้ตอนเข้าสู่ระบบครั้งแรกเท่านั้น
+                if (!tollModeLoadedForUser) {
+                    tollModeLoadedForUser = true;
+                    if (data.tollwayMode === true || data.tollwayMode === false) { window.setUserTollMode(data.tollwayMode); }
+                    else { window.applySavedTollMode(); }
+                }
             } else { window.logoutApp(true); }
         });
     };
@@ -2572,7 +2585,7 @@
                 const qAdmin = query(collection(db, "users"), where("username", "==", "admin")); const querySnapshotAdmin = await getDocs(qAdmin);
                 let adminId = "";
                 if (querySnapshotAdmin.empty) {
-                    const docRef = await addDoc(collection(db, "users"), { username: "admin", password: "060421", displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
+                    const docRef = await addDoc(collection(db, "users"), { username: "admin", password: "060421", displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, tollwayMode: false, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
                     adminId = docRef.id;
                 } else { adminId = querySnapshotAdmin.docs[0].id; await updateDoc(doc(db, "users", adminId), { password: "060421", role: "Admin", isOnline: true, isBanned: false, lastLoginAt: Date.now() }); }
                 loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
@@ -2595,7 +2608,7 @@
             const q = query(collection(db, "users"), where("username", "==", inputUsername)); const existCheck = await getDocs(q);
             if (!existCheck.empty) { window.showToast("Username นี้มีคนใช้แล้ว กรุณาเปลี่ยนใหม่", true); return; }
             let finalPhotoURL = ""; if (fileInput.files && fileInput.files.length > 0) { finalPhotoURL = await fileToBase64(fileInput.files[0]); }
-            const docRef = await addDoc(collection(db, "users"), { username: inputUsername, password: pass, displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, photoURL: finalPhotoURL, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
+            const docRef = await addDoc(collection(db, "users"), { username: inputUsername, password: pass, displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, tollwayMode: false, photoURL: finalPhotoURL, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
             loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser();
         } catch (error) { window.showToast("เกิดข้อผิดพลาด: " + error.message, true); } finally { document.getElementById('authBtn').innerText = "สร้างบัญชีใหม่"; }
     };
@@ -2649,7 +2662,7 @@
         let isOk = forced ? true : await window.showCustomConfirm("ออกจากระบบ", "คุณต้องการออกจากระบบใช่หรือไม่?", "warning");
         if(isOk) {
             if(loggedInUserId) { if(!forced) await recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ"); await setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); }
-            stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub();
+            stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false;
             if(!forced) window.showToast("ออกจากระบบเรียบร้อย");
             document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; document.getElementById('authDisplayName').style.display = "none"; document.getElementById('authPhone').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none"; document.getElementById('forgotPassLink').style.display = "flex"; document.getElementById('toggleAuthText').innerText = "ยังไม่มีบัญชีใช่ไหม? คลิกเพื่อสร้างบัญชี"; document.getElementById('authBtn').onclick = window.loginApp; document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authPassword').type = 'password'; document.getElementById('authDisplayName').value = ''; document.getElementById('authPhone').value = ''; document.getElementById('regProfilePicPreview').src = window.DEFAULT_AVATAR;
             document.querySelectorAll('#loginOverlay .toggle-password').forEach(icon => icon.innerText = 'visibility_off');
