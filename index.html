@@ -1430,6 +1430,8 @@
     let hiddenGapStart = null, hiddenLastPos = null; // จดตอนแอปซ่อน/สลับแอป เพื่อเบิกเวลาจอด + ระยะทางที่หายกลับคืนเมื่อกลับมา
     // ⏸️ บันทึกช่วงที่มิเตอร์ "หยุด" ระหว่างเที่ยว (แอปถูกปิด/ซ่อนหน้าจอ) เพื่อโชว์ในหน้าสรุปหลังจบเที่ยว (ความโปร่งใสกับผู้โดยสาร)
     let pauseLog = [], pauseOpenAt = null; // รายการที่ปิดแล้ว {s: เวลาหยุด, r: เวลากลับมา} + เวลาหยุดของรายการที่ยังไม่ปิด
+    // 🚩 เตือน "ใกล้ถึงปลายทาง" (ทอง, ครั้งเดียวต่อเที่ยว) — จดระยะทางรวมตอนเริ่มเที่ยว + ว่าปล่อยเสียง/โชว์ไปแล้วหรือยัง
+    let nearDestInitRemain = 0, nearDestWarned = false;
     const openPause = (t) => { if (pauseOpenAt === null) pauseOpenAt = t; };
     const closePause = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 8000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } };
     const closePauseManual = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 2000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } }; // กด "หยุดมิเตอร์ชั่วคราว" เอง → ลงรายการแม้สั้นแค่ 2 วิ (แตะพลาด < 2 วิ ไม่รก)
@@ -1526,6 +1528,24 @@
         if (!(movedKm >= 0)) return false;
         const acc = (accM && accM > 0) ? accM : 30;
         return movedKm < Math.min(0.15, 0.03 + acc * 0.0005 + gapSec * 0.0004);
+    };
+    const TOMTOM_DAILY_LIMIT = 2500; // แผนฟรี TomTom Developer: ~2,500 ครั้ง/วัน (นับในเครื่อง เพื่อเตือนก่อนโควตาจะหมด)
+    // นับจำนวนครั้งที่เรียก TomTom ในวันนี้ (หาเส้นทาง + ค้นหาสถานที่) แล้วเตือนทองเมื่อใช้ใกล้เต็ม (ครั้งเดียวต่อเกณฑ์/วัน)
+    const countTomTomCall = () => {
+        const today = new Date().toISOString().slice(0, 10);
+        let st = {}; try { st = JSON.parse(localStorage.getItem('tomtom_usage_daily') || '{}'); } catch(e) {}
+        if (st.date !== today) st = { date: today, n: 0 };
+        st.n += 1;
+        try { localStorage.setItem('tomtom_usage_daily', JSON.stringify(st)); } catch(e) {}
+        for (const [pct, id] of [[0.88, 1], [0.97, 2]]) {
+            const dayId = today + ':' + id;
+            let prev = ''; try { prev = localStorage.getItem('tomtom_warned_' + id) || ''; } catch(e) {}
+            if (st.n >= Math.floor(TOMTOM_DAILY_LIMIT * pct) && prev !== dayId) {
+                try { localStorage.setItem('tomtom_warned_' + id, dayId); } catch(e) {}
+                window.showToast('⚠️ ใช้ TomTom ไปแล้ว ~' + st.n.toLocaleString('th-TH') + '/' + TOMTOM_DAILY_LIMIT.toLocaleString('th-TH') + ' ครั้งวันนี้ — โควตาใกล้เต็ม ระบบอาจค้นหาหรือรีเฟรชเส้นทางชั่วคราวไม่ได้', false, null, true);
+            }
+        }
+        return st.n;
     };
     function formatDuration(totalMins) { if (totalMins < 60) return totalMins + " นาที"; let h = Math.floor(totalMins / 60); let m = totalMins % 60; return h + " ชม. " + (m > 0 ? m + " นาที" : ""); }
 
@@ -1769,6 +1789,19 @@
             const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=${routeType}&routeRepresentation=polyline&language=th-TH&sectionType=toll${avoidParam}`;
             
             let res = await fetch(url);
+            countTomTomCall(); // นับรอบที่ถึงเซิร์ฟเวอร์จริง (สำเร็จหรือโดนจำกัดโควตาก็ใช้สิทธิ์ไปแล้ว)
+            if (!res.ok) {
+                // TomTom ปฏิเสธ (โควตาหมด/คีย์ผิด/ถูกจำกัดอัตรา) → เตือนทอง ครั้งเดียว/ชั่วโมง กันโพล 120 วิ รบกวนซ้ำ
+                const errTxt = await res.text().catch(() => '');
+                if (/quota|forbidden|denied|rate ?limit|inactive|invalid key|too many/i.test(errTxt) || res.status === 403 || res.status === 429) {
+                    const now = Date.now();
+                    if (!window.__tomtomBlockWarnAt || now - window.__tomtomBlockWarnAt > 3600000) {
+                        window.__tomtomBlockWarnAt = now;
+                        window.showToast('⚠️ TomTom โควตาหมด/ใช้งานไม่ได้ (' + res.status + ') — ระบบจะประเมินจากระยะทางที่กรอกแทนชั่วคราว', false, null, true);
+                    }
+                }
+                return null;
+            }
             let data = await res.json();
             
             if (!data.routes || data.routes.length === 0) return null;
@@ -1855,7 +1888,7 @@
         if(id === 'adminMenuModal' && window.handleAdminModalState) window.handleAdminModalState(show);
     };
 
-    window.showToast = (msg, isError = false, imgUrl = null, gold = false) => {
+    window.showToast = (msg, isError = false, imgUrl = null, gold = false, onClick = null) => {
         const toast = document.getElementById('toastBox'); const icon = document.getElementById('toastIcon'); const img = document.getElementById('toastImg');
         document.getElementById('toastMsg').innerText = msg;
         toast.classList.toggle('toast-gold', !!gold);
@@ -1864,10 +1897,10 @@
         toast.style.borderColor = gold ? '#f1c40f' : (isError ? 'var(--accent-red)' : 'var(--neon-green)'); toast.style.display = 'flex';
         if (window.__toastHideTimer) clearTimeout(window.__toastHideTimer);
         window.__toastHideTimer = setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('toast-gold'); toast.style.cursor = 'default'; toast.onclick = null; }, gold ? 6500 : 4000); // toast ทองอยู่นานกว่า ให้คนขับอ่านทัน
-        // แตะ toast ทอง = เปิดสรุปว่าเบิกเวลา/กิโล/เงินไปเท่าไร
+        // แตะ toast ที่ส่ง onClick มา (เช่น toast ทอง "กลับจากเบื้องหลัง" = เปิดสรุปยอดที่เบิก) → ผูก handler ให้
         toast.onclick = null; toast.style.cursor = 'default';
-        if (gold && window.lastCatchUpInfo) {
-            toast.onclick = () => { if (typeof window.showCatchUpDetails === 'function') window.showCatchUpDetails(); };
+        if (typeof onClick === 'function') {
+            toast.onclick = onClick;
             toast.style.cursor = 'pointer';
         }
     };
@@ -2046,7 +2079,9 @@
             try { 
                 list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--text-dim);"><span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">progress_activity</span> กำลังค้นหา...</div>';
                 list.style.display = 'block';
-                let res = await (await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(smartQuery)}.json?key=${TOMTOM_KEY}&countrySet=TH&limit=15&language=th-TH&typeahead=true&minFuzzyLevel=2&maxFuzzyLevel=4&idxSet=Geo,Addr,PAD,POI`)).json(); 
+                let httpRes = await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(smartQuery)}.json?key=${TOMTOM_KEY}&countrySet=TH&limit=15&language=th-TH&typeahead=true&minFuzzyLevel=2&maxFuzzyLevel=4&idxSet=Geo,Addr,PAD,POI`);
+                countTomTomCall(); // ค้นหาสถานที่ก็ใช้โควตา TomTom เหมือนกัน → นับด้วย
+                let res = await httpRes.json(); 
                 if(!res.results || !res.results.length) return (list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติมนะครับ</span></div>', list.style.display = 'block'); 
                 list.innerHTML = res.results.map((item, idx) => {
                     let name = (item.poi && item.poi.name) ? item.poi.name : ((item.address && item.address.freeformAddress) ? item.address.freeformAddress.split(',')[0] : 'สถานที่');
@@ -2386,7 +2421,7 @@
                 if (caughtKm > 0.02) parts.push(caughtKm.toFixed(2) + ' กม.');
                 const fareDelta = Math.max(0, calcFareOf(actualDrivenKm, trafficSeconds) - calcFareOf(preKm, preTraffic));
                 window.lastCatchUpInfo = { type: 'hidden', timeSec: caughtTimeSec, km: caughtKm, fareDelta: fareDelta, at: Date.now() };
-                window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true); // ทองเด่นกว่า toast ปกติ + แตะเปิดสรุปได้
+                window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true, () => { if (typeof window.showCatchUpDetails === 'function') window.showCatchUpDetails(); }); // ทองเด่น + แตะเปิดสรุปยอดที่เบิก
             }
         } catch(e) {}
         finally { kmCatchUpBusy = false; }
@@ -2617,7 +2652,7 @@
             if (caughtKm > 0.02) parts.push(caughtKm.toFixed(2) + ' กม.');
             const fareDelta = Math.max(0, calcFareOf(km, trafficSec) - calcFareOf(data.km || 0, data.trafficSec || 0));
             window.lastCatchUpInfo = { type: 'kill', timeSec: caughtTimeSec, km: caughtKm, fareDelta: fareDelta, at: Date.now() };
-            window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true); // ทองเด่นกว่า toast ปกติ
+            window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true, () => { if (typeof window.showCatchUpDetails === 'function') window.showCatchUpDetails(); }); // ทองเด่น + แตะเปิดสรุปยอดที่เบิก
         } catch(e) {}
         finally { window.crashCatchUpBusy = false; }
     };
@@ -2739,6 +2774,7 @@
             pauseLog = []; pauseOpenAt = null; window.isMeterPaused = false;
         }
         
+        nearDestInitRemain = 0; nearDestWarned = false; window.__tripLiveAt = Date.now(); // รีเซ็ตเตือน "ใกล้ถึงปลายทาง" สำหรับเที่ยวนี้ (เริ่มนับเวลาหลังเริ่ม/เริ่มต่อ)
         $('driveCovered').innerText = actualDrivenKm.toFixed(2); 
         window.saveActiveTrip(true);
 
@@ -3082,6 +3118,22 @@
             if ($('carIcon')) $('carIcon').style.left = pct + '%';
         }
 
+        // 🚩 เตือน "ใกล้ถึงปลายทาง" (ทอง ครั้งเดียว/เที่ยว): เหลือ ≤ ~1 กม. หรือ ≤ ~15% ของระยะทางรวมตอนเริ่ม
+        // รอผ่านไป 10 วิ หลังเริ่ม/เริ่มต่อ ก่อน กัน toast ตอนเริ่มเที่ยว (เริ่มต่อ/พบสถานที่) เขียนทับเตือนนี้
+        if (window.isManualRunning && destLoc && !window.isMeterPaused && !nearDestWarned && (Date.now() - (window.__tripLiveAt || startTime)) >= 10000) {
+            const rk = currentTrueRemainKm;
+            if (rk > 0.02) {
+                if (nearDestInitRemain <= 0) nearDestInitRemain = Math.max(rk, targetKm + rk); // ระยะทางรวมตอนเริ่มเที่ยว (เห็นครั้งแรก)
+                const threshold = Math.min(1.0, Math.max(0.3, nearDestInitRemain * 0.15));
+                if (rk <= threshold) {
+                    nearDestWarned = true;
+                    const mins = Math.max(1, Math.ceil((currentTrueRemainSec || 0) / 60));
+                    window.showToast(`🚩 ใกล้ถึงปลายทางแล้ว — เหลือ ~${rk.toFixed(1)} กม. (อีก ~${mins} นาที)`, false, null, true);
+                    window.playSound('resume'); // เสียงเตือนสั้น ๆ ให้คนขับรู้ตัว
+                }
+            }
+        }
+
         if ($('tzMeterPrice')) {
             $('tzMeterPrice').innerText = displayFare;
             $('tzDrivenKm').innerText = targetKm.toFixed(2);
@@ -3152,7 +3204,7 @@
         window.stopSilentAudio(); 
         window.hideMap(); // Hide map when tracking stops
         $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; window.syncFareTollBtn(); if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false;        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
-        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null;
+        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false;
         window.isMeterPaused = false;
         window.updatePauseBtnUI();
         window.syncTollToggleVisibility();
