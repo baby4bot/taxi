@@ -1301,6 +1301,14 @@
     </div>
 </div>
 
+<div id="catchUpInfoModal" class="modal-overlay" style="z-index: 10061;" onclick="window.toggleModal('catchUpInfoModal', false)">
+    <div class="modal-box standard-box" onclick="event.stopPropagation()" style="padding: 26px 22px 18px;">
+        <button class="btn-close-floating" style="top: 12px; right: 12px; transform: none;" onclick="window.toggleModal('catchUpInfoModal', false)"><span class="material-symbols-outlined">close</span></button>
+        <div id="catchUpModalBody" style="width:100%; box-sizing:border-box;"></div>
+        <button onclick="window.toggleModal('catchUpInfoModal', false)" class="manual-timer-btn" style="background: var(--neon-green); width:100%; justify-content:center; color:white; margin-top:6px;"><span class="material-symbols-outlined" style="font-size:20px;">check_circle</span> รับทราบ</button>
+    </div>
+</div>
+
 <div onclick="window.toggleModal('qrOverlay', false)" id="qrOverlay" class="modal-overlay">
     <div onclick="event.stopPropagation()" style="position: relative; display: inline-flex; flex-direction: column; align-items: center;">
         <div onclick="window.toggleModal('qrOverlay', false)" class="btn-close-floating" style="top: -15px; right: -15px;"><span class="material-symbols-outlined">close</span></div>
@@ -1832,7 +1840,13 @@
         else { img.style.display = 'none'; icon.style.display = 'block'; if(gold) { icon.innerText = 'sync'; icon.style.color = '#f1c40f'; } else if(isError) { icon.innerText = 'error'; icon.style.color = 'var(--accent-red)'; } else { icon.innerText = 'notifications_active'; icon.style.color = 'var(--neon-green)'; } }
         toast.style.borderColor = gold ? '#f1c40f' : (isError ? 'var(--accent-red)' : 'var(--neon-green)'); toast.style.display = 'flex';
         if (window.__toastHideTimer) clearTimeout(window.__toastHideTimer);
-        window.__toastHideTimer = setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('toast-gold'); }, gold ? 6500 : 4000); // toast ทองอยู่นานกว่า ให้คนขับอ่านทัน
+        window.__toastHideTimer = setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('toast-gold'); toast.style.cursor = 'default'; toast.onclick = null; }, gold ? 6500 : 4000); // toast ทองอยู่นานกว่า ให้คนขับอ่านทัน
+        // แตะ toast ทอง = เปิดสรุปว่าเบิกเวลา/กิโล/เงินไปเท่าไร
+        toast.onclick = null; toast.style.cursor = 'default';
+        if (gold && window.lastCatchUpInfo) {
+            toast.onclick = () => { if (typeof window.showCatchUpDetails === 'function') window.showCatchUpDetails(); };
+            toast.style.cursor = 'pointer';
+        }
     };
 
     window.showCustomConfirm = function(title, desc, type = 'warning', okText = 'ยืนยัน') {
@@ -2277,6 +2291,9 @@
         lastCalcTime = now;
     };
 
+    // คำนวณค่าโดยสารตามสูตรมิเตอร์จาก (กม., วินาทีรถติด) — ใช้หาว่าการเบิกคืนคิดเงินเพิ่มเท่าไร
+    const calcFareOf = (km, trafficSec) => window.baseFare + Math.floor((window.calcThaiMeterDist(km) + trafficSec * (3.0 / 60)) / 2) * 2;
+
     // 📍 กลับมาจากการซ่อนหน้าต่าง/สลับแอป: เบิกเวลาจอด + ระยะทางที่หายไประหว่างที่ GPS ถูกพัก
     // - ต้องมี fix เก่านานเกิน 8 วิ (GPS ถูกพักจริง) ถึงจะเข้าเบิก — ถ้า fix ยังมาปกติ กลไกมิเตอร์ปกติจัดการอยู่แล้ว
     // - จอดนิ่งทั้งช่วง (ตำแหน่งก่อน/หลังซ่อนแทบไม่ขยับ + ความเร็ว <= 6) → เบิกเวลาจอดทั้งช่วงตามมิเตอร์จริง
@@ -2302,6 +2319,7 @@
             const prevPos = lastPos; // ตำแหน่งก่อนซ่อน (ถ้ายังไม่มี fix ใหม่แทรกมา) — กันการนับระยะซ้ำซ้อน
             lastPos = p;
             lastPosTime = Date.now();
+            const preKm = actualDrivenKm, preTraffic = trafficSeconds; // ค่าก่อนเบิก ไว้คำนวณ "เงินที่เพิ่ม" (อิงสูตรมิเตอร์)
 
             // ตรวจว่าจอดนิ่งตลอดช่วงที่ซ่อนหรือไม่ (ตำแหน่งแทบไม่ขยับ + ความเร็ว <= 6)
             const speedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
@@ -2345,7 +2363,9 @@
                 let parts = [];
                 if (caughtTimeSec >= 1) parts.push('เบิกเวลา ' + Math.round(caughtTimeSec) + ' วิ');
                 if (caughtKm > 0.02) parts.push(caughtKm.toFixed(2) + ' กม.');
-                window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true); // ทองเด่นกว่า toast ปกติ
+                const fareDelta = Math.max(0, calcFareOf(actualDrivenKm, trafficSeconds) - calcFareOf(preKm, preTraffic));
+                window.lastCatchUpInfo = { type: 'hidden', timeSec: caughtTimeSec, km: caughtKm, fareDelta: fareDelta, at: Date.now() };
+                window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true); // ทองเด่นกว่า toast ปกติ + แตะเปิดสรุปได้
             }
         } catch(e) {}
         finally { kmCatchUpBusy = false; }
@@ -2371,6 +2391,41 @@
         try { localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(payload)); } catch(e) {}
     };
     window.clearActiveTrip = () => { try { localStorage.removeItem(ACTIVE_TRIP_KEY); } catch(e) {} };
+
+    // 👆 แตะ toast ทอง "กลับจากเบื้องหลัง" → เปิดสรุปย่อ: เบิกเวลา/กิโล/เงินไปเท่าไร
+    window.showCatchUpDetails = () => {
+        const info = window.lastCatchUpInfo;
+        if (!info) return;
+        const thb = (n) => Math.max(0, Math.round(n)).toLocaleString('th-TH') + ' ฿';
+        const durTxt = (sec) => {
+            sec = Math.max(0, Math.round(sec));
+            const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+            if (h > 0) return h + ' ชม. ' + m + ' นาที';
+            if (m > 0) return s > 0 ? m + ' นาที ' + s + ' วิ' : m + ' นาที';
+            return s + ' วิ';
+        };
+        const row = (icon, label, val, color) => `
+            <div style="display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px dashed rgba(255,255,255,0.08);">
+                <span class="material-symbols-outlined" style="font-size:22px; color:${color || 'var(--neon-yellow)'}; flex-shrink:0;">${icon}</span>
+                <span style="flex:1; text-align:left; font-size:14px; color:var(--text-dim);">${label}</span>
+                <span style="font-weight:700; font-size:15px; color:white; white-space:nowrap;">${val}</span>
+            </div>`;
+        let html = `
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                <span class="material-symbols-outlined" style="font-size:38px; color:#f1c40f; filter: drop-shadow(0 0 9px rgba(241,196,15,0.75));">sync</span>
+                <div style="text-align:left;">
+                    <div style="font-size:18px; font-weight:700; color:#ffe9a8; line-height:1.3;">กลับจากเบื้องหลัง</div>
+                    <div style="font-size:12px; color:var(--text-dim); margin-top:2px;">มิเตอร์เบิกคืนให้อัตโนมัติตามหลักฐาน GPS</div>
+                </div>
+            </div>`;
+        if (info.timeSec >= 1) html += row('timer', 'เวลาจอด / รถติดที่เบิกคืน', durTxt(info.timeSec));
+        if (info.km > 0.02) html += row('route', 'ระยะทางที่เบิกคืน', info.km.toFixed(2) + ' กม.');
+        html += row('payments', 'ค่าโดยสารที่เพิ่มขึ้น', '+' + thb(info.fareDelta), 'var(--neon-green)');
+        html += `<div style="font-size:11.5px; color:var(--text-dim); line-height:1.6; text-align:left; margin:10px 2px 4px;">ยอดบนมิเตอร์อัปเดตให้แล้ว — ตรวจสอบเลขบนหน้าจอได้เลย กด "เริ่มต่อ" เพื่อเดินเที่ยวต่อ</div>`;
+        const body = document.getElementById('catchUpModalBody');
+        if (body) body.innerHTML = html;
+        window.toggleModal('catchUpInfoModal', true);
+    };
 
     // 🚕 แบนเนอร์ "เริ่มต่อ": เด่น ๆ ตอนเปิดแอปกลับมา (เลื่อนขึ้นจอ + เสียง + สั่น) และถ้ายังไม่กดเริ่มต่อใน 30 วิ จะย่อเป็นแถบเล็ก (แตะขยายกลับได้)
     const hideResumeBanner = () => {
@@ -2518,10 +2573,12 @@
             try { localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(cur2)); } catch(e) {}
             window.maybeShowResumeBanner(); // รีเฟรชข้อความบนแบนเนอร์เป็นตัวเลขใหม่
 
-            // 🔔 แจ้งคนขับว่ามิเตอร์ถูกเบิกคืนให้แล้ว
+            // 🔔 แจ้งคนขับว่ามิเตอร์ถูกเบิกคืนให้แล้ว (แตะ toast เพื่อดูรายละเอียดว่าเบิกเวลา/กิโล/เงินเท่าไร)
             let parts = [];
             if (caughtTimeSec >= 1) parts.push('เบิกเวลา ' + Math.round(caughtTimeSec) + ' วิ');
             if (caughtKm > 0.02) parts.push(caughtKm.toFixed(2) + ' กม.');
+            const fareDelta = Math.max(0, calcFareOf(km, trafficSec) - calcFareOf(data.km || 0, data.trafficSec || 0));
+            window.lastCatchUpInfo = { type: 'kill', timeSec: caughtTimeSec, km: caughtKm, fareDelta: fareDelta, at: Date.now() };
             window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true); // ทองเด่นกว่า toast ปกติ
         } catch(e) {}
         finally { window.crashCatchUpBusy = false; }
