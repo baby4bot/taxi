@@ -911,9 +911,24 @@
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
 
         @media (max-width: 380px) {
-            .price { font-size: 54px; }
+            .price { font-size: 44px; }
+            .price span { font-size: 22px !important; }
             .header-center h2 { font-size: 16px; }
             .side-menu { width: 86vw; }
+
+            /* การ์ดประเมินราคาเตี้ยลงบนจอแคบ */
+            .result-container { min-height: 84px; max-height: 116px; padding: 6px 12px 4px; margin: 0 0 6px 0; }
+            #fareTollBtn { top: 4px; right: 6px; padding: 4px 9px; font-size: 12px; border-radius: 15px; }
+            #fareTollBtn .material-symbols-outlined { font-size: 14px; }
+            .sub-info { margin-top: 3px; padding: 3px 10px; font-size: 11px; border-radius: 12px; }
+
+            /* กระชับระยะห่างระหว่างปุ่มเริ่มมิเตอร์กับแถวไอคอนล่าง */
+            .action-row { margin-bottom: 2px; }
+            .manual-timer-btn { padding: 12px 14px; }
+            .btn-reset { padding: 12px; margin-bottom: 10px; }
+            #mainApp > div[style*="flex-shrink: 0"] { gap: 10px; margin-bottom: 8px !important; }
+            .btn-icon-base { width: 52px; height: 52px; border-radius: 16px; }
+            .footer-credit { padding-top: 8px; }
         }
     </style>
 </head>
