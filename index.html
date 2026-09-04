@@ -1433,6 +1433,7 @@
     // 🚩 เตือน "ใกล้ถึงปลายทาง" (ทอง, ครั้งเดียวต่อเที่ยว) — จดระยะทางรวมตอนเริ่มเที่ยว + ว่าปล่อยเสียง/โชว์ไปแล้วหรือยัง
     let nearDestInitRemain = 0, nearDestWarned = false;
     let arriveAsked = false; // ถาม "ถึงปลายทางแล้วหรือยัง?" (ครั้งเดียว/เที่ยว) หลังเบิกคืนพบเหลือระยะทาง < 100 ม.
+    let lastPath = []; // พิกัดเส้นทาง 2-3 จุดล่าสุด (ไว้ประมาณระยะที่วิ่งช่วงแอปปิด/ซ่อน แทนเส้นตรงเส้นเดียว)
     const openPause = (t) => { if (pauseOpenAt === null) pauseOpenAt = t; };
     const closePause = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 8000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } };
     const closePauseManual = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 2000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } }; // กด "หยุดมิเตอร์ชั่วคราว" เอง → ลงรายการแม้สั้นแค่ 2 วิ (แตะพลาด < 2 วิ ไม่รก)
@@ -1529,6 +1530,21 @@
         if (!(movedKm >= 0)) return false;
         const acc = (accM && accM > 0) ? accM : 30;
         return movedKm < Math.min(0.15, 0.03 + acc * 0.0005 + gapSec * 0.0004);
+    };
+    // 📏 ประมาณระยะที่วิ่งช่วงแอปปิด/ซ่อน (เที่ยวไม่มีปลายทาง): ใช้เส้นทางจริง 2-3 จุดล่าสุดแทนเส้นตรงเส้นเดียว
+    // - คำนวณ "ความคดเคี้ยว" ของถนนช่วงท้าย = ความยาวเส้นทางจริง / ระยะเส้นตรงระหว่างจุดแรก-จุดสุดท้าย
+    // - ระยะช่วงปิด = ระยะเส้นตรง (จุดก่อนปิด → จุดปัจจุบัน) × ปัจจัยคดเคี้ยว (อย่างน้อย 1.05 เหมือนเดิม, จำกัดสูงสุด 1.6)
+    const estimateGapKm = (path, fromPt, toPt) => {
+        if (!fromPt || !toPt) return 0;
+        const straight = calcGPS(fromPt.lat, fromPt.lon, toPt.lat, toPt.lon);
+        let factor = 1.05;
+        if (Array.isArray(path) && path.length >= 2) {
+            let poly = 0;
+            for (let i = 0; i < path.length - 1; i++) poly += calcGPS(path[i].lat, path[i].lon, path[i + 1].lat, path[i + 1].lon);
+            const firstStraight = calcGPS(path[0].lat, path[0].lon, path[path.length - 1].lat, path[path.length - 1].lon);
+            if (firstStraight > 0.02) factor = Math.min(1.6, Math.max(1.05, poly / firstStraight));
+        }
+        return straight * factor;
     };
     const TOMTOM_DAILY_LIMIT = 2500; // แผนฟรี TomTom Developer: ~2,500 ครั้ง/วัน (นับในเครื่อง เพื่อเตือนก่อนโควตาจะหมด)
     // นับจำนวนครั้งที่เรียก TomTom ในวันนี้ (หาเส้นทาง + ค้นหาสถานที่) แล้วเตือนทองเมื่อใช้ใกล้เต็ม (ครั้งเดียวต่อเกณฑ์/วัน)
@@ -2411,7 +2427,8 @@
                 }
                 // 2) ขอเส้นทางไม่ได้ / ไม่มีปลายทาง / ซ่อนไม่นานพอ → กันระยะหายด้วยเส้นตรงจากจุดก่อนซ่อน
                 if (!distanceAdded && prevPos) {
-                    const straight = calcGPS(prevPos.lat, prevPos.lon, p.lat, p.lon) * 1.05;
+                    // ใช้หลายพิกัดล่าสุด (เส้นทางจริง) ประเมินระยะแทนเส้นตรงเส้นเดียว — ถนนคด = คูณมากขึ้น (จำกัด 60%)
+                    const straight = estimateGapKm(lastPath, prevPos, p);
                     if (straight > 0.02 && straight < 100) {
                         actualDrivenKm += straight;
                         caughtKm += straight;
@@ -2448,6 +2465,7 @@
             km: actualDrivenKm, trafficSec: trafficSeconds,
             remainKm: currentTrueRemainKm, remainSec: currentTrueRemainSec,
             lastPos: lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null, // เซฟตำแหน่งล่าสุดไว้ เบิกคืนตอนแอปถูกคิลแล้วเปิดใหม่
+            lastPath: lastPath.slice(), // พิกัดเส้นทาง 2-3 จุดล่าสุด ไว้ประมาณระยะที่วิ่งช่วงแอปปิด (แทนเส้นตรงเส้นเดียว)
             dest: destLoc ? { lat: destLoc.lat, lon: destLoc.lon } : null,
             destName: destLoc ? $('destInput').value.trim() : '',
             surcharges: window.surchargeList.slice(),
@@ -2647,7 +2665,8 @@
                 }
                 // ขอเส้นทางไม่ได้ / เที่ยวกรอกระยะทางเอง → เส้นตรงจากจุดก่อนปิดแอป
                 if (!distanceAdded && hidePos) {
-                    const straight = calcGPS(hidePos.lat, hidePos.lon, p.lat, p.lon) * 1.05;
+                    // ใช้หลายพิกัดล่าสุด (เส้นทางจริง) ประเมินระยะแทนเส้นตรงเส้นเดียว — ถนนคด = คูณมากขึ้น (จำกัด 60%)
+                    const straight = estimateGapKm(data.lastPath || cur.lastPath, hidePos, p);
                     if (straight > 0.02 && straight < 100) {
                         km += straight;
                         caughtKm += straight;
@@ -2804,6 +2823,7 @@
             currentSpeedKmh = 0; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; // รอ fix ใหม่ยืนยันจอดก่อน ค่อยคิดเวลาจอด
             startTime = seed.startTime || Date.now();
             lastPosTime = Date.now(); lastCalcTime = Date.now(); // ไม่คิดค่าเวลาช่วงที่แอปปิด (ตามกฎหลักฐานจอดจริง)
+            lastPath = (seed.lastPath || []).slice(); // คืนค่าเส้นทางล่าสุด (ไว้ประมาณระยะช่วงปิด/ซ่อน)
             if (seed.dest) destLoc = { lat: seed.dest.lat, lon: seed.dest.lon };
             if (seed.destName) $('destInput').value = seed.destName;
             if (seed.baseFare) window.baseFare = seed.baseFare;
@@ -2818,6 +2838,7 @@
             actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; trafficCharging = true; lastFixSpeedKmh = null;
             startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime; lastStopFixAt = startTime;
             pauseLog = []; pauseOpenAt = null; window.isMeterPaused = false;
+            lastPath = []; // เที่ยวใหม่ เริ่มจดเส้นทางใหม่
         }
         
         nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; window.__tripLiveAt = Date.now(); // รีเซ็ตเตือน "ใกล้ถึงปลายทาง"/ถามจบเที่ยว สำหรับเที่ยวนี้ (เริ่มนับเวลาหลังเริ่ม/เริ่มต่อ)
@@ -2912,6 +2933,13 @@
                 window.updateMapPosition(pos.coords.latitude, pos.coords.longitude);
                 lastPosTime = now; 
             } 
+            
+            // 📍 จดเส้นทาง 2-3 จุดล่าสุด (เฉพาะ fix ที่ขยับ ≥ 4 ม.) ไว้ประมาณระยะช่วงแอปปิด/ซ่อน
+            const lpLast = lastPath[lastPath.length - 1];
+            if (!lpLast || calcGPS(lpLast.lat, lpLast.lon, pos.coords.latitude, pos.coords.longitude) > 0.004) {
+                lastPath.push({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+                if (lastPath.length > 3) lastPath.shift();
+            }
             
             $('driveCovered').innerText = actualDrivenKm.toFixed(2);
 
@@ -3250,7 +3278,7 @@
         window.stopSilentAudio(); 
         window.hideMap(); // Hide map when tracking stops
         $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; window.syncFareTollBtn(); if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false;        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
-        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false;
+        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; lastPath = [];
         window.isMeterPaused = false;
         window.updatePauseBtnUI();
         window.syncTollToggleVisibility();
