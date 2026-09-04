@@ -2259,6 +2259,7 @@
         hiddenGapStart = null; hiddenLastPos = null; // ใช้ครั้งเดียว กันเบิกซ้ำ
         if (gapSec < 8 || gpsPausedSec < 8) return; // ซ่อนสั้นๆ / สัญญาณยังมา = กลไกปกติคิดให้อยู่แล้ว
         kmCatchUpBusy = true;
+        let caughtTimeSec = 0, caughtKm = 0; // ยอดที่เบิกคืนจริงตอนกลับจากเบื้องหลัง (สำหรับ toast แจ้งคนขับ)
         try {
             const pos = await new Promise((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 });
@@ -2279,6 +2280,7 @@
                 // จอดนิ่งทั้งช่วง → เบิกเวลาจอดให้ครบ (มิเตอร์จริงคิดเวลารอต่อเนื่อง ไม่ใช่แค่หลักฐาน 6 วิ)
                 trafficSeconds += gapSec;
                 trafficCharging = true; lastStopFixAt = Date.now();
+                caughtTimeSec += gapSec;
             } else {
                 // 1) เบิกระยะที่วิ่งช่วงซ่อน: ขอเส้นทางใหม่จากจุดปัจจุบัน (เฉพาะเที่ยวมีปลายทาง + ซ่อน > 20 วิ กันโควตา)
                 let distanceAdded = false;
@@ -2287,7 +2289,7 @@
                         const route = await window.fetchRouteFromTomTom(destLoc.lat, destLoc.lon, p.lat, p.lon);
                         if (route && route.km !== undefined) {
                             const missing = currentTrueRemainKm - route.km;
-                            if (missing > 0.02 && missing < 100) { actualDrivenKm += missing; distanceAdded = true; }
+                            if (missing > 0.02 && missing < 100) { actualDrivenKm += missing; caughtKm += missing; distanceAdded = true; }
                             else if (missing >= -0.02) { distanceAdded = true; } // ไม่ได้วิ่งเพิ่ม หรือนับครบแล้ว (กันเส้นตรงซ้ำ)
                             currentTrueRemainKm = Math.max(0, route.km);
                             if (route.sec !== undefined) currentTrueRemainSec = route.sec;
@@ -2299,12 +2301,20 @@
                     const straight = calcGPS(prevPos.lat, prevPos.lon, p.lat, p.lon) * 1.05;
                     if (straight > 0.02 && straight < 100) {
                         actualDrivenKm += straight;
+                        caughtKm += straight;
                         currentTrueRemainKm = Math.max(0, currentTrueRemainKm - straight);
                     }
                 }
             }
             window.saveActiveTrip(true);
             window.updateLiveMeterDisplay();
+            // 🔔 แจ้งคนขับว่ามิเตอร์เบิกคืนให้แล้ว (กลับจากเบื้องหลัง) — ให้เชื่อใจว่าตัวเลข/ค่าโดยสารถูกต้อง
+            if (caughtTimeSec >= 1 || caughtKm > 0.02) {
+                let parts = [];
+                if (caughtTimeSec >= 1) parts.push('เบิกเวลา ' + Math.round(caughtTimeSec) + ' วิ');
+                if (caughtKm > 0.02) parts.push(caughtKm.toFixed(2) + ' กม.');
+                window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '));
+            }
         } catch(e) {}
         finally { kmCatchUpBusy = false; }
     };
