@@ -972,10 +972,7 @@
     <div id="searchSectionBox" class="search-section">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 6px 8px 6px;">
             <label style="margin: 0; flex: 1; min-width: 0;">ค้นหาจุดหมาย</label>
-            <div style="display: flex; gap: 6px; flex-shrink: 0;">
-                <button id="btnAvoidTollMain" class="small-toll-btn active" onclick="window.setTollMode(false)" title="เลี่ยงทางด่วน" style="width: 34px; height: 34px; border-radius: 11px;"><span class="material-symbols-outlined" style="font-size: 17px;">route</span></button>
-                <button id="btnUseTollMain" class="small-toll-btn" onclick="window.setTollMode(true)" title="ขึ้นทางด่วน" style="width: 34px; height: 34px; border-radius: 11px;"><span class="material-symbols-outlined" style="font-size: 17px;">add_road</span></button>
-            </div>
+            <button id="btnTollToggleMain" class="small-toll-btn active" onclick="window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 18px;">route</span></button>
         </div>
         <div class="input-group">
             <input oninput="window.smartSearch(this.value); window.checkAppStatus();" onfocus="window.showHistory()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />
@@ -1341,10 +1338,14 @@
         if (window.isTollwayMode === isToll) return;
         window.isTollwayMode = isToll;
         
-        // Update button states on ALL locations (Main, Live, Zoom)
-        document.getElementById('btnAvoidTollMain').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
-        document.getElementById('btnUseTollMain').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
-        
+        // Update button states: Main = single toggle switch; Live & Zoom keep two-button pairs
+        const tollToggleMain = document.getElementById('btnTollToggleMain');
+        if (tollToggleMain) {
+            tollToggleMain.className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn active';
+            const tglIcon = tollToggleMain.querySelector('.material-symbols-outlined');
+            if (tglIcon) tglIcon.innerText = isToll ? 'add_road' : 'route';
+            tollToggleMain.title = isToll ? 'ขึ้นทางด่วน (แตะเพื่อเลี่ยงทางด่วน)' : 'เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)';
+        }
         if (document.getElementById('btnAvoidTollLive')) {
             document.getElementById('btnAvoidTollLive').className = isToll ? 'small-toll-btn' : 'small-toll-btn active';
             document.getElementById('btnUseTollLive').className = isToll ? 'small-toll-btn toll-active' : 'small-toll-btn';
