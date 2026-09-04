@@ -2814,6 +2814,9 @@
         clearTimeout(window.__catchUpStatusHideT);
         el.classList.remove('catchup-status-fadeout');
         el.style.display = 'flex';
+        // เสียงสั้น + สั่นเบา ๆ คล้าย toast ทอง ให้คนขับสังเกตเห็นแถบ (เคารพสวิตช์ปิดสั่นในหน้าโปรไฟล์)
+        try { window.playSound('resume'); } catch(e) {}
+        if (navigator.vibrate && window.userVibrateGold !== false) { try { navigator.vibrate([60, 40, 60]); } catch(e) {} }
     };
     window.hideCatchUpStatus = () => {
         window.__catchUpStatusRef = Math.max(0, (window.__catchUpStatusRef || 0) - 1);
