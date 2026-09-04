@@ -1446,6 +1446,7 @@
     let nearDestInitRemain = 0, nearDestWarned = false;
     let arriveAsked = false; // ถาม "ถึงปลายทางแล้วหรือยัง?" (ครั้งเดียว/เที่ยว) หลังเบิกคืนพบเหลือระยะทาง < 100 ม.
     let lastPath = []; // พิกัดเส้นทาง 2-3 จุดล่าสุด (ไว้ประมาณระยะที่วิ่งช่วงแอปปิด/ซ่อน แทนเส้นตรงเส้นเดียว)
+    let catchUpLog = []; // 📒 ประวัติการเบิกคืนทุกรอบของเที่ยวนี้ [{type:'hidden'|'kill', from, to, idleSec, km, fareDelta}] — เซฟ Firestore ต่อเที่ยว + โชว์ในสรุป
     const openPause = (t) => { if (pauseOpenAt === null) pauseOpenAt = t; };
     const closePause = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 8000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } };
     const closePauseManual = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 2000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } }; // กด "หยุดมิเตอร์ชั่วคราว" เอง → ลงรายการแม้สั้นแค่ 2 วิ (แตะพลาด < 2 วิ ไม่รก)
@@ -2457,6 +2458,7 @@
                 if (caughtKm > 0.02) parts.push(caughtKm.toFixed(2) + ' กม.');
                 const fareDelta = Math.max(0, calcFareOf(actualDrivenKm, trafficSeconds) - calcFareOf(preKm, preTraffic));
                 window.lastCatchUpInfo = { type: 'hidden', timeSec: caughtTimeSec, km: caughtKm, fareDelta: fareDelta, at: Date.now() };
+                catchUpLog.push({ type: 'hidden', from: Date.now() - gapSec * 1000, to: Date.now(), idleSec: caughtTimeSec, km: caughtKm, fareDelta: fareDelta }); // 📒 จดประวัติรอบนี้ (ช่วงปิด เริ่ม-จบ + ยอดที่เบิก)
                 window.showToast('กลับจากเบื้องหลัง: ' + parts.join(' / '), false, null, true, () => { if (typeof window.showCatchUpDetails === 'function') window.showCatchUpDetails(); }); // ทองเด่น + แตะเปิดสรุปยอดที่เบิก
             }
             // 🚩 กลับจากเบื้องหลังแล้วเหลือระยะทางถึงปลายทาง < 100 ม. → ถามจบเที่ยวทันที
@@ -2483,6 +2485,7 @@
             surcharges: window.surchargeList.slice(),
             baseFare: window.baseFare,
             pauseLog: pauseLog.slice(), pauseOpenAt: pauseOpenAt,
+            catchUpLog: catchUpLog.slice(), // ประวัติการเบิกคืนทุกรอบ (กันหายถ้าแอปถูกคิลกลางเที่ยว)
             paused: window.isMeterPaused ? true : false
         };
         try { localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(payload)); } catch(e) {}
@@ -2698,6 +2701,7 @@
                     currentTrueRemainKm = Math.max(0, remainKm); // ระยะเหลือใหม่จากเส้นทาง/เส้นตรงที่คำนวณไว้
                     if (remainSec !== undefined && remainSec > 0) currentTrueRemainSec = remainSec;
                 }
+                catchUpLog.push({ type: 'kill', from: gapStart, to: Date.now(), idleSec: caughtTimeSec, km: caughtKm, fareDelta: Math.max(0, calcFareOf(actualDrivenKm, trafficSeconds) - calcFareOf(data.km || 0, data.trafficSec || 0)) }); // 📒 จดประวัติการเบิกคืนรอบนี้ (ช่วงปิด เริ่ม-จบ + ยอดที่เบิก)
                 window.saveActiveTrip(true); // อัปเดต payload ให้ตรงกับมิเตอร์
                 window.updateLiveMeterDisplay();
                 // 🚩 เบิกคืนแล้วเหลือระยะทางถึงปลายทาง < 100 ม. (กดเริ่มต่อไปแล้วระหว่างตรวจสอบ) → ถามจบเที่ยวทันที
@@ -2718,6 +2722,9 @@
                     if (!Array.isArray(cur2.pauseLog)) cur2.pauseLog = [];
                     if (Date.now() - cur2.pauseOpenAt >= 8000) cur2.pauseLog.push({ s: cur2.pauseOpenAt, r: Date.now() });
                 }
+                // 📒 จดประวัติการเบิกคืนรอบนี้ลง payload (เบิกทางแบนเนอร์ ยังไม่เริ่มมิเตอร์) → โชว์สรุป + เซฟ Firestore ตอนจบเที่ยว
+                if (!Array.isArray(cur2.catchUpLog)) cur2.catchUpLog = [];
+                cur2.catchUpLog.push({ type: 'kill', from: gapStart, to: Date.now(), idleSec: caughtTimeSec, km: caughtKm, fareDelta: Math.max(0, calcFareOf(km, trafficSec) - calcFareOf(data.km || 0, data.trafficSec || 0)) });
                 cur2.pauseOpenAt = null;
                 try { localStorage.setItem(ACTIVE_TRIP_KEY, JSON.stringify(cur2)); } catch(e) {}
                 window.maybeShowResumeBanner(); // รีเฟรชข้อความบนแบนเนอร์เป็นตัวเลขใหม่
@@ -2861,6 +2868,7 @@
             startTime = seed.startTime || Date.now();
             lastPosTime = Date.now(); lastCalcTime = Date.now(); // ไม่คิดค่าเวลาช่วงที่แอปปิด (ตามกฎหลักฐานจอดจริง)
             lastPath = (seed.lastPath || []).slice(); // คืนค่าเส้นทางล่าสุด (ไว้ประมาณระยะช่วงปิด/ซ่อน)
+            catchUpLog = (seed.catchUpLog || []).slice(); // คืนค่าประวัติการเบิกคืนเดิมของเที่ยวนี้ (ต่อยอดถ้ามีรอบใหม่)
             if (seed.dest) destLoc = { lat: seed.dest.lat, lon: seed.dest.lon };
             if (seed.destName) $('destInput').value = seed.destName;
             if (seed.baseFare) window.baseFare = seed.baseFare;
@@ -2876,6 +2884,7 @@
             startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime; lastStopFixAt = startTime;
             pauseLog = []; pauseOpenAt = null; window.isMeterPaused = false;
             lastPath = []; // เที่ยวใหม่ เริ่มจดเส้นทางใหม่
+            catchUpLog = []; // เที่ยวใหม่ ประวัติการเบิกคืนเริ่มต้นใหม่
         }
         
         nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; window.__tripLiveAt = Date.now(); // รีเซ็ตเตือน "ใกล้ถึงปลายทาง"/ถามจบเที่ยว สำหรับเที่ยวนี้ (เริ่มนับเวลาหลังเริ่ม/เริ่มต่อ)
@@ -3055,6 +3064,30 @@
         window.manualInputChange(); 
     };
     window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; window.updateFareEstimation(km); window.checkAppStatus(); };
+
+    // 📒 เซฟเที่ยว (รวมประวัติการเบิกคืนทุกรอบ) ลง Firestore: users/{uid}/trips — ให้คนขับเปิดดูย้อนหลังกับผู้โดยสารได้
+    window.saveTripToFirestore = (s) => {
+        if (!loggedInUserId || !db) return;
+        try {
+            const distFare = window.calcThaiMeterDist(s.km);
+            const meterTravel = Math.floor((distFare + s.trafficSec * (3.0 / 60)) / 2) * 2;
+            const surchargeTotal = (s.surcharges || []).reduce((sum, it) => sum + it.amount, 0);
+            addDoc(collection(db, "users", loggedInUserId, "trips"), {
+                startTime: s.startTime,
+                endTime: s.endTime,
+                destName: s.destName || '',
+                km: s.km,
+                trafficSec: s.trafficSec,
+                baseFare: s.baseFare,
+                surcharges: s.surcharges || [],
+                pauses: s.pauses || [],
+                catchUps: s.catchUps || [], // [{type:'hidden'|'kill', from, to, idleSec, km, fareDelta}]
+                fare: s.baseFare + meterTravel + surchargeTotal,
+                driverUid: loggedInUserId,
+                createdAt: Date.now()
+            }).catch(() => {}); // ไม่บล็อกการสรุปเที่ยว ถ้า Firestore ติด/ออฟไลน์
+        } catch(e) {}
+    };
     
     // 🧾 จบเที่ยว (จากปุ่มหลัก หรือหน้าจอขยาย): ถ่ายข้อมูลสรุป → รีเซ็ตระบบ → เปิดหน้าสรุปค่าโดยสาร
     // หน้าสรุปโชว์ช่วง "หยุด/เริ่มต่อ" ระหว่างเที่ยว (แอปปิด/สลับหน้าจอ) ให้ผู้โดยสารเห็นอย่างโปร่งใส
@@ -3071,8 +3104,10 @@
             trafficSec: trafficSeconds,
             baseFare: window.baseFare,
             surcharges: window.surchargeList.slice(),
-            pauses: pauseLog.slice()
+            pauses: pauseLog.slice(),
+            catchUps: catchUpLog.slice() // 📒 ประวัติการเบิกคืนทุกรอบของเที่ยวนี้
         };
+        window.saveTripToFirestore(snap); // เซฟเที่ยว + ประวัติการเบิกคืนลง Firestore (คนขับตรวจสอบย้อนหลังกับผู้โดยสารได้)
         window.resetAll();
         window.toggleModal('trackerZoomOverlay', false);
         window.renderTripSummary(snap);
@@ -3170,6 +3205,29 @@
                         <span style="color:var(--text-dim);">→</span>
                         <span style="background:rgba(46,204,113,0.16); color:#7bed9f; padding:2px 9px; border-radius:9px; font-size:12px;">ต่อ ${clock(p.r)} น.</span>
                         <span style="margin-left:auto; color:var(--neon-yellow); font-weight:600; white-space:nowrap;">${dur(durSec)}</span>
+                    </div>`;
+                }).join('')}
+            </div>`;
+        }
+
+        if (s.catchUps && s.catchUps.length > 0) {
+            html += `<div style="background:rgba(250,204,21,0.05); border:1px solid rgba(250,204,21,0.25); border-radius:16px; padding:13px 14px; margin-top:14px;">
+                <div style="display:flex; align-items:center; gap:7px; font-size:14px; font-weight:600; color:var(--neon-yellow);">
+                    <span class="material-symbols-outlined" style="font-size:19px;">sync</span> กลับจากเบื้องหลัง: เบิกคืนอัตโนมัติ
+                    <span style="font-size:11px; font-weight:400; color:var(--text-dim); margin-left:auto;">${s.catchUps.length} ครั้ง</span>
+                </div>
+                <div style="font-size:11.5px; color:var(--text-dim); line-height:1.5; margin:7px 0 5px; text-align:left;">ช่วงที่แอปถูกปิด / สลับหน้าจอ ระบบเบิกเวลาจอดและระยะทางคืนให้อัตโนมัติตามหลักฐาน GPS (บันทึกในระบบแล้ว ตรวจสอบย้อนหลังได้)</div>
+                ${s.catchUps.map((c, i) => {
+                    const parts = [];
+                    if (c.idleSec >= 1) parts.push('จอด ' + dur(c.idleSec));
+                    if (c.km > 0.02) parts.push('+ ' + c.km.toFixed(2) + ' กม.');
+                    if (c.fareDelta > 0) parts.push('+' + c.fareDelta + '฿');
+                    return `<div style="display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:${i < s.catchUps.length - 1 ? '1px dashed rgba(255,255,255,0.09)' : 'none'}; font-size:13px;">
+                        <span style="color:var(--text-dim); width:16px;">${i + 1}.</span>
+                        <span style="background:rgba(250,204,21,0.14); color:#ffe08a; padding:2px 9px; border-radius:9px; font-size:12px;">${c.type === 'kill' ? 'ปิดแอป ' : 'ซ่อน '}${clock(c.from)} น.</span>
+                        <span style="color:var(--text-dim);">→</span>
+                        <span style="background:rgba(46,204,113,0.16); color:#7bed9f; padding:2px 9px; border-radius:9px; font-size:12px;">${clock(c.to)} น.</span>
+                        <span style="margin-left:auto; color:var(--neon-yellow); font-weight:600; white-space:nowrap; font-size:12px;">${parts.join(' · ') || 'ตรวจสอบแล้ว'}</span>
                     </div>`;
                 }).join('')}
             </div>`;
@@ -3316,7 +3374,7 @@
         window.stopSilentAudio(); 
         window.hideMap(); // Hide map when tracking stops
         $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; window.syncFareTollBtn(); if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false;        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
-        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; lastPath = [];
+        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; lastPath = []; catchUpLog = [];
         window.isMeterPaused = false;
         window.updatePauseBtnUI();
         window.syncTollToggleVisibility();

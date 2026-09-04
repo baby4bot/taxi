@@ -317,6 +317,31 @@
                 return 'รถติด ' + d.traffic + ' วิ (คาด ~70 = 10 + 60) / ' + d.fare + '฿';
             });
 
+            // 7) ประวัติการเบิกคืน: ลง payload (catchUpLog) + โชว์ในหน้าสรุปหลังจบเที่ยว
+            await runScenario('7. ประวัติเบิกคืนลง payload + โชว์ในสรุปหลังจบเที่ยว', async () => {
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(makePayload()));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(1200);
+                releaseFix(5, P0.lat, P0.lon, 8);
+                await wait(1000);
+                // payload ต้องมี catchUpLog 1 รายการ (live branch เซฟไว้)
+                const p = JSON.parse(w().localStorage.getItem('taxi_active_trip_v1'));
+                assert(Array.isArray(p.catchUpLog) && p.catchUpLog.length === 1, 'payload ต้องมี catchUpLog 1 รายการ (ได้ ' + (p.catchUpLog ? p.catchUpLog.length : 'ไม่มี') + ')');
+                const entry = p.catchUpLog[0];
+                assert(entry.type === 'kill', 'type ต้องเป็น kill');
+                near(entry.idleSec, 90, 8, 'idleSec ที่จด');
+                assert(entry.from > 0 && entry.to >= entry.from, 'ต้องมีเวลาเริ่ม-จบช่วงปิด (from/to)');
+                // จบเที่ยว → สรุปต้องโชว์ section "กลับจากเบื้องหลัง: เบิกคืนอัตโนมัติ" + รายละเอียด
+                w().finishTripWithSummary();
+                await wait(600);
+                const sumTxt = w().document.getElementById('tsSummaryContent') ? w().document.getElementById('tsSummaryContent').innerText : '';
+                assert(sumTxt.includes('กลับจากเบื้องหลัง: เบิกคืนอัตโนมัติ'), 'หน้าสรุปต้องมีหัวข้อเบิกคืน');
+                assert(sumTxt.includes('ปิดแอป') && sumTxt.includes('จอด'), 'สรุปต้องโชว์ช่วงปิดแอป + ยอดจอดที่เบิก');
+                return 'payload catchUpLog=1 · สรุปโชว์ "ปิดแอป … จอด ~1 นาที"';
+            });
+
             window.__testResults = { pass: passCount, fail: failCount, failures: failures, at: new Date().toISOString() };
         }
 
