@@ -203,6 +203,7 @@
         pair('เวลาเริ่ม', fmtTime(d.st) + ' น.');
         pair('เวลาสิ้นสุด', fmtTime(d.et) + ' น.');
         if (d.drv) pair('คนขับ', d.drv);
+        if (d.pn) pair('ทะเบียนรถ', d.pn);
         if (d.dn) {
             ctx.fillStyle = '#555'; ctx.font = '500 14px Tahoma, "Noto Sans Thai", sans-serif';
             ctx.fillText('จุดหมาย', L, y);
