@@ -1427,6 +1427,7 @@
 <div id="tripSummaryOverlay" class="modal-overlay" style="z-index: 10060;" onclick="window.toggleModal('tripSummaryOverlay', false)">
     <div class="modal-box flex-col-box" onclick="event.stopPropagation()">
         <div class="modal-header">
+            <button class="btn-action-floating" style="right:auto; left:15px; background: linear-gradient(135deg,#2ecc71,#0f8a4a);" onclick="window.openReceiptQr()" title="QR ใบเสร็จ — ให้ผู้โดยสารสแกนรับใบเสร็จ (รูปภาพ)"><span class="material-symbols-outlined" style="font-size:20px;">qr_code</span></button>
             <h3 style="display:flex; align-items:center; justify-content:center; gap:8px;"><span class="material-symbols-outlined" style="color: var(--neon-green);">receipt_long</span> สรุปค่าโดยสาร</h3>
             <button class="btn-close-floating" onclick="window.toggleModal('tripSummaryOverlay', false)"><span class="material-symbols-outlined">close</span></button>
         </div>
@@ -1434,7 +1435,7 @@
             <div id="tsSummaryContent"></div>
         </div>
         <div style="padding:14px 18px; border-top:1px solid rgba(255,255,255,0.07); width:100%; box-sizing:border-box; background:rgba(0,0,0,0.25); flex-shrink:0;">
-            <button onclick="window.toggleModal('tripSummaryOverlay', false)" class="manual-timer-btn" style="background: var(--neon-green); width:100%; justify-content:center; color:white;"><span class="material-symbols-outlined" style="font-size:20px;">check_circle</span> เสร็จสิ้น / กลับหน้าหลัก</button>
+            <div style="font-size:12px; color:var(--text-dim); text-align:center; line-height:1.6;">💡 แตะปุ่ม <span style="color:var(--neon-green); font-weight:700;">QR</span> ที่มุมซ้ายบน เพื่อให้ผู้โดยสารสแกนรับใบเสร็จ (รูปภาพ) แล้วปิดหน้าต่างนี้ด้วย ✕</div>
         </div>
     </div>
 </div>
@@ -1447,7 +1448,7 @@
     </div>
 </div>
 
-<div onclick="window.toggleModal('qrOverlay', false)" id="qrOverlay" class="modal-overlay">
+<div onclick="window.toggleModal('qrOverlay', false)" id="qrOverlay" class="modal-overlay" style="z-index: 10070;">
     <div onclick="event.stopPropagation()" style="position: relative; display: inline-flex; flex-direction: column; align-items: center;">
         <div onclick="window.toggleModal('qrOverlay', false)" class="btn-close-floating" style="top: -15px; right: -15px;"><span class="material-symbols-outlined">close</span></div>
         <img id="mainScreenQrImg" src="" style="width: 80vw; max-width: 350px; max-height: 70vh; object-fit: contain; box-sizing: border-box; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); border: 3px solid rgba(255,255,255,0.2); background: white; padding: 15px;" />
@@ -3474,6 +3475,7 @@
         window.saveTripToFirestore(snap); // เซฟเที่ยว + ประวัติการเบิกคืนลง Firestore (คนขับตรวจสอบย้อนหลังกับผู้โดยสารได้)
         window.resetAll();
         window.toggleModal('trackerZoomOverlay', false);
+        window.__lastTripSummary = snap; // เก็บไว้สร้าง QR ใบเสร็จให้ผู้โดยสารสแกนได้จากหน้าสรุป
         window.renderTripSummary(snap);
         window.toggleModal('tripSummaryOverlay', true);
     };
@@ -3490,6 +3492,34 @@
     window.modalStopTripClick = async () => {
         let isOk = await window.showCustomConfirm("สิ้นสุดการเดินทาง", "ระบบจะทำการหยุดมิเตอร์และสรุปยอด\nคุณต้องการสิ้นสุดการเดินทางใช่หรือไม่?", "danger", "สิ้นสุดเดินทาง");
         if(isOk) window.finishTripWithSummary();
+    };
+
+    // 🧾 ปุ่ม QR ใบเสร็จ (มุมซ้ายบนของหน้าสรุป): สร้างลิงก์ไปหน้าใบเสร็จ (รูปภาพ) แล้วยิงเป็น QR ให้ผู้โดยสารสแกน
+    window.__lastTripSummary = null;
+    window.openReceiptQr = () => {
+        const s = window.__lastTripSummary;
+        if (!s || !s.startTime) { window.showToast('ยังไม่มีข้อมูลเที่ยวนี้ — จบเที่ยวก่อนแล้วกดปุ่ม QR', true); return; }
+        const distFare = window.calcThaiMeterDist(s.km);
+        const meterTravel = Math.floor((distFare + s.trafficSec * (3.0 / 60)) / 2) * 2;
+        const payload = {
+            v: 1, st: s.startTime, et: s.endTime,
+            dn: String(s.destName || '').slice(0, 80),
+            drv: String(window.myCurrentDisplayName || '').slice(0, 40),
+            km: Math.round(s.km * 100) / 100,
+            tr: Math.round(s.trafficSec),
+            bf: Math.round(s.baseFare || 0),
+            mt: meterTravel,
+            su: (s.surcharges || []).map(x => ({ n: String(x.name || 'ค่าเพิ่ม').slice(0, 24), a: Math.round(x.amount || 0) })),
+            tot: Math.round(s.baseFare || 0) + meterTravel + (s.surcharges || []).reduce((a, b) => a + (b.amount || 0), 0)
+        };
+        try {
+            const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            const base = location.origin + location.pathname.replace(/[^/]*$/, '') + 'receipt.html';
+            const link = base + '#d=' + b64;
+            document.getElementById('mainScreenQrImg').src = 'https://api.qrserver.com/v1/create-qr-code/?size=340x340&margin=10&data=' + encodeURIComponent(link);
+            document.getElementById('qrNameText').innerText = 'ใบเสร็จ (รูปภาพ) — ให้ผู้โดยสารสแกน แล้วกดดาวน์โหลดรูปใบเสร็จ';
+            window.toggleModal('qrOverlay', true);
+        } catch (e) { window.showToast('สร้าง QR ใบเสร็จไม่สำเร็จ', true); }
     };
 
     // สร้างเนื้อหาหน้าสรุป (ใบเสร็จ) ลงใน #tsSummaryContent
