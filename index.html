@@ -372,27 +372,27 @@
         #tzMeterPrice { font-size: 140px; font-weight: 800; color: white; line-height: 0.8; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .tz-fare-currency { font-size: 60px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .tz-toll-btn {
-            position: absolute; top: 12px; left: 12px; z-index: 60;
-            display: flex; align-items: center; justify-content: center; gap: 4px;
-            padding: 5px 11px; border-radius: 18px;
-            font-size: 12px; font-weight: 600; line-height: 1;
+            position: absolute; top: 10px; left: 10px; z-index: 60;
+            display: flex; align-items: center; justify-content: center; gap: 3px;
+            padding: 3px 9px; border-radius: 13px;
+            font-size: 11px; font-weight: 600; line-height: 1;
             white-space: nowrap;
-            background: rgba(255,255,255,0.22);
-            border: 1px solid rgba(255,255,255,0.55);
-            color: white;
+            background: rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: rgba(255,255,255,0.95);
             cursor: pointer; -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.18);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
             transition: transform 0.15s, background 0.2s;
         }
-        .tz-toll-btn:active { transform: scale(0.93); background: rgba(255,255,255,0.34); }
-        .tz-toll-btn .material-symbols-outlined { font-size: 14px; }
-        .tz-toll-list { position: absolute; top: 46px; left: 12px; z-index: 60; display: none; flex-direction: column; align-items: flex-start; gap: 4px; }
+        .tz-toll-btn:active { transform: scale(0.93); background: rgba(0,0,0,0.4); }
+        .tz-toll-btn .material-symbols-outlined { font-size: 12px; }
+        .tz-toll-list { position: absolute; top: 36px; left: 10px; z-index: 60; display: none; flex-direction: column; align-items: flex-start; gap: 3px; }
         .tz-toll-item {
-            display: flex; align-items: center; gap: 5px;
-            background: rgba(0,0,0,0.28); border-radius: 10px;
-            padding: 3px 8px; font-size: 11.5px; font-weight: 600; color: white;
+            display: flex; align-items: center; gap: 4px;
+            background: rgba(0,0,0,0.3); border-radius: 8px;
+            padding: 2px 7px; font-size: 10.5px; font-weight: 600; color: rgba(255,255,255,0.95);
         }
-        .tz-toll-item .tz-toll-del { font-size: 13px; opacity: 0.75; cursor: pointer; }
+        .tz-toll-item .tz-toll-del { font-size: 12px; opacity: 0.7; cursor: pointer; }
         .tz-toll-item .tz-toll-del:active { opacity: 1; transform: scale(0.9); }
         .tz-est-fare {
             position: absolute; bottom: 10px; right: 14px; z-index: 60;
@@ -1031,9 +1031,9 @@
             .manual-section { margin: 0 auto var(--space-section) auto; }
             #fareTollBtn { top: 4px; left: 6px; padding: 4px 9px; font-size: 12px; border-radius: 15px; }
             #fareTollBtn .material-symbols-outlined { font-size: 14px; }
-            .tz-toll-btn { top: 8px; left: 8px; padding: 4px 9px; font-size: 11px; border-radius: 14px; }
-            .tz-toll-btn .material-symbols-outlined { font-size: 13px; }
-            .tz-toll-list { top: 38px; left: 8px; }
+            .tz-toll-btn { top: 8px; left: 8px; padding: 3px 8px; font-size: 10.5px; border-radius: 12px; }
+            .tz-toll-btn .material-symbols-outlined { font-size: 11.5px; }
+            .tz-toll-list { top: 32px; left: 8px; }
             .tz-est-fare { font-size: 11.5px; right: 10px; bottom: 8px; }
             #fareResetBtn { top: 4px; right: 6px; width: 22px; height: 22px; }
             #fareResetBtn .material-symbols-outlined { font-size: 14px; }
@@ -3523,7 +3523,8 @@
         let extraFare = distFare + timeFare;
         let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0);
         
-        let displayFare = window.baseFare + Math.floor(extraFare / 2) * 2 + extraSurcharge; 
+        // มิเตอร์จริง — ระหว่างวิ่งโชว์เฉพาะค่าโดยสารตามมิเตอร์ (ยังไม่รวมค่าทางด่วน/ค่าเพิ่ม) ค่อยรวมตอนกดสิ้นสุดในหน้าสรุป
+        let displayFare = window.baseFare + Math.floor(extraFare / 2) * 2;
         let elapsed = Math.floor((Date.now() - startTime) / 1000); 
 
         let isVan = window.baseFare === 40;
