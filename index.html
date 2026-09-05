@@ -140,19 +140,28 @@
         .small-toll-btn.toll-active { background: #2196f3; color: white; border-color: #2196f3; box-shadow: none; }
         .small-toll-btn:active { transform: scale(0.92); }
 
-        /* ปุ่มกากบาท (×) ล้างจุดหมาย — ไอคอนเล็ก ๆ อยู่ในช่องค้นหาขวาสุด เหมือนปุ่มตาสลับพาสเวิร์ด */
+        /* ปุ่มกากบาท (×) ล้างจุดหมาย — ไอคอนเล็ก ๆ อยู่ในช่องค้นหาขวาสุด เหมือนปุ่มตาสลับพาสเวิร์ด
+           โผล่/หายแบบ fade+slide นุ่ม ๆ (เลื่อนจากขวา + เฟด 0.22 วิ) */
         .input-group { position: relative; }
         .input-group #destInput { padding-right: 48px !important; }
         .clear-dest-btn {
-            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            position: absolute; right: 8px; top: 50%;
             width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            border: none; background: transparent; color: var(--text-dim);
-            transition: 0.2s; cursor: pointer; -webkit-tap-highlight-color: transparent; padding: 0; z-index: 5;
+            border: none; background: transparent; color: var(--text-dim); padding: 0; z-index: 5;
+            cursor: pointer; -webkit-tap-highlight-color: transparent;
+            opacity: 0; transform: translateY(-50%) translateX(10px) scale(0.6);
+            visibility: hidden; pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1), visibility 0s linear 0.22s;
+        }
+        .clear-dest-btn:not(.is-hidden) {
+            opacity: 1; transform: translateY(-50%) translateX(0) scale(1);
+            visibility: visible; pointer-events: auto;
+            transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.12), visibility 0s;
         }
         .clear-dest-btn:hover { color: #fff; background: rgba(255,255,255,0.12); }
-        .clear-dest-btn:active { transform: translateY(-50%) scale(0.88); }
+        .clear-dest-btn:active { transform: translateY(-50%) translateX(0) scale(0.85); }
         .clear-dest-btn .material-symbols-outlined { font-size: 20px; }
-        .clear-dest-btn.is-hidden { display: none !important; }
+        /* (ซ่อนแบบนุ่ม — ไม่ใช้ display:none เพื่อให้ transition ทำงาน) */
 
         .surcharge-btn { padding: 10px 20px; border-radius: 10px; background: #252525; border: 1px solid #444; color: #ffd600; font-family: 'Kanit'; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: none; }
         .surcharge-btn:active { transform: scale(0.95); background: #333; }
@@ -537,7 +546,6 @@
             box-shadow: 0 0 16px rgba(255,181,46,0.24), inset 0 1px 0 rgba(255,255,255,0.08);
         }
         .small-toll-btn.is-hidden { display: none !important; }
-        .clear-dest-btn.is-hidden { display: none !important; }
         @keyframes tollFadeSlideIn { from { opacity: 0; transform: translateY(5px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
         .small-toll-btn.toll-pop-in { animation: tollFadeSlideIn 0.28s ease-out both; }
         .trip-resume-banner { display: none; align-items: center; gap: 10px; background: linear-gradient(135deg, rgba(250,204,21,0.14), rgba(250,204,21,0.04)); border: 1px solid rgba(250,204,21,0.4); border-radius: 16px; padding: 10px 12px; margin: 0 2px 10px 2px; box-shadow: 0 4px 18px rgba(0,0,0,0.35); cursor: pointer; -webkit-tap-highlight-color: transparent; }
