@@ -140,15 +140,18 @@
         .small-toll-btn.toll-active { background: #2196f3; color: white; border-color: #2196f3; box-shadow: none; }
         .small-toll-btn:active { transform: scale(0.92); }
 
-        /* ปุ่มกลมกากบาท (×) ล้างจุดหมาย — อยู่ท้ายช่องค้นหา */
+        /* ปุ่มกากบาท (×) ล้างจุดหมาย — ไอคอนเล็ก ๆ อยู่ในช่องค้นหาขวาสุด เหมือนปุ่มตาสลับพาสเวิร์ด */
+        .input-group { position: relative; }
+        .input-group #destInput { padding-right: 48px !important; }
         .clear-dest-btn {
-            width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.08); color: var(--text-dim);
-            transition: 0.2s; flex-shrink: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; padding: 0;
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            border: none; background: transparent; color: var(--text-dim);
+            transition: 0.2s; cursor: pointer; -webkit-tap-highlight-color: transparent; padding: 0; z-index: 5;
         }
-        .clear-dest-btn:hover { color: #fff; background: rgba(255,255,255,0.16); }
-        .clear-dest-btn:active { transform: scale(0.9); }
-        .clear-dest-btn .material-symbols-outlined { font-size: 18px; }
+        .clear-dest-btn:hover { color: #fff; background: rgba(255,255,255,0.12); }
+        .clear-dest-btn:active { transform: translateY(-50%) scale(0.88); }
+        .clear-dest-btn .material-symbols-outlined { font-size: 20px; }
         .clear-dest-btn.is-hidden { display: none !important; }
 
         .surcharge-btn { padding: 10px 20px; border-radius: 10px; background: #252525; border: 1px solid #444; color: #ffd600; font-family: 'Kanit'; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: none; }
