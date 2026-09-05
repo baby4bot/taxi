@@ -3460,10 +3460,25 @@
                 <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:6px 12px; border-radius:12px; font-size:12.5px; color:white;">🚦 รถติด ${dur(s.trafficSec)}</div>
             </div>`;
 
+        // 💰 ค่าทางด่วน/ค่าเพิ่ม: แสดงแต่ละช่วงแยกบรรทัด (ช่วงที่ 1, 2, ...) + บรรทัดรวมค่าทางด่วน ก่อนยอดรวมใหญ่
+        const surNames = [...new Set(s.surcharges.map(it => it.name || 'ค่าเพิ่ม'))];
+        let surHTML = '';
+        for (const nm of surNames) {
+            const items = s.surcharges.filter(it => (it.name || 'ค่าเพิ่ม') === nm);
+            if (items.length === 1) {
+                surHTML += fareRow(esc(nm), items[0].amount);
+            } else {
+                items.forEach((it, i) => { surHTML += fareRow(`${esc(nm)} · ช่วงที่ ${i + 1}`, it.amount); });
+                surHTML += `<div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:11px 2px 9px; border-top:1px dashed rgba(255,193,7,0.4); margin-top:6px;">
+                    <div style="font-size:15px; font-weight:700; color:var(--neon-yellow);">รวม${esc(nm)} (${items.length} ช่วง)</div>
+                    <div style="font-size:20px; font-weight:700; color:var(--neon-yellow); white-space:nowrap;">${thb(items.reduce((a, b) => a + b.amount, 0))}</div>
+                </div>`;
+            }
+        }
         html += `<div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:6px 14px 8px; margin-bottom:var(--space-card);">
             ${fareRow('ค่าแรกเข้า', s.baseFare)}
             ${fareRow('ค่าระยะทาง + เวลารถติด', meterTravel, s.km.toFixed(2) + ' กม. · รถติด ' + dur(s.trafficSec))}
-            ${s.surcharges.map((it) => fareRow(esc(it.name), it.amount)).join('')}
+            ${surHTML}
             ${fareRow('รวมค่าโดยสาร', total, '', true)}
         </div>`;
 
