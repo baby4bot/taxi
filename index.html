@@ -2508,13 +2508,12 @@
         const deltaSec = (now - lastCalcTime) / 1000;
         if (deltaSec <= 0) { lastCalcTime = now; return; }
 
-        // คิดค่าเวลาเฉพาะตอนรู้ว่ารถจอด/เคลื่อนช้า (<= 6 กม./ชม.) — ต้องมี fix สดยืนยัน
-        // "หลักฐานจอดจริง" (lastStopFixAt) อายุ 6 วิ: ถ้า GPS หลุด/ขาด หรือซ่อนแอปนานเกิน
-        // โดยที่ fix ถัดไปยังไม่ยืนยันว่ารถจอด ก็หยุดคิดค่าเวลาจอดทันที (รถอาจวิ่งต่อแล้ว)
-        // => ไม่คิดค่าเวลาจอดเกินจริงจากสัญญาณค้างตอน GPS หลุด
-        if (trafficCharging && lastStopFixAt) {
-            const billUntil = Math.min(now, lastStopFixAt + 6000);
-            if (billUntil > lastCalcTime) trafficSeconds += (billUntil - lastCalcTime) / 1000;
+        // คิดเวลาจอด/รถติดต่อเนื่องตลอดเวลาที่ GPS ยืนยันว่ารถหยุด (trafficCharging = true)
+        // trafficCharging ถูกตั้งค่าโดย GPS handler: true เมื่อ speed <= 6 กม./ชม., false เมื่อวิ่ง
+        // => คิดต่อเนื่องไม่มีช่วงว่าง (ตรงกับมิเตอร์จริงที่คิดเวลารอตลอด)
+        // จำกัดไม่เกิน 30 วิ/ครั้งกัน over-bill กรณี GPS หลุดยาวwhileรถวิ่ง (edge case หายาก)
+        if (trafficCharging) {
+            trafficSeconds += Math.min(deltaSec, 30);
         }
 
         // เวลาที่เหลือของเส้นทางลดลงตามเวลาจริง (อัปเดต ETA)
