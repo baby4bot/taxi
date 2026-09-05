@@ -4006,6 +4006,8 @@
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 if(data.isBanned) { window.showToast("บัญชีนี้ถูกระงับการใช้งาน", true); window.logoutApp(true); return; }
+                // กันบัญชีที่ข้อมูลถูกเขียนทับ/เสียหาย (ไม่มี username/role) แสดงผลผิดๆ เป็นผู้ใช้ทั่วไป — บังคับออกจากระบบแล้วเข้าสู่ระบบใหม่
+                if(!data.username || !data.role) { window.showToast("ข้อมูลบัญชีเสียหาย — กรุณาเข้าสู่ระบบใหม่อีกครั้ง", true); window.logoutApp(true); return; }
                 
                 document.getElementById('appLoader').style.display = 'none'; 
                 document.getElementById('loginOverlay').style.display = 'none';
