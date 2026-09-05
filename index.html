@@ -414,10 +414,13 @@
             --surface-1: rgba(255,255,255,0.045);
             --surface-2: rgba(255,255,255,0.09);
             --ring: rgba(255,255,255,0.14);
-            /* ระยะห่างแนวตั้งระหว่างส่วน/บล็อก — ปรับที่นี่จุดเดียว (section=ส่วนหลักหน้าแรก, card=การ์ดหน้าสรุป, field=ช่องฟอร์ม/เมนู) */
-            --space-section: 12px;
-            --space-card: 14px;
-            --space-field: 20px;
+            /* ===== สเกลระยะห่างแนวตั้งกลางทั้งแอป =====
+               ปรับ --space-unit จุดเดียว → ทั้ง 3 กลุ่มขยับตามสัดส่วน
+               section = 6u (12px หน้าแรก) · card = 7u (14px สรุป) · field = 9u (18px ฟอร์ม/เมนู) */
+            --space-unit: 2px;
+            --space-section: calc(var(--space-unit) * 6); /* 12px — ระหว่างส่วนหลักหน้าแรก */
+            --space-card: calc(var(--space-unit) * 7);    /* 14px — ระหว่างการ์ดหน้าสรุป */
+            --space-field: calc(var(--space-unit) * 9);   /* 18px — ระหว่างช่องฟอร์ม/เมนู */
         }
 
         html { background: #070a11; }
@@ -986,7 +989,7 @@
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
 
         @media (max-width: 380px) {
-            :root { --space-section: 8px; } /* จอแคบ: ระยะระหว่างส่วนหลัก = 8px (เปลี่ยนได้ที่ :root ด้านบน) */
+            :root { --space-section: calc(var(--space-unit) * 4); } /* จอแคบ: 8px (จาก --space-unit) */
             .price { font-size: 44px; }
             .price span { font-size: 22px !important; }
             .header-center h2 { font-size: 16px; }
