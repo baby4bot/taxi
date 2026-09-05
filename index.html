@@ -1190,7 +1190,7 @@
                     <input type="number" step="0.1" inputmode="decimal" value="0" onfocus="if(this.value=='0') this.value=''" onblur="if(this.value=='') this.value='0'" oninput="window.manualInputChange()" id="kmInput" aria-label="ระยะทาง (กม.)" />
                     <span class="km-label">กม.</span>
                 </div>
-                <button class="btn-math btn-minus flex-center" id="btnMinus" onpointerdown="window.kmHoldStart(-1)" onpointerup="window.kmHoldEnd()" onpointerleave="window.kmHoldEnd()" onpointercancel="window.kmHoldEnd()" title="ลด 1 กม. (กดค้างเพื่อลดเร็ว ๆ)" aria-label="ลด 1 กม." style="-webkit-user-select:none; user-select:none; touch-action:manipulation;">−</button>
+                <button class="btn-math btn-minus flex-center" id="btnMinus" disabled onpointerdown="window.kmHoldStart(-1)" onpointerup="window.kmHoldEnd()" onpointerleave="window.kmHoldEnd()" onpointercancel="window.kmHoldEnd()" title="ลด 1 กม. (กดค้างเพื่อลดเร็ว ๆ)" aria-label="ลด 1 กม." style="-webkit-user-select:none; user-select:none; touch-action:manipulation;">−</button>
                 <button class="btn-math btn-plus flex-center" id="btnPlus" onpointerdown="window.kmHoldStart(1)" onpointerup="window.kmHoldEnd()" onpointerleave="window.kmHoldEnd()" onpointercancel="window.kmHoldEnd()" title="เพิ่ม 1 กม. (กดค้างเพื่อเพิ่มเร็ว ๆ)" aria-label="เพิ่ม 1 กม." style="-webkit-user-select:none; user-select:none; touch-action:manipulation;">+</button>
             </div>
         </div>
@@ -3421,7 +3421,13 @@
         $('kmInput').value = val > 0 ? Math.floor(curr)+1 : Math.max(0, Math.ceil(curr)-1); 
         window.manualInputChange(); 
     };
-    window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; window.updateFareEstimation(km); window.checkAppStatus(); };
+    // ปุ่ม − (ลด กม.) กดไม่ได้เมื่อค่าอยู่ที่ 0 แล้ว (สีจางลง) — ป้องกันกดแล้วไม่มีอะไรเกิดขึ้น
+    window.updateKmStepper = () => {
+        const m = document.getElementById('btnMinus'); if (!m) return;
+        const km = parseFloat(document.getElementById('kmInput').value) || 0;
+        m.disabled = km <= 0;
+    };
+    window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; window.updateKmStepper(); window.updateFareEstimation(km); window.checkAppStatus(); };
 
     // 📒 เซฟเที่ยว (รวมประวัติการเบิกคืนทุกรอบ) ลง Firestore: users/{uid}/trips — ให้คนขับเปิดดูย้อนหลังกับผู้โดยสารได้
     window.saveTripToFirestore = (s) => {
@@ -3749,7 +3755,7 @@
         releaseWakeLock(); 
         window.stopSilentAudio(); 
         window.hideMap(); // Hide map when tracking stops
-        $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; window.syncFareTollBtn(); if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false;        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
+        $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; window.syncFareTollBtn(); if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; window.updateKmStepper();        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
         lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; lastPath = []; catchUpLog = [];
         window.isMeterPaused = false;
         window.updatePauseBtnUI();
