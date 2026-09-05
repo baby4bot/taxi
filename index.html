@@ -1072,8 +1072,8 @@
         <div style="position:relative; width:100%; margin-bottom: var(--space-field);">
             <input type="text" inputmode="numeric" pattern="[0-9]*" id="tollInput" placeholder="ระบุจำนวนเงิน (บาท)" style="width: 100%; padding: 15px; border-radius: 15px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; text-align: center; font-size: 18px; box-sizing: border-box; outline:none;" autocomplete="off">
             <div style="position:absolute; top:50%; right:8px; transform:translateY(-50%); display:flex; gap:6px; z-index:2;">
-                <button type="button" onclick="event.stopPropagation(); window.tollStep(-5)" title="ลบ 5 บาท" style="width:30px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.08); color:white; font-size:17px; font-weight:700; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; -webkit-tap-highlight-color:transparent;">−</button>
-                <button type="button" onclick="event.stopPropagation(); window.tollStep(5)" title="บวก 5 บาท" style="width:30px; height:30px; border-radius:10px; border:1px solid rgba(52,199,89,0.5); background:rgba(52,199,89,0.16); color:#3ddc84; font-size:17px; font-weight:700; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; -webkit-tap-highlight-color:transparent;">+</button>
+                <button type="button" id="tollMinusBtn" onpointerdown="window.tollHoldStart(-5)" onpointerup="window.tollHoldEnd()" onpointerleave="window.tollHoldEnd()" onpointercancel="window.tollHoldEnd()" title="ลบ 5 บาท (กดค้างเพื่อลดเร็ว ๆ)" style="width:30px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.08); color:white; font-size:17px; font-weight:700; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; touch-action:manipulation;">−</button>
+                <button type="button" id="tollPlusBtn" onpointerdown="window.tollHoldStart(5)" onpointerup="window.tollHoldEnd()" onpointerleave="window.tollHoldEnd()" onpointercancel="window.tollHoldEnd()" title="บวก 5 บาท (กดค้างเพื่อเพิ่มเร็ว ๆ)" style="width:30px; height:30px; border-radius:10px; border:1px solid rgba(52,199,89,0.5); background:rgba(52,199,89,0.16); color:#3ddc84; font-size:17px; font-weight:700; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; touch-action:manipulation;">+</button>
             </div>
         </div>
         <div class="custom-confirm-actions">
@@ -2170,6 +2170,24 @@
         v = Math.max(0, v + delta);
         inp.value = v > 0 ? String(v) : '';
         inp.focus();
+    };
+
+    // กดค้างปุ่ม − / + → เพิ่ม/ลดเร็ว ๆ (repeat ทุก ~110ms หลังกดค้าง 420ms) + สั่นเบา ๆ ทุกครั้งที่กด
+    let __tollHoldTimer = null, __tollHoldInt = null;
+    window.tollHoldStart = (delta) => {
+        window.tollStep(delta); // กดครั้งแรกทันที (1 ขั้น)
+        if (navigator.vibrate) { try { navigator.vibrate(8); } catch(e) {} }
+        window.tollHoldEnd();
+        __tollHoldTimer = setTimeout(() => {
+            __tollHoldInt = setInterval(() => {
+                window.tollStep(delta);
+                if (navigator.vibrate) { try { navigator.vibrate(8); } catch(e) {} }
+            }, 110);
+        }, 420);
+    };
+    window.tollHoldEnd = () => {
+        if (__tollHoldTimer) { clearTimeout(__tollHoldTimer); __tollHoldTimer = null; }
+        if (__tollHoldInt) { clearInterval(__tollHoldInt); __tollHoldInt = null; }
     };
     
     window.confirmToll = () => {
