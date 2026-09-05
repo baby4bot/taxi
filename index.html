@@ -678,6 +678,20 @@
         .btn-minus { background: linear-gradient(135deg, #ff7a88, #f43f5e); }
         .btn-math:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; box-shadow: none; }
 
+        /* ---------- Modal ค่าทางด่วน: ปุ่ม − / + ให้เหมือนปุ่มแถว กม. (สีแดง/เขียวไล่เฉด ใหญ่ อยู่ในช่องขวา) ---------- */
+        #tollModal .toll-step-btn {
+            width: 42px; height: 40px; border-radius: 13px;
+            border: none; color: #fff; font-size: 24px; font-weight: 700; line-height: 1;
+            padding: 0; cursor: pointer;
+            -webkit-user-select: none; user-select: none; touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+            transition: transform 0.15s ease, filter 0.15s ease;
+        }
+        #tollModal .toll-step-btn:active { transform: scale(0.92); filter: brightness(1.1); }
+        #tollModal #tollMinusBtn { background: linear-gradient(135deg, #ff7a88, #f43f5e); }
+        #tollModal #tollPlusBtn { background: var(--green-grad); }
+
         /* ---------- Surcharge ---------- */
         .surcharge-btn {
             padding: 11px 18px;
@@ -1096,9 +1110,9 @@
         <h3 class="custom-confirm-title" style="margin-bottom: var(--space-field);">เพิ่มค่าทางด่วน</h3>
         <div style="position:relative; width:100%; margin-bottom: var(--space-field);">
             <input type="text" inputmode="numeric" pattern="[0-9]*" id="tollInput" placeholder="ระบุจำนวนเงิน (บาท)" style="width: 100%; padding: 15px; border-radius: 15px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; text-align: center; font-size: 18px; box-sizing: border-box; outline:none;" autocomplete="off">
-            <div style="position:absolute; top:50%; right:8px; transform:translateY(-50%); display:flex; gap:6px; z-index:2;">
-                <button type="button" id="tollMinusBtn" onpointerdown="window.tollHoldStart(-5)" onpointerup="window.tollHoldEnd()" onpointerleave="window.tollHoldEnd()" onpointercancel="window.tollHoldEnd()" title="ลบ 5 บาท (กดค้างเพื่อลดเร็ว ๆ)" style="width:30px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.08); color:white; font-size:17px; font-weight:700; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; touch-action:manipulation;">−</button>
-                <button type="button" id="tollPlusBtn" onpointerdown="window.tollHoldStart(5)" onpointerup="window.tollHoldEnd()" onpointerleave="window.tollHoldEnd()" onpointercancel="window.tollHoldEnd()" title="บวก 5 บาท (กดค้างเพื่อเพิ่มเร็ว ๆ)" style="width:30px; height:30px; border-radius:10px; border:1px solid rgba(52,199,89,0.5); background:rgba(52,199,89,0.16); color:#3ddc84; font-size:17px; font-weight:700; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; touch-action:manipulation;">+</button>
+            <div style="position:absolute; top:50%; right:7px; transform:translateY(-50%); display:flex; gap:6px; z-index:2;">
+                <button type="button" id="tollMinusBtn" class="toll-step-btn flex-center" onpointerdown="window.tollHoldStart(-5)" onpointerup="window.tollHoldEnd()" onpointerleave="window.tollHoldEnd()" onpointercancel="window.tollHoldEnd()" title="ลบ 5 บาท (กดค้างเพื่อลดเร็ว ๆ)" aria-label="ลบ 5 บาท">−</button>
+                <button type="button" id="tollPlusBtn" class="toll-step-btn flex-center" onpointerdown="window.tollHoldStart(5)" onpointerup="window.tollHoldEnd()" onpointerleave="window.tollHoldEnd()" onpointercancel="window.tollHoldEnd()" title="บวก 5 บาท (กดค้างเพื่อเพิ่มเร็ว ๆ)" aria-label="บวก 5 บาท">+</button>
             </div>
         </div>
         <div class="custom-confirm-actions">
