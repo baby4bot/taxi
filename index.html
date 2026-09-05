@@ -634,24 +634,49 @@
             text-shadow: none;
         }
 
-        /* ---------- Km controls ---------- */
+        /* ---------- Km controls (แถว กม. อยู่ในกล่องค้นหาจุดหมาย ใต้ช่องค้นหา; ปุ่ม − / + อยู่ในช่องขวา) ---------- */
+        .manual-section {
+            display: flex; align-items: center;
+            margin: var(--space-section) 0 0 0; /* ระยะ dest → แถว กม. ในกล่องเดียวกัน (12px / จอแคบ 8px) */
+        }
         .km-input-box {
-            flex: 1; height: 56px;
+            flex: 1; width: 100%; height: 56px;
+            display: flex; align-items: center;
             border-radius: 20px;
             background: rgba(10,14,22,0.75);
             border: 1px solid rgba(255,255,255,0.1);
             box-shadow: inset 0 2px 6px rgba(0,0,0,0.35);
+            padding: 0 7px 0 16px;
         }
-        input[type="number"] { font-size: 26px; font-weight: 600; }
-        .km-label { color: #8b96ad; font-size: 15px; }
-        .manual-section { gap: 10px; margin: 0 auto var(--space-section) auto; } /* mt 0 + mb = --space-section → ระยะห่างเท่ากันทุกส่วน (12px จอปกติ / 8px จอ ≤380 ผ่านตัวแปร) */
-        .btn-math {
-            width: 56px; height: 56px; border-radius: 20px;
-            font-size: 30px; font-weight: 400;
-            box-shadow: 0 6px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+        .km-center {
+            flex: 1; min-width: 0;
+            display: flex; align-items: center; justify-content: center;
+            gap: 5px;
         }
+        #kmInput {
+            flex: 0 0 auto; width: 84px; min-width: 84px;
+            background: transparent; border: none; outline: none; color: #fff;
+            font-size: 24px; font-weight: 600; line-height: 1;
+            text-align: right; padding: 0; margin: 0;
+            -moz-appearance: textfield; appearance: textfield;
+        }
+        #kmInput::-webkit-outer-spin-button, #kmInput::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .km-label {
+            position: static; right: auto;
+            color: #8b96ad; font-size: 15px; flex-shrink: 0; pointer-events: none;
+        }
+        .km-input-box .btn-math {
+            width: 42px; height: 40px; border-radius: 13px;
+            font-size: 24px; line-height: 1; flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+        }
+        .km-input-box .btn-minus { margin-left: 14px; }
+        .km-input-box .btn-plus { margin-left: 6px; }
+        .btn-math { border: none; color: white; cursor: pointer; transition: 0.2s; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .btn-math:active { transform: scale(0.95); }
         .btn-plus { background: var(--green-grad); }
         .btn-minus { background: linear-gradient(135deg, #ff7a88, #f43f5e); }
+        .btn-math:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; box-shadow: none; }
 
         /* ---------- Surcharge ---------- */
         .surcharge-btn {
@@ -1028,7 +1053,7 @@
             .result-container { min-height: 84px; max-height: 116px; padding: 6px 12px 4px; margin: 0 0 var(--space-section) 0; }
             /* ระยะห่างแนวตั้งระหว่างส่วน (ค้นหา → แถวกม./± → การ์ดราคา → ปุ่มเริ่มมิเตอร์ → ไอคอนล่าง) เท่ากันทุกช่อง = var(--space-section) */
             .search-section { margin-bottom: var(--space-section); }
-            .manual-section { margin: 0 auto var(--space-section) auto; }
+            .manual-section { margin: var(--space-section) 0 0 0; } /* แถว กม. อยู่ในกล่องค้นหาแล้ว → ระยะบนจากช่องค้นหา = 8px (จอแคบ) */
             #fareTollBtn { top: 4px; left: 6px; padding: 4px 9px; font-size: 12px; border-radius: 15px; }
             #fareTollBtn .material-symbols-outlined { font-size: 14px; }
             .tz-toll-btn { top: 8px; left: 8px; padding: 3px 8px; font-size: 10.5px; border-radius: 12px; }
@@ -1143,6 +1168,18 @@
 
         <div id="suggestionList" class="dropdown-box"></div>
         <div id="historyList" class="dropdown-box"></div>
+
+        <!-- แถว กม.: ย้ายเข้ามาอยู่ในกล่องค้นหาจุดหมาย (ใต้ช่องค้นหา) ปุ่ม − / + อยู่ในช่องด้านขวา -->
+        <div id="manualSectionBox" class="manual-section">
+            <div class="km-input-box">
+                <div class="km-center">
+                    <input type="number" step="0.1" inputmode="decimal" value="0" onfocus="if(this.value=='0') this.value=''" onblur="if(this.value=='') this.value='0'" oninput="window.manualInputChange()" id="kmInput" aria-label="ระยะทาง (กม.)" />
+                    <span class="km-label">กม.</span>
+                </div>
+                <button class="btn-math btn-minus flex-center" id="btnMinus" onpointerdown="window.kmHoldStart(-1)" onpointerup="window.kmHoldEnd()" onpointerleave="window.kmHoldEnd()" onpointercancel="window.kmHoldEnd()" title="ลด 1 กม. (กดค้างเพื่อลดเร็ว ๆ)" aria-label="ลด 1 กม." style="-webkit-user-select:none; user-select:none; touch-action:manipulation;">−</button>
+                <button class="btn-math btn-plus flex-center" id="btnPlus" onpointerdown="window.kmHoldStart(1)" onpointerup="window.kmHoldEnd()" onpointerleave="window.kmHoldEnd()" onpointercancel="window.kmHoldEnd()" title="เพิ่ม 1 กม. (กดค้างเพื่อเพิ่มเร็ว ๆ)" aria-label="เพิ่ม 1 กม." style="-webkit-user-select:none; user-select:none; touch-action:manipulation;">+</button>
+            </div>
+        </div>
     </div>
                                                        
     <div onclick="window.toggleModal('trackerZoomOverlay', true)" id="liveTracker" class="live-tracker-box">
@@ -1184,14 +1221,7 @@
         </div>
     </div>
                                                        
-    <div id="manualSectionBox" class="manual-section">
-        <div class="km-input-box">
-            <input type="number" step="0.1" inputmode="decimal" value="0" onfocus="if(this.value=='0') this.value=''" onblur="if(this.value=='') this.value='0'" oninput="window.manualInputChange()" id="kmInput" style="background:transparent; border:none; color:white; width:100%; font-size:20px; text-align:center; outline:none;" />
-            <span class="km-label">กม.</span>                    
-        </div>
-        <button class="btn-math btn-minus flex-center" id="btnMinus" onpointerdown="window.kmHoldStart(-1)" onpointerup="window.kmHoldEnd()" onpointerleave="window.kmHoldEnd()" onpointercancel="window.kmHoldEnd()" title="ลด 1 กม. (กดค้างเพื่อลดเร็ว ๆ)" style="-webkit-user-select:none; user-select:none; touch-action:manipulation;">−</button>
-        <button class="btn-math btn-plus flex-center" id="btnPlus" onpointerdown="window.kmHoldStart(1)" onpointerup="window.kmHoldEnd()" onpointerleave="window.kmHoldEnd()" onpointercancel="window.kmHoldEnd()" title="เพิ่ม 1 กม. (กดค้างเพื่อเพิ่มเร็ว ๆ)" style="-webkit-user-select:none; user-select:none; touch-action:manipulation;">+</button>
-    </div>
+
 
     <div id="surchargeDetails" class="surcharge-list-container" style="display:none;"></div>
     

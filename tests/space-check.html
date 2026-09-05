@@ -67,19 +67,21 @@
             const d = cw.document;
             const get = id => d.getElementById(id);
             const q = sel => d.querySelector(sel);
-            const els = {
-                search: get('searchSectionBox'),
-                kmRow: get('manualSectionBox'),
-                fareCard: q('.result-container'),
-                actionRow: q('.action-row'),
-                iconsRow: q('div.flex-center[style*="flex-shrink: 0"]')
+            // แถว กม. (manualSectionBox) ย้ายเข้าไปอยู่ในกล่องค้นหาแล้ว → วัดช่องว่างระหว่างบล็อกระดับหน้าจอ
+            // (search card → การ์ดราคา → ปุ่มเริ่ม → ไอคอน) + ช่องว่างภายในกล่อง (dest → แถว กม.)
+            const search = get('searchSectionBox');
+            const inputGroup = q('#searchSectionBox .input-group');
+            const kmRow = get('manualSectionBox');
+            const fareCard = q('.result-container');
+            const actionRow = q('.action-row');
+            const iconsRow = q('div.flex-center[style*="flex-shrink: 0"]');
+            const gap = (a, b) => Math.round(b.getBoundingClientRect().top - a.getBoundingClientRect().bottom);
+            return {
+                'dest->km (ในกล่อง)': gap(inputGroup, kmRow),
+                'search->fare': gap(search, fareCard),
+                'fare->action': gap(fareCard, actionRow),
+                'action->icons': gap(actionRow, iconsRow)
             };
-            const keys = Object.keys(els);
-            const gaps = {};
-            for (let i = 0; i < keys.length - 1; i++) {
-                gaps[keys[i] + '->' + keys[i + 1]] = Math.round(els[keys[i + 1]].getBoundingClientRect().top - els[keys[i]].getBoundingClientRect().bottom);
-            }
-            return gaps;
         }
 
         async function measureMenu(cw) {
