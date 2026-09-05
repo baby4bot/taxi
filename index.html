@@ -184,7 +184,7 @@
         .list-item:hover { background: rgba(255,255,255,0.05); }
         .item-icon { font-size: 20px !important; color: var(--neon-green); text-shadow: 0 0 10px rgba(46, 204, 113, 0.4); flex-shrink: 0; }
 
-        .live-tracker-box { flex-shrink: 0; display: none; cursor: pointer; background: #1a1a1a; border: 1px solid #444; border-radius: 16px; padding: 15px; margin-top: 10px; text-align: center; transition: 0.3s; animation: fadeIn 0.5s ease; }
+        .live-tracker-box { flex-shrink: 0; display: none; cursor: pointer; background: #1a1a1a; border: 1px solid #444; border-radius: 16px; padding: 15px; margin-top: var(--space-section); text-align: center; transition: 0.3s; animation: fadeIn 0.5s ease; }
         .live-tracker-box:active { transform: scale(0.98); }
         .tracker-stats { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
         .highlight { color: var(--neon-green); font-weight: 600; text-shadow: 0 0 5px var(--glow-green); }
@@ -348,30 +348,30 @@
         .zoom-card-new { background: #161823; border: 1px solid var(--border-glass); border-radius: 30px; width: 90%; max-width: 400px; overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.9); animation: popIn 0.3s forwards; padding: 0; }
         .zoom-header { background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(22, 24, 35, 1)); padding: 30px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .zoom-body { padding: 30px 20px; text-align: center; }
-        .zoom-price-box { margin-bottom: 25px; }
-        .zoom-detail-row { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 15px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.03); }
+        .zoom-price-box { margin-bottom: var(--space-zoom); }
+        .zoom-detail-row { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 15px; margin-bottom: var(--space-zoom); border: 1px solid rgba(255,255,255,0.03); }
 
         /* Live Tracker Zoom Big Size CSS */
         .tracker-zoom-box { background: #0b0c10; border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; padding: 30px 15px; width: 98%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); font-family: 'Kanit', sans-serif; }
-        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 10px; }
+        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-zoom); padding: 0 10px; }
         .tz-start-time { color: white; font-weight: 600; font-size: 18px; }
         .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 18px; }
-        .tz-progress-container { position: relative; margin: 15px 15px 35px 15px; }
+        .tz-progress-container { position: relative; margin: 15px 15px var(--space-zoom) 15px; }
         .tz-progress-line { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; position: relative; }
         .tz-progress-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); border-radius: 3px; transition: width 1s ease-out; box-shadow: 0 0 10px var(--glow-yellow); }
         .tz-point-start { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; background: transparent; display: flex; justify-content: center; align-items: center; }
         .tz-point-start::before { content: ''; width: 8px; height: 8px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -16px; left: -14px; box-shadow: 16px 16px 0 var(--neon-yellow); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotate(45deg); }
         .tz-point-end { position: absolute; right: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--accent-red); background: transparent; }
-        .tz-stats-row { display: flex; justify-content: space-around; margin-bottom: 30px; }
+        .tz-stats-row { display: flex; justify-content: space-around; margin-bottom: var(--space-zoom); }
         .tz-stat-col { text-align: center; }
         .tz-stat-num { font-size: 55px; font-weight: 700; line-height: 1; letter-spacing: -1px; margin-bottom: 5px; }
         .tz-stat-label { font-size: 18px; color: var(--text-dim); }
-        .tz-fare-card { background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 25px; padding: 35px 15px; text-align: center; box-shadow: 0 15px 40px rgba(46, 204, 113, 0.4); margin-bottom: 25px; }
+        .tz-fare-card { background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 25px; padding: 35px 15px; text-align: center; box-shadow: 0 15px 40px rgba(46, 204, 113, 0.4); margin-bottom: var(--space-zoom); }
         .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 20px; font-weight: 500; margin-bottom: 5px; }
         .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 10px; }
         #tzMeterPrice { font-size: 140px; font-weight: 800; color: white; line-height: 0.8; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .tz-fare-currency { font-size: 60px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: 25px; }
+        .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: var(--space-zoom); }
         .tz-info-col { flex: 1; text-align: center; }
         .tz-info-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.08); }
         .tz-info-label { font-size: 18px; color: var(--text-dim); margin-bottom: 5px; }
@@ -421,6 +421,7 @@
             --space-section: calc(var(--space-unit) * 6); /* 12px — ระหว่างส่วนหลักหน้าแรก */
             --space-card: calc(var(--space-unit) * 7);    /* 14px — ระหว่างการ์ดหน้าสรุป */
             --space-field: calc(var(--space-unit) * 9);   /* 18px — ระหว่างช่องฟอร์ม/เมนู */
+            --space-zoom: calc(var(--space-unit) * 10);   /* 20px — ระหว่างบล็อกหน้าจอมิเตอร์ขยาย (zoom) */
         }
 
         html { background: #070a11; }
@@ -1035,7 +1036,7 @@
 
 <div id="tollModal" class="custom-confirm-overlay" style="display: none;">
     <div class="custom-confirm-box" style="padding: 25px 20px;">
-        <h3 class="custom-confirm-title" style="margin-bottom: 15px;">เพิ่มค่าทางด่วน</h3>
+        <h3 class="custom-confirm-title" style="margin-bottom: var(--space-field);">เพิ่มค่าทางด่วน</h3>
         <input type="number" id="tollInput" placeholder="ระบุจำนวนเงิน (บาท)" style="width: 100%; padding: 15px; border-radius: 15px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; text-align: center; font-size: 18px; margin-bottom: var(--space-field); box-sizing: border-box; outline:none;" autocomplete="off">
         <div class="custom-confirm-actions">
             <button onclick="window.toggleModal('tollModal', false)" class="btn-cc-cancel">ยกเลิก</button>
@@ -1288,7 +1289,7 @@
                 <span class="material-symbols-outlined" style="color: var(--neon-yellow);">add_circle</span>
                 <span id="zoomExtraVal" style="font-size: 16px; color: var(--neon-yellow);">ค่าบริการเพิ่มเติม 0 ฿</span>
             </div>
-            <button onclick="window.toggleModal('zoomOverlay', false)" class="manual-timer-btn" style="width: 100%; margin-top: 25px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">ปิดหน้าต่าง</button>
+            <button onclick="window.toggleModal('zoomOverlay', false)" class="manual-timer-btn" style="width: 100%; margin-top: var(--space-zoom); background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">ปิดหน้าต่าง</button>
         </div>
     </div>
 </div>
@@ -1296,7 +1297,7 @@
 <div id="trackerZoomOverlay" class="modal-overlay" onclick="window.toggleModal('trackerZoomOverlay', false)">
     <div class="modal-box tracker-zoom-box" onclick="event.stopPropagation()">
         
-        <div id="tzDestNameBox" style="color: white; font-size: 18px; font-weight: 500; background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 15px; margin-bottom: 15px; display: none; border: 1px solid rgba(255,255,255,0.05); align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
+        <div id="tzDestNameBox" style="color: white; font-size: 18px; font-weight: 500; background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 15px; margin-bottom: var(--space-zoom); display: none; border: 1px solid rgba(255,255,255,0.05); align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
             <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">📍 ไปที่: <span id="tzDestText" style="color: var(--neon-yellow);"></span></div>
             <button id="btnTollToggleZoom" class="small-toll-btn toll-pop-in active" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;" onclick="event.stopPropagation(); window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)"><span class="material-symbols-outlined" style="font-size: 18px;">route</span></button>
         </div>
@@ -1324,10 +1325,10 @@
             <div class="tz-info-col"><div class="tz-info-label">คาดว่าจะถึง</div><div id="tzArrivalTime" class="tz-info-val" style="color: var(--neon-green);">--:--</div></div>
         </div>
         
-        <button onclick="window.modalStopTripClick();" class="manual-timer-btn" id="modalStopBtn" style="background: var(--accent-red); width: 100%; justify-content: space-between; margin-bottom: 15px; font-size: 18px; padding: 12px 20px;">
+        <button onclick="window.modalStopTripClick();" class="manual-timer-btn" id="modalStopBtn" style="background: var(--accent-red); width: 100%; justify-content: space-between; margin-bottom: var(--space-zoom); font-size: 18px; padding: 12px 20px;">
             </button>
         
-        <button onclick="window.toggleMeterPause()" class="manual-timer-btn" id="zoomPauseBtn" style="display:none; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); width:100%; justify-content:center; align-items:center; gap:4px; margin-bottom:12px; font-size:15px; padding:11px 16px;"><span class="material-symbols-outlined" style="font-size:18px;">pause</span> หยุดมิเตอร์ชั่วคราว</button>
+        <button onclick="window.toggleMeterPause()" class="manual-timer-btn" id="zoomPauseBtn" style="display:none; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); width:100%; justify-content:center; align-items:center; gap:4px; margin-bottom: var(--space-zoom); font-size:15px; padding:11px 16px;"><span class="material-symbols-outlined" style="font-size:18px;">pause</span> หยุดมิเตอร์ชั่วคราว</button>
         
         <div class="tz-close-text" onclick="window.toggleModal('trackerZoomOverlay', false)">แตะที่นี่เพื่อย่อหน้าจอ</div>
     </div>
