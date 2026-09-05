@@ -1583,6 +1583,26 @@
         }
         return straight * factor;
     };
+    // 📏 tryNoDestRouteKm: เที่ยวไม่มีปลายทาง — เบิกคืนระยะช่วงแอปปิด/ซ่อนด้วยเส้นทางถนนจริง
+    // (TomTom route จากจุดก่อนปิด → จุดปัจจุบัน) แทนเส้นตรง×factor ที่ตัดมุมถนน (ระยะจริง > เส้นตรงเสมอ)
+    // ใช้เฉพาะ: ขยับจริง ≥ 0.15 กม. (เส้นตรง) + เว้นอย่างน้อย 4 นาที/ครั้ง กันเผาโควตา 2,500 ครั้ง/วัน
+    // กันหลุด: เชื่อ route ก็ต่อเมื่อ ≥ เส้นตรง×1.05 และไม่เกินเส้นตรง×2.5 (กัน snap ผิดถนน/อ้อมแม่น้ำ)
+    // คืน null → ให้หลุดไปใช้วิธีเส้นตรง×factor เดิม (ออฟไลน์/โควตาหมด/ระยะสั้นเกินไม่คุ้ม)
+    let lastNoDestRouteAt = 0;
+    const tryNoDestRouteKm = async (fromPt, toPt) => {
+        try {
+            if (!fromPt || !toPt) return null;
+            const straight = calcGPS(fromPt.lat, fromPt.lon, toPt.lat, toPt.lon);
+            if (!(straight >= 0.15 && straight < 100)) return null; // ขยับน้อยเกินไม่คุ้มโควตา / พิกัดหลุดไกลเกินพิกัด
+            const now = Date.now();
+            if (now - lastNoDestRouteAt < 240000) return null; // เว้น 4 นาทีต่อการเรียก (กันขอเส้นทางซ้ำๆ เผาโควตา)
+            lastNoDestRouteAt = now;
+            const route = await window.fetchRouteFromTomTom(toPt.lat, toPt.lon, fromPt.lat, fromPt.lon); // เส้นทางจากจุดก่อนปิด → จุดปัจจุบัน
+            if (!route || typeof route.km !== 'number' || !(route.km > 0)) return null;
+            const km = Math.min(route.km, straight * 2.5);
+            return km >= straight * 1.05 ? km : null;
+        } catch(e) { return null; }
+    };
     // 📏 projectToPolyline: snap ตำแหน่งลงบนเส้นทางจริง (polyline) → { perpKm: ระยะตั้งฉาก, remainKm: ระยะที่เหลือถึงปลายทางตามเส้นทาง }
     const projectToPolyline = (coords, pos) => {
         if (!Array.isArray(coords) || coords.length < 2 || !pos) return null;
@@ -2547,14 +2567,22 @@
                         }
                     } catch(e) {}
                 }
-                // 2) ขอเส้นทางไม่ได้ / ไม่มีปลายทาง / ซ่อนไม่นานพอ → กันระยะหายด้วยเส้นตรงจากจุดก่อนซ่อน
+                // 2) ขอเส้นทางไม่ได้ / มีปลายทางแต่ใช้ไม่ได้ / ไม่มีปลายทาง / ซ่อนไม่นานพอ → กันระยะหาย
                 if (!distanceAdded && prevPos) {
-                    // ใช้หลายพิกัดล่าสุด (เส้นทางจริง) ประเมินระยะแทนเส้นตรงเส้นเดียว — ถนนคด = คูณมากขึ้น (จำกัด 60%)
-                    const straight = estimateGapKm(lastPath, prevPos, p);
-                    if (straight > 0.02 && straight < 100) {
-                        actualDrivenKm += straight;
-                        caughtKm += straight;
-                        currentTrueRemainKm = Math.max(0, currentTrueRemainKm - straight);
+                    // เที่ยวไม่มีปลายทาง: ขอเส้นทางถนนจริงจากจุดก่อนซ่อน → จุดปัจจุบัน (แม่นกว่าเส้นตรง×factor ที่ตัดมุมถนน)
+                    let roadKm = null;
+                    if (!destLoc && hidePos) roadKm = await tryNoDestRouteKm(hidePos, p);
+                    if (roadKm > 0.02) {
+                        actualDrivenKm += roadKm; caughtKm += roadKm; kmVia = 'route';
+                        currentTrueRemainKm = Math.max(0, currentTrueRemainKm - roadKm);
+                    } else {
+                        // ใช้หลายพิกัดล่าสุด (เส้นทางจริง) ประเมินระยะแทนเส้นตรงเส้นเดียว — ถนนคด = คูณมากขึ้น (จำกัด 60%)
+                        const straight = estimateGapKm(lastPath, prevPos, p);
+                        if (straight > 0.02 && straight < 100) {
+                            actualDrivenKm += straight;
+                            caughtKm += straight;
+                            currentTrueRemainKm = Math.max(0, currentTrueRemainKm - straight);
+                        }
                     }
                 }
             }
@@ -2799,12 +2827,20 @@
                 }
                 // ขอเส้นทางไม่ได้ / เที่ยวกรอกระยะทางเอง → เส้นตรงจากจุดก่อนปิดแอป
                 if (!distanceAdded && hidePos) {
-                    // ใช้หลายพิกัดล่าสุด (เส้นทางจริง) ประเมินระยะแทนเส้นตรงเส้นเดียว — ถนนคด = คูณมากขึ้น (จำกัด 60%)
-                    const straight = estimateGapKm(data.lastPath || cur.lastPath, hidePos, p);
-                    if (straight > 0.02 && straight < 100) {
-                        km += straight;
-                        caughtKm += straight;
-                        remainKm = Math.max(0, remainKm - straight);
+                    // เที่ยวไม่มีปลายทาง: ขอเส้นทางถนนจริงจากจุดก่อนปิด → จุดปัจจุบัน (แม่นกว่าเส้นตรง×factor ที่ตัดมุมถนน)
+                    let roadKm = null;
+                    if (!cur.dest) roadKm = await tryNoDestRouteKm(hidePos, p);
+                    if (roadKm > 0.02) {
+                        km += roadKm; caughtKm += roadKm; kmVia = 'route';
+                        remainKm = Math.max(0, remainKm - roadKm);
+                    } else {
+                        // ใช้หลายพิกัดล่าสุด (เส้นทางจริง) ประเมินระยะแทนเส้นตรงเส้นเดียว — ถนนคด = คูณมากขึ้น (จำกัด 60%)
+                        const straight = estimateGapKm(data.lastPath || cur.lastPath, hidePos, p);
+                        if (straight > 0.02 && straight < 100) {
+                            km += straight;
+                            caughtKm += straight;
+                            remainKm = Math.max(0, remainKm - straight);
+                        }
                     }
                 }
             }
@@ -3080,7 +3116,10 @@
                 lastStopFixAt = trafficCharging ? now : null;
                 
                 // ปรับปรุงการกรองสัญญาณและการชดเชย GPS ให้สอดคล้องกับมิเตอร์จริง
-                const GPS_CALIBRATION_MULTIPLIER = 1.05; // ชดเชย GPS 5% สำหรับกันโค้งและจุดบอด
+                // 🎯 นับระยะแบบ "มิเตอร์จริง" (ล้อหมุน): ถ้า GPS ให้ความเร็วมือถือมา (Android/Chrome ให้ coords.speed)
+                //    ใช้ ความเร็ว×เวลา = ระยะตามถนนจริง (∫v·dt) — เส้นตรงระหว่าง fix ตัดมุมถนน → ได้น้อยกว่ามิเตอร์จริงเสมอ
+                //    ยิ่งวิ่งไกล (โค้ง/เลี้ยวเยอะ) ยิ่งเพี้ยนสะสม ใช้ speed ช่วยให้ตรงมิเตอร์มากขึ้น
+                const GPS_CALIBRATION_MULTIPLIER = 1.05; // ชดเชย GPS 5% สำหรับกันโค้งและจุดบอด (ใช้เมื่อ GPS ไม่ให้ความเร็ว)
                 if (window.isMeterPaused) {
                     // ⏸️ ธงลง (หยุดมิเตอร์): ขยับตำแหน่งอ้างอิง/แผนที่ตามจริง แต่ไม่นับกิโล
                     // => ตอนเริ่มต่อจะได้ไม่โดนคิดระยะทางย้อนกลับช่วงที่หยุด
@@ -3088,12 +3127,37 @@
                         lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
                         window.updateMapPosition(pos.coords.latitude, pos.coords.longitude);
                     }
-                } else if (dMoved > 0.003) { // ปรับเกณฑ์ขั้นต่ำลงเป็น 3 เมตร ให้จับคลานตอนรถติดได้ไวขึ้น
-                    actualDrivenKm += (dMoved * GPS_CALIBRATION_MULTIPLIER); 
-                    currentTrueRemainKm -= (dMoved * GPS_CALIBRATION_MULTIPLIER); 
-                    if(currentTrueRemainKm < 0) currentTrueRemainKm = 0; 
-                    lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-                    window.updateMapPosition(pos.coords.latitude, pos.coords.longitude);
+                } else {
+                    // คำนวณระยะท่อนนี้ (กม.): เริ่มจากเส้นตรงระหว่าง fix ×1.05 (กันโค้ง/จุดบอด)
+                    // แล้วถ้า GPS ให้ความเร็วมา (Android/Chrome ให้ coords.speed) ใช้ ความเร็ว×เวลา = ระยะตามถนนจริง (∫v·dt)
+                    // ⭐ ทำไมต้องเชื่อ speed: เส้นตรงระหว่าง fix ตัดมุมถนนเสมอ (ถนนโค้ง/เลี้ยว ระยะจริง > เส้นตรง)
+                    // => กิโลขาดสะสม 3%+ ยิ่งวิ่งไกลยิ่งห่างมิเตอร์จริง (ล้อหมุน) — speed เป็นค่า Doppler วัดที่ตัวรถ
+                    // ไม่มีอคติตัดมุม แก้จุดที่เพี้ยนได้ตรงต้นตอ (iOS Safari ไม่ให้ speed → ใช้เส้นตรง×1.05 แทน)
+                    let segKm = dMoved * GPS_CALIBRATION_MULTIPLIER;
+                    const dtSecSpeed = (now - lastPosTime) / 1000; // ห่างจาก fix ก่อนหน้า (วิ) — ถี่พอถึงจะเชื่อ speed ได้
+                    let speedMoved = false;
+                    if (OS_SpeedKmh !== -1 && dtSecSpeed > 0.4 && dtSecSpeed <= 6) {
+                        const spdMps = OS_SpeedKmh / 3.6;
+                        const bySpeedKm = (spdMps * dtSecSpeed) / 1000;
+                        // กันเบิ้ลกับค่าเวลาจอด: ความเร็ว < ~7.6 กม./ชม. (จอด/คลาน) ไม่นับระยะ — ช่วงนั้นมิเตอร์คิดเป็น
+                        // เวลาจอด/รถติด (≤ 6 กม./ชม.) อยู่แล้ว ไม่ควรนับระยะซ้ำ (speed ลอยตอนจอดนิ่งมักไม่เกินนี้)
+                        // กัน speed พุ่งเกินจริง: ตัดที่ ~144 กม./ชม. (รถยนต์ปกติไม่เกิน) — นอกนั้นเชื่อ speed เต็มที่
+                        // เพราะถ้าจำกัดด้วยเส้นตรงอีก ก็กลับไปขาดเหมือนเดิมตอน GPS จุดชิด/สัญญาณสะท้อนตึก
+                        if (spdMps >= 2.1 && bySpeedKm > 0.0006) {
+                            segKm = Math.min(bySpeedKm, 0.04 * dtSecSpeed);
+                            speedMoved = true;
+                        }
+                    }
+                    // กัน "เคลื่อนที่ช้าแต่ยังวิ่ง" (เช่น รถติดคลาน ~7-15 กม./ชม.) หลุดเกณฑ์เส้นตรง 3 เมตร
+                    // โดยใช้ speed ยืนยันว่ากำลังเคลื่อนที่จริง (ไม่ใช่ GPS ลอยตอนจอด) → ยังนับกิโลให้ครบ
+                    const moving = dMoved > 0.003 || speedMoved;
+                    if (moving) {
+                        actualDrivenKm += segKm;
+                        currentTrueRemainKm -= segKm;
+                        if(currentTrueRemainKm < 0) currentTrueRemainKm = 0; 
+                        lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                        window.updateMapPosition(pos.coords.latitude, pos.coords.longitude);
+                    }
                 }
                 lastPosTime = now; 
             } else { 

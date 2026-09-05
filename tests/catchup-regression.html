@@ -30,7 +30,7 @@
         <b>วิธีเปิด:</b> ต้องผ่าน HTTP เท่านั้น เช่น <code>https://baby4bot.github.io/taxi/tests/catchup-regression.html</code>
         (เปิดจาก file:// ตรง ๆ ไม่ได้ เพราะ iframe ถูกบล็อก cross-origin) — เปิดแล้วรันอัตโนมัติ หรือกดปุ่มด้านล่างเพื่อรันใหม่
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (9 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (11 สถานการณ์)</button>
     <div id="summary"></div>
     <ol id="results"></ol>
     <iframe id="appFrame" src="../index.html"></iframe>
@@ -76,13 +76,13 @@
             }, overrides || {});
         }
 
-        // ปล่อย fix ที่ค้างในคิว (count ตัว) → จำลอง GPS ตอบกลับ
-        function releaseFix(count, lat, lon, acc) {
+        // ปล่อย fix ที่ค้างในคิว (count ตัว) → จำลอง GPS ตอบกลับ (speedKmh: ใส่เพื่อจำลอง Android/Chrome ที่ให้ coords.speed)
+        function releaseFix(count, lat, lon, acc, speedKmh) {
             const cw = frame.contentWindow;
             let n = 0;
             while (count > 0 && cw.__q && cw.__q.length > 0) {
                 const cb = cw.__q.shift();
-                try { cb.ok({ coords: { latitude: lat, longitude: lon, accuracy: acc || 8, speed: null }, timestamp: Date.now() }); n++; } catch (e) {}
+                try { cb.ok({ coords: { latitude: lat, longitude: lon, accuracy: acc || 8, speed: (typeof speedKmh === 'number') ? speedKmh / 3.6 : null }, timestamp: Date.now() }); n++; } catch (e) {}
                 count--;
             }
             return n;
@@ -93,7 +93,8 @@
             cw.__q = [];
             const g = cw.navigator.geolocation;
             g.getCurrentPosition = (ok, err, opts) => { cw.__q.push({ kind: 'cur', ok: ok }); };
-            g.watchPosition = (ok, err, opts) => { cw.__q.push({ kind: 'watch', ok: ok }); return 777; };
+            // จด watch cb ไว้ด้วย — ในเบราว์เซอร์จริง watch ส่ง fix ซ้ำๆ เอง แต่ harness ต้องยิง cb ตรง ๆ จำลอง (ใช้ในสถานการณ์ที่ 10)
+            g.watchPosition = (ok, err, opts) => { cw.__q.push({ kind: 'watch', ok: ok }); cw.__watchCb = ok; return 777; };
             g.clearWatch = () => {};
         }
 
@@ -242,6 +243,9 @@
 
             // 3) วิ่งช่วงปิด ไม่มีปลายทาง — ประเมินกิโลจากเส้นทางจริง (คด) แทนเส้นตรง
             await runScenario('3. วิ่งช่วงปิด ไม่มีปลายทาง (ประมาณกิโลจากเส้นทางจริงคด)', async () => {
+                // ให้ "ขอเส้นทางถนนจริง" ใช้ไม่ได้ (ออฟไลน์/โควตาหมด) → สถานการณ์นี้ต้องตรวจเส้นตรง×คดเคี้ยวเดิม
+                // (เส้นทางถนนจริงทดสอบแยกในสถานการณ์ที่ 11)
+                w().fetchRouteFromTomTom = async () => null;
                 const p = makePayload({ lastPos: WIND_PATH[0], lastPath: WIND_PATH });
                 w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
                 w().maybeShowResumeBanner();
@@ -412,6 +416,70 @@
                 assert(calls >= 1, 'ต้องเรียกเส้นทาง (stub) อย่างน้อย 1 ครั้ง');
                 assert(p.catchUpLog && p.catchUpLog.length === 1 && p.catchUpLog[0].via === 'polyline', 'catchUpLog ต้องบันทึก via=polyline');
                 return 'ทางด่วนลัด: เบิก ' + d.km.toFixed(2) + ' กม. (คาด ' + (0.5 + gapKm).toFixed(2) + ') · เหลือ ' + p.remainKm.toFixed(2) + ' (จากเดิม ' + oldRemain.toFixed(2) + ') · ทางด่วน ' + tollKm.toFixed(2) + ' < ปกติ ' + normalKm.toFixed(2) + ' กม.';
+            });
+
+            // 10) วิ่งปกติบนถนน (GPS ให้ coords.speed) → นับกิโลด้วย ความเร็ว×เวลา (∫v·dt) ตามถนนจริง
+            // จำลองเคสที่กิโลเพี้ยนแบบ 9.3 vs 9.6: fix จุดชิดกันมาก (< 3 ม. — สัญญาณสะท้อน/จุดชิด) แต่ความเร็วจริง 36 กม./ชม.
+            // วิธีเส้นตรง×1.05 แทบนับไม่ได้ → ขาดสะสมทุกโค้ง/จุดชิด; วิธีใหม่เชื่อ speed (Doppler) = 10 ม./วิ ตรงมิเตอร์ล้อหมุน
+            await runScenario('10. วิ่งปกติ (มี speed จาก GPS): นับกิโลด้วย ∫speed·dt ตามถนนจริง ไม่ใช่เส้นตรง', async () => {
+                // เซ็ต caughtUpAt แล้ว → ไม่เบิกคืนช่วงปิดตอนแบนเนอร์ (ไม่รบกวนการนับกิโลปกติ)
+                const p = makePayload({ caughtUpAt: Date.now() - 1000, lastPos: P0, lastPath: [P0] });
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip(); // เริ่มมิเตอร์ (queue: [getCurrentPosition, watchPosition])
+                await wait(300);
+                releaseFix(1, P0.lat, P0.lon, 8); // fix แรก (getCurrentPosition) = ตั้งจุดอ้างอิง (lastPos)
+                const SPEED_KMH = 36, STEPS = 4; // 36 กม./ชม. = 10 ม./วิ
+                // ยิง watch cb ตรง ๆ (จำลอง browser ส่ง fix ราย ~1 วิ — watch ของจริงเรียกซ้ำเอง, harness ไม่มี)
+                const feedFix = (lat, lon, speedKmh) => {
+                    const cb = w().__watchCb;
+                    assert(typeof cb === 'function', 'ต้องมี watch cb (เริ่มมิเตอร์แล้ว)');
+                    cb({ coords: { latitude: lat, longitude: lon, accuracy: 8, speed: speedKmh / 3.6 }, timestamp: Date.now() });
+                };
+                // จุด fix ต่อๆ ไปขยับไม่ถึง ~3 ม. (ตำแหน่งแทบซ้ำกัน) แต่ speed บอก 10 ม./วิ → วิธีใหม่ต้องนับ ~10 ม./วิ
+                const offs = [[1, -0.5], [-0.8, 1.2], [0.6, -1.4], [-0.4, 0.9]]; // ออฟเซ็ต (ม.) จากจุดก่อนหน้า
+                const dLatM = 1 / 111320, dLonM = 1 / (111320 * Math.cos(P0.lat * Math.PI / 180));
+                for (let i = 0; i < STEPS; i++) {
+                    await wait(1100); // fix ห่างกัน ~1.1 วิ (อยู่ในช่วง 0.4-6 วิ ที่แอปเชื่อ speed ได้)
+                    feedFix(P0.lat + offs[i][0] * dLatM, P0.lon + offs[i][1] * dLonM, SPEED_KMH);
+                }
+                await wait(800);
+                const d = readDisplay();
+                const billedKm = d.km - 0.5;
+                assert(billedKm >= 0.030, 'ต้องนับระยะตาม speed จริง (≥0.03 กม.) — วิธีเส้นตรงเก่าได้แค่ ~0 (เคส 9.3 vs 9.6) ได้ ' + billedKm.toFixed(3));
+                assert(billedKm <= 0.060, 'ไม่ควรเกิน 4 วิ × 10 ม./วิ + เผื่อจังหวะ (ได้ ' + billedKm.toFixed(3) + ' กม.)');
+                near(d.traffic, 10, 5, 'เวลารถติดบนจอ (วิ่ง 36 กม./ชม. ไม่ควรเบิกจอดเพิ่ม)');
+                return '4 วิ @36 กม./ชม. → +' + billedKm.toFixed(3) + ' กม. (คาด ~0.044) · วิธีเส้นตรงเก่าได้ ~0';
+            });
+
+            // 11) ไม่มีปลายทาง + วิ่งช่วงแอปปิด → เบิกกิโลด้วยเส้นทางถนนจริง (TomTom route จุดก่อนปิด → จุดปัจจุบัน)
+            // แทนเส้นตรง×คดเคี้ยว (factor จำกัด 1.6 — ถนนอ้อม 1.45 เท่าเส้นตรงก็ใช้ได้ แต่ถ้า route จริงยาวกว่า 1.6 เท่า
+            // วิธีเก่าก็ยังขาดอยู่ดี) — สถานการณ์นี้ route จริง = เส้นตรง×1.45 → ต้องเบิกตาม route ไม่ใช่ factor 1.6
+            await runScenario('11. ไม่มีปลายทาง: เบิกกิโลด้วยเส้นทางถนนจริง (TomTom route จุดก่อนปิด→ปัจจุบัน)', async () => {
+                const straightKm = haversine(P0, P_FAR);
+                const routeKm = straightKm * 1.45; // ถนนจริงอ้อม 1.45 เท่าเส้นตรง (เส้นตรง ~1.55 กม. → ~2.25 กม.)
+                w().fetchRouteFromTomTom = async (dLat, dLon, sLat, sLon) => {
+                    w().__routeCalls = (w().__routeCalls || 0) + 1;
+                    w().__routeCallArgs = [dLat, dLon, sLat, sLon];
+                    return { km: routeKm, sec: 1200, coords: [[P0.lat, P0.lon], [P_FAR.lat, P_FAR.lon]], tolls: { hasTolls: false, booths: [], total: 0 } };
+                };
+                const p = makePayload({ lastPos: P0, lastPath: WIND_PATH });
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(1200);
+                releaseFix(5, P_FAR.lat, P_FAR.lon, 8); // fix ที่จุดที่รถไปถึงช่วงแอปตาย
+                await wait(1400);
+                const d = readDisplay();
+                near(d.km, 0.5 + routeKm, 0.05, 'กิโลเมตรบนจอ (0.5 + เส้นทางถนนจริง ไม่ใช่เส้นตรง×1.6)');
+                const pp = JSON.parse(w().localStorage.getItem('taxi_active_trip_v1'));
+                assert(pp.catchUpLog && pp.catchUpLog.length >= 1 && pp.catchUpLog[pp.catchUpLog.length - 1].via === 'route', 'catchUpLog ต้องจด via=route');
+                assert((w().__routeCalls || 0) >= 1, 'ต้องขอเส้นทาง TomTom (stub) อย่างน้อย 1 ครั้ง');
+                const args = w().__routeCallArgs;
+                near(args[2], P0.lat, 0.0001, 'sLat = จุดก่อนปิด'); near(args[3], P0.lon, 0.0001, 'sLon = จุดก่อนปิด');
+                return d.km.toFixed(2) + ' กม. (คาด ' + (0.5 + routeKm).toFixed(2) + ' = เส้นตรง ' + straightKm.toFixed(2) + ' ×1.45) · via route (วิธีเก่าได้ ' + (0.5 + straightKm * 1.6).toFixed(2) + ')';
             });
 
             // 7) ประวัติการเบิกคืน: ลง payload (catchUpLog) + โชว์ในหน้าสรุปหลังจบเที่ยว
