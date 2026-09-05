@@ -237,8 +237,8 @@
         .small-nav-btn img { width: 30px; height: 30px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3)); }
         /* ปุ่ม หยุดมิเตอร์ชั่วคราว / เริ่มต่อ (คนขับกดเองกลางเที่ยว) */
         .meter-pause-btn { width: 60px; height: 60px; border-radius: 20px; border: none; cursor: pointer; flex-shrink: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-family: 'Kanit', sans-serif; color: #fff; transition: 0.3s; -webkit-user-select: none; user-select: none; }
-        .meter-pause-btn.idle { background: linear-gradient(135deg, #f1c40f, #e67e22); box-shadow: 0 4px 15px rgba(241,196,15,0.35); }
-        .meter-pause-btn.paused { background: linear-gradient(135deg, #2ecc71, #27ae60); box-shadow: 0 4px 15px rgba(46,204,113,0.45); animation: tollFadeSlideIn 0.25s ease-out; }
+        .meter-pause-btn.idle { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 4px 15px rgba(59,130,246,0.4); }
+        .meter-pause-btn.paused { background: linear-gradient(135deg, #f97316, #ea580c); box-shadow: 0 4px 15px rgba(249,115,22,0.45); animation: tollFadeSlideIn 0.25s ease-out; }
         .meter-pause-btn.idle:active, .meter-pause-btn.paused:active { transform: scale(0.95); }
 
         .btn-reset { flex-shrink: 0; width: 100%; padding: 18px; border: none; border-radius: 20px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; background: var(--accent-red); color: white; box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3); margin-bottom: 20px; }
@@ -386,6 +386,18 @@
         }
         .tz-toll-btn:active { transform: scale(0.93); background: rgba(0,0,0,0.4); }
         .tz-toll-btn .material-symbols-outlined { font-size: 12px; }
+        .tz-pause-btn {
+            position: absolute; top: 10px; right: 10px; z-index: 60;
+            width: 42px; height: 42px; border-radius: 50%;
+            display: none; align-items: center; justify-content: center;
+            border: 1px solid rgba(255,255,255,0.35);
+            color: #fff; cursor: pointer; -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: 0.2s;
+        }
+        .tz-pause-btn .material-symbols-outlined { font-size: 24px; }
+        .tz-pause-btn.running { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .tz-pause-btn.paused { background: linear-gradient(135deg, #f97316, #ea580c); animation: tollFadeSlideIn 0.25s ease-out; }
+        .tz-pause-btn:active { transform: scale(0.92); }
         .tz-toll-list { position: absolute; top: 36px; left: 10px; z-index: 60; display: none; flex-direction: column; align-items: flex-start; gap: 3px; }
         .tz-toll-item {
             display: flex; align-items: center; gap: 4px;
@@ -1072,6 +1084,7 @@
             #fareTollBtn .material-symbols-outlined { font-size: 14px; }
             .tz-toll-btn { top: 8px; left: 8px; padding: 3px 8px; font-size: 10.5px; border-radius: 12px; }
             .tz-toll-btn .material-symbols-outlined { font-size: 11.5px; }
+            .tz-pause-btn { top: 8px; right: 8px; width: 38px; height: 38px; }
             .tz-toll-list { top: 32px; left: 8px; }
             .tz-est-fare { font-size: 11.5px; right: 10px; bottom: 8px; }
             #fareResetBtn { top: 4px; right: 6px; width: 22px; height: 22px; }
@@ -1405,6 +1418,7 @@
                 <span class="material-symbols-outlined">toll</span> + ทางด่วน
             </button>
             <div id="tzTollList" class="tz-toll-list"></div>
+            <button onclick="window.toggleMeterPause()" id="zoomPauseBtn" class="tz-pause-btn running" style="display:none;" title="หยุดมิเตอร์ชั่วคราว"><span class="material-symbols-outlined">pause</span></button>
             <div class="tz-fare-title">• ค่าโดยสารเรียลไทม์ •</div>
             <div class="tz-fare-price-box"><span id="tzMeterPrice">35</span><span class="tz-fare-currency">฿</span></div>
             <div id="tzEstFare" class="tz-est-fare">ประเมิน: -- ฿</div>
@@ -1418,7 +1432,6 @@
         <button onclick="window.modalStopTripClick();" class="manual-timer-btn" id="modalStopBtn" style="background: var(--accent-red); width: 100%; justify-content: space-between; margin-bottom: var(--space-zoom); font-size: 18px; padding: 12px 20px;">
             </button>
         
-        <button onclick="window.toggleMeterPause()" class="manual-timer-btn" id="zoomPauseBtn" style="display:none; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); width:100%; justify-content:center; align-items:center; gap:4px; margin-bottom: var(--space-zoom); font-size:15px; padding:11px 16px;"><span class="material-symbols-outlined" style="font-size:18px;">pause</span> หยุดมิเตอร์ชั่วคราว</button>
         
         <div class="tz-close-text" onclick="window.toggleModal('trackerZoomOverlay', false)">แตะที่นี่เพื่อย่อหน้าจอ</div>
     </div>
@@ -1428,6 +1441,7 @@
     <div class="modal-box flex-col-box" onclick="event.stopPropagation()">
         <div class="modal-header">
             <button class="btn-action-floating" style="right:auto; left:15px; background: linear-gradient(135deg,#2ecc71,#0f8a4a);" onclick="window.openReceiptQr()" title="QR ใบเสร็จ — ให้ผู้โดยสารสแกนรับใบเสร็จ (รูปภาพ)"><span class="material-symbols-outlined" style="font-size:20px;">qr_code</span></button>
+            <button class="btn-action-floating" style="right:auto; left:62px; background: linear-gradient(135deg,#0ea5e9,#0369a1);" onclick="window.shareReceiptLink()" title="ส่งลิงก์ใบเสร็จผ่านแอปแชร์ (LINE/WhatsApp)"><span class="material-symbols-outlined" style="font-size:20px;">share</span></button>
             <h3 style="display:flex; align-items:center; justify-content:center; gap:8px;"><span class="material-symbols-outlined" style="color: var(--neon-green);">receipt_long</span> สรุปค่าโดยสาร</h3>
             <button class="btn-close-floating" onclick="window.toggleModal('tripSummaryOverlay', false)"><span class="material-symbols-outlined">close</span></button>
         </div>
@@ -1453,6 +1467,17 @@
         <div onclick="window.toggleModal('qrOverlay', false)" class="btn-close-floating" style="top: -15px; right: -15px;"><span class="material-symbols-outlined">close</span></div>
         <img id="mainScreenQrImg" src="" style="width: 80vw; max-width: 350px; max-height: 70vh; object-fit: contain; box-sizing: border-box; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); border: 3px solid rgba(255,255,255,0.2); background: white; padding: 15px;" />
         <div id="qrNameText" style="margin-top: 15px; font-size: 20px; font-weight: 600; color: var(--neon-yellow); text-shadow: 0 2px 5px rgba(0,0,0,0.8);">...</div>
+    </div>
+</div>
+
+<div id="shareReceiptModal" class="modal-overlay" style="z-index: 10072;" onclick="window.toggleModal('shareReceiptModal', false)">
+    <div class="modal-box standard-box" onclick="event.stopPropagation()" style="padding: 26px 22px 18px; text-align:center;">
+        <button class="btn-close-floating" style="top:12px; right:12px; transform:none;" onclick="window.toggleModal('shareReceiptModal', false)"><span class="material-symbols-outlined">close</span></button>
+        <h3 style="margin-bottom:6px;">ส่งใบเสร็จให้ผู้โดยสาร</h3>
+        <div style="font-size:13px; color:var(--text-dim); margin-bottom:14px;">เลือกช่องทางส่งลิงก์ใบเสร็จ (รูปภาพ) — ผู้โดยสารเปิดลิงก์แล้วกดดาวน์โหลดรูปใบเสร็จได้เลย</div>
+        <button class="manual-timer-btn" onclick="window.shareReceiptVia('line')" style="background:#06C755; justify-content:center; width:100%; margin-bottom:10px;"><img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" style="width:22px;height:22px;" /> ส่งผ่าน LINE</button>
+        <button class="manual-timer-btn" onclick="window.shareReceiptVia('whatsapp')" style="background:#25D366; justify-content:center; width:100%; margin-bottom:10px;"><span class="material-symbols-outlined" style="font-size:18px;">chat</span> ส่งผ่าน WhatsApp</button>
+        <button class="manual-timer-btn" onclick="window.shareReceiptVia('copy')" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); justify-content:center; width:100%; color:#fff;"><span class="material-symbols-outlined" style="font-size:18px;">link</span> คัดลอกลิงก์</button>
     </div>
 </div>
 
@@ -3143,12 +3168,9 @@
         const zb = document.getElementById('zoomPauseBtn');
         if (zb) {
             zb.style.display = running ? 'flex' : 'none';
-            zb.innerHTML = paused
-                ? '<span class="material-symbols-outlined" style="font-size:18px;">play_arrow</span> เริ่มต่อมิเตอร์'
-                : '<span class="material-symbols-outlined" style="font-size:18px;">pause</span> หยุดมิเตอร์ชั่วคราว';
-            zb.style.background = paused ? 'linear-gradient(135deg, #2ecc71, #27ae60)' : 'rgba(255,255,255,0.08)';
-            zb.style.border = '1px solid ' + (paused ? 'rgba(46,204,113,0.6)' : 'rgba(255,255,255,0.2)');
-            zb.style.color = '#fff';
+            zb.className = 'tz-pause-btn ' + (paused ? 'paused' : 'running');
+            zb.title = paused ? 'เริ่มต่อมิเตอร์' : 'หยุดมิเตอร์ชั่วคราว';
+            zb.innerHTML = '<span class="material-symbols-outlined">' + (paused ? 'play_arrow' : 'pause') + '</span>';
         }
     };
     window.toggleMeterPause = () => {
@@ -3164,7 +3186,7 @@
             // ⏸️ หยุดมิเตอร์ชั่วคราว
             openPause(Date.now());
             window.isMeterPaused = true;
-            window.showToast('⏸️ หยุดมิเตอร์ชั่วคราว (แตะปุ่มเขียวเมื่อพร้อมเริ่มต่อ)');
+            window.showToast('⏸️ หยุดมิเตอร์ชั่วคราว (แตะปุ่มส้มเมื่อพร้อมเริ่มต่อ)');
         }
         window.saveActiveTrip(true);
         window.updatePauseBtnUI();
@@ -3496,9 +3518,10 @@
 
     // 🧾 ปุ่ม QR ใบเสร็จ (มุมซ้ายบนของหน้าสรุป): สร้างลิงก์ไปหน้าใบเสร็จ (รูปภาพ) แล้วยิงเป็น QR ให้ผู้โดยสารสแกน
     window.__lastTripSummary = null;
-    window.openReceiptQr = () => {
+    // สร้างลิงก์ใบเสร็จ (ใช้ร่วมกันทั้งปุ่ม QR และปุ่มแชร์) — คืน '' ถ้ายังไม่มีเที่ยวที่จบ
+    window.buildReceiptLink = () => {
         const s = window.__lastTripSummary;
-        if (!s || !s.startTime) { window.showToast('ยังไม่มีข้อมูลเที่ยวนี้ — จบเที่ยวก่อนแล้วกดปุ่ม QR', true); return; }
+        if (!s || !s.startTime) { window.showToast('ยังไม่มีข้อมูลเที่ยวนี้ — จบเที่ยวก่อนแล้วกดปุ่มแชร์', true); return ''; }
         const distFare = window.calcThaiMeterDist(s.km);
         const meterTravel = Math.floor((distFare + s.trafficSec * (3.0 / 60)) / 2) * 2;
         const payload = {
@@ -3517,11 +3540,35 @@
         try {
             const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
             const base = location.origin + location.pathname.replace(/[^/]*$/, '') + 'receipt.html';
-            const link = base + '#d=' + b64;
-            document.getElementById('mainScreenQrImg').src = 'https://api.qrserver.com/v1/create-qr-code/?size=340x340&margin=10&data=' + encodeURIComponent(link);
-            document.getElementById('qrNameText').innerText = 'ใบเสร็จ (รูปภาพ) — ให้ผู้โดยสารสแกน แล้วกดดาวน์โหลดรูปใบเสร็จ';
-            window.toggleModal('qrOverlay', true);
-        } catch (e) { window.showToast('สร้าง QR ใบเสร็จไม่สำเร็จ', true); }
+            return base + '#d=' + b64;
+        } catch (e) { window.showToast('สร้างลิงก์ใบเสร็จไม่สำเร็จ', true); return ''; }
+    };
+    window.openReceiptQr = () => {
+        const link = window.buildReceiptLink();
+        if (!link) return;
+        document.getElementById('mainScreenQrImg').src = 'https://api.qrserver.com/v1/create-qr-code/?size=340x340&margin=10&data=' + encodeURIComponent(link);
+        document.getElementById('qrNameText').innerText = 'ใบเสร็จ (รูปภาพ) — ให้ผู้โดยสารสแกน แล้วกดดาวน์โหลดรูปใบเสร็จ';
+        window.toggleModal('qrOverlay', true);
+    };
+    // 📤 ส่งลิงก์ใบเสร็จผ่านแอปแชร์ (LINE / WhatsApp) — ผู้โดยสารไม่ต้องสแกน
+    window.shareReceiptLink = () => {
+        const link = window.buildReceiptLink();
+        if (!link) return;
+        const txt = '🧾 ใบเสร็จค่าโดยสาร (รูปภาพ)\nเปิดลิงก์นี้ แล้วกด "ดาวน์โหลดรูปใบเสร็จ" ได้เลย:\n' + link;
+        window.__receiptShareTxt = txt;
+        window.toggleModal('shareReceiptModal', true);
+    };
+    window.shareReceiptVia = (p) => {
+        const txt = window.__receiptShareTxt || '';
+        if (p === 'line') { window.open('https://line.me/R/msg/text/?' + encodeURIComponent(txt), '_blank'); }
+        else if (p === 'whatsapp') { window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank'); }
+        else if (p === 'copy') {
+            const link = (txt.match(/https?:\/\/\S+/) || [''])[0];
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(link || txt).then(() => window.showToast('คัดลอกลิงก์ใบเสร็จแล้ว — ส่งต่อในแอปแชร์ได้เลย')).catch(() => window.showToast('คัดลอกไม่สำเร็จ', true));
+            } else { window.prompt('คัดลอกลิงก์ใบเสร็จ:', link || txt); }
+        }
+        window.toggleModal('shareReceiptModal', false);
     };
 
     // สร้างเนื้อหาหน้าสรุป (ใบเสร็จ) ลงใน #tsSummaryContent
