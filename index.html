@@ -1069,7 +1069,13 @@
 <div id="tollModal" class="custom-confirm-overlay" style="display: none;">
     <div class="custom-confirm-box" style="padding: 25px 20px;">
         <h3 class="custom-confirm-title" style="margin-bottom: var(--space-field);">เพิ่มค่าทางด่วน</h3>
-        <input type="text" inputmode="numeric" pattern="[0-9]*" id="tollInput" placeholder="ระบุจำนวนเงิน (บาท)" style="width: 100%; padding: 15px; border-radius: 15px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; text-align: center; font-size: 18px; margin-bottom: var(--space-field); box-sizing: border-box; outline:none;" autocomplete="off">
+        <div style="position:relative; width:100%; margin-bottom: var(--space-field);">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" id="tollInput" placeholder="ระบุจำนวนเงิน (บาท)" style="width: 100%; padding: 15px; border-radius: 15px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; text-align: center; font-size: 18px; box-sizing: border-box; outline:none;" autocomplete="off">
+            <div style="position:absolute; top:50%; right:8px; transform:translateY(-50%); display:flex; gap:6px; z-index:2;">
+                <button type="button" onclick="event.stopPropagation(); window.tollStep(-5)" title="ลบ 5 บาท" style="width:30px; height:30px; border-radius:10px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.08); color:white; font-size:17px; font-weight:700; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; -webkit-tap-highlight-color:transparent;">−</button>
+                <button type="button" onclick="event.stopPropagation(); window.tollStep(5)" title="บวก 5 บาท" style="width:30px; height:30px; border-radius:10px; border:1px solid rgba(52,199,89,0.5); background:rgba(52,199,89,0.16); color:#3ddc84; font-size:17px; font-weight:700; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; -webkit-tap-highlight-color:transparent;">+</button>
+            </div>
+        </div>
         <div class="custom-confirm-actions">
             <button onclick="window.toggleModal('tollModal', false)" class="btn-cc-cancel">ยกเลิก</button>
             <button onclick="window.confirmToll()" class="btn-cc-ok">เพิ่มเงิน</button>
@@ -2155,6 +2161,15 @@
         inp.value = '';
         window.toggleModal('tollModal', true);
         setTimeout(() => { inp.focus(); }, 250);
+    };
+
+    // ปุ่มลัด − / + (ทีละ 5 บาท) ด้านขวาของช่องกรอกค่าทางด่วน
+    window.tollStep = (delta) => {
+        const inp = document.getElementById('tollInput');
+        let v = parseInt(inp.value, 10) || 0;
+        v = Math.max(0, v + delta);
+        inp.value = v > 0 ? String(v) : '';
+        inp.focus();
     };
     
     window.confirmToll = () => {
