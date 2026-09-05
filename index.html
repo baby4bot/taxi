@@ -2190,10 +2190,14 @@
         else document.getElementById('profileTaxiNormal').classList.add('active');
         document.getElementById('editTaxiType').value = val;
         
+        // ซิงก์กับหน้าหลักทันที (ทั้งกดจากหน้าโปรไฟล์ และจากปุ่มสลับบนหน้าหลัก) เพื่อให้เรทราคาตรงกันเสมอ
+        window.baseFare = val;
+        window.renderStartButton();
+        if(window.isManualRunning) window.updateLiveMeterDisplay(); else window.manualInputChange();
+        
         if(save && loggedInUserId) {
-             window.baseFare = val;
-             window.renderStartButton();
-             if(window.isManualRunning) window.updateLiveMeterDisplay(); else window.manualInputChange();
+            // บันทึกลง Firestore ทันที (กรณีเรียกด้วย save=true)
+            try { updateDoc(doc(db, "users", loggedInUserId), { taxiType: val }); } catch(e) {}
         }
     };
 
