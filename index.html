@@ -1463,16 +1463,16 @@
     let kmCatchUpBusy = false;
     let trafficCharging = false, lastFixSpeedKmh = null, lastStopFixAt = null; // กำลังคิดค่าเวลาจอด? / ความเร็วจาก GPS ล่าสุด / เวลา fix สุดท้ายที่ยืนยันจอดจริง
     let lastPosTime = null, currentSpeedKmh = 0, currentTrueRemainKm = 0, currentTrueRemainSec = 0; 
-    let hiddenGapStart = null, hiddenLastPos = null; // จดตอนแอปซ่อน/สลับแอป เพื่อเบิกเวลาจอด + ระยะทางที่หายกลับคืนเมื่อกลับมา
+    let hiddenGapStart = null, hiddenLastPos = null, hiddenTrafficBase = 0; // จดตอนแอปซ่อน/สลับแอป เพื่อเบิกเวลาจอด + ระยะทางที่หายกลับคืนเมื่อกลับมา; hiddenTrafficBase = trafficSeconds ตอนเริ่มซ่อน (อ้างอิงเบิก "exactly-once")
     // ⏸️ บันทึกช่วงที่มิเตอร์ "หยุด" ระหว่างเที่ยว (แอปถูกปิด/ซ่อนหน้าจอ) เพื่อโชว์ในหน้าสรุปหลังจบเที่ยว (ความโปร่งใสกับผู้โดยสาร)
-    let pauseLog = [], pauseOpenAt = null; // รายการที่ปิดแล้ว {s: เวลาหยุด, r: เวลากลับมา} + เวลาหยุดของรายการที่ยังไม่ปิด
+    let pauseLog = [], pauseOpenAt = null, pauseTrafficBase = 0; // รายการที่ปิดแล้ว {s: เวลาหยุด, r: เวลากลับมา} + เวลาหยุดของรายการที่ยังไม่ปิด; pauseTrafficBase = trafficSeconds ตอนเริ่มหยุด (กันเบิกซ้ำตอนคิลแอป)
     // 🚩 เตือน "ใกล้ถึงปลายทาง" (ทอง, ครั้งเดียวต่อเที่ยว) — จดระยะทางรวมตอนเริ่มเที่ยว + ว่าปล่อยเสียง/โชว์ไปแล้วหรือยัง
     let nearDestInitRemain = 0, nearDestWarned = false;
     let arriveAsked = false; // ถาม "ถึงปลายทางแล้วหรือยัง?" (ครั้งเดียว/เที่ยว) หลังเบิกคืนพบเหลือระยะทาง < 100 ม.
     let lastPath = []; // พิกัดเส้นทาง 2-3 จุดล่าสุด (ไว้ประมาณระยะที่วิ่งช่วงแอปปิด/ซ่อน แทนเส้นตรงเส้นเดียว)
     let catchUpLog = []; // 📒 ประวัติการเบิกคืนทุกรอบของเที่ยวนี้ [{type:'hidden'|'kill', from, to, idleSec, km, fareDelta}] — เซฟ Firestore ต่อเที่ยว + โชว์ในสรุป
-    const openPause = (t) => { if (pauseOpenAt === null) pauseOpenAt = t; };
-    const closePause = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 8000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } };
+    const openPause = (t) => { if (pauseOpenAt === null) { pauseOpenAt = t; pauseTrafficBase = trafficSeconds; } };
+    const closePause = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 8000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; pauseTrafficBase = 0; } };
     const closePauseManual = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 2000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } }; // กด "หยุดมิเตอร์ชั่วคราว" เอง → ลงรายการแม้สั้นแค่ 2 วิ (แตะพลาด < 2 วิ ไม่รก)
     window.isManualRunning = false;
     window.isMeterPaused = false; // ⏸️ คนขับกด "หยุดมิเตอร์ชั่วคราว" เองกลางเที่ยว (เหมือนลงธง: ไม้นับเวลา/กิโลเพิ่ม)
@@ -1513,7 +1513,7 @@
     // จดสถานะตอนแอปซ่อน/สลับไปแอปอื่น แล้วเมื่อกลับมาให้เบิกเวลาจอด + ระยะทางที่หายกลับคืน
     const captureHiddenGap = () => {
         if (!window.isManualRunning) return;
-        if (hiddenGapStart === null) { hiddenGapStart = Date.now(); hiddenLastPos = lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null; }
+        if (hiddenGapStart === null) { hiddenGapStart = Date.now(); hiddenTrafficBase = trafficSeconds; hiddenLastPos = lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null; }
         openPause(Date.now()); // เริ่มจับเวลาช่วงที่มิเตอร์หยุด (แอปซ่อน/ปิดหน้าจอ)
         window.saveActiveTrip(true);
     };
@@ -2556,9 +2556,13 @@
 
             if (stoppedWholeTime) {
                 // จอดนิ่งทั้งช่วง → เบิกเวลาจอดให้ครบ (มิเตอร์จริงคิดเวลารอต่อเนื่อง ไม่ใช่แค่หลักฐาน 6 วิ)
-                trafficSeconds += gapSec;
+                // เบิกแบบ "exactly-once": ticker อาจยังรันและบวกเวลาจอดไปแล้วบางส่วนช่วงที่ซ่อน (เบราว์เซอร์บางตัวไม่หยุด interval)
+                // → เบิกเพิ่มเฉพาะส่วนที่ขาดจาก hiddenTrafficBase + gapSec (ไม่บวกทับเต็มช่วง = เบิกซ้ำ/เกิน)
+                const targetTraffic = (hiddenTrafficBase || 0) + gapSec;
+                const toBill = Math.max(0, targetTraffic - trafficSeconds);
+                trafficSeconds += toBill;
                 trafficCharging = true; lastStopFixAt = Date.now();
-                caughtTimeSec += gapSec;
+                caughtTimeSec += toBill;
             } else {
                 // 1) เบิกระยะที่วิ่งช่วงซ่อน: ใช้ polyline เส้นทางจริงจากจุดก่อนซ่อน (snap จุดก่อนซ่อน+จุดปัจจุบันลงเส้นทางเดียวกัน)
                 // หักส่วนต่างระยะเหลือถึงปลายทาง — แม่นกว่าเส้นตรง (เฉพาะเที่ยวมีปลายทาง + ซ่อน > 20 วิ กันโควตา)

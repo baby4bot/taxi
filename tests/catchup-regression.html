@@ -30,7 +30,7 @@
         <b>วิธีเปิด:</b> ต้องผ่าน HTTP เท่านั้น เช่น <code>https://baby4bot.github.io/taxi/tests/catchup-regression.html</code>
         (เปิดจาก file:// ตรง ๆ ไม่ได้ เพราะ iframe ถูกบล็อก cross-origin) — เปิดแล้วรันอัตโนมัติ หรือกดปุ่มด้านล่างเพื่อรันใหม่
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (11 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (12 สถานการณ์)</button>
     <div id="summary"></div>
     <ol id="results"></ol>
     <iframe id="appFrame" src="../index.html"></iframe>
@@ -480,6 +480,40 @@
                 const args = w().__routeCallArgs;
                 near(args[2], P0.lat, 0.0001, 'sLat = จุดก่อนปิด'); near(args[3], P0.lon, 0.0001, 'sLon = จุดก่อนปิด');
                 return d.km.toFixed(2) + ' กม. (คาด ' + (0.5 + routeKm).toFixed(2) + ' = เส้นตรง ' + straightKm.toFixed(2) + ' ×1.45) · via route (วิธีเก่าได้ ' + (0.5 + straightKm * 1.6).toFixed(2) + ')';
+            });
+
+            // 12) ซ่อนแอป (pagehide) + ticker ยังรันนับเวลาจอดช่วงซ่อน (เบราว์เซอร์ Android บางตัวไม่หยุด interval)
+            //     → กลับมา (pageshow) catch-up ต้องเบิกแบบ "exactly-once" (base+gap) ไม่บวกทับเต็มช่วงซ่อน (double-bill)
+            await runScenario('12. ซ่อนแอป + ticker ยังรัน → เบิกครั้งเดียวพอดี ไม่เบิกซ้ำ', async () => {
+                // เริ่มมิเตอร์จริง (hidden path ทำงานเมื่อ isManualRunning)
+                const p = makePayload({ lastPos: P0, lastPath: [P0] });
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(400);
+                releaseFix(1, P0.lat, P0.lon, 8, 0); // fix แรก: จอดนิ่ง (speed 0) → เริ่มคิดเวลาจอด
+                await wait(2500); // รอ ticker นับเวลาจอดจริง ~2 วิ (ยืนยันกลไกปกติทำงาน)
+                const d1 = readDisplay();
+                assert(d1.traffic >= 11, 'ต้องมีเวลาจอดพื้นฐาน 10 + ticker ก่อนซ่อน (ได้ ' + d1.traffic + ' วิ)');
+                // จำลอง "ซ่อนแอป" (pagehide): ticker ของเบราว์เซอร์ยังรัน → ยังบวกเวลาจอดต่อ (trafficCharging ค้าง true)
+                w().dispatchEvent(new (w().Event)('pagehide'));
+                await wait(12000); // ซ่อน 12 วิ — ticker ยังรัน → นับเวลาจอดเองไปแล้ว ~12 วิ (ตรงกับอาการ double-bill)
+                const d2 = readDisplay();
+                const billedDuringHidden = d2.traffic - d1.traffic;
+                assert(billedDuringHidden >= 9, 'ticker ต้องยังนับเวลาจอดช่วงซ่อนจริง (+' + billedDuringHidden.toFixed(1) + ' วิ) — เงื่อนไขที่จำลอง ticker ยังรัน');
+                // กลับมา (pageshow) → resume + catch-up ขอ fix ยืนยัน แล้วเบิก
+                w().dispatchEvent(new (w().Event)('pageshow'));
+                await wait(300);
+                releaseFix(3, P0.lat, P0.lon, 8, 0); // fix ยืนยันจอดนิ่งทั้งช่วง (speed 0)
+                await wait(1800);
+                const d3 = readDisplay();
+                const addedByCatchUp = d3.traffic - d2.traffic;
+                // ก่อนแก้ (ad6f6db ใช้ trafficSeconds += gapSec): catch-up บวกทับ ~12 วิเต็มอีก → d3-d2 ≈ 12 → fail
+                // หลังแก้: catch-up เบิกเฉพาะส่วนที่ ticker ยังขาด → d3-d2 ≤ ~4 วิ (ticker หลัง fix ใหม่ + timing)
+                assert(addedByCatchUp <= 5, 'catch-up ต้องไม่บวกซ้ำเต็มช่วงซ่อน (ticker นับไปแล้ว +' + billedDuringHidden.toFixed(1) + ' วิ; catch-up เบิกเพิ่ม +' + addedByCatchUp.toFixed(1) + ' วิ ต้อง ≤ 5)');
+                assert(d3.traffic >= d1.traffic + 9, 'เวลาจอดรวมต้องครบช่วงซ่อน (ได้ ' + d3.traffic + ' วิ ≥ ' + (d1.traffic + 9).toFixed(1) + ' วิ)');
+                return 'ซ่อน 12 วิ: ticker นับ +' + billedDuringHidden.toFixed(1) + ' วิ → catch-up เบิกเพิ่ม +' + addedByCatchUp.toFixed(1) + ' วิ (ไม่ซ้ำ) · รวม ' + d3.traffic + ' วิ';
             });
 
             // 7) ประวัติการเบิกคืน: ลง payload (catchUpLog) + โชว์ในหน้าสรุปหลังจบเที่ยว
