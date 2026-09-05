@@ -1069,7 +1069,7 @@
 <div id="tollModal" class="custom-confirm-overlay" style="display: none;">
     <div class="custom-confirm-box" style="padding: 25px 20px;">
         <h3 class="custom-confirm-title" style="margin-bottom: var(--space-field);">เพิ่มค่าทางด่วน</h3>
-        <input type="number" id="tollInput" placeholder="ระบุจำนวนเงิน (บาท)" style="width: 100%; padding: 15px; border-radius: 15px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; text-align: center; font-size: 18px; margin-bottom: var(--space-field); box-sizing: border-box; outline:none;" autocomplete="off">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" id="tollInput" placeholder="ระบุจำนวนเงิน (บาท)" style="width: 100%; padding: 15px; border-radius: 15px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; text-align: center; font-size: 18px; margin-bottom: var(--space-field); box-sizing: border-box; outline:none;" autocomplete="off">
         <div class="custom-confirm-actions">
             <button onclick="window.toggleModal('tollModal', false)" class="btn-cc-cancel">ยกเลิก</button>
             <button onclick="window.confirmToll()" class="btn-cc-ok">เพิ่มเงิน</button>
@@ -2150,13 +2150,11 @@
     window.addSurcharge = (amount, name) => { window.surchargeList.push({ name: name, amount: amount, id: Date.now() }); window.updateSurchargeUI(); };
 
     window.promptToll = () => {
-        // เน้นยอดรวมทางด่วนจริงของเส้นทางก่อน ถ้าไม่มีให้ใช้จำนวนที่กรอกครั้งล่าสุดที่จำไว้
-        const total = window.getRouteTollTotal ? window.getRouteTollTotal() : 0;
-        let last = 0;
-        try { last = parseInt(localStorage.getItem(LAST_TOLL_KEY) || '0', 10) || 0; } catch(e) {}
-        document.getElementById('tollInput').value = (total > 0 ? total : last) || '';
+        // ช่องกรอกเริ่มว่างเสมอ (ไม่เติมเลขค้าง) — กดปุ่มแล้วพิมพ์ได้ทันที แป้นตัวเลขขึ้นมาเลย
+        const inp = document.getElementById('tollInput');
+        inp.value = '';
         window.toggleModal('tollModal', true);
-        setTimeout(() => document.getElementById('tollInput').focus(), 300);
+        setTimeout(() => { inp.focus(); }, 250);
     };
     
     window.confirmToll = () => {
