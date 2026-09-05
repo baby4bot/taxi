@@ -2148,8 +2148,26 @@
 
     window.saveHistory = (name, lat, lon) => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]').filter(i => i.name !== name); h.unshift({ name, lat, lon }); localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 10))); };
     
-    window.showHistory = () => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); if (!h.length) return $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; $('historyList').innerHTML = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ประวัติล่าสุด</span><button class="clear-history-btn" onclick="event.stopPropagation(); localStorage.removeItem('${HISTORY_KEY}'); $('historyList').style.display='none';">ล้าง</button></div>` + h.map(i => `<div class="list-item" onclick="window.selectLocation('${i.name}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span>${i.name}</div>`).join(''); $('historyList').style.display = 'block'; };
+    window.showHistory = () => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); if (!h.length) return $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; $('historyList').innerHTML = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ประวัติล่าสุด</span><button class="clear-history-btn" onclick="event.stopPropagation(); window.clearSearchHistory();">ล้าง</button></div>` + h.map(i => `<div class="list-item" onclick="window.selectLocation('${i.name}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span>${i.name}</div>`).join(''); $('historyList').style.display = 'block'; };
     
+    // 🧹 ปุ่ม "ล้าง" ในหัวข้อประวัติล่าสุด: ลบประวัติทั้งหมดในเครื่อง + ซ่อนรายการทันที
+    // (ต้องเรียกผ่าน window.* — inline onclick เข้าไม่ถึงตัวแปร `$`/HISTORY_KEY ใน module → เดิมพังต้องรีเฟรชถึงจะหาย)
+    window.clearSearchHistory = () => {
+        try { localStorage.removeItem(HISTORY_KEY); } catch(e) {}
+        const h = $('historyList');
+        if (h) { h.innerHTML = ''; h.style.display = 'none'; }
+    };
+
+    // 👆 แตะ/คลิกนอกกล่องค้นหาจุดหมาย → ยุบ dropdown (ประวัติล่าสุด / ผลค้นหา) ทันที เหมือน UX ปกติของแอปค้นหาสถานที่
+    document.addEventListener('click', (e) => {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        if (t.closest('#searchSectionBox')) return; // ยังอยู่ในกล่องค้นหา (พิมพ์/เลือก/ปุ่ม ×) → ปล่อยไว้ ไม่ยุบ
+        const s = $('suggestionList'), h = $('historyList');
+        if (s && s.style.display !== 'none') s.style.display = 'none';
+        if (h && h.style.display !== 'none') h.style.display = 'none';
+    });
+
     // ===== Favorites System =====
     window.getFavorites = () => JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
     
