@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>📐 ตรวจระยะห่างแนวตั้งหลายขนาดจอ</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 10px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.6; max-width: 860px; }
+    pre { background: #0a0e15; border: 1px solid var(--line); border-radius: 12px; padding: 14px; font-size: 12.5px; line-height: 1.5; max-width: 900px; overflow: auto; white-space: pre-wrap; }
+    .ok { color: var(--green); font-weight: 700; }
+    .bad { color: var(--red); font-weight: 700; }
+    #holder { position: fixed; left: -9999px; top: 0; } /* iframe อยู่นอกจอแต่ยังมี layout จริง (media query คำนวณจากความกว้าง iframe) */
+    #holder iframe { display: block; border: 0; }
+</style>
+</head>
+<body>
+<h1>📐 ตรวจระยะห่างแนวตั้งหลายขนาดจอ (เล็ก/กลาง/ใหญ่)</h1>
+<p class="note">
+    โหลดแอปจริง (<code>../index.html</code>) ใน iframe ทีละขนาดจอ แล้ววัดช่องว่างจริงระหว่างบล็อกทุกหน้า:
+    หน้าแรก (ค้นหา→กม./±→การ์ดราคา→ปุ่มเริ่ม→ไอคอน) · เมนูซ้าย · ฟอร์มโปรไฟล์ · สรุปเที่ยว<br>
+    ต้องเปิดผ่าน HTTP (เช่น http://127.0.0.1:58911/tests/space-check.html) — เปิดแล้วรันอัตโนมัติ
+</p>
+<pre id="out">กำลังรัน...</pre>    <div id="holder"></div>
+
+<script>
+    (function () {
+        const holder = document.getElementById('holder');
+        const out = document.getElementById('out');
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        const WIDTHS = [360, 390, 414, 768, 1024]; // เล็ก / กลาง / ใหญ่
+
+        function makeFrame() {
+            const f = document.createElement('iframe');
+            f.style.width = '360px'; f.style.height = '820px'; f.style.border = '0';
+            f.src = '../index.html';
+            holder.appendChild(f);
+            return f;
+        }
+
+        async function loadApp(frame) {
+            await new Promise(r => frame.addEventListener('load', r, { once: true }));
+            await wait(300);
+            const t0 = Date.now();
+            while (Date.now() - t0 < 25000) {
+                const cw = frame.contentWindow;
+                if (cw && cw.document && typeof cw.openProfileModal === 'function' &&
+                    typeof cw.renderTripSummary === 'function' && typeof cw.toggleSideMenu === 'function') {
+                    // รอ main screen มองเห็น (search section แสดง)
+                    const t1 = Date.now();
+                    while (Date.now() - t1 < 10000) {
+                        const s = cw.document.getElementById('searchSectionBox');
+                        if (s && s.offsetParent !== null) return cw;
+                        await wait(60);
+                    }
+                    return cw;
+                }
+                await wait(60);
+            }
+            throw new Error('แอปโหลดไม่ทัน (ต้องเปิดผ่าน HTTP)');
+        }
+
+        function measureMain(cw) {
+            const d = cw.document;
+            const get = id => d.getElementById(id);
+            const q = sel => d.querySelector(sel);
+            const els = {
+                search: get('searchSectionBox'),
+                kmRow: get('manualSectionBox'),
+                fareCard: q('.result-container'),
+                actionRow: q('.action-row'),
+                iconsRow: q('div.flex-center[style*="flex-shrink: 0"]')
+            };
+            const keys = Object.keys(els);
+            const gaps = {};
+            for (let i = 0; i < keys.length - 1; i++) {
+                gaps[keys[i] + '->' + keys[i + 1]] = Math.round(els[keys[i + 1]].getBoundingClientRect().top - els[keys[i]].getBoundingClientRect().bottom);
+            }
+            return gaps;
+        }
+
+        async function measureMenu(cw) {
+            cw.toggleSideMenu(true);
+            await wait(600); // รอ animation
+            const d = cw.document;
+            const box = d.getElementById('sideMenuBox');
+            const header = box.querySelector('.side-menu-header');
+            const divs = box.querySelectorAll('hr.side-divider');
+            const items = box.querySelectorAll('.side-menu-item');
+            const g = el => Math.round(el.getBoundingClientRect().top);
+            const b = el => Math.round(el.getBoundingClientRect().bottom);
+            // วัดเฉพาะรายการที่มองเห็นจริง (ไม่นับ display:none) และไม่ใช่ปุ่มออกจากระบบ
+            // (ออกจากระบบถูกดันไว้ล่างสุดของเมนูด้วย margin-top:auto — แยกกลุ่มกันโดยตั้งใจ)
+            const visible = [...items].filter(el => el.offsetParent !== null && !el.classList.contains('logout-item'));
+            const r = {
+                headerToDiv: g(divs[0]) - b(header),
+                divToItem: g(visible[0]) - b(divs[0]),
+                itemGaps: []
+            };
+            for (let i = 0; i < visible.length - 1; i++) {
+                r.itemGaps.push(g(visible[i + 1]) - b(visible[i]));
+            }
+            cw.toggleSideMenu(false);
+            await wait(400);
+            return r;
+        }
+
+        async function measureProfile(cw) {
+            cw.openProfileModal();
+            await wait(600);
+            const d = cw.document;
+            const q = s => d.querySelector('#profileModal ' + s);
+            const labels = [...d.querySelectorAll('#profileModal label')];
+            const nameL = labels.find(l => l.textContent.includes('ชื่อที่แสดง'));
+            const phL = labels.find(l => l.textContent.includes('เบอร์โทรศัพท์'));
+            const carL = labels.find(l => l.textContent.includes('ประเภทรถ'));
+            const capL = labels.find(l => l.textContent.includes('เบิกเวลาจอด'));
+            const vibL = labels.find(l => l.textContent.includes('สั่นเมื่อ'));
+            const avatar = d.querySelector('#profileModal .modal-content-scroll > div[style*="justify-content: center"]');
+            const save = q('#saveProfileBtn');
+            const g = el => Math.round(el.getBoundingClientRect().top);
+            const b = el => Math.round(el.getBoundingClientRect().bottom);
+            const r = {
+                avatarToName: g(nameL) - b(avatar),
+                nameToPhone: g(phL) - b(q('#editDisplayName')),
+                phoneToCar: g(carL) - b(q('#editPhone')),
+                carToCap: g(capL) - b(q('.taxi-type-selector')),
+                vibToSave: g(save) - b(vibL)
+            };
+            cw.toggleModal('profileModal', false);
+            await wait(400);
+            return r;
+        }
+
+        async function measureSummary(cw) {
+            const now = Date.now();
+            cw.renderTripSummary({
+                startTime: now - 3600000, endTime: now, km: 5.2, trafficSec: 420,
+                surcharges: [{ name: 'ค่าทางด่วน', amount: 50 }],
+                pauses: [{ s: now - 3000000, r: now - 2900000 }],
+                catchUps: [{ type: 'kill', from: now - 2900000, to: now - 2700000, idleSec: 90, km: 0, via: 'idle', fareDelta: 4 }],
+                baseFare: 35, destName: 'สนามบินดอนเมือง'
+            });
+            cw.toggleModal('tripSummaryOverlay', true);
+            await wait(600);
+            const box = cw.document.getElementById('tsSummaryContent');
+            const divs = [...box.children];
+            const gaps = [];
+            for (let i = 0; i < divs.length - 1; i++) {
+                gaps.push(Math.round(divs[i + 1].getBoundingClientRect().top - divs[i].getBoundingClientRect().bottom));
+            }
+            cw.toggleModal('tripSummaryOverlay', false);
+            await wait(400);
+            return gaps;
+        }
+
+        async function measure(width) {
+            const frame = makeFrame();
+            frame.style.width = width + 'px';
+            const cw = await loadApp(frame);
+            const r = {
+                vw: cw.innerWidth,
+                main: measureMain(cw),
+                menu: await measureMenu(cw),
+                profile: await measureProfile(cw),
+                summary: await measureSummary(cw)
+            };
+            frame.remove(); // ทำลาย iframe หลังวัด (กัน modal/state ค้าง)
+            return r;
+        }
+
+        async function run() {
+            const results = [];
+            for (const w of WIDTHS) {
+                try {
+                    const r = await measure(w);
+                    // ตรวจว่าแต่ละกลุ่มเท่ากัน (±1px)
+                    const chk = (label, vals) => {
+                        const arr = Array.isArray(vals) ? vals : Object.values(vals);
+                        // ว่าง = ไม่มีคู่ให้เทียบ (เช่น มีรายการเมนูที่มองเห็นแค่ตัวเดียว) → ถือว่าผ่าน
+                        const ok = arr.length === 0 || (arr.length > 1 && (Math.max(...arr) - Math.min(...arr)) <= 1);
+                        return { label, vals: arr, ok };
+                    };
+                    r.checks = [
+                        chk('หน้าแรก', r.main),
+                        chk('เมนู (ระหว่างส่วน)', { hd: r.menu.headerToDiv, di: r.menu.divToItem }),
+                        chk('เมนู (ระหว่างรายการ)', r.menu.itemGaps),
+                        chk('โปรไฟล์', r.profile),
+                        chk('สรุป', r.summary)
+                    ];
+                    results.push(r);
+                } catch (e) {
+                    results.push({ width: w, error: String(e) });
+                }
+            }
+            window.__spaceResults = results;
+            out.innerHTML = results.map(r => {
+                if (r.error) return '<div class="bad">❌ ' + r.width + 'px — ' + r.error + '</div>';
+                const lines = ['<div>📱 ' + r.vw + 'px (ขอ ' + r.width + ')</div>'];
+                lines.push('<div>&nbsp;&nbsp;หน้าแรก: ' + JSON.stringify(r.main) + '</div>');
+                lines.push('<div>&nbsp;&nbsp;เมนู: ' + JSON.stringify(r.menu) + '</div>');
+                lines.push('<div>&nbsp;&nbsp;โปรไฟล์: ' + JSON.stringify(r.profile) + '</div>');
+                lines.push('<div>&nbsp;&nbsp;สรุป: ' + JSON.stringify(r.summary) + '</div>');
+                r.checks.forEach(c => {
+                    lines.push('<div>&nbsp;&nbsp;' + (c.ok ? '<span class="ok">✅ ' : '<span class="bad">❌ ') + c.label + ' เท่ากัน (±1) — ' + JSON.stringify(c.vals) + '</span></div>');
+                });
+                return lines.join('\n');
+            }).join('\n\n');
+        }
+
+        run();
+    })();
+</script>
+</body>
+</html>
