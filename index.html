@@ -2775,8 +2775,18 @@
             window.startNavigationMap(p.sLat, p.sLon, p.dLat, p.dLon, p.name || $('destInput').value, currentTrueRemainKm || p.km || 0, p.coords);
         }
     };
-    // ปิดหน้าสรุป (ยังไม่เริ่ม) — เก็บค่าระยะทาง/ราคาไว้บนหน้าหลัก ให้คนขับกดเริ่มมิเตอร์เองทีหลังได้
-    window.closeRoutePreview = () => { window.toggleModal('routePreviewModal', false); };
+    // ปิดหน้าสรุป (ยังไม่เริ่ม) = ยกเลิกการค้นหานี้ → กลับสถานะเริ่มต้นเหมือนเปิดแอปใหม่ (ช่องค้นหาว่าง / กม.=0 / ราคา+ทางด่วนรีเซ็ต)
+    window.closeRoutePreview = () => {
+        window.toggleModal('routePreviewModal', false);
+        window.__pendingRouteStart = null; // ล้างเส้นทางที่จดไว้รอ
+        if (!window.isManualRunning) { // ยังไม่ได้เริ่มมิเตอร์ = ล้างได้เต็มที่
+            window.clearDestination();   // ล้างจุดหมาย/ทางด่วน/ราคาประเมิน → 0
+            $('kmInput').value = '0';
+            window.updateFareEstimation(0);
+            window.checkAppStatus();
+            window.syncFareResetBtn();
+        }
+    };
     // สลับโหมด เลี่ยง/ขึ้นทางด่วน ภายในหน้าสรุป → คำนวณเส้นทางใหม่ทันที + อัปเดตตัวเลขในสรุป
     window.previewSetToll = async (toll) => {
         const p = window.__pendingRouteStart;
