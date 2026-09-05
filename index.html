@@ -1135,6 +1135,60 @@
     </div>
 </div>
 
+<div id="routePreviewModal" class="custom-confirm-overlay" style="display: none;">
+    <div class="custom-confirm-box" style="max-width: 390px; padding: 26px 18px; border-radius: 26px; position: relative;">
+        <button class="btn-close-floating" style="top: 14px; right: 14px; transform: none;" onclick="window.closeRoutePreview()" title="ปิด (ยังไม่เริ่ม)"><span class="material-symbols-outlined">close</span></button>
+        <h3 class="custom-confirm-title" style="font-size: 19px; margin-bottom: 4px;">📍 สรุปเส้นทาง</h3>
+        <div style="font-size: 12.5px; color: var(--text-dim); margin-bottom: 14px;">ตรวจสอบข้อมูลก่อนเริ่ม — มิเตอร์ยังไม่เดิน</div>
+
+        <div id="rpDestName" style="font-size: 14.5px; font-weight: 600; color: white; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 10px 12px; margin-bottom: 12px; word-break: break-word; text-align: left;"></div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+            <div style="background: rgba(0,0,0,0.28); border-radius: 13px; padding: 9px 4px; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:10.5px; color: var(--text-dim); margin-bottom: 2px;">ระยะทาง</div>
+                <div style="font-size:16px; font-weight:700; color: var(--neon-green); white-space: nowrap;"><span id="rpKm">0</span><span style="font-size:11px;"> กม.</span></div>
+            </div>
+            <div style="background: rgba(0,0,0,0.28); border-radius: 13px; padding: 9px 4px; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:10.5px; color: var(--text-dim); margin-bottom: 2px;">เวลาประเมิน</div>
+                <div style="font-size:13px; font-weight:700; color: var(--neon-yellow); white-space: nowrap;"><span id="rpTime">--</span></div>
+            </div>
+            <div style="background: rgba(0,0,0,0.28); border-radius: 13px; padding: 9px 4px; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:10.5px; color: var(--text-dim); margin-bottom: 2px;">ถึงประมาณ</div>
+                <div style="font-size:14px; font-weight:700; color: #4fc3f7; white-space: nowrap;"><span id="rpArrive">--:--</span><span style="font-size:10px;"> น.</span></div>
+            </div>
+        </div>
+
+        <div style="font-size:12px; color: var(--text-dim); margin-bottom: 7px; text-align:left;">เลือกเส้นทาง</div>
+        <div style="display:flex; gap:10px; margin-bottom: 10px;">
+            <button id="rpBtnAvoid" class="small-toll-btn active" style="flex:1; width:auto; height:46px; border-radius:14px; gap:6px;" onclick="window.previewSetToll(false)" title="เลี่ยงทางด่วน">
+                <span class="material-symbols-outlined" style="font-size:20px;">route</span>
+                <span style="font-size:12.5px; font-weight:600;">เลี่ยงทางด่วน</span>
+            </button>
+            <button id="rpBtnUse" class="small-toll-btn" style="flex:1; width:auto; height:46px; border-radius:14px; gap:6px;" onclick="window.previewSetToll(true)" title="ขึ้นทางด่วน">
+                <span class="material-symbols-outlined" style="font-size:20px;">add_road</span>
+                <span style="font-size:12.5px; font-weight:600;">ขึ้นทางด่วน</span>
+            </button>
+        </div>
+
+        <div id="rpTollRow" style="display:none; background: rgba(255,152,0,0.10); border:1px solid rgba(255,152,0,0.4); color:#ffb74d; border-radius:12px; padding:7px 10px; font-size:12.5px; margin-bottom:10px;"></div>
+
+        <div style="background: linear-gradient(135deg, rgba(46,204,113,0.12), rgba(46,204,113,0.02)); border: 1px solid rgba(46,204,113,0.28); border-radius: 15px; padding: 11px 12px; margin-bottom: 16px; display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <div style="text-align:left; min-width:0;">
+                <div style="font-size:11.5px; color:var(--text-dim);">ค่าโดยสารโดยประมาณ (มิเตอร์)</div>
+                <div style="font-size:11px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="rpFareDetail">--</div>
+            </div>
+            <div id="rpFareTotal" style="font-size:24px; font-weight:700; color:white; white-space:nowrap;">0 ฿</div>
+        </div>
+
+        <div class="custom-confirm-actions">
+            <button class="btn-cc-cancel" onclick="window.closeRoutePreview()" title="ปิดหน้าต่างนี้ ยังไม่เริ่มมิเตอร์">ดูอย่างเดียว</button>
+            <button class="btn-cc-ok" onclick="window.startTripFromPreview()" style="background: linear-gradient(135deg,#2ecc71,#27ae60); display:flex; align-items:center; justify-content:center; gap:6px; font-size:15px;">
+                <span class="material-symbols-outlined" style="font-size:19px;">play_circle</span> เริ่มมิเตอร์
+            </button>
+        </div>
+    </div>
+</div>
+
 <div id="appLoader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); z-index: 999999; display: flex; justify-content: center; align-items: center; color: var(--neon-yellow); font-size: 20px; flex-direction: column; gap: 15px;">
     <span class="material-symbols-outlined" style="font-size: 40px; animation: floatBubble 2s infinite;">local_taxi</span>
     <div style="font-weight: 600;">กำลังโหลดระบบ...</div>
@@ -2617,8 +2671,9 @@
                 if (window.isTollwayMode && route.tolls && route.tolls.hasTolls) {
                     window.showToast(`🛣️ ทางด่วน ${route.tolls.booths.length} ช่วง รวม ${route.tolls.total}฿`, false);
                 }
+                // 🚦 ยังไม่เริ่มมิเตอร์/นำทางอัตโนมัติ — จดข้อมูลเส้นทางนี้ไว้รอ (จุดเริ่ม/ปลาย/พิกัด) ให้ modal "สรุปเส้นทาง" ใช้ตอนกดปุ่มเริ่ม
+                window.__pendingRouteStart = { sLat, sLon, dLat, dLon, name, km: route.km, sec: route.sec, coords: route.coords || [] };
                 window.processRoute(currentTrueRemainKm, currentTrueRemainSec, name);
-                window.startNavigationMap(sLat, sLon, dLat, dLon, name, route.km, route.coords);
                 if (label) window.showToast(label, false);
                 return true;
             }
@@ -2669,7 +2724,80 @@
         
         window.updateFareEstimation(km); 
         window.checkAppStatus(); 
+        // 🚦 หยุดเริ่มมิเตอร์อัตโนมัติ: หลังคำนวณเส้นทาง ให้เปิด "สรุปเส้นทาง" ให้คนขับตรวจสอบก่อน (ระยะทาง/เวลา/ถึงกี่โมง/โหมดทางด่วน/ราคา)
+        // แล้วค่อยกดปุ่ม "เริ่มมิเตอร์" ในหน้าสรุป (หรือปิดไว้ดูอย่างเดียวได้)
+        if (window.__pendingRouteStart) window.__pendingRouteStart.name = name;
+        window.refreshRoutePreview();
+        window.toggleModal('routePreviewModal', true);
+    };
+    
+    // 📋 สรุปเส้นทาง (โผล่หลังเลือกจุดหมาย ยังไม่เริ่มมิเตอร์) — เริ่มจริงเมื่อกดปุ่ม "เริ่มมิเตอร์" ในหน้าสรุป
+    window.refreshRoutePreview = () => {
+        const p = window.__pendingRouteStart || {};
+        const km = (typeof currentTrueRemainKm === 'number' && currentTrueRemainKm > 0) ? currentTrueRemainKm : (p.km || 0);
+        const sec = (typeof currentTrueRemainSec === 'number' && currentTrueRemainSec > 0) ? currentTrueRemainSec : (p.sec || 0);
+        const name = p.name || ($('destInput') ? $('destInput').value : '');
+        const el = id => document.getElementById(id);
+        if (el('rpDestName')) el('rpDestName').innerText = '🚕 ไปที่: ' + name;
+        if (el('rpKm')) el('rpKm').innerText = km.toFixed(2);
+        if (el('rpTime')) el('rpTime').innerText = sec > 0 ? formatDuration(Math.max(1, Math.ceil(sec / 60))) : '--';
+        if (el('rpArrive')) el('rpArrive').innerText = sec > 0 ? new Date(Date.now() + sec * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+        const isToll = !!window.isTollwayMode;
+        if (el('rpBtnAvoid')) el('rpBtnAvoid').className = 'small-toll-btn' + (isToll ? '' : ' active');
+        if (el('rpBtnUse')) el('rpBtnUse').className = 'small-toll-btn' + (isToll ? ' toll-active' : '');
+        // ค่าทางด่วนของเส้นทางจริง (เฉพาะโหมดขึ้นทางด่วน)
+        const t = window.currentTollInfo;
+        const tollTotal = (isToll && t && t.hasTolls && t.booths && t.booths.length > 0) ? (t.total || 0) : 0;
+        const tollRow = el('rpTollRow');
+        if (tollRow) {
+            if (tollTotal > 0) {
+                tollRow.style.display = 'block';
+                tollRow.innerHTML = '🛣️ ค่าทางด่วน (โดยประมาณ) ' + t.booths.map(b => b.price + '฿').join(' + ') + ' = <b>' + tollTotal + ' ฿</b>';
+            } else {
+                tollRow.style.display = 'none';
+            }
+        }
+        // ราคาโดยประมาณตามมิเตอร์ (ฐาน + ระยะทาง) + ทางด่วนถ้าเลือกขึ้น
+        const distFare = window.calcThaiMeterDist(km);
+        const meterFare = window.baseFare + Math.floor(distFare / 2) * 2;
+        const total = meterFare + tollTotal;
+        if (el('rpFareDetail')) el('rpFareDetail').innerText = (tollTotal > 0)
+            ? 'มิเตอร์ ' + meterFare.toLocaleString('th-TH') + ' ฿ + ทางด่วน ' + tollTotal.toLocaleString('th-TH') + ' ฿'
+            : 'ค่าแรก ' + window.baseFare + ' ฿ + ตามระยะทาง';
+        if (el('rpFareTotal')) el('rpFareTotal').innerText = total.toLocaleString('th-TH') + ' ฿';
+    };
+    // เริ่มมิเตอร์จริงจากหน้าสรุป (คนขับยืนยันแล้ว) — เดินตาม flow เดิม: เริ่มมิเตอร์ + เตรียม navigation (แผนที่ถูกปิดใช้งาน = แค่แสดงราคา/ข้อมูล)
+    window.startTripFromPreview = () => {
+        const p = window.__pendingRouteStart || {};
+        window.toggleModal('routePreviewModal', false);
         window.startMeterAndTracking();
+        if (p.sLat && p.sLon && p.dLat && p.dLon && destLoc) {
+            window.startNavigationMap(p.sLat, p.sLon, p.dLat, p.dLon, p.name || $('destInput').value, currentTrueRemainKm || p.km || 0, p.coords);
+        }
+    };
+    // ปิดหน้าสรุป (ยังไม่เริ่ม) — เก็บค่าระยะทาง/ราคาไว้บนหน้าหลัก ให้คนขับกดเริ่มมิเตอร์เองทีหลังได้
+    window.closeRoutePreview = () => { window.toggleModal('routePreviewModal', false); };
+    // สลับโหมด เลี่ยง/ขึ้นทางด่วน ภายในหน้าสรุป → คำนวณเส้นทางใหม่ทันที + อัปเดตตัวเลขในสรุป
+    window.previewSetToll = async (toll) => {
+        const p = window.__pendingRouteStart;
+        if (!p) return;
+        if (window.isTollwayMode === toll) { window.refreshRoutePreview(); return; }
+        applyTollModeState(toll, true); // บันทึกทั้ง localStorage + Firestore (ต่อบัญชี) เหมือนปุ่มโหมดอื่น ๆ
+        window.showToast(toll ? '🛣️ ขึ้นทางด่วน' : '🚗 เลี่ยงทางด่วน');
+        if (p.dLat && p.dLon && p.sLat && p.sLon) {
+            const route = await window.fetchRouteFromTomTom(p.dLat, p.dLon, p.sLat, p.sLon);
+            if (route) {
+                currentTrueRemainKm = route.km; currentTrueRemainSec = route.sec;
+                window.currentTollInfo = route.tolls || null;
+                p.km = route.km; p.sec = route.sec; p.coords = route.coords || [];
+                $('kmInput').value = route.km.toFixed(2);
+                window.updateFareEstimation(route.km);
+                window.updateTollDisplay();
+            } else {
+                window.showToast('คำนวณเส้นทางใหม่ไม่ได้ (โควตา/เน็ต) — ยังใช้เส้นทางเดิม', true);
+            }
+        }
+        window.refreshRoutePreview();
     };
     
     window.playSilentAudio = () => {
