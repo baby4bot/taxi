@@ -1131,7 +1131,7 @@
         /* กัน double-tap zoom ตอนแตะฟิลด์/ปุ่มบนมือถือ */
         input, button, select, textarea { touch-action: manipulation; }
 
-        /* ===== แบนเนอร์แนะนำติดตั้งแอปเต็มจอ (PWA) — แสดงครั้งเดียว ===== */
+        /* ===== แบนเนอร์แนะนำติดตั้งแอปเต็มจอ (PWA) — ชวนใหม่ทุกครั้งจนกว่าจะติดตั้ง (ปิด = งด 7 วัน) ===== */
         .install-banner {
             align-items: center; gap: 10px;
             margin: 0 0 var(--space-section) 0;
@@ -1298,7 +1298,7 @@
                                                 
     </div>
                                                        
-    <!-- 📱 แนะนำติดตั้งแอปเต็มจอ (PWA) — แสดงครั้งเดียวจนกว่าจะปิด/ติดตั้ง -->
+    <!-- 📱 แนะนำติดตั้งแอปเต็มจอ (PWA) — ชวนใหม่ทุกครั้งจนกว่าจะติดตั้ง (กดปิด = งดถาม 7 วัน) -->
     <div id="installBanner" class="install-banner" style="display:none;">
         <div class="ib-icon"><span class="material-symbols-outlined">install_mobile</span></div>
         <div class="ib-text">
@@ -2428,13 +2428,18 @@
         });
     })();
 
-    /* ===== 📱 แบนเนอร์แนะนำติดตั้งแอปเต็มจอ (PWA) — แสดงครั้งเดียวจนกว่าจะปิด/ติดตั้ง ===== */
+    /* ===== 📱 แบนเนอร์แนะนำติดตั้งแอปเต็มจอ (PWA) =====
+       หลักการ: ถ้ายังไม่ได้ติดตั้ง → ชวนติดตั้ง (กด “ปิด” = งดถาม 7 วัน แล้วกลับมาชวนใหม่)
+       ถ้าติดตั้งแล้ว (เปิดจากไอคอน = standalone) → ซ่อนอัตโนมัติ และเคลียร์แฟล็ก
+       → ถ้าลบไอคอนทิ้งแล้วเปิดผ่านเบราว์เซอร์อีกครั้ง = ชวนใหม่อีกครั้ง (ไม่ผูกถาวร) */
     let deferredInstallPrompt = null;
     const PWA_SKIP_KEY = 'taxi_pwa_install_skip';
+    const PWA_SKIP_MS = 7 * 24 * 60 * 60 * 1000; // กด “ปิด” แล้วไม่ถาม 7 วัน
     const isStandaloneApp = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
     const isIOSDevice = () => /iP(hone|ad|od)/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const hideInstallBanner = () => { const b = $('installBanner'); if (b) b.style.display = 'none'; };
-    const pwaMarkDismissed = () => { try { localStorage.setItem(PWA_SKIP_KEY, '1'); } catch(e) {} hideInstallBanner(); };
+    const pwaMarkDismissed = () => { try { localStorage.setItem(PWA_SKIP_KEY, String(Date.now())); } catch(e) {} hideInstallBanner(); };
+    const pwaClearDismissed = () => { try { localStorage.removeItem(PWA_SKIP_KEY); } catch(e) {} };
     window.pwaInstallDismiss = pwaMarkDismissed;
     window.pwaInstallNow = async () => {
         if (deferredInstallPrompt) {
@@ -2442,7 +2447,8 @@
                 deferredInstallPrompt.prompt();
                 const choice = await deferredInstallPrompt.userChoice;
                 if (choice && choice.outcome === 'accepted') {
-                    pwaMarkDismissed();
+                    pwaClearDismissed();
+                    hideInstallBanner();
                     window.showToast('ติดตั้งแล้ว — เปิดจากไอคอนแอปบนหน้าจอหลักเพื่อเต็มจอถาวร', false);
                 } else {
                     window.showToast('ไม่เป็นไร — กด “ปิด” ได้ถ้ายังไม่ติดตั้ง', false);
@@ -2457,7 +2463,10 @@
         const b = $('installBanner'); if (!b) return;
         if (isStandaloneApp()) return;                       // เปิดจากแอปที่ติดตั้งแล้ว = ไม่ต้องแนะนำ
         if (window.isManualRunning) return;                  // กำลังวิ่งเที่ยว = ไม่รบกวน
-        try { if (localStorage.getItem(PWA_SKIP_KEY) === '1') return; } catch(e) {} // เคยปิดแล้ว = ไม่ถามอีก
+        try {
+            const skip = localStorage.getItem(PWA_SKIP_KEY);
+            if (skip) { const t = parseInt(skip, 10); if (!isNaN(t) && (Date.now() - t) < PWA_SKIP_MS) return; } // กดปิดแล้วยังไม่ครบ 7 วัน
+        } catch(e) {}
         const main = $('mainApp');
         if (main && main.style.display === 'none') return;   // ยังไม่ได้ล็อกอิน
         // หน้าจอใหญ่ (คอมพิวเตอร์) ที่ไม่มีปุ่มติดตั้ง = ข้ามไป; มือถือที่ไม่มี beforeinstallprompt (iOS/อื่น ๆ) = ยังโชว์คำแนะนำได้
@@ -2471,7 +2480,7 @@
         b.style.display = 'flex';
     };
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstallPrompt = e; window.tryShowInstallBanner(); });
-    window.addEventListener('appinstalled', () => { deferredInstallPrompt = null; pwaMarkDismissed(); });
+    window.addEventListener('appinstalled', () => { deferredInstallPrompt = null; pwaClearDismissed(); hideInstallBanner(); });
     // สำรอง: ถ้าเข้าแอปแล้วบนมือถือแต่เบราว์เซอร์ไม่ส่ง beforeinstallprompt (iOS/อื่น ๆ) → ลองโชว์ครั้งเดียวหลังโหลด
     setTimeout(() => { if (window.tryShowInstallBanner) window.tryShowInstallBanner(); }, 3000);
     // ถ้าเริ่มเที่ยว/วิ่งจริงระหว่างที่แบนเนอร์ยังโชว์ → ซ่อนอัตโนมัติไม่ให้กวน
