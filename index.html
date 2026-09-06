@@ -51,7 +51,7 @@
         .flex-center { display: flex; align-items: center; justify-content: center; }
         
         #toastBox {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            position: fixed; top: max(50%, calc(env(safe-area-inset-top, 0px) + 265px)); left: 50%; transform: translate(-50%, -50%); /* ล่างหัวโปรแกรม+ป้ายสถานะเสมอ (จอเตี้ยไม่ชนหัว/ป้าย) */
             background: linear-gradient(165deg, #262033, #17131f);
             border: 1px solid rgba(241,196,15,0.45);
             color: white; width: min(82vw, 260px); aspect-ratio: 1 / 1; min-height: 260px;
