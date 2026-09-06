@@ -1899,9 +1899,10 @@
     };
 
     // ตั้งค่าโหมดทางด่วนตามค่าจาก Firestore (บันทึกต่อบัญชี) + เก็บ localStorage เป็นแคช
-    const applyTollModeState = (isToll, saveToServer) => {
+    // keepLocalCache=true → เปลี่ยนเฉพาะเส้นทางปัจจุบัน (window.isTollwayMode + UI) ไม่แตะค่าเริ่มต้นที่คนขับจำไว้ต่อบัญชี
+    const applyTollModeState = (isToll, saveToServer, keepLocalCache) => {
         window.isTollwayMode = !!isToll;
-        try { localStorage.setItem(TOLL_MODE_KEY, isToll ? '1' : '0'); } catch(e) {}
+        if (!keepLocalCache) { try { localStorage.setItem(TOLL_MODE_KEY, isToll ? '1' : '0'); } catch(e) {} }
         applyTollModeUI(isToll);
         if (saveToServer && loggedInUserId) { try { updateDoc(doc(db, "users", loggedInUserId), { tollwayMode: isToll }); } catch(e) {} }
     };
@@ -1909,6 +1910,23 @@
 
     // ใช้ค่าในเครื่องก่อน (โหลดเร็ว) — ค่าจาก Firestore จะถูกยืนยันตอนล็อกอิน (listenToMyUser)
     window.applySavedTollMode = () => { applyTollModeState(localStorage.getItem(TOLL_MODE_KEY) === '1', false); };
+
+    // เส้นทางปัจจุบันมีช่วงทางด่วนจริงหรือไม่ (จาก route.tolls ที่ TomTom คืนมา)
+    window.routeHasToll = () => {
+        const t = window.currentTollInfo;
+        return !!(t && t.hasTolls && (t.total || 0) > 0);
+    };
+    // 🚦 กันไอคอน/ปุ่ม "ขึ้นทางด่วน" ค้างทั้งที่เส้นทางนี้ไม่มีทางด่วนจริง:
+    // ถ้าโหมดเป็น "ขึ้นทางด่วน" แต่เส้นทางปัจจุบันไม่มีทางด่วน → ดีดกลับเป็น "เลี่ยงทางด่วน" เฉพาะเส้นทางนี้
+    // (ค่าเริ่มต้นต่อบัญชียังเป็น "ขึ้นทางด่วน" ไว้ — เส้นทางที่มีทางด่วนจริงรอบหน้าจะยังขึ้นเหมือนเดิม)
+    window.enforceTollModeVsRoute = (notify) => {
+        if (!window.isTollwayMode) return false;        // เลี่ยงอยู่แล้ว = ไม่ต้องทำอะไร
+        if (!destLoc || !window.currentTollInfo) return false; // ยังไม่มีเส้นทางจริง = ไม่ยุ่ง (เช่น วิ่งแบบกรอก กม. เอง)
+        if (window.routeHasToll()) return false;        // มีทางด่วนจริง = คงโหมดขึ้นด่วนไว้
+        applyTollModeState(false, false, true);         // ดีดกลับเป็น "เลี่ยงทางด่วน" (ไม่ลบค่าที่จำไว้ต่อบัญชี)
+        if (notify) window.showToast('เส้นทางนี้ไม่มีทางด่วน ใช้ถนนปกติ', false);
+        return true;
+    };
 
     // รีเซ็ตค่าที่จำไว้ในเครื่อง (โหมดทางด่วน, ประวัติค้นหา, รายการโปรด) — ไม่แตะข้อมูลบัญชี/ประวัติการเดินทาง
     window.resetSettings = async () => {
@@ -1967,7 +1985,9 @@
                         if (route.tolls && route.tolls.hasTolls) {
                             window.showToast(`🛣️ ทางด่วน ${route.tolls.booths.length} ช่วง รวม ${route.tolls.total}฿`, false);
                         } else {
+                            // ขึ้นทางด่วนแล้วเส้นทางนี้ไม่มีทางด่วนจริง → บอกว่าไม่มี + ดีดกลับเป็น "เลี่ยงทางด่วน" (เฉพาะเส้นทางนี้)
                             window.showToast('เส้นทางนี้ไม่มีทางด่วน ใช้ถนนปกติ', false);
+                            window.enforceTollModeVsRoute(false);
                         }
                     }
                     
@@ -2712,8 +2732,13 @@
                 currentTrueRemainSec = route.sec;
                 window.currentTollInfo = route.tolls || null;
                 window.updateTollDisplay();
-                if (window.isTollwayMode && route.tolls && route.tolls.hasTolls) {
-                    window.showToast(`🛣️ ทางด่วน ${route.tolls.booths.length} ช่วง รวม ${route.tolls.total}฿`, false);
+                if (window.isTollwayMode) {
+                    if (window.routeHasToll()) {
+                        window.showToast(`🛣️ ทางด่วน ${route.tolls.booths.length} ช่วง รวม ${route.tolls.total}฿`, false);
+                    } else {
+                        // ค่าเริ่มต้นตั้ง "ขึ้นทางด่วน" แต่เส้นทางนี้ไม่มีทางด่วนจริง → แจ้ง + ดีดกลับเป็น "เลี่ยงทางด่วน" (เฉพาะเส้นทางนี้)
+                        window.enforceTollModeVsRoute(true);
+                    }
                 }
                 // 🚦 ยังไม่เริ่มมิเตอร์/นำทางอัตโนมัติ — จดข้อมูลเส้นทางนี้ไว้รอ (จุดเริ่ม/ปลาย/พิกัด) ให้ modal "สรุปเส้นทาง" ใช้ตอนกดปุ่มเริ่ม
                 window.__pendingRouteStart = { sLat, sLon, dLat, dLon, name, km: route.km, sec: route.sec, coords: route.coords || [] };
@@ -2852,6 +2877,8 @@
                 $('kmInput').value = route.km.toFixed(2);
                 window.updateFareEstimation(route.km);
                 window.updateTollDisplay();
+                // เลือก "ขึ้นทางด่วน" ในหน้าสรุปแล้วเส้นทางไม่มีทางด่วนจริง → แจ้งว่าไม่มี + ดีดกลับเป็น "เลี่ยงทางด่วน"
+                if (toll) window.enforceTollModeVsRoute(true);
             } else {
                 window.showToast('คำนวณเส้นทางใหม่ไม่ได้ (โควตา/เน็ต) — ยังใช้เส้นทางเดิม', true);
             }
@@ -4025,6 +4052,8 @@
                 if (window.isTollwayMode) {
                     window.currentTollInfo = route.tolls || null;
                     window.updateTollDisplay();
+                    // รีเฟรชเส้นทางแล้วพบว่าไม่มีทางด่วนจริง → ดีดกลับเป็นเลี่ยง (เงียบ ไม่รบกวนตอนขับ)
+                    if (window.enforceTollModeVsRoute) window.enforceTollModeVsRoute(false);
                 }
             }
         }, 120000); // โพล TomTom ทุก 120 วิ (ประหยัดโควตา 2,500 ครั้ง/วัน เมื่อใช้กันหลายคน)
