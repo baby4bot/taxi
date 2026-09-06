@@ -2271,7 +2271,8 @@
             try { req(); } catch (e) { window.showToast("กดเต็มจอไม่สำเร็จ", true); }
         } else {
             (document.exitFullscreen || document.webkitExitFullscreen || function () {}).call(document);
-            window.__userLeftFs = true; // กดออกเองจากเมนู → ครั้งนี้ไม่ออโต้เด้งกลับ (จนกว่าจะกดเปิดเอง)
+            window.__userLeftFs = true; // กดออกเองจากเมนู → รอบนี้ไม่เด้งกลับ แต่แตะครั้งถัดไปกลับเต็มจอให้
+            __lastFsTry = 0; // ปลดคูลดาวน์ → แตะถัดไปกลับเต็มจอได้ทันที
         }
         setTimeout(window.syncFullscreenLabel, 400);
     };
@@ -2284,12 +2285,12 @@
        Android Chrome/Firefox/Edge = ซ่อนแถบเบราว์เซอร์ เหมือนเปิดแอปจริง
        iOS Safari ไม่มี Fullscreen API สำหรับหน้าเว็บ (ทำจากโค้ดไม่ได้) → ต้องติดตั้ง PWA/เพิ่มหน้าจอหลัก
        (แบนเนอร์แนะนำติดตั้งด้านบนจะโชว์วิธีให้อยู่แล้ว) */
-    window.__userLeftFs = false; // ผู้ใช้กด "ออกจากเต็มจอ" ในเมนูเอง → ไม่แทรกแซงอีก (จนกว่าจะกดเปิดเอง)
+    window.__userLeftFs = false; // ผู้ใช้กด "ออกจากเต็มจอ" ในเมนู → ไม่เด้งกลับในจังหวะเดียวกัน (แตะครั้งถัดไปกลับเต็มจอให้)
     window.userAutoFs = true; // ค่าเริ่มต้น: ขอเต็มจออัตโนมัติ — ผู้ใช้ปิดได้ในหน้าโปรไฟล์ (บันทึกต่อบัญชี Firestore)
     window.autoEnterFullscreen = function () {
         try {
-            if (window.userAutoFs === false) return; // ผู้ใช้เลือกปิด "เต็มจออัตโนมัติ" ไว้
-            if (window.__userLeftFs) return;
+            if (window.userAutoFs === false) return; // ผู้ใช้เลือกปิด "เต็มจออัตโนมัติ" ไว้ (หน้าโปรไฟล์)
+            if (window.__userLeftFs) return; // แตะนี้คือปุ่มออกจากเต็มจอ → ข้าม (ปลดล็อกที่ __autoFsTap)
             if (window.top !== window.self) return; // อยู่ใน iframe (เช่นหน้าเทสต์) — ข้าม
             if (document.fullscreenElement || document.webkitFullscreenElement) return;
             const el = document.documentElement;
@@ -2307,6 +2308,8 @@
     let __lastFsTry = 0;
     // ฟังที่ phase bubble → ปุ่มที่แตะทำงานครบก่อน แล้วค่อยเต็มจอ (กันการแตะปุ่มแรกโดนกลืนหาย)
     const __autoFsTap = function () {
+        // แตะนี้คือปุ่ม "ออกจากเต็มจอ" (ทำงานเสร็จแล้ว) → รอบนี้ข้าม + ปลดล็อก ให้แตะครั้งถัดไปกลับเต็มจอทันที
+        if (window.__userLeftFs) { window.__userLeftFs = false; return; }
         const now = Date.now();
         if (now - __lastFsTry < 8000) return; // ถอยหลัง 8 วิ กันรัว (เด้งออกแล้วแตะใหม่ ค่อยขอใหม่)
         __lastFsTry = now;
@@ -2314,6 +2317,17 @@
     };
     window.addEventListener('click', __autoFsTap, { passive: true });
     window.addEventListener('touchend', __autoFsTap, { passive: true });
+
+    /* กลับจากพื้นหลัง/สลับแอปกลางเที่ยว → ปลดคูลดาวน์ + ปลดล็อก ให้แตะครั้งถัดไปกลับเต็มจอทันที
+       (เดิมคูลดาวน์ 8 วิ + ป้าย __userLeftFs อาจค้าง ทำให้แตะแล้วไม่เต็มจอ) */
+    const __armFsOnReturn = () => { __lastFsTry = 0; window.__userLeftFs = false; };
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') __armFsOnReturn(); });
+    window.addEventListener('pageshow', __armFsOnReturn);
+    // ระบบปลดเต็มจอเอง (ไม่ใช่ปุ่มเมนู) → ปลดคูลดาวน์ ให้แตะถัดไปกลับเต็มจอทันที
+    document.addEventListener('fullscreenchange', () => {
+        const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+        if (!isFs && !window.__userLeftFs) __lastFsTry = 0;
+    });
 
     /* ===== 🔒 ล็อก "ดึงลงเพื่อรีเฟรช" (pull-to-refresh) — ตัวเสริมสำหรับ iOS Safari ที่ยังไม่รองรับ CSS overscroll-behavior
        (CSS หลักอยู่ที่ html,body { overscroll-behavior: none } — ครอบคลุม Chrome/Android + Safari 16 ขึ้นไป)
