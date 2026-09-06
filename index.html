@@ -1099,6 +1099,18 @@
             .btn-icon-base { width: 52px; height: 52px; border-radius: 16px; }
             .footer-credit { padding-top: 8px; }
         }
+
+        /* ===== เต็มจอ + ขอบปลอดภัย (safe-area) สำหรับมือถือ =====
+           env(safe-area-inset-*) คืน 0 ในเบราว์เซอร์ธรรมดา → ใช้ max() ให้มีระยะขั้นต่ำเสมอ
+           ตอนติดตั้งเป็นแอปเต็มจอ env จะคืนค่าจริง → หัวข้อเว้นจากแถบสถานะ/รอยบาก และท้ายสุดไม่โดนแถบนำทางบัง */
+        #mainApp {
+            padding-top: max(env(safe-area-inset-top, 0px), 14px);
+            padding-bottom: max(env(safe-area-inset-bottom, 0px), 36px);
+        }
+        .footer-credit { padding-bottom: 6px; }
+        @media (max-width: 380px) {
+            #mainApp { padding-bottom: max(env(safe-area-inset-bottom, 0px), 30px); }
+        }
     </style>
 </head>
 <body>
@@ -1375,6 +1387,7 @@
             <div id="adminMenuBtn" class="side-menu-item" onclick="window.toggleSideMenu(false); setTimeout(() => { window.toggleModal('adminMenuModal', true); }, 300);" style="display: none;"><span class="material-symbols-outlined">manage_accounts</span><span>จัดการผู้ใช้งาน</span></div>
             <div id="roleSettingsBtn" class="side-menu-item" onclick="window.toggleSideMenu(false); setTimeout(() => { window.openRoleSettingsModal(); }, 300);" style="display: none;"><span class="material-symbols-outlined">admin_panel_settings</span><span>ตั้งค่าสิทธิ์การใช้งาน</span></div>
             <div id="serviceMenuBtn" class="side-menu-item" onclick="window.toggleSideMenu(false); setTimeout(() => { window.openServicePortal(true); }, 300);" style="display: none;"><span class="material-symbols-outlined" style="color: #00bcd4;">settings_applications</span><span style="color: #00bcd4;">จัดการ Portal</span></div>
+            <div class="side-menu-item" onclick="window.toggleAppFullscreen()"><span class="material-symbols-outlined">fullscreen</span><span id="fullscreenLabel">เปิดเต็มจอ</span></div>
         </div>
         <hr class="side-divider">
         <div class="side-menu-item logout-item" onclick="window.toggleSideMenu(false); window.logoutApp();"><span class="material-symbols-outlined">logout</span><span>ออกจากระบบ</span></div>
@@ -2145,6 +2158,30 @@
     };
 
     window.openShareModal = () => { window.toggleModal('shareModal', true); };
+
+    /* ===== ปุ่ม "เปิดเต็มจอ" (ซ่อนแถบเบราว์เซอร์บน/ล่าง) ===== */
+    window.syncFullscreenLabel = () => {
+        const lbl = $('fullscreenLabel'); if (!lbl) return;
+        const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+        lbl.textContent = isFs ? 'ออกจากเต็มจอ' : 'เปิดเต็มจอ';
+    };
+    window.toggleAppFullscreen = () => {
+        const el = document.documentElement;
+        const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+        if (!isFs) {
+            const req = el.requestFullscreen ? el.requestFullscreen.bind(el) : (el.webkitRequestFullscreen ? el.webkitRequestFullscreen.bind(el) : null);
+            if (!req) {
+                window.showToast("เบราว์เซอร์นี้ไม่รองรับเต็มจอ — ใช้เมนู ⋮ ของ Chrome → 'เพิ่มไปยังหน้าจอหลัก' แล้วเปิดจากไอคอนแอปแทน", true);
+                return;
+            }
+            try { req(); } catch (e) { window.showToast("กดเต็มจอไม่สำเร็จ", true); }
+        } else {
+            (document.exitFullscreen || document.webkitExitFullscreen || function () {}).call(document);
+        }
+        setTimeout(window.syncFullscreenLabel, 400);
+    };
+    document.addEventListener('fullscreenchange', window.syncFullscreenLabel);
+    document.addEventListener('webkitfullscreenchange', window.syncFullscreenLabel);
 
     window.copyAppShareLink = () => {
         const link = "https://baby4bot.github.io/taxi/";
