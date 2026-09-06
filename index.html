@@ -1102,15 +1102,23 @@
 
         /* ===== เต็มจอ + ขอบปลอดภัย (safe-area) สำหรับมือถือ =====
            env(safe-area-inset-*) คืน 0 ในเบราว์เซอร์ธรรมดา → ใช้ max() ให้มีระยะขั้นต่ำเสมอ
-           ตอนติดตั้งเป็นแอปเต็มจอ env จะคืนค่าจริง → หัวข้อเว้นจากแถบสถานะ/รอยบาก และท้ายสุดไม่โดนแถบนำทางบัง */
+           ตอนติดตั้งเป็นแอปเต็มจอ env จะคืนค่าจริง → หัวข้อเว้นจากแถบสถานะ/รอยบาก และท้ายสุดไม่โดนแถบนำทางบัง
+           ระยะล่างเท่ากับระยะบน (เหมือนหัวโปรแกรม) — โลโก้/Design by ชิดล่างพอดี ไม่ลอยสูง */
         #mainApp {
             padding-top: max(env(safe-area-inset-top, 0px), 14px);
-            padding-bottom: max(env(safe-area-inset-bottom, 0px), 36px);
+            padding-bottom: max(env(safe-area-inset-bottom, 0px), 14px);
         }
-        .footer-credit { padding-bottom: 6px; }
+        .footer-credit { padding-bottom: 0; }
         @media (max-width: 380px) {
-            #mainApp { padding-bottom: max(env(safe-area-inset-bottom, 0px), 30px); }
+            #mainApp { padding-bottom: max(env(safe-area-inset-bottom, 0px), 14px); }
         }
+
+        /* ===== 🔒 กัน "ดึงลงเพื่อรีเฟรช" (pull-to-refresh) — หน้าเป็นแอป เหมือน native =====
+           overscroll-behavior ใช้ได้ Chrome/Android + Safari/iOS 16+ → กัน PTR/เด้งขอบ
+           (iOS Safari เก่ากว่า 16 ใช้ตัวเสริมใน JS ด้านล่าง) */
+        html, body { overscroll-behavior: none; }
+        #mainApp, .modal-overlay, .modal-box, .modal-content-scroll, .dropdown-box, .side-menu,
+        .live-tracker-box, .result-container { overscroll-behavior-y: contain; }
 
         /* ===== แบนเนอร์แนะนำติดตั้งแอปเต็มจอ (PWA) — แสดงครั้งเดียว ===== */
         .install-banner {
@@ -2247,14 +2255,86 @@
                 window.showToast("เบราว์เซอร์นี้ไม่รองรับเต็มจอ — ใช้เมนู ⋮ ของ Chrome → 'เพิ่มไปยังหน้าจอหลัก' แล้วเปิดจากไอคอนแอปแทน", true);
                 return;
             }
+            window.__userLeftFs = false; // ผู้ใช้เปิดเอง → ปลดล็อกไม่ให้ auto เต็มจอแทรกแซงอีก
             try { req(); } catch (e) { window.showToast("กดเต็มจอไม่สำเร็จ", true); }
         } else {
             (document.exitFullscreen || document.webkitExitFullscreen || function () {}).call(document);
+            window.__userLeftFs = true; // กดออกเองจากเมนู → ครั้งนี้ไม่ออโต้เด้งกลับ (จนกว่าจะกดเปิดเอง)
         }
         setTimeout(window.syncFullscreenLabel, 400);
     };
     document.addEventListener('fullscreenchange', window.syncFullscreenLabel);
     document.addEventListener('webkitfullscreenchange', window.syncFullscreenLabel);
+
+    /* ===== 📱 เต็มจออัตโนมัติเมื่อเปิดจากมือถือ (แท็บเบราว์เซอร์) =====
+       ข้อจำกัดของเบราว์เซอร์: เว็บขอเต็มจอตอนโหลดหน้าเองไม่ได้ ต้องเกิดจากท่าทางผู้ใช้
+       → พอผู้ใช้แตะ/กดครั้งแรก (ตอนกำลังจะใช้งานปุ่มอะไรก็ตาม) ระบบจะขอเต็มจอให้ทันที
+       Android Chrome/Firefox/Edge = ซ่อนแถบเบราว์เซอร์ เหมือนเปิดแอปจริง
+       iOS Safari ไม่มี Fullscreen API สำหรับหน้าเว็บ (ทำจากโค้ดไม่ได้) → ต้องติดตั้ง PWA/เพิ่มหน้าจอหลัก
+       (แบนเนอร์แนะนำติดตั้งด้านบนจะโชว์วิธีให้อยู่แล้ว) */
+    window.__userLeftFs = false; // ผู้ใช้กด "ออกจากเต็มจอ" ในเมนูเอง → ไม่แทรกแซงอีก (จนกว่าจะกดเปิดเอง)
+    window.autoEnterFullscreen = function () {
+        try {
+            if (window.__userLeftFs) return;
+            if (window.top !== window.self) return; // อยู่ใน iframe (เช่นหน้าเทสต์) — ข้าม
+            if (document.fullscreenElement || document.webkitFullscreenElement) return;
+            const el = document.documentElement;
+            const req = el.requestFullscreen ? el.requestFullscreen.bind(el) : (el.webkitRequestFullscreen ? el.webkitRequestFullscreen.bind(el) : null);
+            if (!req) return; // iOS Safari ฯลฯ ไม่มี Fullscreen API
+            const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+            if (!coarse || window.innerWidth > 900) return; // คอม/แท็บเล็ตจอใหญ่ ไม่บังคับ
+            try {
+                if (window.matchMedia && (window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: standalone)').matches)) return; // แอปที่ติดตั้ง = เต็มจออยู่แล้ว
+            } catch (e) {}
+            const p = req();
+            if (p && typeof p.catch === 'function') p.catch(function () {});
+        } catch (e) {}
+    };
+    let __lastFsTry = 0;
+    // ฟังที่ phase bubble → ปุ่มที่แตะทำงานครบก่อน แล้วค่อยเต็มจอ (กันการแตะปุ่มแรกโดนกลืนหาย)
+    const __autoFsTap = function () {
+        const now = Date.now();
+        if (now - __lastFsTry < 8000) return; // ถอยหลัง 8 วิ กันรัว (เด้งออกแล้วแตะใหม่ ค่อยขอใหม่)
+        __lastFsTry = now;
+        window.autoEnterFullscreen();
+    };
+    window.addEventListener('click', __autoFsTap, { passive: true });
+    window.addEventListener('touchend', __autoFsTap, { passive: true });
+
+    /* ===== 🔒 ล็อก "ดึงลงเพื่อรีเฟรช" (pull-to-refresh) — ตัวเสริมสำหรับ iOS Safari ที่ยังไม่รองรับ CSS overscroll-behavior
+       (CSS หลักอยู่ที่ html,body { overscroll-behavior: none } — ครอบคลุม Chrome/Android + Safari 16 ขึ้นไป)
+       ตรงนี้กันเฉพาะตอน "ลากลงจากจุดบนสุด" และปลายนิ้วไม่อยู่ในกล่องที่ยังเลื่อนขึ้นได้ = ไม่ไปรบกวนการเลื่อนใน modal */
+    (function lockPullToRefresh() {
+        let startY = null;
+        let targetEl = null;
+        function findScrollableUp(el) {
+            let n = el;
+            while (n && n.nodeType === 1 && n !== document.body) {
+                const cs = window.getComputedStyle(n);
+                const oy = cs.overflowY;
+                if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight + 2) return n;
+                n = n.parentElement;
+            }
+            return null;
+        }
+        document.addEventListener('touchstart', function (e) {
+            startY = (e.touches && e.touches[0]) ? e.touches[0].clientY : null;
+            targetEl = (e.touches && e.touches[0]) ? e.target : null;
+        }, { passive: true });
+        document.addEventListener('touchmove', function (e) {
+            if (startY === null || !e.touches || !e.touches[0]) return;
+            const dy = e.touches[0].clientY - startY;
+            if (dy <= 10) return; // ลากขึ้น/นิ่ง = ไม่ใช่ pull-to-refresh
+            // ปลายนิ้วอยู่ในกล่องที่ยังเลื่อนขึ้นได้ (ไม่ใช่หัวสุด) → ปล่อยให้เลื่อนปกติ
+            const sc = findScrollableUp(targetEl);
+            if (sc && sc.scrollTop > 1) return;
+            const docEl = (document.scrollingElement || document.documentElement);
+            if (docEl.scrollTop <= 1) e.preventDefault(); // อยู่หัวสุดหน้าแล้วลากลง = pull-to-refresh → ปิด
+        }, { passive: false });
+        ['touchend', 'touchcancel'].forEach(function (ev) {
+            document.addEventListener(ev, function () { startY = null; targetEl = null; }, { passive: true });
+        });
+    })();
 
     /* ===== 📱 แบนเนอร์แนะนำติดตั้งแอปเต็มจอ (PWA) — แสดงครั้งเดียวจนกว่าจะปิด/ติดตั้ง ===== */
     let deferredInstallPrompt = null;
