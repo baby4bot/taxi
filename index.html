@@ -1117,8 +1117,15 @@
            overscroll-behavior ใช้ได้ Chrome/Android + Safari/iOS 16+ → กัน PTR/เด้งขอบ
            (iOS Safari เก่ากว่า 16 ใช้ตัวเสริมใน JS ด้านล่าง) */
         html, body { overscroll-behavior: none; }
+        /* กฎสากล: เอเลเมนต์ใดก็ตามในแอป/ในหน้าต่าง อย่าให้เลื่อนล้นต่อถึง document
+           (กัน PTR รั่วจากทุกหน้าจอ รวมถึงหน้าจอ zoom, modal, dropdown, หน้าสรุป ฯลฯ) */
+        #mainApp *, .modal-overlay *, .side-menu * { overscroll-behavior-y: contain; }
         #mainApp, .modal-overlay, .modal-box, .modal-content-scroll, .dropdown-box, .side-menu,
-        .live-tracker-box, .result-container { overscroll-behavior-y: contain; }
+        .live-tracker-box, .result-container, .tracker-zoom-box, .sp-modal-box, .zoom-card-new,
+        .tz-toll-list, .surcharge-list-container, .category-items-container,
+        #suggestionList, #historyList { overscroll-behavior-y: contain; }
+        /* กัน double-tap zoom ตอนแตะฟิลด์/ปุ่มบนมือถือ */
+        input, button, select, textarea { touch-action: manipulation; }
 
         /* ===== แบนเนอร์แนะนำติดตั้งแอปเต็มจอ (PWA) — แสดงครั้งเดียว ===== */
         .install-banner {
@@ -2322,20 +2329,46 @@
             }
             return null;
         }
-        document.addEventListener('touchstart', function (e) {
-            startY = (e.touches && e.touches[0]) ? e.touches[0].clientY : null;
-            targetEl = (e.touches && e.touches[0]) ? e.target : null;
-        }, { passive: true });
-        document.addEventListener('touchmove', function (e) {
-            if (startY === null || !e.touches || !e.touches[0]) return;
+        function shouldBlockPull(e) {
+            if (startY === null || !e.touches || !e.touches[0]) return false;
             const dy = e.touches[0].clientY - startY;
-            if (dy <= 10) return; // ลากขึ้น/นิ่ง = ไม่ใช่ pull-to-refresh
+            if (dy <= 10) return false; // ลากขึ้น/นิ่ง = ไม่ใช่ pull-to-refresh
             // ปลายนิ้วอยู่ในกล่องที่ยังเลื่อนขึ้นได้ (ไม่ใช่หัวสุด) → ปล่อยให้เลื่อนปกติ
             const sc = findScrollableUp(targetEl);
-            if (sc && sc.scrollTop > 1) return;
+            if (sc && sc.scrollTop > 1) return false;
             const docEl = (document.scrollingElement || document.documentElement);
-            if (docEl.scrollTop <= 1) e.preventDefault(); // อยู่หัวสุดหน้าแล้วลากลง = pull-to-refresh → ปิด
-        }, { passive: false });
+            if (docEl.scrollTop <= 1) return true; // อยู่หัวสุดหน้าแล้วลากลง = pull-to-refresh → ปิด
+            // กรณีค้างในหน้าต่างเต็มจอ (modal/zoom/เมนู) — หลังจอไม่เลื่อนเอง → ดึงลง = PTR
+            const inFixed = targetEl && targetEl.closest &&
+                targetEl.closest('.modal-overlay, .side-menu-overlay, .custom-confirm-overlay, .side-menu');
+            return !!inFixed;
+        }
+        function onTouchStart(e) {
+            startY = (e.touches && e.touches[0]) ? e.touches[0].clientY : null;
+            targetEl = (e.touches && e.touches[0]) ? e.target : null;
+        }
+        function onTouchMove(e) {
+            if (shouldBlockPull(e)) e.preventDefault();
+        }
+        document.addEventListener('touchstart', onTouchStart, { passive: true });
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        // ตัวสำรอง: ฟังแบบ capture ที่ window เผื่อ iOS บางรุ่นไม่ส่ง touchmove ถึง document
+        window.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
+        // แป้นพิมพ์ขึ้น: iOS อาจยังยอมให้ PTR จากขอบบนได้ → ถ้าแป้นพิมพ์เปิดอยู่ (visualViewport หด) ให้กันเข้มขึ้น
+        if (window.visualViewport) {
+            let kbShown = false;
+            const vv = window.visualViewport;
+            const updateKb = () => { kbShown = vv.height < (window.innerHeight - 80); };
+            updateKb();
+            vv.addEventListener('resize', updateKb);
+            window.addEventListener('resize', updateKb);
+            window.addEventListener('touchstart', function (e) {
+                if (!kbShown) return;
+                // แป้นพิมพ์เปิดอยู่ + กำลังลากลงจากบริเวณที่ยังเลื่อนขึ้นไม่ได้ → ปิด PTR
+                startY = (e.touches && e.touches[0]) ? e.touches[0].clientY : null;
+                targetEl = (e.touches && e.touches[0]) ? e.target : null;
+            }, { passive: true });
+        }
         ['touchend', 'touchcancel'].forEach(function (ev) {
             document.addEventListener(ev, function () { startY = null; targetEl = null; }, { passive: true });
         });
