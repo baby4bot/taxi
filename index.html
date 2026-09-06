@@ -4395,11 +4395,11 @@
                 </div>`;
             }
         }
+        // ⚠️ ไม่โชว์แถว "รวมค่าโดยสาร" ซ้ำอีก เพราะยอดรวมใหญ่ (hero) แสดงอยู่ด้านบนแล้ว — รายการนี้แค่แยกค่าแรกเข้า/ระยะทาง/ค่าทางด่วนให้ดูโปร่งใส
         html += `<div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:6px 14px 8px; margin-bottom:var(--space-card);">
             ${fareRow('ค่าแรกเข้า', s.baseFare)}
             ${fareRow('ค่าระยะทาง + เวลารถติด', meterTravel, s.km.toFixed(2) + ' กม. · รถติด ' + dur(s.trafficSec))}
             ${surHTML}
-            ${fareRow('รวมค่าโดยสาร', total, '', true)}
         </div>`;
 
         if (s.pauses.length > 0) {
