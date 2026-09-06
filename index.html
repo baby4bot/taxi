@@ -69,6 +69,10 @@
         #toastBox #toastIcon { font-size: 58px; color: #ffd700; line-height: 1; } /* ไอคอนคมชัด ไม่มี blur/เรืองแสง */
         #toastBox #toastMsg { font-weight: 700; color: #ffd700; font-size: 20px; letter-spacing: 0.2px; white-space: nowrap; max-width: 100%; overflow: hidden; } /* บรรทัดเดียว + ย่อ font อัตโนมัติถ้ายาวเกิน (JS) */
         #toastSub { font-size: 13.5px; color: rgba(255,255,255,0.62); font-weight: 400; display: none; }
+        /* ป้าย "กดเพื่อดูรายละเอียด" — โชว์เฉพาะ toast ที่กดได้ (มี onClick) ใต้คำอธิบาย */
+        #toastHint { display: none; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600; color: #f1c40f; background: rgba(241,196,15,0.12); border: 1px solid rgba(241,196,15,0.4); padding: 4px 12px; border-radius: 20px; margin-top: 2px; letter-spacing: 0.2px; animation: toastHintPulse 1.2s ease-in-out infinite; }
+        #toastHint .material-symbols-outlined { font-size: 14px; }
+        @keyframes toastHintPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
         .toast-img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; display: none; border: 2px solid rgba(241,196,15,0.5); }
         /* toast "กลับจากเบื้องหลัง" — สีทองเด่น + ไอคอนหมุน ให้คนขับเห็นชัด */
         @keyframes toastGoldPop { 0% { opacity: 0; transform: translate(-50%,-50%) scale(0.82); } 45% { opacity: 1; transform: translate(-50%,-50%) scale(1.06); box-shadow: 0 0 44px rgba(241,196,15,0.5), 0 24px 60px rgba(0,0,0,0.75); } 100% { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
@@ -1270,6 +1274,7 @@
     <span class="material-symbols-outlined" id="toastIcon">check_circle</span>
     <span id="toastMsg">บันทึกข้อมูลสำเร็จ</span>
     <span id="toastSub"></span>
+    <span id="toastHint"><span class="material-symbols-outlined">touch_app</span> กดเพื่อดูรายละเอียด</span>
 </div>
 
 <div class="card" id="mainApp" style="display: none;">
@@ -2550,7 +2555,7 @@
     };
 
     window.showToast = (msg, isError = false, imgUrl = null, gold = false, onClick = null, subtitle = null) => {
-        const toast = document.getElementById('toastBox'); const icon = document.getElementById('toastIcon'); const img = document.getElementById('toastImg'); const sub = document.getElementById('toastSub');
+        const toast = document.getElementById('toastBox'); const icon = document.getElementById('toastIcon'); const img = document.getElementById('toastImg'); const sub = document.getElementById('toastSub'); const hint = document.getElementById('toastHint');
         document.getElementById('toastMsg').innerText = msg;
         if (sub) { sub.innerText = subtitle || ''; sub.style.display = subtitle ? 'block' : 'none'; } // บรรทัดที่ 2 (คำอธิบายเล็ก) — ถ้าไม่มีก็ซ่อน
         toast.classList.toggle('toast-gold', !!gold);
@@ -2574,7 +2579,11 @@
         if (window.__toastHideTimer) clearTimeout(window.__toastHideTimer);
         // toast ที่กดได้ (มี onClick) ให้อยู่นานขึ้นเป็น 3.5 วิ เผื่อคนขับแตะทัน (ปกติ 1.5 วิ / ทอง 2 วิ)
         const hasTap = typeof onClick === 'function';
-        window.__toastHideTimer = setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('toast-gold'); toast.style.cursor = 'default'; toast.onclick = null; }, hasTap ? 3500 : (gold ? 2000 : 1500));
+        // ป้าย "กดเพื่อดูรายละเอียด" ใต้คำอธิบาย — โชว์เฉพาะ toast ที่กดได้ (มี onClick)
+        // และ subtitle ยังไม่ได้บอกวิธีแตะอยู่แล้ว (เช่น "แตะเพื่อดูเส้นทางเลี่ยงทางด่วน") → ไม่โชว์ซ้ำ
+        const subTellsTap = sub && /แตะ|กด/.test(sub.innerText || '');
+        if (hint) hint.style.display = (hasTap && !subTellsTap) ? 'flex' : 'none';
+        window.__toastHideTimer = setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('toast-gold'); toast.style.cursor = 'default'; toast.onclick = null; if (hint) hint.style.display = 'none'; }, hasTap ? 3500 : (gold ? 2000 : 1500));
         // แตะ toast ที่ส่ง onClick มา (เช่น toast ทอง "กลับจากเบื้องหลัง" = เปิดสรุปยอดที่เบิก, toast "ไม่มีทางด่วน" = สลับกลับเลี่ยงทางด่วน) → ผูก handler ให้
         toast.onclick = null; toast.style.cursor = 'default';
         if (hasTap) {
