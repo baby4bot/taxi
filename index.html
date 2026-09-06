@@ -1500,7 +1500,7 @@
 
 <div id="adminMenuModal" class="modal-overlay"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3>ระบบจัดการผู้ใช้งาน</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
 
-<div id="toastMsgModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3>จัดการข้อความแจ้งเตือน</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetToastMsgOverrides()" title="รีเซ็ตข้อความทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('toastMsgModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">แก้ไขข้อความ/ไอคอนของป๊อปอัปแจ้งเตือนทุกแบบ — บันทึกแล้วมีผลกับทุกคนทันที (ทั้งผู้ใช้และแอดมินเห็นเหมือนกัน)<br>ช่องไอคอนพิมพ์ชื่อไอคอน material (เช่น <b>sync</b>, <b>toll</b>) หรืออีโมจิ (เช่น 🚕) ได้</p><div id="toastMsgList" style="min-height: 200px;"></div><datalist id="toastIconList"><option>sync</option><option>notifications_active</option><option>check_circle</option><option>error</option><option>warning</option><option>info</option><option>toll</option><option>directions_car</option><option>local_taxi</option><option>flag</option><option>location_on</option><option>navigation</option><option>pause</option><option>play_arrow</option><option>delete</option><option>person_add</option><option>person_remove</option><option>key</option><option>lock_reset</option><option>content_copy</option><option>settings_backup_restore</option><option>qr_code</option><option>block</option><option>cloud_off</option><option>data_usage</option><option>login</option><option>person_search</option><option>phone_disabled</option><option>🚕</option><option>🚗</option><option>🛣️</option><option>⏸️</option><option>▶️</option><option>📍</option><option>🚩</option><option>⚠️</option><option>⭐</option></datalist></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveToastMsgsBtn" onclick="window.saveToastMsgOverrides()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกข้อความแจ้งเตือนทั้งหมด</button></div></div></div>
+<div id="toastMsgModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3>จัดการข้อความแจ้งเตือน</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetToastMsgOverrides()" title="รีเซ็ตข้อความทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('toastMsgModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">แก้ไขข้อความ/ไอคอน/เวลาของป๊อปอัปแจ้งเตือนทุกแบบ — บันทึกแล้วมีผลกับทุกคนทันที (ทั้งผู้ใช้และแอดมินเห็นเหมือนกัน)<br>ช่องไอคอนพิมพ์ชื่อไอคอน material (เช่น <b>sync</b>, <b>toll</b>) หรืออีโมจิ (เช่น 🚕) ได้ · ช่อง <b>วินาที</b> ตั้งเวลาที่ toast อยู่บนจอ (default <b>1.5 วิ</b> — เว้นว่าง = 1.5)</p><div id="toastMsgList" style="min-height: 200px;"></div><datalist id="toastIconList"><option>sync</option><option>notifications_active</option><option>check_circle</option><option>error</option><option>warning</option><option>info</option><option>toll</option><option>directions_car</option><option>local_taxi</option><option>flag</option><option>location_on</option><option>navigation</option><option>pause</option><option>play_arrow</option><option>delete</option><option>person_add</option><option>person_remove</option><option>key</option><option>lock_reset</option><option>content_copy</option><option>settings_backup_restore</option><option>qr_code</option><option>block</option><option>cloud_off</option><option>data_usage</option><option>login</option><option>person_search</option><option>phone_disabled</option><option>🚕</option><option>🚗</option><option>🛣️</option><option>⏸️</option><option>▶️</option><option>📍</option><option>🚩</option><option>⚠️</option><option>⭐</option></datalist></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveToastMsgsBtn" onclick="window.saveToastMsgOverrides()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกข้อความแจ้งเตือนทั้งหมด</button></div></div></div>
 
 <div id="adminEditUserModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="adminEditModalTitle">จัดการผู้ใช้</h3><button class="btn-close-floating" onclick="window.toggleModal('adminEditUserModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll"><div style="display: flex; justify-content: center; gap: 20px; margin-bottom: var(--space-field);"><div style="position: relative; text-align: center;"><img id="adminEditPic" src="" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid #3498db; background: rgba(0,0,0,0.3);" onclick="document.getElementById('adminUploadPicInput').click()"><button id="delAdminProfilePicBtn" onclick="window.removeImage('adminEditPic', true)" class="btn-del-media" style="display: none;" title="ลบรูปโปรไฟล์"><span class="material-symbols-outlined">delete</span></button><div style="font-size: 11px; color: var(--text-dim); margin-top: 5px; cursor: pointer;" onclick="document.getElementById('adminUploadPicInput').click()">แตะเปลี่ยนรูป</div><input type="file" id="adminUploadPicInput" accept="image/*" style="display: none;" onchange="window.previewProfilePic(event, 'adminEditPic')"></div><div style="position: relative; text-align: center;"><img id="adminEditQrPic" src="" style="width: 80px; height: 80px; object-fit: contain; cursor: pointer; border: 2px dashed #3498db; border-radius: 15px; background: rgba(0,0,0,0.5); padding: 5px;" onclick="document.getElementById('adminUploadQrInput').click()"><button id="delAdminQrPicBtn" onclick="window.removeImage('adminEditQrPic', false)" class="btn-del-media" style="display: none;" title="ลบ QR Code"><span class="material-symbols-outlined">delete</span></button><div style="font-size: 11px; color: var(--text-dim); margin-top: 5px; cursor: pointer;" onclick="document.getElementById('adminUploadQrInput').click()">แตะเปลี่ยน QR</div><input type="file" id="adminUploadQrInput" accept="image/*" style="display: none;" onchange="window.previewProfilePic(event, 'adminEditQrPic')"></div></div><input type="hidden" id="adminEditUid"><label id="adminEditUsernameLabel" style="text-align: left; display: none;">Username</label><input type="text" id="adminEditUsername" style="margin-bottom: var(--space-field); text-align: left;" placeholder="เช่น staff" autocomplete="off"><label style="text-align: left;">ชื่อที่แสดง</label><input type="text" id="adminEditName" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="text-align: left;">ชื่อบริษัท/สหกรณ์แท็กซี่ (สำหรับหัวใบเสร็จ)<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400;">ถ้าเว้นไว้ ใบเสร็จจะใช้ชื่อคนขับแทน</span></label><input type="text" id="adminEditCompanyName" maxlength="60" placeholder="เช่น สหกรณ์แท็กซี่นครหลวง จำกัด" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="text-align: left;">เบอร์โทรศัพท์</label>
 <div style="display: flex; gap: 10px; margin-bottom: var(--space-field);"><input type="tel" id="adminEditPhone" style="flex: 1; margin-bottom: 0; text-align: left;" autocomplete="off"><button id="adminCallBtn" onclick="" class="manual-timer-btn" style="background: #2ecc71; width: 50px; flex: none; display: none; justify-content: center; padding: 0; align-items: center;" title="โทรออก"><span class="material-symbols-outlined" style="font-size: 24px;">call</span></button></div>
@@ -2553,8 +2553,9 @@
     };
 
     window.showToast = (msg, isError = false, imgUrl = null, gold = false, onClick = null, subtitle = null) => {
-        // 🔧 ข้อความ/ไอคอนที่แอดมินแก้ไว้ (Firestore settings/toast_messages) — ค้นจาก registry (exact หรือ prefix สำหรับข้อความที่มีตัวแปรต่อท้าย)
+        // 🔧 ข้อความ/ไอคอน/วินาทีที่แอดมินแก้ไว้ (Firestore settings/toast_messages) — ค้นจาก registry (exact หรือ prefix สำหรับข้อความที่มีตัวแปรต่อท้าย)
         let overrideIcon = null;
+        window.__toastSec = null; // reset วินาทีของ toast นี้ก่อน — จะถูกเซ็ตใหม่ใน loop ด้านล่างถ้ามี override ระบุวินาที
         try {
             const reg = window.__toastReg || null;
             if (reg) {
@@ -2571,6 +2572,7 @@
                     else msg = hit.text;
                 }
                 if (hit && hit.icon) overrideIcon = hit.icon;
+                if (hit && hit.sec > 0) window.__toastSec = hit.sec; // ⏱️ วินาทีที่แอดมินตั้งไว้สำหรับ toast นี้ (default 1.5 วิ)
             }
         } catch (e) {}
         const toast = document.getElementById('toastBox'); const icon = document.getElementById('toastIcon'); const img = document.getElementById('toastImg'); const sub = document.getElementById('toastSub');
@@ -2607,9 +2609,10 @@
         if (window.__toastHideTimer) clearTimeout(window.__toastHideTimer);
         // 🔊 เสียงติ๊งสั้น ๆ ทุกครั้งที่ toast เด้ง — ให้คนขับรู้ตัวแม้ไม่มองจอ (ปิดได้ในหน้าโปรไฟล์ → userToastSound = false)
         if (window.playToastTing && window.userToastSound !== false) { try { window.playToastTing(); } catch(e) {} }
-        // ⏱️ ทุก toast (รวม toast ทอง) แสดง 1.5 วิ เท่ากันหมด — toast ที่กดได้ (มี onClick เช่น "ไม่มีทางด่วน") ให้ 3.5 วิ เผื่อแตะทัน
+        // ⏱️ เวลาแสดงผล: default 1.5 วิ ทุก toast — แอดมินตั้งวินาทีเฉพาะตัวได้ (window.__toastSec) — toast ที่กดได้ (มี onClick) ถ้าไม่ตั้งค่าให้ 3.5 วิ เผื่อแตะทัน
         const hasTap = typeof onClick === 'function';
-        window.__toastHideTimer = setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('toast-gold'); toast.style.cursor = 'default'; toast.onclick = null; }, hasTap ? 3500 : 1500);
+        let showMs = window.__toastSec && window.__toastSec > 0 ? Math.round(window.__toastSec * 1000) : (hasTap ? 3500 : 1500);
+        window.__toastHideTimer = setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('toast-gold'); toast.style.cursor = 'default'; toast.onclick = null; }, showMs);
         // แตะ toast ที่ส่ง onClick มา (เช่น toast "ไม่มีทางด่วน" = สลับกลับเลี่ยงทางด่วน) → ผูก handler ให้
         toast.onclick = null; toast.style.cursor = 'default';
         if (hasTap) {
@@ -2666,8 +2669,8 @@
             window.__toastReg = {};
             for (const k of TOAST_MSG_KEYS) {
                 const ov = data[k.key];
-                if (ov && (ov.text || ov.icon)) {
-                    window.__toastReg[k.key] = { text: (ov.text || null), icon: (ov.icon || null), prefix: !!k.prefix };
+                if (ov && (ov.text || ov.icon || ov.sec > 0)) {
+                    window.__toastReg[k.key] = { text: (ov.text || null), icon: (ov.icon || null), sec: (ov.sec > 0 ? ov.sec : null), prefix: !!k.prefix };
                 }
             }
         } catch (e) { window.__toastReg = null; }
@@ -2677,11 +2680,20 @@
         try {
             const data = {};
             for (const k of TOAST_MSG_KEYS) {
-                const tEl = document.getElementById('tmText_' + k.key.replace(/[^a-zA-Z0-9]/g, '_'));
-                const iEl = document.getElementById('tmIcon_' + k.key.replace(/[^a-zA-Z0-9]/g, '_'));
+                const idSuffix = k.key.replace(/[^a-zA-Z0-9]/g, '_');
+                const tEl = document.getElementById('tmText_' + idSuffix);
+                const iEl = document.getElementById('tmIcon_' + idSuffix);
+                const sEl = document.getElementById('tmSec_' + idSuffix);
                 const text = tEl ? tEl.value.trim() : '';
                 const icon = iEl ? iEl.value.trim() : '';
-                if (text || icon) data[k.key] = { text: text || '', icon: icon || '' };
+                const sec = sEl ? parseFloat(sEl.value) : 0;
+                if (text || icon || (sec > 0)) {
+                    const entry = {};
+                    if (text) entry.text = text;
+                    if (icon) entry.icon = icon;
+                    if (sec > 0) entry.sec = sec;
+                    data[k.key] = entry;
+                }
             }
             await setDoc(doc(db, "settings", "toast_messages"), data);
             await window.loadToastMsgOverrides();
@@ -2701,13 +2713,19 @@
             const ov = reg[k.key] || {};
             const tVal = (ov.text || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             const iVal = (ov.icon || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const sVal = (ov.sec && ov.sec > 0) ? ov.sec : '';
             const orig = k.key.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             return `<div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:12px; margin-bottom:10px; text-align:left;">
                 <div style="font-size:12px; color:var(--text-dim); margin-bottom:6px;">${k.label} — <span style="opacity:0.6;">ต้นฉบับ: "${orig}"</span></div>
                 <input type="text" id="tmText_${idSuffix}" value="${tVal}" placeholder="ข้อความใหม่ (เว้นว่าง = ใช้ต้นฉบับ)" style="margin-bottom:8px; text-align:left; font-size:14px;" maxlength="200">
-                <div style="display:flex; gap:8px; align-items:center;">
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
                     <input type="text" id="tmIcon_${idSuffix}" value="${iVal}" list="toastIconList" placeholder="ไอคอน: ชื่อ material หรืออีโมจิ (เว้นว่าง = เดิม)" style="flex:1; text-align:left; font-size:14px;" maxlength="40">
                     <span class="material-symbols-outlined" style="color:var(--neon-yellow); font-size:22px;">${iVal || k.icon}</span>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <span style="font-size:12px; color:var(--text-dim); white-space:nowrap;">⏱️ วินาที:</span>
+                    <input type="number" id="tmSec_${idSuffix}" value="${sVal}" placeholder="1.5" min="0.3" max="30" step="0.1" style="width:80px; text-align:left; font-size:14px; flex-shrink:0;" title="เวลาที่ toast อยู่บนจอ (default 1.5 วิ — เว้นว่าง = ใช้ค่า default)">
+                    <span style="font-size:11px; color:var(--text-dim);">วิ (default 1.5)</span>
                 </div>
             </div>`;
         }).join('');
