@@ -2306,6 +2306,11 @@
     // ถ้าเริ่มเที่ยว/วิ่งจริงระหว่างที่แบนเนอร์ยังโชว์ → ซ่อนอัตโนมัติไม่ให้กวน
     setInterval(() => { if (window.isManualRunning) hideInstallBanner(); }, 1000);
 
+    // Service Worker — เงื่อนไขให้ Chrome/Android ส่ง beforeinstallprompt (ปุ่มติดตั้งแอปเต็มจอ) ได้
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+        window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+    }
+
     window.copyAppShareLink = () => {
         const link = "https://baby4bot.github.io/taxi/";
         navigator.clipboard.writeText(link).then(() => {
