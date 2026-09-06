@@ -1111,6 +1111,47 @@
         @media (max-width: 380px) {
             #mainApp { padding-bottom: max(env(safe-area-inset-bottom, 0px), 30px); }
         }
+
+        /* ===== แบนเนอร์แนะนำติดตั้งแอปเต็มจอ (PWA) — แสดงครั้งเดียว ===== */
+        .install-banner {
+            align-items: center; gap: 10px;
+            margin: 0 0 var(--space-section) 0;
+            padding: 10px 12px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(255,210,77,0.14), rgba(120,90,10,0.16));
+            border: 1px solid rgba(255,210,77,0.45);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.07);
+            text-align: left;
+            animation: bannerSlideIn 0.45s ease-out;
+            flex-shrink: 0;
+        }
+        @keyframes bannerSlideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        .ib-icon {
+            width: 40px; height: 40px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(255,210,77,0.25), rgba(255,180,40,0.15));
+            color: #ffd24d;
+        }
+        .ib-icon .material-symbols-outlined { font-size: 22px; }
+        .ib-text { flex: 1; min-width: 0; }
+        .ib-title { font-size: 13.5px; font-weight: 700; color: #ffe9a8; line-height: 1.3; }
+        .ib-sub { font-size: 11.5px; color: rgba(255,255,255,0.72); line-height: 1.45; margin-top: 2px; }
+        .ib-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+        .ib-btn {
+            border: none; cursor: pointer; border-radius: 12px;
+            font-family: 'Kanit', sans-serif; font-weight: 600; font-size: 12.5px;
+            padding: 8px 14px; white-space: nowrap; transition: 0.2s;
+        }
+        .ib-btn.primary { background: linear-gradient(135deg, #ffe08a, #ffb52e); color: #1a1200; box-shadow: 0 4px 12px rgba(255,180,40,0.35); }
+        .ib-btn.primary:active { transform: scale(0.95); }
+        .ib-btn.ghost { background: rgba(255,255,255,0.07); color: #cbd2e0; border: 1px solid rgba(255,255,255,0.12); }
+        .ib-btn.ghost:active { transform: scale(0.95); }
+        @media (max-width: 430px) {
+            .ib-actions { flex-direction: row; }
+            .ib-title { font-size: 12.5px; }
+            .ib-sub { font-size: 11px; }
+        }
     </style>
 </head>
 <body>
@@ -1234,6 +1275,19 @@
                                                 
     </div>
                                                        
+    <!-- 📱 แนะนำติดตั้งแอปเต็มจอ (PWA) — แสดงครั้งเดียวจนกว่าจะปิด/ติดตั้ง -->
+    <div id="installBanner" class="install-banner" style="display:none;">
+        <div class="ib-icon"><span class="material-symbols-outlined">install_mobile</span></div>
+        <div class="ib-text">
+            <div class="ib-title">📱 ติดตั้งแอป “เต็มจอ” ไว้ใช้ประจำไหม?</div>
+            <div id="ibSub" class="ib-sub">เปิดจากไอคอนบนหน้าจอหลัก → เต็มจอถาวร ไม่มีแถบเบราว์เซอร์บน/ล่าง เหมาะกับการวางบนแท่นรถ</div>
+        </div>
+        <div class="ib-actions">
+            <button id="ibYes" class="ib-btn primary" onclick="window.pwaInstallNow()">ติดตั้ง</button>
+            <button id="ibNo" class="ib-btn ghost" onclick="window.pwaInstallDismiss()">ปิด</button>
+        </div>
+    </div>
+    
     <div id="tripResumeBanner" class="trip-resume-banner" onclick="window.tapResumeBanner()" title="แตะเพื่อขยาย/ย่อ">
         <span class="material-symbols-outlined trb-icon" style="font-size: 20px; color: var(--neon-yellow); flex-shrink: 0;">local_taxi</span>
         <div class="trb-details" style="flex: 1; min-width: 0;">
@@ -2202,6 +2256,55 @@
     };
     document.addEventListener('fullscreenchange', window.syncFullscreenLabel);
     document.addEventListener('webkitfullscreenchange', window.syncFullscreenLabel);
+
+    /* ===== 📱 แบนเนอร์แนะนำติดตั้งแอปเต็มจอ (PWA) — แสดงครั้งเดียวจนกว่าจะปิด/ติดตั้ง ===== */
+    let deferredInstallPrompt = null;
+    const PWA_SKIP_KEY = 'taxi_pwa_install_skip';
+    const isStandaloneApp = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+    const isIOSDevice = () => /iP(hone|ad|od)/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const hideInstallBanner = () => { const b = $('installBanner'); if (b) b.style.display = 'none'; };
+    const pwaMarkDismissed = () => { try { localStorage.setItem(PWA_SKIP_KEY, '1'); } catch(e) {} hideInstallBanner(); };
+    window.pwaInstallDismiss = pwaMarkDismissed;
+    window.pwaInstallNow = async () => {
+        if (deferredInstallPrompt) {
+            try {
+                deferredInstallPrompt.prompt();
+                const choice = await deferredInstallPrompt.userChoice;
+                if (choice && choice.outcome === 'accepted') {
+                    pwaMarkDismissed();
+                    window.showToast('ติดตั้งแล้ว — เปิดจากไอคอนแอปบนหน้าจอหลักเพื่อเต็มจอถาวร', false);
+                } else {
+                    window.showToast('ไม่เป็นไร — กด “ปิด” ได้ถ้ายังไม่ติดตั้ง', false);
+                }
+            } catch(e) { window.showToast('ติดตั้งไม่สำเร็จ ลองใหม่ภายหลัง', true); }
+        } else {
+            // ไม่มีปุ่มติดตั้งของเบราว์เซอร์ (เช่น iPhone/iOS) → สอนวิธีเพิ่มเข้าหน้าจอหลักเอง
+            window.showToast(isIOSDevice() ? 'กดปุ่ม แชร์ → “เพิ่มไปยังหน้าจอหลัก” แล้วเปิดจากไอคอนแอปเพื่อเต็มจอถาวร' : 'เปิดเมนู ⋮ → “เพิ่มไปยังหน้าจอหลัก” / “ติดตั้งแอป” เพื่อเปิดเต็มจอถาวร', false);
+        }
+    };
+    window.tryShowInstallBanner = () => {
+        const b = $('installBanner'); if (!b) return;
+        if (isStandaloneApp()) return;                       // เปิดจากแอปที่ติดตั้งแล้ว = ไม่ต้องแนะนำ
+        if (window.isManualRunning) return;                  // กำลังวิ่งเที่ยว = ไม่รบกวน
+        try { if (localStorage.getItem(PWA_SKIP_KEY) === '1') return; } catch(e) {} // เคยปิดแล้ว = ไม่ถามอีก
+        const main = $('mainApp');
+        if (main && main.style.display === 'none') return;   // ยังไม่ได้ล็อกอิน
+        // หน้าจอใหญ่ (คอมพิวเตอร์) ที่ไม่มีปุ่มติดตั้ง = ข้ามไป; มือถือที่ไม่มี beforeinstallprompt (iOS/อื่น ๆ) = ยังโชว์คำแนะนำได้
+        if (!isIOSDevice() && !deferredInstallPrompt && !(window.matchMedia && window.matchMedia('(max-width: 900px)').matches)) return;
+        const yes = $('ibYes');
+        const sub = $('ibSub');
+        if (isIOSDevice()) {
+            if (yes) yes.style.display = 'none';
+            if (sub) sub.innerHTML = 'เปิดจาก Safari: กดปุ่ม <b>แชร์</b> (กล่อง↑) → <b>เพิ่มไปยังหน้าจอหลัก</b> แล้วเปิดจากไอคอนแอป = เต็มจอถาวร ไม่มีแถบเบราว์เซอร์';
+        }
+        b.style.display = 'flex';
+    };
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstallPrompt = e; window.tryShowInstallBanner(); });
+    window.addEventListener('appinstalled', () => { deferredInstallPrompt = null; pwaMarkDismissed(); });
+    // สำรอง: ถ้าเข้าแอปแล้วบนมือถือแต่เบราว์เซอร์ไม่ส่ง beforeinstallprompt (iOS/อื่น ๆ) → ลองโชว์ครั้งเดียวหลังโหลด
+    setTimeout(() => { if (window.tryShowInstallBanner) window.tryShowInstallBanner(); }, 3000);
+    // ถ้าเริ่มเที่ยว/วิ่งจริงระหว่างที่แบนเนอร์ยังโชว์ → ซ่อนอัตโนมัติไม่ให้กวน
+    setInterval(() => { if (window.isManualRunning) hideInstallBanner(); }, 1000);
 
     window.copyAppShareLink = () => {
         const link = "https://baby4bot.github.io/taxi/";
