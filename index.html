@@ -2002,8 +2002,36 @@
         if (!destLoc || !window.currentTollInfo) return false; // ยังไม่มีเส้นทางจริง = ไม่ยุ่ง (เช่น วิ่งแบบกรอก กม. เอง)
         if (window.routeHasToll()) return false;        // มีทางด่วนจริง = คงโหมดขึ้นด่วนไว้
         applyTollModeState(false, false, true);         // ดีดกลับเป็น "เลี่ยงทางด่วน" (ไม่ลบค่าที่จำไว้ต่อบัญชี)
-        if (notify) window.showToast('เส้นทางนี้ไม่มีทางด่วน ใช้ถนนปกติ', false);
+        if (notify) window.showNoTollToast();           // แจ้ง + แตะ toast = สลับกลับดูเส้นทางเลี่ยงทางด่วนได้เลย
         return true;
+    };
+
+    // 🔔 toast "เส้นทางนี้ไม่มีทางด่วน ใช้ถนนปกติ" — แตะได้: ปิด toast + สลับกลับเป็นโหมดเลี่ยงทางด่วน
+    // + คำนวณเส้นทางเลี่ยงใหม่ทันที (หน้าสรุป/ระยะ/ราคาอัปเดตตามเส้นทางเลี่ยง)
+    window.showNoTollToast = async () => {
+        window.showToast('เส้นทางนี้ไม่มีทางด่วน ใช้ถนนปกติ', false, null, false, async () => {
+            try { document.getElementById('toastBox').style.display = 'none'; } catch(e) {}
+            // ถ้ายังไม่ถูกดีดกลับเป็นเลี่ยง → ดีดกลับ (ทั้ง localStorage + บัญชี)
+            if (window.isTollwayMode) applyTollModeState(false, true);
+            // ถ้ากำลังอยู่ในหน้าสรุปเส้นทาง (มีเส้นทางค้างรอเริ่ม) → คำนวณเส้นทางเลี่ยงใหม่ + อัปเดตสรุป
+            const p = window.__pendingRouteStart;
+            if (p && p.sLat && p.sLon && p.dLat && p.dLon) {
+                const route = await window.fetchRouteFromTomTom(p.dLat, p.dLon, p.sLat, p.sLon);
+                if (route) {
+                    currentTrueRemainKm = route.km; currentTrueRemainSec = route.sec;
+                    window.currentTollInfo = route.tolls || null;
+                    p.km = route.km; p.sec = route.sec; p.coords = route.coords || [];
+                    const ki = $('kmInput'); if (ki) ki.value = route.km.toFixed(2);
+                    window.updateFareEstimation(route.km);
+                }
+            }
+            if (window.refreshRoutePreview) window.refreshRoutePreview();
+            if (window.syncTollToggleVisibility) window.syncTollToggleVisibility();
+            if (window.updateTollDisplay) window.updateTollDisplay();
+            if (window.updateNavTollDisplay) window.updateNavTollDisplay();
+            if (window.syncFareTollBtn) window.syncFareTollBtn();
+            if (window.updateFareTollBtnText) window.updateFareTollBtnText();
+        }, 'แตะเพื่อดูเส้นทางเลี่ยงทางด่วน');
     };
 
     // รีเซ็ตค่าที่จำไว้ในเครื่อง (โหมดทางด่วน, ประวัติค้นหา, รายการโปรด) — ไม่แตะข้อมูลบัญชี/ประวัติการเดินทาง
@@ -2064,7 +2092,7 @@
                             window.showToast(`🛣️ ทางด่วน ${route.tolls.booths.length} ช่วง รวม ${route.tolls.total}฿`, false);
                         } else {
                             // ขึ้นทางด่วนแล้วเส้นทางนี้ไม่มีทางด่วนจริง → บอกว่าไม่มี + ดีดกลับเป็น "เลี่ยงทางด่วน" (เฉพาะเส้นทางนี้)
-                            window.showToast('เส้นทางนี้ไม่มีทางด่วน ใช้ถนนปกติ', false);
+                            window.showNoTollToast();
                             window.enforceTollModeVsRoute(false);
                         }
                     }
@@ -2544,10 +2572,12 @@
         } catch (e) {}
         if (gold && navigator.vibrate && window.userVibrateGold !== false) { try { navigator.vibrate([60, 40, 60]); } catch(e) {} } // สั่นเบา ๆ (เฉพาะ toast ทอง) — ปิดได้ในหน้าโปรไฟล์ (บางคนไม่อยากให้สั่นตอนขับ)
         if (window.__toastHideTimer) clearTimeout(window.__toastHideTimer);
-        window.__toastHideTimer = setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('toast-gold'); toast.style.cursor = 'default'; toast.onclick = null; }, gold ? 2000 : 1500); // ดับอัตโนมัติ ~1.5 วิ (toast ทอง 2 วิ เผื่อแตะเปิดรายละเอียด)
-        // แตะ toast ที่ส่ง onClick มา (เช่น toast ทอง "กลับจากเบื้องหลัง" = เปิดสรุปยอดที่เบิก) → ผูก handler ให้
+        // toast ที่กดได้ (มี onClick) ให้อยู่นานขึ้นเป็น 3.5 วิ เผื่อคนขับแตะทัน (ปกติ 1.5 วิ / ทอง 2 วิ)
+        const hasTap = typeof onClick === 'function';
+        window.__toastHideTimer = setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('toast-gold'); toast.style.cursor = 'default'; toast.onclick = null; }, hasTap ? 3500 : (gold ? 2000 : 1500));
+        // แตะ toast ที่ส่ง onClick มา (เช่น toast ทอง "กลับจากเบื้องหลัง" = เปิดสรุปยอดที่เบิก, toast "ไม่มีทางด่วน" = สลับกลับเลี่ยงทางด่วน) → ผูก handler ให้
         toast.onclick = null; toast.style.cursor = 'default';
-        if (typeof onClick === 'function') {
+        if (hasTap) {
             toast.onclick = onClick;
             toast.style.cursor = 'pointer';
         }
