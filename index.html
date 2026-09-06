@@ -1614,17 +1614,6 @@
     </div>
 </div>
 
-<div id="shareReceiptModal" class="modal-overlay" style="z-index: 10072;" onclick="window.toggleModal('shareReceiptModal', false)">
-    <div class="modal-box standard-box" onclick="event.stopPropagation()" style="padding: 26px 22px 18px; text-align:center;">
-        <button class="btn-close-floating" style="top:12px; right:12px; transform:none;" onclick="window.toggleModal('shareReceiptModal', false)"><span class="material-symbols-outlined">close</span></button>
-        <h3 style="margin-bottom:6px;">ส่งใบเสร็จให้ผู้โดยสาร</h3>
-        <div style="font-size:13px; color:var(--text-dim); margin-bottom:14px;">เลือกช่องทางส่งลิงก์ใบเสร็จ (รูปภาพ) — ผู้โดยสารเปิดลิงก์แล้วกดดาวน์โหลดรูปใบเสร็จได้เลย</div>
-        <button class="manual-timer-btn" onclick="window.shareReceiptVia('line')" style="background:#06C755; justify-content:center; width:100%; margin-bottom:10px;"><img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" style="width:22px;height:22px;" /> ส่งผ่าน LINE</button>
-        <button class="manual-timer-btn" onclick="window.shareReceiptVia('whatsapp')" style="background:#25D366; justify-content:center; width:100%; margin-bottom:10px;"><span class="material-symbols-outlined" style="font-size:18px;">chat</span> ส่งผ่าน WhatsApp</button>
-        <button class="manual-timer-btn" onclick="window.shareReceiptVia('copy')" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); justify-content:center; width:100%; color:#fff;"><span class="material-symbols-outlined" style="font-size:18px;">link</span> คัดลอกลิงก์</button>
-    </div>
-</div>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -4304,27 +4293,6 @@
         document.getElementById('qrNameText').innerText = 'ใบเสร็จ (รูปภาพ) — ให้ผู้โดยสารสแกน แล้วกดดาวน์โหลดรูปใบเสร็จ';
         window.toggleModal('qrOverlay', true);
     };
-    // 📤 ส่งลิงก์ใบเสร็จผ่านแอปแชร์ (LINE / WhatsApp) — ผู้โดยสารไม่ต้องสแกน
-    window.shareReceiptLink = () => {
-        const link = window.buildReceiptLink();
-        if (!link) return;
-        const txt = '🧾 ใบเสร็จค่าโดยสาร (รูปภาพ)\nเปิดลิงก์นี้ แล้วกด "ดาวน์โหลดรูปใบเสร็จ" ได้เลย:\n' + link;
-        window.__receiptShareTxt = txt;
-        window.toggleModal('shareReceiptModal', true);
-    };
-    window.shareReceiptVia = (p) => {
-        const txt = window.__receiptShareTxt || '';
-        if (p === 'line') { window.open('https://line.me/R/msg/text/?' + encodeURIComponent(txt), '_blank'); }
-        else if (p === 'whatsapp') { window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank'); }
-        else if (p === 'copy') {
-            const link = (txt.match(/https?:\/\/\S+/) || [''])[0];
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(link || txt).then(() => window.showToast('คัดลอกลิงก์ใบเสร็จแล้ว — ส่งต่อในแอปแชร์ได้เลย')).catch(() => window.showToast('คัดลอกไม่สำเร็จ', true));
-            } else { window.prompt('คัดลอกลิงก์ใบเสร็จ:', link || txt); }
-        }
-        window.toggleModal('shareReceiptModal', false);
-    };
-
     // สร้างเนื้อหาหน้าสรุป (ใบเสร็จ) ลงใน #tsSummaryContent
     window.renderTripSummary = (s) => {
         const el = (id) => document.getElementById(id);
