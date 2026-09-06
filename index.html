@@ -1453,6 +1453,7 @@
         </div>
         <hr class="side-divider">
         <div class="side-menu-item logout-item" onclick="window.toggleSideMenu(false); window.logoutApp();"><span class="material-symbols-outlined">logout</span><span>ออกจากระบบ</span></div>
+        <div id="buildStamp" style="font-size: 10px; color: rgba(255,255,255,0.22); text-align: center; margin-top: 8px; flex-shrink: 0;">รุ่น ...</div>
     </div>
 </div>
 
@@ -1613,6 +1614,10 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
+    // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
+    const APP_BUILD = '2026-09-06c';
+    try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
+
     const firebaseConfig = {
       apiKey: "AIzaSyAhK_yT1kbFVl3A11n_QU4BgTvHrC7YkXI",
       authDomain: "mytalkie-3955a.firebaseapp.com",
@@ -2400,11 +2405,10 @@
         });
     };
 
-    // 🚕 เริ่ม/เริ่มต่อเที่ยวแบบไม่มีจุดหมาย → เปิดจอมิเตอร์ใหญ่ (trackerZoomOverlay) ให้เป็นหน้าหลักระหว่างเที่ยวทันที
+    // 🚕 เริ่ม/เริ่มต่อเที่ยว (มีหรือไม่มีจุดหมาย) → เปิดจอมิเตอร์ใหญ่ (trackerZoomOverlay) ทันที ไม่มีดีเลย์
+    // (เดิมหน่วง 260ms → บนมือถือช้าอาจเห็นหน้าจอกลางแวบขึ้นมาก่อน; เปิด sync เลย ไม่มีคั่นกลางให้เห็น)
     window.openTripZoom = () => {
-        setTimeout(() => {
-            if (window.isManualRunning) window.toggleModal('trackerZoomOverlay', true);
-        }, 260);
+        if (window.isManualRunning) window.toggleModal('trackerZoomOverlay', true);
     };
     // ขณะเที่ยวกำลังวิ่ง แตะพื้นหลัง/ปุ่มย่อ = ไม่ให้ปิด (ออกได้ที่ปุ่ม "สิ้นสุดเดินทาง") — หน้าจอกลางถูกตัดออกแล้ว
     window.tryCloseTrackerZoom = () => {
