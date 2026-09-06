@@ -1,7 +1,9 @@
 /* Taxi Meter — Service Worker (PWA)
-   Chrome/Android จะส่ง beforeinstallprompt (ปุ่มติดตั้งแอปเต็มจอ) ต่อเมื่อมี service worker + manifest
-   กลยุทธ์: network-first (ไฟล์เปลี่ยนทุกครั้งที่ deploy) → สำรองจาก cache ตอนออฟไลน์ */
-const CACHE = 'taxi-meter-v1';
+   - ทำให้ Chrome/Android ส่ง beforeinstallprompt (ปุ่มติดตั้งแอปเต็มจอ) ได้
+   - กัน "แคชเก่าค้าง": GitHub Pages สั่งให้เบราว์เซอร์เก็บไฟล์ได้ถึง ~10 นาที
+     → ขอไฟล์จากเน็ตทุกครั้ง (cache:'no-store' ข้ามแคช HTTP) เวอร์ชันใหม่จะโผล่ทันทีหลัง deploy
+   - สำรองจาก cache เฉพาะตอนออฟไลน์ */
+const CACHE = 'taxi-meter-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -25,7 +27,8 @@ self.addEventListener('fetch', (e) => {
 
   e.respondWith((async () => {
     try {
-      const fresh = await fetch(req);
+      // no-store = ไม่เชื่อแคช HTTP เก่า → เปิดทีไรได้เวอร์ชันใหม่สุดจาก GitHub Pages เสมอ
+      const fresh = await fetch(req, { cache: 'no-store' });
       const cache = await caches.open(CACHE);
       cache.put(req, fresh.clone()).catch(() => {});
       return fresh;

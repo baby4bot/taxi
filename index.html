@@ -2392,7 +2392,8 @@
 
     // Service Worker — เงื่อนไขให้ Chrome/Android ส่ง beforeinstallprompt (ปุ่มติดตั้งแอปเต็มจอ) ได้
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-        window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+        // updateViaCache:'none' = ตรวจสอบ/อัปเดต sw.js กับเน็ตทุกครั้ง (ไม่เชื่อแคช) → หลัง deploy รอบใหม่ ตัว SW ใหม่จะติดตั้งทันที
+        window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {}); });
     }
 
     window.copyAppShareLink = () => {
