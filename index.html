@@ -4159,14 +4159,13 @@
         window.updateFareTollBtnText();
     };
 
-    // ปุ่ม X (ล้างข้อมูลทั้งหมด) มุมบนขวาของการ์ด — แสดงเฉพาะตอนมีข้อมูลให้ล้างและยังไม่ได้เริ่มวิ่ง
+    // ปุ่ม X (ล้างข้อมูลทั้งหมด) มุมบนขวาของการ์ด — แสดงเฉพาะเมื่อมีการ์ดมีตัวเลข (กม./ราคา) หรือค่าทางด่วนค้างอยู่ และยังไม่ได้เริ่มวิ่ง (ซ่อนเมื่อว่างเปล่า)
     window.syncFareResetBtn = () => {
         const btn = document.getElementById('fareResetBtn');
         if (!btn) return;
         let km = parseFloat($('kmInput').value) || 0;
-        let destText = $('destInput').value.trim();
         let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0);
-        btn.style.display = (!window.isManualRunning && (km > 0 || destText !== "" || extraSurcharge > 0)) ? 'flex' : 'none';
+        btn.style.display = (!window.isManualRunning && (km > 0 || extraSurcharge > 0)) ? 'flex' : 'none';
     };
 
     window.checkAppStatus = () => { 
