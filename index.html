@@ -5214,6 +5214,7 @@
                 await addDoc(collection(db, "users"), { username: newUsername, password: newPassword, displayName: newName, companyName: newCompany, phoneNumber: newPhone, role: newRole, photoURL: photoUpdate, qrCodeURL: qrUpdate, taxiType: 35, vibrateGold: newVibGold ? newVibGold.checked : true, autoFullscreen: newAutoFs ? newAutoFs.checked : true, isOnline: false, isBanned: false, lastLoginAt: null, order: Date.now() });
                 await recordActivityLog(loggedInUserId, "เพิ่มผู้ใช้งานใหม่", `ชื่อ: ${newName}, สิทธิ์: ${newRole}`); window.showToast("สร้างผู้ใช้งานเรียบร้อย!"); window.toggleModal('adminEditUserModal', false); window.toggleModal('adminMenuModal', true); 
             } else {
+                const u = window.currentAdminUsers.find(x => x.uid === uid) || {}; // ข้อมูลเดิมของผู้ใช้ (เดิม u ถูกใช้แต่ไม่ประกาศ → ReferenceError → บันทึกไม่ได้)
                 let logDetail = `แอดมินแก้ไขข้อมูล (ชื่อ: ${newName})`; let updatePayload = { displayName: newName, phoneNumber: newPhone };
                 if(currentUserRole === "Admin") { updatePayload.role = newRole; logDetail += `, สิทธิ์: ${newRole}`; }
                 if (newPassword.trim().length >= 1) { updatePayload.password = newPassword.trim(); logDetail += " และเปลี่ยนรหัสผ่าน"; }
