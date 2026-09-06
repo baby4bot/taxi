@@ -5167,6 +5167,7 @@
         document.getElementById('adminEditPassword').type = 'password'; document.querySelectorAll('#adminEditUserModal .toggle-password').forEach(icon => icon.innerText = 'visibility_off'); document.getElementById('adminEditPasswordLabel').innerText = "รหัสผ่าน (คลิกรูปตาเพื่อดู)";
         document.getElementById('adminEditModalTitle').innerText = "เพิ่มผู้ใช้งานใหม่"; document.getElementById('deleteUserBtn').style.display = 'none'; document.getElementById('banUserBtn').style.display = 'none'; 
         window.toggleModal('adminMenuModal', false); window.toggleModal('adminEditUserModal', true);
+        setTimeout(() => { const es = document.querySelector('#adminEditUserModal .modal-content-scroll'); if (es) es.scrollTop = 0; }, 0); // เลื่อนขึ้นบนสุดเสมอ
     };
 
     window.openAdminEditUser = (uid) => {
@@ -5188,6 +5189,7 @@
         if(myPerms.canBan) { document.getElementById('banUserBtn').style.display = 'flex'; const banBtn = document.getElementById('banUserBtn'); const banIcon = document.getElementById('banIcon'); const banText = document.getElementById('banText'); if(isBannedState) { banBtn.style.background = 'var(--neon-green)'; banIcon.innerText = 'check_circle'; banText.innerText = 'ปลดระงับการใช้งาน'; } else { banBtn.style.background = 'var(--accent-red)'; banIcon.innerText = 'block'; banText.innerText = 'ระงับการใช้งาน (Ban)'; } } else { document.getElementById('banUserBtn').style.display = 'none'; }
         let canDeleteThisUser = isGod || (myPerms.canDelete && u.role !== "Admin"); document.getElementById('deleteUserBtn').style.display = canDeleteThisUser ? 'flex' : 'none'; 
         window.toggleModal('adminEditUserModal', true);
+        setTimeout(() => { const es = document.querySelector('#adminEditUserModal .modal-content-scroll'); if (es) es.scrollTop = 0; }, 0); // เลื่อนขึ้นบนสุดเสมอ (เห็นรูปโปรไฟล์/username ก่อน)
     };
 
     window.saveAdminUserEdit = async () => {
