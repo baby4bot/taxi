@@ -2554,6 +2554,15 @@
     window.toggleModal = (id, show) => {
         $(id).style.display = show ? 'flex' : 'none';
         
+        if (show) {
+            // เลื่อน modal ขึ้นบนสุดเสมอทุกครั้งที่เปิด (กันค้างตำแหน่งเลื่อนจากครั้งก่อน)
+            setTimeout(() => {
+                const root = $(id); if (!root) return;
+                root.scrollTop = 0;
+                root.querySelectorAll('.modal-content-scroll, .modal-box').forEach(el => { el.scrollTop = 0; });
+            }, 0);
+        }
+        
         if(id === 'zoomOverlay' && show) {
             $('zoomPrice').innerHTML = $('farePrice').innerHTML;
             let km = parseFloat($('kmInput').value) || 0;
