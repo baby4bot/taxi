@@ -133,13 +133,13 @@
             const $ = id => cw.document.getElementById(id);
             const kmEl = $('driveCovered');
             const trEl = $('smallTrafficTime');
-            // ค่าโดยสารที่วิ่งอยู่โชว์ในปุ่ม "สิ้นสุดเดินทาง" (เช่น "... 41 ฿") — farePrice ใหญ่จะอัปเดตเฉพาะเที่ยว 0 กม.
-            const btnEl = $('manualTimerBtn');
+            // ค่าโดยสารที่วิ่งอยู่โชว์ในใบเขียว (farePrice) — ปุ่มแดง "สิ้นสุดเดินทาง" ไม่มีตัวเลขค่าโดยสารแล้ว (ตัดออกตามที่ผู้ใช้ขอ)
+            const fareEl = $('farePrice');
             const km = kmEl ? parseFloat(kmEl.innerText) : NaN;
             const m = trEl ? trEl.innerText.match(/(\d+)น\.\s*(\d+)ว\./) : null;
             const traffic = m ? parseInt(m[1]) * 60 + parseInt(m[2]) : NaN;
-            const fm = btnEl ? btnEl.innerText.match(/(\d+)\s*฿/) : null;
-            const fare = fm ? parseInt(fm[1], 10) : NaN;
+            const fm = fareEl ? fareEl.innerText.match(/(\d+[\s,]*(?:\.\d+)?)/) : null;
+            const fare = fm ? parseFloat(fm[1].replace(/[\s,]/g, '')) : NaN;
             return { km: km, traffic: traffic, fare: fare };
         }
 
