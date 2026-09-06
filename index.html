@@ -1510,7 +1510,7 @@
     </div>
 </div>
 
-<div id="trackerZoomOverlay" class="modal-overlay" onclick="window.toggleModal('trackerZoomOverlay', false)">
+<div id="trackerZoomOverlay" class="modal-overlay" onclick="window.tryCloseTrackerZoom()">
     <div class="modal-box tracker-zoom-box" onclick="event.stopPropagation()">
         
         <div id="tzDestNameBox" style="color: white; font-size: 18px; font-weight: 500; background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 15px; margin-bottom: var(--space-zoom); display: none; border: 1px solid rgba(255,255,255,0.05); align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
@@ -1554,7 +1554,6 @@
             </button>
         
         
-        <div class="tz-close-text" onclick="window.toggleModal('trackerZoomOverlay', false)">แตะที่นี่เพื่อย่อหน้าจอ</div>
     </div>
 </div>
 
@@ -2319,6 +2318,18 @@
         }).catch(err => {
             window.showToast("ไม่สามารถคัดลอกได้ อุปกรณ์อาจไม่รองรับ", true);
         });
+    };
+
+    // 🚕 เริ่ม/เริ่มต่อเที่ยวแบบไม่มีจุดหมาย → เปิดจอมิเตอร์ใหญ่ (trackerZoomOverlay) ให้เป็นหน้าหลักระหว่างเที่ยวทันที
+    window.openTripZoom = () => {
+        setTimeout(() => {
+            if (window.isManualRunning && !destLoc) window.toggleModal('trackerZoomOverlay', true);
+        }, 260);
+    };
+    // ขณะเที่ยวกำลังวิ่ง แตะพื้นหลัง/ปุ่มย่อ = ไม่ให้ปิด (ออกได้ที่ปุ่ม "สิ้นสุดเดินทาง") — หน้าจอกลางถูกตัดออกแล้ว
+    window.tryCloseTrackerZoom = () => {
+        if (window.isManualRunning) return;
+        window.toggleModal('trackerZoomOverlay', false);
     };
 
     window.handleResultClick = () => {
@@ -3474,6 +3485,8 @@
             })();
         }
         window.showToast('เริ่มต่อจากเที่ยวเดิมแล้ว 🚕');
+        // 🚕 เที่ยวค้างแบบไม่มีจุดหมาย → หลังเริ่มต่อ/เบิกคืน เด้งเข้าจอมิเตอร์ใหญ่ตรง ๆ (ข้ามหน้าจอกลาง รูปที่ 2)
+        if (!destLoc && window.openTripZoom) window.openTripZoom();
     };
     window.discardSavedTrip = async () => {
         const ok = await window.showCustomConfirm('ลบทิ้งเที่ยวที่ค้างอยู่?', 'ข้อมูลเที่ยวที่บันทึกไว้ (ระยะทาง เวลา ค่าทางด่วน) จะถูกลบออกจากเครื่องนี้ กด "เริ่มต่อ" ถ้ายังต้องการใช้', 'danger', 'ลบทิ้ง');
@@ -3842,6 +3855,8 @@
             if(isOk) window.finishTripWithSummary();
         } else { 
             window.startMeterAndTracking(); 
+            // 🚕 เริ่มมิเตอร์แบบไม่มีจุดหมาย → เปิดจอมิเตอร์ใหญ่ตรง ๆ (ข้ามหน้าจอกลาง รูปที่ 2)
+            if (!destLoc && window.openTripZoom) window.openTripZoom();
         } 
     };
 
