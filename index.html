@@ -2942,7 +2942,7 @@
 
     window.saveHistory = (name, lat, lon) => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]').filter(i => i.name !== name); h.unshift({ name, lat, lon }); localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 10))); };
     
-    window.showHistory = () => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); if (!h.length) return $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; $('historyList').innerHTML = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ประวัติล่าสุด</span><button class="clear-history-btn" onclick="event.stopPropagation(); window.clearSearchHistory();">ล้าง</button></div>` + h.map(i => `<div class="list-item" onclick="window.selectLocation('${i.name}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span>${i.name}</div>`).join(''); $('historyList').style.display = 'block'; };
+    window.showHistory = () => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); if (!h.length) { $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; window.updateClearDestBtn(); return; } $('historyList').innerHTML = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ประวัติล่าสุด</span><button class="clear-history-btn" onclick="event.stopPropagation(); window.clearSearchHistory();">ล้าง</button></div>` + h.map(i => `<div class="list-item" onclick="window.selectLocation('${i.name}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span>${i.name}</div>`).join(''); $('suggestionList').style.display = 'none'; $('historyList').style.display = 'block'; window.updateClearDestBtn(); };
     
     // 🧹 ปุ่ม "ล้าง" ในหัวข้อประวัติล่าสุด: ลบประวัติทั้งหมดในเครื่อง + ซ่อนรายการทันที
     // (ต้องเรียกผ่าน window.* — inline onclick เข้าไม่ถึงตัวแปร `$`/HISTORY_KEY ใน module → เดิมพังต้องรีเฟรชถึงจะหาย)
@@ -2950,6 +2950,7 @@
         try { localStorage.removeItem(HISTORY_KEY); } catch(e) {}
         const h = $('historyList');
         if (h) { h.innerHTML = ''; h.style.display = 'none'; }
+        window.updateClearDestBtn(); // ล้างประวัติ → dropdown ปิด → ปุ่ม × หายพร้อมกัน
     };
 
     // 👆 แตะ/คลิกนอกกล่องค้นหาจุดหมาย → ยุบ dropdown (ประวัติล่าสุด / ผลค้นหา) ทันที เหมือน UX ปกติของแอปค้นหาสถานที่
@@ -2960,6 +2961,7 @@
         const s = $('suggestionList'), h = $('historyList');
         if (s && s.style.display !== 'none') s.style.display = 'none';
         if (h && h.style.display !== 'none') h.style.display = 'none';
+        window.updateClearDestBtn(); // ยุบ dropdown → ปุ่ม × หายไปพร้อมกับประวัติล่าสุด
     });
 
     // ===== Favorites System =====
@@ -3015,10 +3017,11 @@
             try { 
                 list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--text-dim);"><span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">progress_activity</span> กำลังค้นหา...</div>';
                 list.style.display = 'block';
+                window.updateClearDestBtn(); // เปิดผลค้นหา → ปุ่ม × โผล่พร้อมกัน
                 let httpRes = await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(smartQuery)}.json?key=${TOMTOM_KEY}&countrySet=TH&limit=15&language=th-TH&typeahead=true&minFuzzyLevel=2&maxFuzzyLevel=4&idxSet=Geo,Addr,PAD,POI`);
                 countTomTomCall(); // ค้นหาสถานที่ก็ใช้โควตา TomTom เหมือนกัน → นับด้วย
                 let res = await httpRes.json(); 
-                if(!res.results || !res.results.length) return (list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติมนะครับ</span></div>', list.style.display = 'block'); 
+                if(!res.results || !res.results.length) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติมนะครับ</span></div>'; list.style.display = 'block'; window.updateClearDestBtn(); return; } 
                 list.innerHTML = res.results.map((item, idx) => {
                     let name = (item.poi && item.poi.name) ? item.poi.name : ((item.address && item.address.freeformAddress) ? item.address.freeformAddress.split(',')[0] : 'สถานที่');
                     let addr = (item.address && item.address.freeformAddress) ? item.address.freeformAddress : '';
@@ -3037,7 +3040,8 @@
                     </div>`;
                 }).join(''); 
                 list.style.display = 'block'; 
-            } catch(e) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--accent-red);">เกิดข้อผิดพลาดในการเชื่อมต่อ</div>'; list.style.display = 'block'; } 
+                window.updateClearDestBtn(); // เปิดผลค้นหา → ปุ่ม × โผล่พร้อมกัน
+            } catch(e) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--accent-red);">เกิดข้อผิดพลาดในการเชื่อมต่อ</div>'; list.style.display = 'block'; window.updateClearDestBtn(); } 
         }, 300); 
     };
 
@@ -3181,12 +3185,15 @@
         window.updateClearDestBtn();
     };
 
-    // 🧹 ปุ่มกากบาท (×) ล้างจุดหมาย — โผล่เมื่อมีข้อความ/ปลายทางในช่องค้นหา, กดแล้วล้างทุกอย่างกลับสถานะเริ่มต้น
+    // 🧹 ปุ่มกากบาท (×) ล้างจุดหมาย — โผล่เฉพาะตอน dropdown (ประวัติล่าสุด/ผลค้นหา) เปิดอยู่ และมีข้อความ/ปลายทางให้ล้าง
+    // แล้วหายไปพร้อมกับประวัติล่าสุด (ปิด dropdown = ปุ่ม × หายด้วย) เพื่อให้ช่องค้นหาดูสะอาดตอนไม่ได้ค้นหา
     window.updateClearDestBtn = () => {
         const btn = $('btnClearDest');
         if (!btn) return;
         const hasVal = !!($('destInput').value || '').trim();
-        btn.classList.toggle('is-hidden', !hasVal && !destLoc);
+        const s = $('suggestionList'), h = $('historyList');
+        const dropdownOpen = (s && s.style.display !== 'none') || (h && h.style.display !== 'none');
+        btn.classList.toggle('is-hidden', !dropdownOpen || (!hasVal && !destLoc));
     };
     window.clearDestination = () => {
         $('destInput').value = '';
