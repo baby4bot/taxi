@@ -2716,7 +2716,10 @@
             const sVal = (ov.sec && ov.sec > 0) ? ov.sec : '';
             const orig = k.key.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             return `<div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:12px; margin-bottom:10px; text-align:left;">
-                <div style="font-size:12px; color:var(--text-dim); margin-bottom:6px;">${k.label} — <span style="opacity:0.6;">ต้นฉบับ: "${orig}"</span></div>
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:6px;">
+                    <div style="font-size:12px; color:var(--text-dim);">${k.label} — <span style="opacity:0.6;">ต้นฉบับ: "${orig}"</span></div>
+                    <button onclick="window.previewToastMsg('${idSuffix}', ${JSON.stringify(k.key).replace(/"/g, '&quot;')}, ${JSON.stringify(k.icon || '').replace(/"/g, '&quot;')})" title="พรีวิว toast นี้" style="width:28px; height:28px; border-radius:50%; background:#3498db; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:0; box-shadow:0 2px 8px rgba(52,152,219,0.4);"><span class="material-symbols-outlined" style="color:#fff; font-size:16px;">play_arrow</span></button>
+                </div>
                 <input type="text" id="tmText_${idSuffix}" value="${tVal}" placeholder="ข้อความใหม่ (เว้นว่าง = ใช้ต้นฉบับ)" style="margin-bottom:8px; text-align:left; font-size:14px;" maxlength="200">
                 <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
                     <input type="text" id="tmIcon_${idSuffix}" value="${iVal}" list="toastIconList" placeholder="ไอคอน: ชื่อ material หรืออีโมจิ (เว้นว่าง = เดิม)" style="flex:1; text-align:left; font-size:14px;" maxlength="40">
@@ -2730,6 +2733,20 @@
             </div>`;
         }).join('');
         window.toggleModal('toastMsgModal', true);
+    };
+    // ▶️ พรีวิว toast ของการ์ดนี้ — ใช้ข้อความ/ไอคอน/วินาทีที่กรอกไว้ทันที (ยังไม่ต้องบันทึก)
+    window.previewToastMsg = (idSuffix, origKey, origIcon) => {
+        const tEl = document.getElementById('tmText_' + idSuffix);
+        const iEl = document.getElementById('tmIcon_' + idSuffix);
+        const sEl = document.getElementById('tmSec_' + idSuffix);
+        const text = (tEl && tEl.value.trim()) ? tEl.value.trim() : origKey;
+        const icon = (iEl && iEl.value.trim()) ? iEl.value.trim() : (origIcon || null);
+        const sec = (sEl && parseFloat(sEl.value) > 0) ? parseFloat(sEl.value) : null;
+        // ใส่ registry ชั่วคราวเพื่อบังคับไอคอน/วินาทีที่กรอก (แล้วคืนค่าเดิมทันที)
+        const saved = window.__toastReg;
+        window.__toastReg = saved ? Object.assign({}, saved) : {};
+        window.__toastReg[text] = { text: text, icon: icon, sec: sec };
+        try { window.showToast(text, false); } finally { window.__toastReg = saved; }
     };
     // รีเซ็ตข้อความทั้งหมดกลับเป็นต้นฉบับ
     window.resetToastMsgOverrides = async () => {
