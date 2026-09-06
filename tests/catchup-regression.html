@@ -30,7 +30,7 @@
         <b>วิธีเปิด:</b> ต้องผ่าน HTTP เท่านั้น เช่น <code>https://baby4bot.github.io/taxi/tests/catchup-regression.html</code>
         (เปิดจาก file:// ตรง ๆ ไม่ได้ เพราะ iframe ถูกบล็อก cross-origin) — เปิดแล้วรันอัตโนมัติ หรือกดปุ่มด้านล่างเพื่อรันใหม่
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (12 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (13 สถานการณ์)</button>
     <div id="summary"></div>
     <ol id="results"></ol>
     <iframe id="appFrame" src="../index.html"></iframe>
@@ -514,6 +514,30 @@
                 assert(addedByCatchUp <= 5, 'catch-up ต้องไม่บวกซ้ำเต็มช่วงซ่อน (ticker นับไปแล้ว +' + billedDuringHidden.toFixed(1) + ' วิ; catch-up เบิกเพิ่ม +' + addedByCatchUp.toFixed(1) + ' วิ ต้อง ≤ 5)');
                 assert(d3.traffic >= d1.traffic + 9, 'เวลาจอดรวมต้องครบช่วงซ่อน (ได้ ' + d3.traffic + ' วิ ≥ ' + (d1.traffic + 9).toFixed(1) + ' วิ)');
                 return 'ซ่อน 12 วิ: ticker นับ +' + billedDuringHidden.toFixed(1) + ' วิ → catch-up เบิกเพิ่ม +' + addedByCatchUp.toFixed(1) + ' วิ (ไม่ซ้ำ) · รวม ' + d3.traffic + ' วิ';
+            });
+
+            // 13) จอดนิ่งทั้งช่วงแต่ GPS ลอย (เปิดใหม่ fix ห่างจากจุดก่อนปิดหลายร้อยเมตร — อย่างเคสจริง: ปิดแอป 10 นาที
+            //     แล้วเปิดใหม่ GPS ลอยไป 0.5 กม. ความเร็วเฉลี่ย ~3 กม./ชม. ≤ 6) → ต้องเบิกเป็นเวลาจอด ไม่ใช่ระยะทาง
+            //     (เดิมดูแค่ระยะขยับรวม ≤ 0.15 กม. → 0.5 กม. ถูกตัดสินว่า "วิ่ง" → เวลาจอด 10 นาทีหาย กลายเป็น +0.5 กม.)
+            await runScenario('13. จอดนิ่งทั้งช่วงแต่ GPS ลอยตอนเปิดใหม่ → เบิกเวลาจอด ไม่ใช่ระยะทาง', async () => {
+                frame.contentWindow.userKillCapMin = 60; // cap 60 นาที (ไม่จำกัดพอสำหรับช่วง 10 นาทีนี้)
+                const DRIFT = { lat: P0.lat + 0.0045, lon: P0.lon }; // fix ใหม่ลอยไปทางเหนือ ~0.5 กม. (GPS ลอยตอนจอด)
+                const GAP = 600; // ปิดแอปไป 10 นาที
+                const p = makePayload({ savedAt: Date.now() - GAP * 1000, startTime: Date.now() - GAP * 1000 - 60000, lastPos: P0, lastPath: [P0] });
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
+                w().fetchRouteFromTomTom = async () => null; // ออฟไลน์ — กันไปขอเส้นทางถนนจริง (ไม่เกี่ยวกับกรณีนี้)
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(1200);
+                releaseFix(5, DRIFT.lat, DRIFT.lon, 8, 0); // fix มาไวที่จุดลอย (speed 0 = ยืนยันจอด)
+                await wait(1000);
+                const d = readDisplay();
+                // ควรเบิกเวลาจอดเต็มช่วง (10 + 600 = 610 วิ) และ km ไม่ควรเพิ่ม (0.5 → 0.5)
+                near(d.traffic, 10 + GAP, 8, 'เวลารถติดบนจอ (เบิกจอดทั้งช่วง 600 วิ แม้ GPS ลอย 0.5 กม.)');
+                near(d.km, 0.5, 0.01, 'กิโลเมตรบนจอ (จอดนิ่ง ไม่ควร +0.5 กม. จาก GPS ลอย)');
+                checkFareRange(0.5, 10 + GAP - 8, 10 + GAP + 8, 'ค่าโดยสารบนจอ');
+                return 'GPS ลอย 0.5 กม./10 นาที → เบิกจอด ' + d.traffic + ' วิ (คาด ~610) · km ' + d.km.toFixed(2) + ' (ไม่บวก GPS ลอย)';
             });
 
             // 7) ประวัติการเบิกคืน: ลง payload (catchUpLog) + โชว์ในหน้าสรุปหลังจบเที่ยว
