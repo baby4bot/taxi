@@ -2710,8 +2710,9 @@
         const btn = document.getElementById('saveToastMsgsBtn'); if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">save</span> กำลังบันทึก...'; }
         try {
             const data = {};
-            for (const k of TOAST_MSG_KEYS) {
-                const idSuffix = k.key.replace(/[^a-zA-Z0-9]/g, '_');
+            for (let i = 0; i < TOAST_MSG_KEYS.length; i++) {
+                const k = TOAST_MSG_KEYS[i];
+                const idSuffix = i; // ใช้ index เป็น id — ป้องกัน id ซ้ำ (คีย์ภาษาไทย sanitize แล้วชนกันได้)
                 const tEl = document.getElementById('tmText_' + idSuffix);
                 const iEl = document.getElementById('tmIcon_' + idSuffix);
                 const sEl = document.getElementById('tmSec_' + idSuffix);
@@ -2738,8 +2739,9 @@
         if (!btn) return;
         const reg = window.__toastReg || {};
         let dirty = false;
-        for (const k of TOAST_MSG_KEYS) {
-            const idSuffix = k.key.replace(/[^a-zA-Z0-9]/g, '_');
+        for (let i = 0; i < TOAST_MSG_KEYS.length; i++) {
+            const k = TOAST_MSG_KEYS[i];
+            const idSuffix = i; // ใช้ index เป็น id — ป้องกัน id ซ้ำ
             const tEl = document.getElementById('tmText_' + idSuffix);
             const iEl = document.getElementById('tmIcon_' + idSuffix);
             const sEl = document.getElementById('tmSec_' + idSuffix);
@@ -2772,8 +2774,8 @@
         const list = document.getElementById('toastMsgList');
         if (!list) return;
         const reg = window.__toastReg || {};
-        list.innerHTML = TOAST_MSG_KEYS.map(k => {
-            const idSuffix = k.key.replace(/[^a-zA-Z0-9]/g, '_');
+        list.innerHTML = TOAST_MSG_KEYS.map((k, i) => {
+            const idSuffix = i; // ใช้ index เป็น id — ป้องกัน id ซ้ำ
             const ov = reg[k.key] || {};
             const tVal = (ov.text || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             const iVal = (ov.icon || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -2782,7 +2784,7 @@
             return `<div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:12px; margin-bottom:10px; text-align:left;">
                 <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:6px;">
                     <div style="font-size:12px; color:var(--text-dim);">${k.label} — <span style="opacity:0.6;">ต้นฉบับ: "${orig}"</span></div>
-                    <button onclick="window.previewToastMsg('${idSuffix}', ${JSON.stringify(k.key).replace(/"/g, '&quot;')}, ${JSON.stringify(k.icon || '').replace(/"/g, '&quot;')})" title="ดูตัวอย่าง toast นี้" style="display:flex; align-items:center; justify-content:center; background:#3498db; border:none; cursor:pointer; border-radius:50%; width:32px; height:32px; flex-shrink:0; box-shadow:0 2px 8px rgba(52,152,219,0.4);"><span class="material-symbols-outlined" style="color:#fff; font-size:18px;">play_arrow</span></button>
+                    <button onclick="window.previewToastMsg(${idSuffix}, ${JSON.stringify(k.key).replace(/"/g, '&quot;')}, ${JSON.stringify(k.icon || '').replace(/"/g, '&quot;')})" title="ดูตัวอย่าง toast นี้" style="display:flex; align-items:center; justify-content:center; background:#3498db; border:none; cursor:pointer; border-radius:50%; width:32px; height:32px; flex-shrink:0; box-shadow:0 2px 8px rgba(52,152,219,0.4);"><span class="material-symbols-outlined" style="color:#fff; font-size:18px;">play_arrow</span></button>
                 </div>
                 <input type="text" id="tmText_${idSuffix}" value="${tVal}" placeholder="ข้อความใหม่ (เว้นว่าง = ใช้ต้นฉบับ)" style="margin-bottom:8px; text-align:left; font-size:14px;" maxlength="200" oninput="window.syncToastSaveBtn()">
                 <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
