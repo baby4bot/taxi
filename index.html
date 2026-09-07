@@ -1531,13 +1531,13 @@
 
 <div id="forgotPasswordModal" class="modal-overlay" style="z-index: 10055;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><button class="btn-close-floating" style="top: 15px; right: 15px; transform: none;" onclick="window.toggleModal('forgotPasswordModal', false)"><span class="material-symbols-outlined">close</span></button><div id="fpStep1" style="text-align: center;"><span class="material-symbols-outlined" style="font-size: 44px; color: var(--neon-yellow); margin-bottom: 6px;">lock_reset</span><h3 style="color: white; margin-bottom: 8px;">ลืมรหัสผ่าน?</h3><p style="font-size: 13px; color: var(--text-dim); margin: 0 0 var(--space-field); line-height: 1.6;">กรอก Username และเบอร์โทรศัพท์ที่ใช้สมัครไว้<br>ถ้าตรงกับในระบบ จะให้ตั้งรหัสผ่านใหม่ได้ทันที (ไม่ต้องใช้ OTP)</p><input type="text" id="fpUsername" placeholder="Username ที่สมัครไว้" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><input type="tel" id="fpPhone" placeholder="เบอร์โทรศัพท์ที่สมัครไว้" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><button id="fpVerifyBtn" onclick="window.verifyForgotIdentity()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: white;"><span class="material-symbols-outlined" style="font-size: 20px;">verified_user</span> ตรวจสอบข้อมูล</button><div style="margin-top: 14px; font-size: 13px; color: var(--text-dim); cursor: pointer;" onclick="window.toggleModal('forgotPasswordModal', false)">← กลับไปหน้าเข้าสู่ระบบ</div></div><div id="fpStep2" style="display: none;"><div style="text-align: center;"><span class="material-symbols-outlined" style="font-size: 44px; color: var(--neon-green); margin-bottom: 6px;">key</span><h3 style="color: white; margin-bottom: 4px;">ยืนยันตัวตนสำเร็จ</h3><p id="fpAccountLabel" style="font-size: 13px; color: var(--neon-yellow); margin: 0 0 var(--space-field);"></p></div><div class="password-wrapper"><input type="password" id="fpNewPassword" placeholder="รหัสผ่านใหม่" style="text-align: left;" autocomplete="new-password"><span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('fpNewPassword', this)">visibility_off</span></div><div class="password-wrapper" style="margin-bottom: var(--space-field);"><input type="password" id="fpConfirmPassword" placeholder="ยืนยันรหัสผ่านใหม่" style="text-align: left;" autocomplete="new-password"><span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('fpConfirmPassword', this)">visibility_off</span></div><button onclick="window.saveForgotPassword()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: white;" id="fpSaveBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกรหัสผ่านใหม่</button><div style="margin-top: 14px; font-size: 13px; color: var(--text-dim); cursor: pointer; text-align: center;" onclick="window.backForgotStep1()">← กรอกข้อมูลใหม่</div></div></div></div>
 
-<div id="adminMenuModal" class="modal-overlay"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3>ระบบจัดการผู้ใช้งาน</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
+<div id="adminMenuModal" class="modal-overlay"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3>ระบบจัดการผู้ใช้งาน</h3><button id="adminGlobalLogsBtn" class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
 
 <div id="toastMsgModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3>จัดการข้อความแจ้งเตือน</h3><button class="btn-action-floating" style="left: 15px;" onclick="window.resetToastMsgOverrides()" title="รีเซ็ตข้อความทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('toastMsgModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">แก้ไขข้อความ/ไอคอน/เวลาของป๊อปอัปแจ้งเตือนทุกแบบ — บันทึกแล้วมีผลกับทุกคนทันที (ทั้งผู้ใช้และแอดมินเห็นเหมือนกัน)<br>แตะปุ่มรูปไอคอนสีเหลืองข้างช่องเพื่อเลือกรูปจากกริด หรือพิมพ์ชื่อไอคอน material (เช่น <b>sync</b>, <b>toll</b>) / อีโมจิเองก็ได้ · ช่อง <b>วินาที</b> ตั้งเวลาที่ toast อยู่บนจอ (default <b>1.5 วิ</b> — เว้นว่าง = 1.5)</p><div id="toastMsgList" style="min-height: 200px;"></div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveToastMsgsBtn" onclick="window.saveToastMsgOverrides()" class="manual-timer-btn" disabled style="background: #3a3f4b; width: 100%; justify-content: center; opacity: 0.55; cursor: not-allowed;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก</button></div></div></div><div id="iconPickerModal" class="modal-overlay" style="z-index: 10010;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="font-size:18px;">เลือกรูปไอคอน</h3><button class="btn-close-floating" onclick="window.toggleModal('iconPickerModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><div style="font-size:12px; color:var(--text-dim); margin-bottom:8px;">🅰️ ไอคอน Material (เห็นเป็นรูป)</div><div id="iconPickerMat" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;"></div><div style="font-size:12px; color:var(--text-dim); margin-bottom:8px;">🔤 อีโมจิ</div><div id="iconPickerEmoji" style="display:flex; flex-wrap:wrap; gap:8px;"></div></div></div></div>
 
 <div id="adminEditUserModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="adminEditModalTitle">จัดการผู้ใช้</h3><button class="btn-close-floating" onclick="window.toggleModal('adminEditUserModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll"><div style="display: flex; justify-content: center; gap: 20px; margin-bottom: var(--space-field);"><div style="position: relative; text-align: center;"><img id="adminEditPic" src="" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid #3498db; background: rgba(0,0,0,0.3);" onclick="document.getElementById('adminUploadPicInput').click()"><button id="delAdminProfilePicBtn" onclick="window.removeImage('adminEditPic', true)" class="btn-del-media" style="display: none;" title="ลบรูปโปรไฟล์"><span class="material-symbols-outlined">delete</span></button><div style="font-size: 11px; color: var(--text-dim); margin-top: 5px; cursor: pointer;" onclick="document.getElementById('adminUploadPicInput').click()">แตะเปลี่ยนรูป</div><input type="file" id="adminUploadPicInput" accept="image/*" style="display: none;" onchange="window.previewProfilePic(event, 'adminEditPic')"></div><div style="position: relative; text-align: center;"><img id="adminEditQrPic" src="" style="width: 80px; height: 80px; object-fit: contain; cursor: pointer; border: 2px dashed #3498db; border-radius: 15px; background: rgba(0,0,0,0.5); padding: 5px;" onclick="document.getElementById('adminUploadQrInput').click()"><button id="delAdminQrPicBtn" onclick="window.removeImage('adminEditQrPic', false)" class="btn-del-media" style="display: none;" title="ลบ QR Code"><span class="material-symbols-outlined">delete</span></button><div style="font-size: 11px; color: var(--text-dim); margin-top: 5px; cursor: pointer;" onclick="document.getElementById('adminUploadQrInput').click()">แตะเปลี่ยน QR</div><input type="file" id="adminUploadQrInput" accept="image/*" style="display: none;" onchange="window.previewProfilePic(event, 'adminEditQrPic')"></div></div><input type="hidden" id="adminEditUid"><label id="adminEditUsernameLabel" style="text-align: left; display: none;">Username</label><input type="text" id="adminEditUsername" style="margin-bottom: var(--space-field); text-align: left;" placeholder="เช่น staff" autocomplete="off"><label style="text-align: left;">ชื่อที่แสดง</label><input type="text" id="adminEditName" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="text-align: left;">ชื่อบริษัท/สหกรณ์แท็กซี่ (สำหรับหัวใบเสร็จ)<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400;">ถ้าเว้นไว้ ใบเสร็จจะใช้ชื่อคนขับแทน</span></label><input type="text" id="adminEditCompanyName" maxlength="60" placeholder="เช่น สหกรณ์แท็กซี่นครหลวง จำกัด" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="text-align: left;">เบอร์โทรศัพท์</label>
 <div style="display: flex; gap: 10px; margin-bottom: var(--space-field);"><input type="tel" id="adminEditPhone" style="flex: 1; margin-bottom: 0; text-align: left;" autocomplete="off"><button id="adminCallBtn" onclick="" class="manual-timer-btn" style="background: #2ecc71; width: 50px; flex: none; display: none; justify-content: center; padding: 0; align-items: center;" title="โทรออก"><span class="material-symbols-outlined" style="font-size: 24px;">call</span></button></div>
-<label style="text-align: left;">ทะเบียนรถ <span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400;">เช่น 1มข322</span></label><input type="text" id="adminEditPlateNo" maxlength="15" placeholder="เช่น 1มข322" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="text-align: left;" id="adminEditPasswordLabel">รหัสผ่าน (คลิกรูปตาเพื่อดู)</label><div class="password-wrapper"><input type="password" id="adminEditPassword" style="text-align: left;" placeholder="รหัสผ่าน" autocomplete="new-password"><span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('adminEditPassword', this)">visibility_off</span></div><label style="text-align: left;">สิทธิ์การใช้งาน (Role)</label><select id="adminEditRole" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: var(--space-field); outline: none; font-family: 'Kanit';"><option value="User">ผู้ใช้งานทั่วไป (User)</option><option value="Manager">ผู้จัดการ (Manager)</option><option value="Admin">ผู้ดูแลระบบสูงสุด (Admin)</option></select><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">สั่นเมื่อมี toast ทอง<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เช่น กลับจากเบื้องหลัง / ใกล้ถึงปลายทาง (ปิดถ้าไม่อยากให้สั่นตอนขับ)</span></span><input type="checkbox" id="adminEditVibrateGold" checked style="width:22px; height:22px; accent-color:var(--neon-yellow); flex-shrink:0;"></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เต็มจออัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">แตะครั้งแรกหลังเปิดแอปจะขอเต็มจอให้อัตโนมัติ (Android Chrome/Firefox/Edge — iOS ต้องติดตั้งแอป)</span></span><input type="checkbox" id="adminEditAutoFs" checked style="width:22px; height:22px; accent-color:var(--neon-yellow); flex-shrink:0;"></label><div style="display: flex; gap: 10px;"><button onclick="window.saveAdminUserEdit()" class="manual-timer-btn" style="flex:1; justify-content: center; background: var(--neon-green);" id="saveAdminUserBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก</button><button onclick="window.deleteAdminUser()" class="manual-timer-btn" style="background: var(--accent-red); flex:1; justify-content: center;" id="deleteUserBtn"><span class="material-symbols-outlined" style="font-size: 20px;">delete</span> ลบ</button></div></div></div></div>
+<label style="text-align: left;">ทะเบียนรถ <span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400;">เช่น 1มข322</span></label><input type="text" id="adminEditPlateNo" maxlength="15" placeholder="เช่น 1มข322" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="text-align: left;" id="adminEditPasswordLabel">รหัสผ่าน (คลิกรูปตาเพื่อดู)</label><div class="password-wrapper"><input type="password" id="adminEditPassword" style="text-align: left;" placeholder="รหัสผ่าน" autocomplete="new-password"><span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('adminEditPassword', this)">visibility_off</span></div><label style="text-align: left;">สิทธิ์การใช้งาน (Role)</label><select id="adminEditRole" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: var(--space-field); outline: none; font-family: 'Kanit';"><option value="User">ผู้ใช้งานทั่วไป (User)</option><option value="Manager">ผู้จัดการ (Manager)</option><option value="Admin">ผู้ดูแลระบบสูงสุด (Admin)</option></select><div id="adminStaffPrefsWrap"><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">สั่นเมื่อมี toast ทอง<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เช่น กลับจากเบื้องหลัง / ใกล้ถึงปลายทาง (ปิดถ้าไม่อยากให้สั่นตอนขับ)</span></span><input type="checkbox" id="adminEditVibrateGold" checked style="width:22px; height:22px; accent-color:var(--neon-yellow); flex-shrink:0;"></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เต็มจออัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">แตะครั้งแรกหลังเปิดแอปจะขอเต็มจอให้อัตโนมัติ (Android Chrome/Firefox/Edge — iOS ต้องติดตั้งแอป)</span></span><input type="checkbox" id="adminEditAutoFs" checked style="width:22px; height:22px; accent-color:var(--neon-yellow); flex-shrink:0;"></label></div><div style="display: flex; gap: 10px;"><button onclick="window.saveAdminUserEdit()" class="manual-timer-btn" style="flex:1; justify-content: center; background: var(--neon-green);" id="saveAdminUserBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก</button><button onclick="window.deleteAdminUser()" class="manual-timer-btn" style="background: var(--accent-red); flex:1; justify-content: center;" id="deleteUserBtn"><span class="material-symbols-outlined" style="font-size: 20px;">delete</span> ลบ</button></div></div></div></div>
 
 <div id="activityLogModal" class="modal-overlay" style="z-index: 10010;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="logModalTitle">ประวัติการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('activityLogModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="activityLogList" class="modal-content-scroll" style="text-align: left; background: rgba(0,0,0,0.2);"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลด...</div></div></div></div>
 
@@ -1783,10 +1783,41 @@
     let userOnlineStates = {}; let isInitialUserLoad = true;
     window.myCurrentQrCodeURL = ""; window.myCurrentDisplayName = ""; window.myCurrentPhotoURL = ""; window.myCurrentCompanyName = ""; window.myCurrentPlateNo = ""; window.currentAdminUsers = [];
 
+    // รายการสิทธิ์ทั้งหมด — แต่ละข้อผูกกับฟีเจอร์/ปุ่มจริงในแอป (Admin เป็น god เห็นหมดเสมอ; Manager/User ตั้งได้ตามที่ admin ติ๊ก)
     window.defaultPermConfig = [
-        { id: 'perm_canAdd', label: 'สิทธิ์การเพิ่มพนักงานใหม่' }, { id: 'perm_canEdit', label: 'สิทธิ์แก้ไขข้อมูลพนักงาน (คนอื่น)' }, { id: 'perm_canViewPassword', label: 'สิทธิ์ดูรหัสผ่านผู้ใช้อื่น' }, { id: 'perm_canBan', label: 'สิทธิ์การแบน / ปลดแบน' }, { id: 'perm_canViewLogs', label: 'สิทธิ์ดูประวัติการใช้งาน (Logs)' }, { id: 'perm_canEditOwn', label: 'สิทธิ์แก้ไขโปรไฟล์/QR Code ของตัวเอง' }, { id: 'perm_canManageService', label: 'สิทธิ์จัดการ Service Portal (เพิ่ม/ลบ/จัดเรียง)' }, { id: 'perm_canDeleteMedia', label: 'สิทธิ์ลบรูปโปรไฟล์และรูป QR Code' }, { id: 'perm_canDelete', label: 'สิทธิ์การลบผู้ใช้งาน (Delete)' }
+        { id: 'perm_canViewUsers', label: 'เข้าหน้าจัดการผู้ใช้งาน / ดูรายชื่อพนักงาน' },
+        { id: 'perm_canAdd', label: 'เพิ่มพนักงานใหม่' },
+        { id: 'perm_canEdit', label: 'แก้ไขข้อมูลพนักงาน (คนอื่น)' },
+        { id: 'perm_canChangeUserRole', label: 'เปลี่ยนตำแหน่ง (Role) ของพนักงาน' },
+        { id: 'perm_canViewPassword', label: 'ดูรหัสผ่านผู้ใช้อื่น' },
+        { id: 'perm_canBan', label: 'แบน / ปลดแบนพนักงาน' },
+        { id: 'perm_canDelete', label: 'ลบผู้ใช้งาน (Delete)' },
+        { id: 'perm_canCallStaff', label: 'โทรออกหาพนักงาน' },
+        { id: 'perm_canViewLogs', label: 'ดูประวัติการใช้งานของพนักงาน (Logs)' },
+        { id: 'perm_canViewGlobalLogs', label: 'ดูประวัติรวมทั้งระบบ (Global Logs)' },
+        { id: 'perm_canSetStaffPrefs', label: 'ตั้งค่าบังคับพนักงาน (สั่น toast ทอง / เต็มจออัตโนมัติ)' },
+        { id: 'perm_canEditOwn', label: 'แก้ไขโปรไฟล์/QR Code ของตัวเอง' },
+        { id: 'perm_canDeleteMedia', label: 'ลบรูปโปรไฟล์และรูป QR Code' },
+        { id: 'perm_canManageService', label: 'จัดการ Service Portal (เพิ่ม/ลบ/จัดเรียง)' },
+        { id: 'perm_canManageToastMsg', label: 'จัดการข้อความแจ้งเตือน (Toast) ทั้งแอป' },
+        { id: 'perm_canManageRoles', label: 'ตั้งค่าสิทธิ์ของแต่ละตำแหน่ง (Role)' }
     ];
     window.currentPermConfig = [...window.defaultPermConfig];
+
+    // 🎯 ค่าเริ่มต้นของแต่ละตำแหน่ง (ใช้เมื่อยังไม่เคยบันทึก/คีย์ใหม่ยังไม่ถูกบันทึก) — Manager ได้มากกว่า User ตามหน้าที่หัวหน้ากะ
+    // หมายเหตุ: ค่าที่ admin ติ๊กบันทึกไว้แล้วจะชนะค่าเริ่มต้นนี้เสมอ (merge: default → ค่าที่บันทึก)
+    window.DEFAULT_ROLE_PERMS = {
+        Manager: { canViewUsers: true, canAdd: true, canEdit: true, canChangeUserRole: false, canViewPassword: false, canBan: true, canDelete: false, canCallStaff: true, canViewLogs: true, canViewGlobalLogs: true, canSetStaffPrefs: false, canEditOwn: true, canDeleteMedia: true, canManageService: false, canManageToastMsg: false, canManageRoles: false },
+        User: { canViewUsers: false, canAdd: false, canEdit: false, canChangeUserRole: false, canViewPassword: false, canBan: false, canDelete: false, canCallStaff: false, canViewLogs: false, canViewGlobalLogs: false, canSetStaffPrefs: false, canEditOwn: true, canDeleteMedia: false, canManageService: false, canManageToastMsg: false, canManageRoles: false }
+    };
+    // ค่าสิทธิ์จริงของ role หนึ่ง = ค่าเริ่มต้น + ค่าที่ admin บันทึก (ค่าที่บันทึกชนะ) → คีย์ใหม่ที่ยังไม่เคยเซฟจะได้ค่าเริ่มต้นที่สมเหตุสมผลทันที
+    window.effectiveRolePerms = (role) => {
+        const base = window.DEFAULT_ROLE_PERMS[role] || {};
+        const stored = (window.globalPermissions || {})[role] || {};
+        return { ...base, ...stored };
+    };
+    window.godPermsAll = () => { const o = {}; window.currentPermConfig.forEach(p => { o[p.id.replace('perm_', '')] = true; }); return o; }; // Admin = god: ได้ทุกสิทธิ์เสมอ
+    window.currentUserPerms = () => { const g = currentUserRole === "Admin"; return g ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole); }; // สิทธิ์จริงของผู้ล็อกอินปัจจุบัน
 
     const onlineAudio = new Audio('https://actions.google.com/sounds/v1/ui/bell_ping.ogg');
     const offlineAudio = new Audio('https://actions.google.com/sounds/v1/ui/pop.ogg');
@@ -2783,6 +2814,7 @@
     };
     // เปิดหน้าต่างจัดการข้อความแจ้งเตือน (แอดมิน) — สร้างรายการจาก registry + เติมค่าที่แก้ไว้แล้ว
     window.openToastMsgModal = async () => {
+        if(!window.currentUserPerms().canManageToastMsg) return window.showToast("คุณไม่มีสิทธิ์จัดการข้อความแจ้งเตือน", true);
         if (!window.__toastReg) await window.loadToastMsgOverrides();
         const list = document.getElementById('toastMsgList');
         if (!list) return;
@@ -4797,16 +4829,14 @@
     window.applyPermissionsUI = () => {
         if(!loggedInUserId) return;
         let isGod = currentUserRole === "Admin";
-        let currentRoles = window.globalPermissions || {
-            Manager: { canAdd: false, canEdit: false, canBan: false, canViewLogs: true, canEditOwn: true, canManageService: false, canDelete: false, canViewPassword: false, canDeleteMedia: false },
-            User: { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false, canViewPassword: false, canDeleteMedia: false }
-        };
-        let myPerms = isGod ? { canAdd: true, canEdit: true, canBan: true, canViewLogs: true, canEditOwn: true, canManageService: true, canDelete: true, canViewPassword: true, canDeleteMedia: true } : (currentRoles[currentUserRole] || { canAdd: false, canEdit: false, canBan: false, canViewLogs: false, canEditOwn: true, canManageService: false, canDelete: false, canViewPassword: false, canDeleteMedia: false });
-        
-        let showAdminMenu = myPerms.canAdd || myPerms.canEdit || myPerms.canBan || myPerms.canViewLogs || myPerms.canDelete;
+        let myPerms = isGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
+
+        // เมนู "จัดการผู้ใช้งาน" — โชว์เมื่อมีสิทธิ์อะไรก็ตามที่เกี่ยวกับการจัดการพนักงาน (หรือดูรายชื่อล้วน ๆ)
+        let showAdminMenu = myPerms.canViewUsers || myPerms.canAdd || myPerms.canEdit || myPerms.canChangeUserRole || myPerms.canViewPassword || myPerms.canBan || myPerms.canDelete || myPerms.canCallStaff || myPerms.canViewLogs || myPerms.canViewGlobalLogs || myPerms.canSetStaffPrefs;
         document.getElementById('adminMenuBtn').style.display = showAdminMenu ? 'flex' : 'none';
-        document.getElementById('toastMsgMenuBtn').style.display = isGod ? 'flex' : 'none'; // แก้ข้อความแจ้งเตือน — เฉพาะแอดมิน
-        document.getElementById('roleSettingsBtn').style.display = isGod ? 'flex' : 'none';
+        // เมนู "จัดการข้อความแจ้งเตือน" และ "ตั้งค่าสิทธิ์" — มีสิทธิ์เฉพาะ/แอดมินถึงจะเห็น
+        document.getElementById('toastMsgMenuBtn').style.display = (isGod || myPerms.canManageToastMsg) ? 'flex' : 'none';
+        document.getElementById('roleSettingsBtn').style.display = (isGod || myPerms.canManageRoles) ? 'flex' : 'none';
         document.getElementById('adminAddUserBtn').style.display = myPerms.canAdd ? 'flex' : 'none';
         document.getElementById('adminRoleNotice').style.display = isGod ? 'none' : 'block';
 
@@ -4822,7 +4852,7 @@
         let adminDelPic = document.getElementById('delAdminProfilePicBtn'); if (adminDelPic) adminDelPic.style.display = canDelMedia ? 'flex' : 'none';
         let adminDelQr = document.getElementById('delAdminQrPicBtn'); if (adminDelQr) adminDelQr.style.display = canDelMedia ? 'flex' : 'none';
 
-        document.getElementById('serviceMenuBtn').style.display = myPerms.canManageService ? 'flex' : 'none';
+        document.getElementById('serviceMenuBtn').style.display = (isGod || myPerms.canManageService) ? 'flex' : 'none';
 
         if(document.getElementById('adminMenuModal').style.display === 'flex') { if(window.handleAdminModalState) window.handleAdminModalState(true); }
         if(document.getElementById('servicePortalModal').style.display === 'flex') { window.openServicePortal(window.currentServiceModeManage); }
@@ -4846,8 +4876,12 @@
         if(!permsUnsub) { permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { if(docSnap.exists()) { window.globalPermissions = { ...(window.globalPermissions || {}), ...docSnap.data() }; } window.applyPermissionsUI(); }); }
         if(!permConfigUnsub) { 
             permConfigUnsub = onSnapshot(doc(db, "settings", "permission_config"), (docSnap) => { 
-                if(docSnap.exists()) { window.currentPermConfig = docSnap.data().config || window.defaultPermConfig; } 
-                else { window.currentPermConfig = [...window.defaultPermConfig]; }
+                // เอารายการที่เคยบันทึกไว้มารวมกับรายการใหม่ในโค้ด (กันของใหม่ที่เพิ่มมาหายไปถ้าใน DB มีของเก่า 9 รายการ)
+                let stored = (docSnap.exists() && Array.isArray(docSnap.data().config)) ? docSnap.data().config : [];
+                let haveIds = {}; stored.forEach(x => { haveIds[x.id] = true; });
+                let merged = [...stored];
+                window.defaultPermConfig.forEach(d => { if(!haveIds[d.id]) { merged.push(d); haveIds[d.id] = true; } });
+                window.currentPermConfig = merged.length ? merged : [...window.defaultPermConfig];
                 if(document.getElementById('roleSettingsModal').style.display === 'flex') { window.renderPermList(); }
             }); 
         }
@@ -5091,6 +5125,7 @@
     };
 
     window.quickDeleteUser = async (uid, userName) => {
+        if(!window.currentUserPerms().canDelete) return window.showToast("คุณไม่มีสิทธิ์ลบผู้ใช้งาน", true);
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถลบบัญชีตัวเองได้", true);
         let isOk = await window.showCustomConfirm("ลบบัญชีผู้ใช้งาน", `ยืนยันการ 'ลบถาวร' บัญชี ${userName} ใช่หรือไม่?\nข้อมูลจะไม่สามารถกู้คืนได้`, "danger", "ลบข้อมูล");
         if(isOk) { try { await deleteDoc(doc(db, "users", uid)); window.showToast("ลบบัญชีเรียบร้อย"); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการลบข้อมูล", true); } }
@@ -5098,8 +5133,9 @@
 
     window.handleAdminModalState = (isOpen) => {
         if(isOpen) {
-            let currentRoles = window.globalPermissions || {};
-            let isGod = currentUserRole === "Admin"; let myPerms = isGod ? { canAdd: true, canEdit: true, canBan: true, canViewLogs: true, canDelete: true } : (currentRoles[currentUserRole] || {});
+            let isGod = currentUserRole === "Admin"; let myPerms = isGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
+            // ปุ่มดูประวัติรวมทั้งระบบ (Global Logs) — เฉพาะแอดมินหรือผู้มีสิทธิ์ canViewGlobalLogs
+            const glBtn = document.getElementById('adminGlobalLogsBtn'); if (glBtn) glBtn.style.display = (isGod || myPerms.canViewGlobalLogs) ? 'flex' : 'none';
             if(adminSnapshotUnsub) adminSnapshotUnsub();
             adminSnapshotUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
                 window.currentAdminUsers = [];
@@ -5122,8 +5158,9 @@
                     let canTouchThisUser = isGod || (safeRole !== "Admin"); 
                     let canViewThisLog = myPerms.canViewLogs; if (safeRole === "Admin" && currentUserRole !== "Admin") { canViewThisLog = false; }
                     let canDeleteThisUser = isGod || (myPerms.canDelete && safeRole !== "Admin");
+                    let canCallThisStaff = (isGod || myPerms.canCallStaff);
                     
-                    if(u.phoneNumber && u.phoneNumber.trim() !== '') {
+                    if(canCallThisStaff && u.phoneNumber && u.phoneNumber.trim() !== '') {
                         callBtnHtml = `<button onclick="window.location.href='tel:${u.phoneNumber}'" class="action-icon-btn" style="color: var(--neon-green);" title="โทรออก"><span class="material-symbols-outlined" style="font-size:26px;">call</span></button>`;
                     }
 
@@ -5132,7 +5169,8 @@
                             if(u.isBanned) quickBanBtn = `<button onclick="window.quickBanToggle('${uid}', false, '${safeName}')" class="action-icon-btn icon-unban" title="ปลดแบน"><span class="material-symbols-outlined" style="font-size:26px;">check_circle</span></button>`;
                             else quickBanBtn = `<button onclick="window.quickBanToggle('${uid}', true, '${safeName}')" class="action-icon-btn icon-ban" title="แบน"><span class="material-symbols-outlined" style="font-size:26px;">block</span></button>`;
                         }
-                        if(myPerms.canEdit) { editBtnHtml = `<button onclick="window.openAdminEditUser('${uid}')" class="action-icon-btn icon-edit" title="แก้ไข"><span class="material-symbols-outlined" style="font-size:26px;">edit</span></button>`; }
+                        let canOpenUserEdit = myPerms.canEdit || myPerms.canChangeUserRole || myPerms.canSetStaffPrefs || myPerms.canViewPassword;
+                        if(canOpenUserEdit) { editBtnHtml = `<button onclick="window.openAdminEditUser('${uid}')" class="action-icon-btn icon-edit" title="แก้ไข"><span class="material-symbols-outlined" style="font-size:26px;">edit</span></button>`; }
                     }
                     if(canViewThisLog) { logsBtn = `<button onclick="window.viewUserLogs('${uid}', '${safeName}')" class="action-icon-btn icon-log" title="ประวัติ"><span class="material-symbols-outlined" style="font-size:26px;">history</span></button>`; }
                     if(canDeleteThisUser) { deleteBtn = `<button onclick="window.quickDeleteUser('${uid}', '${safeName}')" class="action-icon-btn icon-del" title="ลบผู้ใช้"><span class="material-symbols-outlined" style="font-size:26px;">delete</span></button>`; }
@@ -5160,14 +5198,13 @@
         } else { if(adminSnapshotUnsub) adminSnapshotUnsub(); }
     };
 
-    window.openRoleSettingsModal = () => { window.toggleModal('roleSettingsModal', true); window.renderPermList(); };
+    window.openRoleSettingsModal = () => { if(!window.currentUserPerms().canManageRoles) return window.showToast("คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน", true); window.toggleModal('roleSettingsModal', true); window.renderPermList(); };
     window.loadRolePermissionsToUI = () => { window.renderPermList(); };
     
     window.renderPermList = () => {
-        let html = ''; let perms = window.currentPermConfig; let role = document.getElementById('settingRoleSelect').value; let rolePerms = window.globalPermissions[role] || {};
+        let html = ''; let perms = window.currentPermConfig; let role = document.getElementById('settingRoleSelect').value; let rolePerms = window.effectiveRolePerms(role);
         perms.forEach(p => {
             let prop = p.id.replace('perm_', ''); let checkedStr = rolePerms[prop] ? 'checked' : '';
-            if(prop === 'canEditOwn' && rolePerms[prop] !== false) checkedStr = 'checked'; 
             html += `<div class="perm-item" data-id="${p.id}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;"><div style="display: flex; align-items: center; gap: 10px; flex: 1;"><div class="drag-handle" style="cursor: grab; color: rgba(255,255,255,0.3); display: flex; align-items: center;"><span class="material-symbols-outlined">drag_indicator</span></div><input type="checkbox" id="${p.id}" style="width: 20px; height: 20px;" ${checkedStr}><span style="color: var(--neon-yellow); font-weight: 500; font-size: 14px; flex:1; cursor:pointer;" onclick="document.getElementById('${p.id}').click()">${p.label}</span></div><button onclick="window.editPermLabel('${p.id}')" style="background:none; border:none; color: var(--neon-yellow); cursor:pointer; padding:5px; display:flex; align-items:center; transition:0.2s;" title="แก้ไขชื่อสิทธิ์"><span class="material-symbols-outlined" style="font-size: 20px;">edit</span></button></div>`;
         });
         document.getElementById('permListContainer').innerHTML = html;
@@ -5190,12 +5227,14 @@
     window.savePermConfigToDB = async () => { try { await setDoc(doc(db, "settings", "permission_config"), { config: window.currentPermConfig }); } catch(e) {} };
 
     window.saveRolePermissions = async () => {
+        if(!window.currentUserPerms().canManageRoles) return window.showToast("คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน", true);
         let role = document.getElementById('settingRoleSelect').value; let btn = document.getElementById('saveRolePermBtn'); btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
         let newPerms = {}; window.currentPermConfig.forEach(p => { let prop = p.id.replace('perm_', ''); let el = document.getElementById(p.id); if(el) newPerms[prop] = el.checked; });
         try { await setDoc(doc(db, "settings", "roles"), { [role]: newPerms }, { merge: true }); window.showToast(`บันทึกสิทธิ์สำหรับ ${role} สำเร็จ`); window.toggleModal('roleSettingsModal', false); } catch(e) { window.showToast("บันทึกล้มเหลว", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์`; btn.disabled = false; }
     };
 
     window.quickBanToggle = async (uid, isBan, userName) => {
+        if(!window.currentUserPerms().canBan) return window.showToast("คุณไม่มีสิทธิ์ระงับ/ปลดระงับผู้ใช้งาน", true);
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true);
         const msg = isBan ? "ยืนยันการ 'ระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?\nผู้ใช้จะหลุดจากระบบและเข้าไม่ได้อีก" : "ยืนยันการ 'ปลดระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?";
         let isOk = await window.showCustomConfirm(isBan ? "ระงับการใช้งาน" : "ปลดระงับการใช้งาน", msg, isBan ? "danger" : "warning");
@@ -5204,8 +5243,9 @@
 
     let currentEditUid = "";
     window.openAdminAddUser = () => {
+        if(!window.currentUserPerms().canAdd) return window.showToast("คุณไม่มีสิทธิ์เพิ่มพนักงานใหม่", true);
         currentEditUid = ""; isBannedState = false;
-        document.getElementById('adminEditUid').value = ""; document.getElementById('adminEditUsername').value = ""; document.getElementById('adminEditUsername').disabled = false; document.getElementById('adminEditUsernameLabel').style.display = "block"; document.getElementById('adminEditName').value = ""; document.getElementById('adminEditPhone').value = ""; document.getElementById('adminEditPic').src = window.DEFAULT_AVATAR; document.getElementById('adminEditQrPic').src = window.DEFAULT_QR; document.getElementById('adminEditRole').value = "User"; document.getElementById('adminEditPassword').value = ""; document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = ''; document.getElementById('adminEditRole').disabled = currentUserRole !== "Admin"; const newVib = document.getElementById('adminEditVibrateGold'); if (newVib) newVib.checked = true; const newAutoFs = document.getElementById('adminEditAutoFs'); if (newAutoFs) newAutoFs.checked = true; 
+        document.getElementById('adminEditUid').value = ""; document.getElementById('adminEditUsername').value = ""; document.getElementById('adminEditUsername').disabled = false; document.getElementById('adminEditUsernameLabel').style.display = "block"; document.getElementById('adminEditName').value = ""; document.getElementById('adminEditPhone').value = ""; document.getElementById('adminEditPic').src = window.DEFAULT_AVATAR; document.getElementById('adminEditQrPic').src = window.DEFAULT_QR;        document.getElementById('adminEditRole').value = "User"; document.getElementById('adminEditPassword').value = ""; document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = ''; let addIsGod = currentUserRole === "Admin"; let addMyPerms = addIsGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole); document.getElementById('adminEditRole').disabled = !(addIsGod || addMyPerms.canChangeUserRole); const newVib = document.getElementById('adminEditVibrateGold'); if (newVib) newVib.checked = true; const newAutoFs = document.getElementById('adminEditAutoFs'); if (newAutoFs) newAutoFs.checked = true; const addPrefsWrap = document.getElementById('adminStaffPrefsWrap'); if (addPrefsWrap) addPrefsWrap.style.display = (addIsGod || addMyPerms.canSetStaffPrefs) ? 'block' : 'none';  
         document.getElementById('adminEditPassword').type = 'password'; document.querySelectorAll('#adminEditUserModal .toggle-password').forEach(icon => icon.innerText = 'visibility_off'); document.getElementById('adminEditPasswordLabel').innerText = "รหัสผ่าน (คลิกรูปตาเพื่อดู)";
         document.getElementById('adminEditModalTitle').innerText = "เพิ่มผู้ใช้งานใหม่"; document.getElementById('deleteUserBtn').style.display = 'none'; 
         window.toggleModal('adminMenuModal', false); window.toggleModal('adminEditUserModal', true);
@@ -5213,15 +5253,20 @@
     };
 
     window.openAdminEditUser = (uid) => {
+        const opPerms = window.currentUserPerms(); if(!(opPerms.canEdit || opPerms.canChangeUserRole || opPerms.canSetStaffPrefs || opPerms.canViewPassword)) return window.showToast("คุณไม่มีสิทธิ์จัดการข้อมูลพนักงานคนนี้", true);
         let u = window.currentAdminUsers.find(x => x.uid === uid); if(!u) return; currentEditUid = uid; isBannedState = u.isBanned || false;
         document.getElementById('adminEditUid').value = uid; document.getElementById('adminEditUsername').value = u.username || ''; document.getElementById('adminEditUsername').disabled = true; document.getElementById('adminEditUsernameLabel').style.display = "block"; document.getElementById('adminEditName').value = u.displayName || u.username; document.getElementById('adminEditCompanyName').value = u.companyName || ''; document.getElementById('adminEditPhone').value = u.phoneNumber || ''; document.getElementById('adminEditPic').src = (u.photoURL && u.photoURL.length > 10) ? u.photoURL : window.DEFAULT_AVATAR; document.getElementById('adminEditQrPic').src = (u.qrCodeURL && u.qrCodeURL.length > 10) ? u.qrCodeURL : window.DEFAULT_QR; document.getElementById('adminEditRole').value = u.role || 'User'; document.getElementById('adminEditPlateNo').value = u.plateNo || ''; const editVib = document.getElementById('adminEditVibrateGold'); if (editVib) editVib.checked = u.vibrateGold !== false; const editAutoFs = document.getElementById('adminEditAutoFs'); if (editAutoFs) editAutoFs.checked = u.autoFullscreen !== false; 
         document.getElementById('adminEditPassword').type = 'password'; document.querySelectorAll('#adminEditUserModal .toggle-password').forEach(icon => icon.innerText = 'visibility_off');
-        let isGod = currentUserRole === "Admin"; let currentRoles = window.globalPermissions || {}; let myPerms = isGod ? { canBan: true, canDelete: true, canViewPassword: true } : (currentRoles[currentUserRole] || {});
-        if(myPerms.canViewPassword || isGod) { document.getElementById('adminEditPassword').value = u.password || ''; document.getElementById('adminEditPasswordLabel').innerText = "รหัสผ่าน (คลิกรูปตาเพื่อดู)"; } else { document.getElementById('adminEditPassword').value = ''; document.getElementById('adminEditPasswordLabel').innerText = "ตั้งรหัสผ่านใหม่ (ปล่อยว่างหากไม่เปลี่ยน)"; }
-        document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = ''; document.getElementById('adminEditModalTitle').innerText = "จัดการผู้ใช้"; document.getElementById('adminEditRole').disabled = currentUserRole !== "Admin";
+        let isGod = currentUserRole === "Admin"; let myPerms = isGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
+        let canSetStaffPrefs = isGod || myPerms.canSetStaffPrefs;
+        const prefsWrap = document.getElementById('adminStaffPrefsWrap'); if (prefsWrap) prefsWrap.style.display = canSetStaffPrefs ? 'block' : 'none';
+        const roleSel = document.getElementById('adminEditRole'); if (roleSel) { roleSel.disabled = !(isGod || myPerms.canChangeUserRole); if(u.role === 'Admin' && !isGod) roleSel.disabled = true; }
+        if(myPerms.canViewPassword) { document.getElementById('adminEditPassword').value = u.password || ''; document.getElementById('adminEditPasswordLabel').innerText = "รหัสผ่าน (คลิกรูปตาเพื่อดู)"; } else { document.getElementById('adminEditPassword').value = ''; document.getElementById('adminEditPasswordLabel').innerText = "ตั้งรหัสผ่านใหม่ (ปล่อยว่างหากไม่เปลี่ยน)"; }
+        document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = ''; document.getElementById('adminEditModalTitle').innerText = "จัดการผู้ใช้";
         
         let callBtn = document.getElementById('adminCallBtn');
-        if(u.phoneNumber && u.phoneNumber.trim() !== '') {
+        let canCallThis = (isGod || myPerms.canCallStaff);
+        if(canCallThis && u.phoneNumber && u.phoneNumber.trim() !== '') {
             callBtn.style.display = 'flex';
             callBtn.onclick = () => { window.location.href = `tel:${u.phoneNumber}`; };
         } else {
@@ -5234,7 +5279,9 @@
     };
 
     window.saveAdminUserEdit = async () => {
-        const uid = document.getElementById('adminEditUid').value; const newUsername = document.getElementById('adminEditUsername').value.trim(); const newName = document.getElementById('adminEditName').value; const newCompany = (document.getElementById('adminEditCompanyName').value || '').trim(); const newPhone = document.getElementById('adminEditPhone').value.trim(); const newRole = document.getElementById('adminEditRole').value; const newPassword = document.getElementById('adminEditPassword').value; const fileInput = document.getElementById('adminUploadPicInput'); const qrInput = document.getElementById('adminUploadQrInput'); const btn = document.getElementById('saveAdminUserBtn'); btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
+        const uid = document.getElementById('adminEditUid').value;
+        const svPerms = window.currentUserPerms(); const isNewUser = (uid === "");
+        if((isNewUser && !svPerms.canAdd) || (!isNewUser && !(svPerms.canEdit || svPerms.canChangeUserRole || svPerms.canSetStaffPrefs || svPerms.canViewPassword))) return window.showToast("คุณไม่มีสิทธิ์บันทึกข้อมูลนี้", true); const newUsername = document.getElementById('adminEditUsername').value.trim(); const newName = document.getElementById('adminEditName').value; const newCompany = (document.getElementById('adminEditCompanyName').value || '').trim(); const newPhone = document.getElementById('adminEditPhone').value.trim(); const newRole = document.getElementById('adminEditRole').value; const newPassword = document.getElementById('adminEditPassword').value; const fileInput = document.getElementById('adminUploadPicInput'); const qrInput = document.getElementById('adminUploadQrInput'); const btn = document.getElementById('saveAdminUserBtn'); btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
         try {
             let photoUpdate = document.getElementById('adminEditPic').src; if(photoUpdate === window.DEFAULT_AVATAR) photoUpdate = ""; let qrUpdate = document.getElementById('adminEditQrPic').src; if(qrUpdate === window.DEFAULT_QR) qrUpdate = "";
             if(uid === "") {
@@ -5248,7 +5295,10 @@
             } else {
                 const u = window.currentAdminUsers.find(x => x.uid === uid) || {}; // ข้อมูลเดิมของผู้ใช้ (เดิม u ถูกใช้แต่ไม่ประกาศ → ReferenceError → บันทึกไม่ได้)
                 let logDetail = `แอดมินแก้ไขข้อมูล (ชื่อ: ${newName})`; let updatePayload = { displayName: newName, phoneNumber: newPhone };
-                if(currentUserRole === "Admin") { updatePayload.role = newRole; logDetail += `, สิทธิ์: ${newRole}`; }
+                let editIsGod = currentUserRole === "Admin"; let editMyPerms = editIsGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
+                // เปลี่ยนตำแหน่งได้ต่อเมื่อเป็นแอดมิน หรือมีสิทธิ์ canChangeUserRole (ห้ามแก้ตำแหน่งของแอดมินเอง / ตั้งใครเป็น Admin ถ้าไม่ใช่แอดมิน)
+                let canApplyRole = editIsGod || (editMyPerms.canChangeUserRole && u.role !== 'Admin' && newRole !== 'Admin');
+                if(canApplyRole && newRole !== (u.role || 'User')) { updatePayload.role = newRole; logDetail += `, สิทธิ์: ${newRole}`; }
                 if (newPassword.trim().length >= 1) { updatePayload.password = newPassword.trim(); logDetail += " และเปลี่ยนรหัสผ่าน"; }
                 if (fileInput.files && fileInput.files.length > 0) { photoUpdate = await fileToBase64(fileInput.files[0]); logDetail += " และอัปเดตรูปภาพ"; }
                 if (qrInput.files && qrInput.files.length > 0) { qrUpdate = await fileToBase64(qrInput.files[0], true); logDetail += " และอัปเดต QR Code"; }
@@ -5256,16 +5306,18 @@
                 if(newCompany !== (u.companyName || '')) { updatePayload.companyName = newCompany; logDetail += (newCompany ? ` และตั้งชื่อบริษัท: '${newCompany}'` : " และลบชื่อบริษัท"); }
                 const newPlate = (document.getElementById('adminEditPlateNo').value || '').trim();
                 if(newPlate !== (u.plateNo || '')) { updatePayload.plateNo = newPlate; logDetail += (newPlate ? ` และตั้งทะเบียนรถ: '${newPlate}'` : " และลบทะเบียนรถ"); }
+                // ตั้งค่าบังคับพนักงาน (สั่น toast ทอง / เต็มจออัตโนมัติ) — ต้องมีสิทธิ์ canSetStaffPrefs หรือเป็นแอดมิน
                 const editVibGoldEl = document.getElementById('adminEditVibrateGold');
-                if (editVibGoldEl) { updatePayload.vibrateGold = editVibGoldEl.checked; logDetail += (editVibGoldEl.checked ? ", เปิดสั่น toast ทอง" : ", ปิดสั่น toast ทอง"); }
+                if (editVibGoldEl && (editIsGod || editMyPerms.canSetStaffPrefs)) { updatePayload.vibrateGold = editVibGoldEl.checked; logDetail += (editVibGoldEl.checked ? ", เปิดสั่น toast ทอง" : ", ปิดสั่น toast ทอง"); }
                 const editAutoFsEl = document.getElementById('adminEditAutoFs');
-                if (editAutoFsEl) { updatePayload.autoFullscreen = editAutoFsEl.checked; logDetail += (editAutoFsEl.checked ? ", เปิดเต็มจออัตโนมัติ" : ", ปิดเต็มจออัตโนมัติ"); }
+                if (editAutoFsEl && (editIsGod || editMyPerms.canSetStaffPrefs)) { updatePayload.autoFullscreen = editAutoFsEl.checked; logDetail += (editAutoFsEl.checked ? ", เปิดเต็มจออัตโนมัติ" : ", ปิดเต็มจออัตโนมัติ"); }
                 await updateDoc(doc(db, "users", uid), updatePayload); await recordActivityLog(uid, "ผู้ดูแลระบบแก้ไขข้อมูล", logDetail); window.showToast("อัปเดตข้อมูลผู้ใช้เรียบร้อย!"); window.toggleModal('adminEditUserModal', false);
             }
         } catch(e) { window.showToast("เกิดข้อผิดพลาด", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก`; btn.disabled = false; }
     };
 
     window.viewUserLogs = async (uid, userName) => {
+        if(!window.currentUserPerms().canViewLogs) return window.showToast("คุณไม่มีสิทธิ์ดูประวัติการใช้งาน", true);
         window.toggleModal('activityLogModal', true); document.getElementById('logModalTitle').innerText = 'ประวัติส่วนตัว'; const listDiv = document.getElementById('activityLogList'); listDiv.innerHTML = '<div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลด...</div>';
         try {
             const q = query(collection(db, "users", uid, "logs"), orderBy("timestamp", "desc")); const querySnapshot = await getDocs(q);
@@ -5278,6 +5330,7 @@
     };
 
     window.viewGlobalLogs = async () => {
+        if(!window.currentUserPerms().canViewGlobalLogs) return window.showToast("คุณไม่มีสิทธิ์ดูประวัติรวมทั้งระบบ", true);
         window.toggleModal('activityLogModal', true); 
         document.getElementById('logModalTitle').innerText = 'ประวัติรวมระบบ'; 
         const listDiv = document.getElementById('activityLogList'); 
@@ -5309,10 +5362,9 @@
 
     window.openServicePortal = (isManageMode = false) => {
         window.currentServiceModeManage = isManageMode; window.toggleModal('servicePortalModal', true);
-        let currentRoles = window.globalPermissions || {};
-        let myPerms = (currentUserRole === "Admin") ? {canManageService: true} : (currentRoles[currentUserRole] || {});
+        let isGodSp = currentUserRole === "Admin"; let myPermsSp = isGodSp ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
         document.getElementById('serviceModalTitle').innerText = isManageMode ? "จัดการ SERVICE PORTAL" : "SERVICE PORTAL";
-        document.getElementById('adminServiceAddSection').style.display = (isManageMode && myPerms.canManageService) ? 'block' : 'none';
+        document.getElementById('adminServiceAddSection').style.display = (isManageMode && (isGodSp || myPermsSp.canManageService)) ? 'block' : 'none';
 
         if(!serviceDataUnsub) {
             serviceDataUnsub = onSnapshot(doc(db, "system", "service_data"), (docSnap) => {
