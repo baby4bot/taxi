@@ -14,9 +14,9 @@
     }
     h1 { color: #fff; font-size: 19px; font-weight: 600; margin-bottom: 4px; letter-spacing: 0.4px; }
     .sub { color: #8fa0ba; font-size: 12.5px; margin-bottom: 14px; }
-    .paper-wrap { background: #fff; border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.55); padding: 14px; max-width: 480px; width: 100%; }
+    .paper-wrap { background: #fff; border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.55); padding: 14px; max-width: 360px; width: 100%; }
     canvas { width: 100%; height: auto; display: block; border-radius: 6px; background: #fff; }
-    .actions { margin-top: 16px; width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 10px; }
+    .actions { margin-top: 16px; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; }
     .btn {
         width: 100%; border: none; border-radius: 14px; padding: 15px; font-size: 16px; font-weight: 700;
         cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -25,8 +25,8 @@
     .btn:active { transform: scale(.97); }
     .btn-primary { background: linear-gradient(135deg, #2ecc71, #0f8a4a); color: #fff; box-shadow: 0 8px 22px rgba(46,204,113,.3); }
     .btn-ghost { background: rgba(255,255,255,.07); color: #cfe0ff; border: 1px solid rgba(255,255,255,.15); }
-    .hint { color: #7c88a2; font-size: 11.5px; text-align: center; margin-top: 12px; line-height: 1.6; max-width: 440px; }
-    #err { color: #ffb4b4; background: rgba(244,63,94,.12); border: 1px solid rgba(244,63,94,.35); border-radius: 12px; padding: 16px; font-size: 14px; text-align: center; max-width: 480px; }
+    .hint { color: #7c88a2; font-size: 11.5px; text-align: center; margin-top: 12px; line-height: 1.6; max-width: 360px; }
+    #err { color: #ffb4b4; background: rgba(244,63,94,.12); border: 1px solid rgba(244,63,94,.35); border-radius: 12px; padding: 16px; font-size: 14px; text-align: center; max-width: 360px; }
     .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #16a34a; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 99; }
     .toast.show { opacity: 1; }
 </style>
@@ -115,15 +115,15 @@
 
     // ---------- วาดใบเสร็จแบบกระดาษขาว (logoImg = รูปโปรไฟล์คนขับ หรือ null → ใช้อักษรย่อ) ----------
     const paint = (logoImg) => {
-        const W = 700, SCALE = 2;
-        cv.width = W * SCALE; cv.height = 1010 * SCALE;
+        const W = 700, H = 1244, SCALE = 2;   // สัดส่วน 9:16 แบบจอมือถือ (ไม่ใช่ A4)
+        cv.width = W * SCALE; cv.height = H * SCALE;
         ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
         ctx.textBaseline = 'middle';
         ctx.font = '500 13px Tahoma, "Noto Sans Thai", sans-serif';
 
         // พื้นกระดาษ
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, W, 1010);
+        ctx.fillRect(0, 0, W, H);
 
         const cx = W / 2;
         const L = 40, R = W - 40;
@@ -173,7 +173,7 @@
         ctx.fillText('ใบเสร็จค่าโดยสาร  •  TAXI FARE RECEIPT', tx, ly + 14);
 
         ctx.textAlign = 'left';
-        let y = bandH + 26;
+        let y = bandH + 44;
 
         const pair = (label, value) => {
             ctx.fillStyle = '#555';
@@ -183,7 +183,7 @@
             ctx.fillStyle = '#111';
             ctx.font = '600 14px Tahoma, "Noto Sans Thai", sans-serif';
             ctx.fillText(value, L + wl + 8, y);
-            y += 26;
+            y += 40;
         };
         const line = (label, value, strong) => {
             ctx.fillStyle = strong ? '#111' : '#444';
@@ -194,9 +194,9 @@
             ctx.font = (strong ? '800 ' : '700 ') + (strong ? 18 : 15) + 'px Tahoma, "Noto Sans Thai", sans-serif';
             ctx.fillText(money(value) + ' ฿', R, y);
             ctx.textAlign = 'left';
-            y += strong ? 36 : 27;
+            y += strong ? 48 : 40;
         };
-        const subNote = (txt) => { ctx.fillStyle = '#888'; ctx.font = '500 12px Tahoma, "Noto Sans Thai", sans-serif'; ctx.fillText(txt, L, y); y += 22; };
+        const subNote = (txt) => { ctx.fillStyle = '#888'; ctx.font = '500 12px Tahoma, "Noto Sans Thai", sans-serif'; ctx.fillText(txt, L, y); y += 34; };
 
         pair('เลขที่ใบเสร็จ', receiptNo);
         pair('วันที่', fmtDate(d.st));
@@ -207,48 +207,48 @@
         if (d.dn) {
             ctx.fillStyle = '#555'; ctx.font = '500 14px Tahoma, "Noto Sans Thai", sans-serif';
             ctx.fillText('จุดหมาย', L, y);
-            y += 22;
+            y += 34;
             ctx.fillStyle = '#111'; ctx.font = '600 14px Tahoma, "Noto Sans Thai", sans-serif';
             const maxW = R - L;
             let t = d.dn;
             while (ctx.measureText(t).width > maxW && t.length > 1) { ctx.fillText(t.slice(0, Math.max(1, t.length - 1)), L, y); t = t.slice(Math.max(1, t.length - 1)); }
             if (t) ctx.fillText(t, L, y);
-            y += 26;
+            y += 40;
         }
-        y += 6;
-        dash(y, '#bbb'); y += 26;
+        y += 12;
+        dash(y, '#bbb'); y += 44;
 
         line('ระยะทาง', d.km, false);
         subNote(d.km.toFixed(2) + ' กิโลเมตร  •  เวลารถติด ' + dur(d.tr) + '  •  รวมเวลา ' + dur(wall));
-        y += 4;
+        y += 10;
 
         // รายละเอียดค่าโดยสาร
-        dash(y, '#bbb'); y += 26;
+        dash(y, '#bbb'); y += 44;
         line('ค่าแรกเข้า', d.bf, false);
         line('ค่าระยะทาง + เวลารถติด', d.mt, false);
         (d.su || []).forEach(s => {
             line(s.n || 'ค่าเพิ่ม', s.a, false);
         });
-        y += 4;
-        dash(y, '#bbb'); y += 30;
+        y += 10;
+        dash(y, '#bbb'); y += 48;
         ctx.textAlign = 'center';
         ctx.fillStyle = '#0b7a3b'; ctx.font = '800 15px Tahoma, "Noto Sans Thai", sans-serif';
         ctx.fillText('รวมค่าโดยสาร', cx, y);
-        y += 34;
+        y += 44;
         ctx.fillStyle = '#0b7a3b'; ctx.font = '800 38px Tahoma, "Noto Sans Thai", sans-serif';
         ctx.fillText(money(d.tot) + ' บาท', cx, y);
         ctx.textAlign = 'left';
-        y += 44;
-        dash(y, '#0b7a3b'); y += 36;
+        y += 64;
+        dash(y, '#0b7a3b'); y += 48;
 
         ctx.textAlign = 'center';
         ctx.fillStyle = '#333'; ctx.font = '700 15px Tahoma, "Noto Sans Thai", sans-serif';
-        ctx.fillText('ขอบคุณที่ใช้บริการ  •  ขับขี่ปลอดภัย', cx, y); y += 26;
+        ctx.fillText('ขอบคุณที่ใช้บริการ  •  ขับขี่ปลอดภัย', cx, y); y += 40;
         ctx.fillStyle = '#888'; ctx.font = '500 12px Tahoma, "Noto Sans Thai", sans-serif';
         const brandNote = brand === 'Taxi Meter'
             ? 'เอกสารนี้ออกโดยระบบ Taxi Meter • จ่ายเงินให้คนขับโดยตรง'
             : 'เอกสารนี้ออกโดย ' + ellipsis(brand, R - L, '500 12px Tahoma, "Noto Sans Thai", sans-serif') + ' • จ่ายเงินให้คนขับโดยตรง';
-        ctx.fillText(ellipsis(brandNote, R - L, '500 12px Tahoma, "Noto Sans Thai", sans-serif'), cx, y); y += 22;
+        ctx.fillText(ellipsis(brandNote, R - L, '500 12px Tahoma, "Noto Sans Thai", sans-serif'), cx, y); y += 34;
         ctx.fillText('พิมพ์เมื่อ ' + fmtDate(Date.now()) + ' ' + fmtTime(Date.now()) + ' น.', cx, y);
         ctx.textAlign = 'left';
     };
