@@ -1844,7 +1844,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, limit, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08q';
+    const APP_BUILD = '2026-09-08r';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5816,6 +5816,7 @@
 
     // 🎨 สีกรอบรูปโปรไฟล์ตามตำแหน่ง (Admin/Manager/User สีไม่ซ้ำกัน)
     const OUROLE_BORDER = { Admin: '#f59e0b', Manager: '#38bdf8', User: '#2fd883' };
+    const OUROLE_PRIORITY = { Admin: 0, Manager: 1, User: 2 }; // เรียงลำดับ: แอดมินมาก่อนเสมอ
 
     function renderOnlineUsersCard() {
         const card = document.getElementById('onlineUsersCard');
@@ -5826,7 +5827,10 @@
         const list = document.getElementById('oucList');
         if (!list) return;
         // รวมทุกคนที่ออนไลน์อยู่ (รวมแอดมิน + ตัวเราเอง) — ใช้ lastSeen ตัดสินความสด (ปิด/คิลแอป → หายอัตโนมัติ)
-        const online = Object.keys(userOnlineStates).filter(uid => userOnlineStates[uid] && window.isUserOnlineLive(userOnlineStates[uid]));
+        // + เรียงให้แอดมินมาก่อนเสมอ (แล้วตามด้วยผู้จัดการ/ผู้ใช้)
+        const online = Object.keys(userOnlineStates)
+            .filter(uid => userOnlineStates[uid] && window.isUserOnlineLive(userOnlineStates[uid]))
+            .sort((a, b) => (OUROLE_PRIORITY[userOnlineStates[a].role] ?? 99) - (OUROLE_PRIORITY[userOnlineStates[b].role] ?? 99));
         document.getElementById('oucCount').textContent = online.length > 0 ? `(${online.length} คน)` : '';
         if (online.length === 0) { list.innerHTML = '<div class="ouc-empty">ไม่มีใครออนไลน์อยู่</div>'; return; }
         list.innerHTML = online.map(uid => {
