@@ -1034,6 +1034,8 @@
         .myperm-chip.nav:active { transform: scale(0.94); background: rgba(34,197,94,0.22); }
         .myperm-chip.nav .chip-go { font-size: 16px; color: #86efac; margin-left: 1px; }
         .myperm-chip.static { cursor: default; opacity: 0.88; }
+        .myperm-chip.missing { background: rgba(148,163,184,0.08); border: 1px dashed rgba(148,163,184,0.35); color: #94a3b8; cursor: default; opacity: 0.9; }
+        .myperm-chip.missing .material-symbols-outlined { color: #94a3b8; }
         /* 🎛️ ปุ่มจัดการตำแหน่ง (Role) ในหน้าตั้งค่าสิทธิ์ */
         .role-manage-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; padding: 10px; font-size: 14px; cursor: pointer; font-family: 'Kanit'; transition: 0.2s; }
         .role-manage-btn:hover { filter: brightness(1.15); }
@@ -1766,7 +1768,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07f';
+    const APP_BUILD = '2026-09-07g';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -3207,7 +3209,7 @@
         const perms = (typeof window.currentUserPerms === 'function') ? window.currentUserPerms() : {};
         const list = (window.currentPermConfig && window.currentPermConfig.length ? window.currentPermConfig : window.defaultPermConfig) || [];
         const allowed = list.filter(p => isGod || perms[p.id.replace('perm_', '')]);
-        if (!allowed.length) { wrap.innerHTML = ''; return; }
+        const missing = list.filter(p => !(isGod || perms[p.id.replace('perm_', '')]));
         // สิทธิ์กลุ่ม "จัดการตัวเอง" — ทำได้ในหน้าโปรไฟล์นี้อยู่แล้ว ไม่มีหน้าต่างแยกให้เปิด
         const selfPerms = ['perm_canEditOwn', 'perm_canDeleteMedia'];
         const navKeys = ['perm_canViewUsers','perm_canAdd','perm_canEdit','perm_canChangeUserRole','perm_canViewPassword','perm_canBan','perm_canDelete','perm_canCallStaff','perm_canSetStaffPrefs','perm_canViewLogs','perm_canViewGlobalLogs','perm_canManageService','perm_canManageToastMsg','perm_canManageRoles'];
@@ -3217,6 +3219,8 @@
             const isNav = navKeys.indexOf(p.id) !== -1;
             chips += '<span class="myperm-chip ' + (isSelf ? 'static' : 'nav') + '" ' + (isNav ? 'onclick="window.openPermTarget(\'' + p.id + '\')" title="แตะเพื่อเปิดหน้าต่างที่ตรงกับสิทธินี้"' : '') + '><span class="material-symbols-outlined">' + (isSelf ? 'person' : 'check_circle') + '</span>' + p.label + (isNav ? '<span class="material-symbols-outlined chip-go">chevron_right</span>' : '') + '</span>';
         });
+        let missChips = '';
+        missing.forEach(p => { missChips += '<span class="myperm-chip missing" title="ยังไม่ได้เปิดสิทธิ์นี้ — ถ้าต้องการใช้งาน ให้ติดต่อผู้ดูแลระบบ"><span class="material-symbols-outlined">lock</span>' + p.label + '</span>'; });
         wrap.innerHTML = '<div class="myperms-card">' +
             '<div class="myperms-head"><span class="material-symbols-outlined" style="color: var(--neon-yellow); font-size: 22px;">verified_user</span>' +
             '<b style="color: white; font-size: 15px;">สิทธิ์การใช้งานของฉัน</b>' +
@@ -3224,7 +3228,14 @@
             '<div style="font-size: 12px; color: var(--text-dim); margin-bottom: 10px;">' + (isGod ? 'บัญชีนี้เป็นผู้ดูแลระบบ — เข้าถึงได้ทุกอย่างในแอป:' : 'บัญชีนี้ทำได้ตามสิทธิ์ที่ผู้ดูแลระบบกำหนด:') + '</div>' +
             '<div style="display: flex; flex-wrap: wrap; gap: 8px;">' + chips + '</div>' +
             (allowed.some(p => navKeys.indexOf(p.id) !== -1) ? '<div style="font-size: 11px; color: #86efac; margin-top: 10px; text-align: left; display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">touch_app</span> แตะชิปเขียวเพื่อเปิดหน้าต่างที่ตรงกับสิทธินั้น</div>' : '') +
-            '</div>';
+            '</div>' +
+            (missing.length ? '<div class="myperms-card" style="margin-top: 10px;">' +
+            '<div class="myperms-head"><span class="material-symbols-outlined" style="color: #94a3b8; font-size: 22px;">lock</span>' +
+            '<b style="color: #cbd5e1; font-size: 15px;">สิทธิ์ที่ยังไม่ได้</b>' +
+            '<span class="myperms-badge">' + missing.length + ' รายการ</span></div>' +
+            '<div style="font-size: 12px; color: var(--text-dim); margin-bottom: 10px;">บัญชีนี้ยังไม่มีสิทธิ์เหล่านี้ — ถ้าต้องการใช้งาน ให้ขอจากผู้ดูแลระบบ (สิทธิ์จะเริ่มใช้ทันทีเมื่อแอดมินตั้งให้)</div>' +
+            '<div style="display: flex; flex-wrap: wrap; gap: 8px;">' + missChips + '</div>' +
+            '</div>' : '');
     };
     // 🖱️ แตะชิปสิทธิ์ → เปิดหน้าต่าง/เมนูที่ตรงกับสิทธินั้น (เปิดซ้อนบนหน้าโปรไฟล์ ปิดแล้วกลับมาที่โปรไฟล์)
     window.openPermTarget = (permId) => {
