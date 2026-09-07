@@ -1804,7 +1804,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07x';
+    const APP_BUILD = '2026-09-07y';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -3658,15 +3658,8 @@
         });
         let missChips = '';
         missing.forEach(p => { missChips += '<span class="myperm-chip missing" title="ยังไม่ได้เปิดสิทธิ์นี้ — ถ้าต้องการใช้งาน ให้ติดต่อผู้ดูแลระบบ"><span class="material-symbols-outlined">lock</span>' + p.label + '</span>'; });
-        wrap.innerHTML = '<div class="myperms-card">' +
-            '<div class="myperms-head"><span class="material-symbols-outlined" style="color: var(--neon-yellow); font-size: 22px;">verified_user</span>' +
-            '<b style="color: white; font-size: 15px;">สิทธิ์การใช้งานของฉัน</b>' +
-            '<span class="myperms-badge badge-' + role + '">' + roleTH + '</span></div>' +
-            '<div style="font-size: 12px; color: var(--text-dim); margin-bottom: 10px;">' + (isGod ? 'บัญชีนี้เป็นผู้ดูแลระบบ — เข้าถึงได้ทุกอย่างในแอป:' : 'บัญชีนี้ทำได้ตามสิทธิ์ที่ผู้ดูแลระบบกำหนด:') + '</div>' +
-            '<div style="display: flex; flex-wrap: wrap; gap: 8px;">' + chips + '</div>' +
-            (allowed.some(p => navKeys.indexOf(p.id) !== -1) ? '<div style="font-size: 11px; color: #86efac; margin-top: 10px; text-align: left; display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">touch_app</span> แตะชิปเขียวเพื่อเปิดหน้าต่างที่ตรงกับสิทธินั้น</div>' : '') +
-            '</div>' +
-            (missing.length ? '<div class="myperms-card" style="margin-top: 10px;">' +
+        // 🚫 ซ่อนการ์ด "สิทธิ์การใช้งานของฉัน" (รายการสิทธิ์ยาว ๆ) ออกจากตั้งค่าโปรไฟล์ ตามคำขอ — ยังเหลือการ์ด "สิทธิ์ที่ยังไม่ได้ / ขอสิทธิ์เพิ่ม"
+        wrap.innerHTML = (missing.length ? '<div class="myperms-card">' +
             '<div class="myperms-head" onclick="window.toggleMissingPerms()" title="แตะเพื่อดู/ซ่อนรายการ" style="cursor: pointer;"><span class="material-symbols-outlined" style="color: #94a3b8; font-size: 22px;">lock</span>' +
             '<b style="color: #cbd5e1; font-size: 15px;">สิทธิ์ที่ยังไม่ได้</b>' +
             '<span class="myperms-badge">' + missing.length + ' รายการ</span>' +
@@ -3677,6 +3670,7 @@
             (window.__myPendingPermReq ? '<div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:12px; padding:10px; border-radius:12px; background:rgba(46,204,113,0.12); border:1px solid rgba(46,204,113,0.4); color:#86efac; font-size:13px; font-weight:600;"><span class="material-symbols-outlined" style="font-size:17px;">hourglass_top</span> ส่งคำขอแล้ว — รอผู้ดูแลระบบอนุมัติ</div>' : '<button onclick="window.requestMorePerms()" class="request-perm-btn"><span class="material-symbols-outlined" style="font-size: 17px;">campaign</span> ขอสิทธิ์เพิ่ม</button>') +
             '</div>' +
             '</div>' : '');
+        wrap.style.display = wrap.innerHTML ? '' : 'none'; // 🚫 ถ้าไม่มีอะไรให้แสดง (เช่น แอดมินได้สิทธิ์ครบ) → ซ่อนกล่องเปล่าไม่ให้กินพื้นที่
         if (window.updateMissingPermsBadge) window.updateMissingPermsBadge();
         // 🔔 เช็คว่าบัญชีนี้ส่งคำขอสิทธิ์เพิ่มค้างอยู่ไหม (ถ้าเคยส่งแล้วให้แสดงสถานะรออนุมัติแทนปุ่มขอ)
         if (loggedInUserId && !window.__permReqCheckDone) {
@@ -5877,7 +5871,8 @@
         'ช่องค้นหาไอคอนรองรับคำค้นภาษาไทย (เช่น รถ เงิน เตือน โทร อาหาร เวลา แผนที่ ฯลฯ) — พิมพ์ชื่อไทยแล้วกรองไอคอนที่ตรงได้เลย',
         'ย้ายเลขเวอร์ชัน (v…) จากหัวหน้าแรกไปไว้มุมขวาล่างลอย ๆ (แตะเปิดประวัติเวอร์ชันได้เหมือนเดิม) และซ่อนป้าย "เต็มจออัตโนมัติ: เปิด/ปิด" ออกจากหน้าแรก',
         'แก้บั๊ก: รหัสผ่านแอดมินไม่โดนรีเซ็ตกลับเป็น 060421 อีกแล้ว — ทางเข้าลับ admin/060421 ใช้ได้เฉพาะตอนบัญชียังใช้รหัสเริ่มต้น (เปลี่ยนรหัสแล้ว 060421 ใช้ไม่ได้ และไม่เขียนทับรหัสจริงเด็ดขาด)',
-        'ประวัติล่าสุดในช่องค้นหาจุดหมาย: ปุ่ม "ล้าง" เปลี่ยนเป็นรูปถังขยะ (ไม่มีกรอบ) + แต่ละรายการมีถังขยะลบรายการนั้นรายการเดียวได้'
+        'ประวัติล่าสุดในช่องค้นหาจุดหมาย: ปุ่ม "ล้าง" เปลี่ยนเป็นรูปถังขยะ (ไม่มีกรอบ) + แต่ละรายการมีถังขยะลบรายการนั้นรายการเดียวได้',
+        'ซ่อนการ์ด "สิทธิ์การใช้งานของฉัน" (รายการสิทธิ์ยาว ๆ) ออกจากหน้าตั้งค่าโปรไฟล์ทั้งแอดมินและผู้ใช้ทั่วไป — ยังเหลือการ์ด "สิทธิ์ที่ยังไม่ได้ / ขอสิทธิ์เพิ่ม" (ยุบไว้) ให้ขอสิทธิ์ได้ตามเดิม'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
