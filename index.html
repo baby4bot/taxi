@@ -407,14 +407,13 @@
             padding: 3px 9px; border-radius: 13px;
             font-size: 11px; font-weight: 600; line-height: 1;
             white-space: nowrap;
-            background: rgba(0,0,0,0.25);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: rgba(255,255,255,0.95);
+            background: #f97316; /* สีส้มทึบ — เห็นชัดบนการ์ดเขียว */
+            border: 1px solid rgba(255,255,255,0.4);
+            color: #fff;
             cursor: pointer; -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
             transition: transform 0.15s, background 0.2s;
         }
-        .tz-toll-btn:active { transform: scale(0.93); background: rgba(0,0,0,0.4); }
+        .tz-toll-btn:active { transform: scale(0.93); background: #ea580c; }
         .tz-toll-btn .material-symbols-outlined { font-size: 12px; }
         .tz-pause-btn {
             position: absolute; top: 10px; right: 10px; z-index: 60;
@@ -431,11 +430,13 @@
         .tz-toll-list { position: absolute; top: 36px; left: 10px; z-index: 60; display: none; flex-direction: column; align-items: flex-start; gap: 3px; }
         .tz-toll-item {
             display: flex; align-items: center; gap: 4px;
-            background: rgba(0,0,0,0.3); border-radius: 8px;
-            padding: 2px 7px; font-size: 10.5px; font-weight: 600; color: rgba(255,255,255,0.95);
+            background: #2563eb; /* สีฟ้าทึบ — แยกชัดจากพื้นหลังการ์ด */
+            border: 1px solid rgba(255,255,255,0.35);
+            border-radius: 9px;
+            padding: 2px 8px; font-size: 10.5px; font-weight: 700; color: #fff;
         }
-        .tz-toll-item .tz-toll-del { font-size: 12px; opacity: 0.7; cursor: pointer; }
-        .tz-toll-item .tz-toll-del:active { opacity: 1; transform: scale(0.9); }
+        .tz-toll-item .tz-toll-del { font-size: 13px; opacity: 0.95; cursor: pointer; }
+        .tz-toll-item .tz-toll-del:active { opacity: 1; transform: scale(0.85); }
         .tz-est-fare {
             position: absolute; bottom: 10px; right: 14px; z-index: 60;
             font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.92);
@@ -1810,7 +1811,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08a';
+    const APP_BUILD = '2026-09-08b';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5882,7 +5883,9 @@
         '🔐 เปลี่ยนระบบเก็บรหัสผ่านจาก plaintext มาเป็น SHA-256 + salt (ต่อบัญชี) ทั้งระบบ — บัญชีเก่าล็อกอินได้เหมือนเดิมและถูกอัปเกรดเป็นแฮชให้อัตโนมัติ แอดมินดูรหัสจริงของคนอื่นไม่ได้แล้ว เหลือแค่ตั้งรหัสใหม่ให้',
         'ย้ายระบบล็อกอิน: ตรวจรหัสผ่านด้วย username + เปรียบเทียบ hash ฝั่งเครื่อง (ไม่ query ตามรหัสผ่านตรง ๆ อีกต่อไป)',
         'การ์ดในระบบจัดการผู้ใช้งาน: สถานะ ออนไลน์/ออฟไลน์ ตรงจริงและสด (เปิดแอปค้าง/กลับมาที่แอป/เปิดหน้าจัดการ → ปักหมุดออนไลน์ทันที + เต้นหัวใจทุก 45 วิ)',
-        'การ์ดในระบบจัดการผู้ใช้งาน: เอาช่องชื่อบริษัท/สหกรณ์ (หัวบิล) ออก เหลือ เข้าใช้ล่าสุด + ทะเบียนรถ และจัดปุ่ม โทร/แบน/ประวัติ/แก้ไข/ลบ ไว้กึ่งกลางแบบใหม่สวยขึ้น'
+        'การ์ดในระบบจัดการผู้ใช้งาน: เอาช่องชื่อบริษัท/สหกรณ์ (หัวบิล) ออก เหลือ เข้าใช้ล่าสุด + ทะเบียนรถ และจัดปุ่ม โทร/แบน/ประวัติ/แก้ไข/ลบ ไว้กึ่งกลางแบบใหม่สวยขึ้น',
+        'จอมิเตอร์ขยาย: ปุ่ม "+ ทางด่วน" เป็นสีส้มทึบ (ไม่มีเงา) และรายการ "ค่าทางด่วน X฿" ที่เพิ่มไว้เป็นสีฟ้าทึบ — เห็นชัดไม่กลืนกับพื้นหลัง',
+        'สถานะออนไลน์ในระบบจัดการผู้ใช้งาน ตรงจริง: เปิดแอปค้าง/กลับมาที่แอป/เปิดหน้าจัดการ → ปักหมุดออนไลน์ทันที + heartbeat ทุก 45 วิ'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
