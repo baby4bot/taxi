@@ -652,6 +652,18 @@
         .catchup-spinner { width: 14px; height: 14px; border: 2px solid rgba(250,204,21,0.25); border-top-color: #facc15; border-radius: 50%; animation: catchupSpin 0.8s linear infinite; flex-shrink: 0; }
         @keyframes catchupSpin { to { transform: rotate(360deg); } }
 
+        /* 👥 การ์ดรายชื่อผู้ที่ออนไลน์ตอนนี้ — เห็นเฉพาะแอดมิน (แทน toast เตือนรัวๆ) */
+        .online-users-card { display: none; flex-direction: column; gap: 8px; background: linear-gradient(135deg, rgba(20,26,40,0.94), rgba(28,36,54,0.94)); border: 1px solid rgba(250,204,21,0.35); border-radius: 16px; padding: 10px 12px; margin: 0 2px 10px 2px; box-shadow: 0 4px 18px rgba(0,0,0,0.35); }
+        .online-users-card .ouc-head { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: #ffe08a; }
+        .online-users-card .ouc-head .ouc-dot { width: 8px; height: 8px; border-radius: 50%; background: #2fd883; box-shadow: 0 0 8px #2fd883; flex-shrink: 0; }
+        .online-users-card .ouc-head .ouc-count { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.55); }
+        .online-users-card .ouc-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .online-users-card .ouc-item { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; padding: 3px 10px 3px 3px; font-size: 12px; color: #e5edf7; white-space: nowrap; }
+        .online-users-card .ouc-item img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; background: rgba(0,0,0,0.4); flex-shrink: 0; }
+        .online-users-card .ouc-item .ouc-name { font-weight: 600; }
+        .online-users-card .ouc-item .ouc-role { font-size: 10.5px; font-weight: 600; color: var(--neon-yellow); opacity: 0.9; }
+        .online-users-card .ouc-empty { font-size: 12px; color: rgba(255,255,255,0.5); padding: 2px 0; }
+
         /* Dropdown results */
         .dropdown-box {
             background: rgba(16,21,32,0.94);
@@ -1472,6 +1484,12 @@
         <span>กำลังตรวจสอบ GPS เพื่อเบิกเวลาช่วงที่แอปปิด…</span>
     </div>
     
+    <!-- 👥 รายชื่อผู้ที่ออนไลน์ตอนนี้ — แอดมินเท่านั้น -->
+    <div id="onlineUsersCard" class="online-users-card">
+        <div class="ouc-head"><span class="ouc-dot"></span><span>ออนไลน์ตอนนี้</span><span class="ouc-count" id="oucCount"></span></div>
+        <div id="oucList" class="ouc-list"></div>
+    </div>
+    
     <div id="searchSectionBox" class="search-section">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 6px 8px 6px;">
             <label style="margin: 0; flex: 1; min-width: 0;">ค้นหาจุดหมาย</label>
@@ -1826,7 +1844,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08k';
+    const APP_BUILD = '2026-09-08l';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -1955,7 +1973,7 @@
     let myExtraPerms = {}; // สิทธิ์พิเศษที่แอดมินอนุมัติให้บัญชีนี้โดยเฉพาะ (extraPerms ใน user doc — ไม่เปลี่ยนตำแหน่ง)
     let isBannedState = false;
     let globalUsersUnsub = null, permsUnsub = null, permConfigUnsub = null, myUserUnsub = null, serviceDataUnsub = null, adminSnapshotUnsub = null, permReqUnsub = null;
-    let userOnlineStates = {}; let isInitialUserLoad = true; let lastUserToastAt = {}; // ⏱️ กัน toast เข้าสู่ระบบ/ออกจากระบบ รัวๆ (debounce ต่อคน)
+    let userOnlineStates = {}; let isInitialUserLoad = true;
     window.myCurrentQrCodeURL = ""; window.myCurrentDisplayName = ""; window.myCurrentPhotoURL = ""; window.myCurrentCompanyName = ""; window.myCurrentPlateNo = ""; window.currentAdminUsers = [];
 
     // รายการสิทธิ์ทั้งหมด — แต่ละข้อผูกกับฟีเจอร์/ปุ่มจริงในแอป (Admin เป็น god เห็นหมดเสมอ; Manager/User ตั้งได้ตามที่ admin ติ๊ก)
@@ -5794,28 +5812,43 @@
         } catch(e) {}
     };
 
+    function renderAdminOnlineCard() {
+        const card = document.getElementById('onlineUsersCard');
+        if (!card) return;
+        const isAdmin = (currentUserRole === 'Admin' || currentUserRole === 'admin');
+        card.style.display = (loggedInUserId && isAdmin) ? 'flex' : 'none';
+        if (!loggedInUserId || !isAdmin) return;
+        const list = document.getElementById('oucList');
+        if (!list) return;
+        const online = Object.keys(userOnlineStates).filter(uid => uid !== loggedInUserId && userOnlineStates[uid] && userOnlineStates[uid].isOnline);
+        document.getElementById('oucCount').textContent = online.length > 0 ? `(${online.length} คน)` : '';
+        if (online.length === 0) { list.innerHTML = '<div class="ouc-empty">ไม่มีผู้ใช้คนอื่นออนไลน์อยู่</div>'; return; }
+        list.innerHTML = online.map(uid => {
+            const d = userOnlineStates[uid];
+            const name = d.displayName || d.username || 'ไม่ระบุ';
+            const role = d.role || '';
+            const roleLabel = role === 'Admin' ? 'แอดมิน' : (role === 'Manager' ? 'ผู้จัดการ' : (role === 'User' ? 'ผู้ใช้' : role));
+            const avatar = d.photoURL ? `<img src="${d.photoURL}" alt="" onerror="this.style.visibility='hidden'">` : '<img src="" alt="" style="visibility:hidden">';
+            return `<div class="ouc-item">${avatar}<span class="ouc-name">${name}</span><span class="ouc-role">${roleLabel}</span></div>`;
+        }).join('');
+    }
+
     function startGlobalUserListener() {
         if(globalUsersUnsub) return;
         globalUsersUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
-            if(isInitialUserLoad) { snapshot.forEach(doc => { userOnlineStates[doc.id] = doc.data().isOnline; }); isInitialUserLoad = false; return; }
+            if(isInitialUserLoad) { snapshot.forEach(doc => { userOnlineStates[doc.id] = doc.data(); }); isInitialUserLoad = false; renderAdminOnlineCard(); return; }
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "modified" || change.type === "added") {
-                    const data = change.doc.data(); const oldState = userOnlineStates[change.doc.id];
-                    // 🔕 แจ้งเตือน เข้าสู่ระบบ/ออกจากระบบ เฉพาะแอดมิน (ต้องรู้ว่าพนักงานคนไหนออนไลน์อยู่) — ผู้ใช้ทั่วไปไม่ต้องโดนสแปม
-                    // + debounce ต่อคน (10 วิ) กันสถานะดีดไปมารัวๆ (โดนไล่ออก/ล็อกอินใหม่/เปิด-ปิดแอป) แล้วเด้งรัวๆ ทุกเครื่อง
-                    if (change.doc.id !== loggedInUserId && oldState !== undefined && currentUserRole === 'Admin') {
-                        const now = Date.now();
-                        if ((lastUserToastAt[change.doc.id] || 0) + 10000 < now) {
-                            lastUserToastAt[change.doc.id] = now;
-                            if (data.isOnline && !oldState) { window.showToast(`${data.displayName || data.username} เข้าสู่ระบบ`, false, data.photoURL); } 
-                            else if (!data.isOnline && oldState) { window.showToast(`${data.displayName || data.username} ออกจากระบบ`, true, data.photoURL); }
-                        }
-                    }
-                    userOnlineStates[change.doc.id] = data.isOnline;
+                    userOnlineStates[change.doc.id] = change.doc.data();
+                } else if (change.type === "removed") {
+                    delete userOnlineStates[change.doc.id];
                 }
             });
+            // 👥 ใช้การ์ดรายชื่อออนไลน์เฉพาะแอดมินบนหน้าแรก แทน toast เตือนรัวๆ
+            renderAdminOnlineCard();
         });
     }
+    window.renderAdminOnlineCard = renderAdminOnlineCard;
 
     function stopGlobalUserListener() {
         if(permReqUnsub) { permReqUnsub(); permReqUnsub = null; } // 🔔 หยุดฟังคำขอสิทธิ์เพิ่ม
@@ -5845,6 +5878,7 @@
         document.getElementById('adminAddUserBtn').style.display = myPerms.canAdd ? 'flex' : 'none';
         if (typeof window.refreshPermReqBadges === 'function') window.refreshPermReqBadges(); // 🔔 อัปเดตป้ายคำขอสิทธิ์ทุกครั้งที่เปิดเมนู
         document.getElementById('adminRoleNotice').style.display = isGod ? 'none' : 'block';
+        if (typeof window.renderAdminOnlineCard === 'function') window.renderAdminOnlineCard(); // 👥 แสดง/ซ่อนการ์ดรายชื่อออนไลน์ตามยศ
 
         document.getElementById('saveProfileBtn').style.display = myPerms.canEditOwn !== false ? 'flex' : 'none';
         document.getElementById('editDisplayName').disabled = myPerms.canEditOwn === false;
@@ -5913,7 +5947,8 @@
         '🔒 อัปเกรดแฮชรหัสผ่านใหม่เป็น PBKDF2-HMAC-SHA256 (100,000 รอบ + salt ต่อบัญชี) — รุ่นเก่า sha256$/plaintext ยังล็อกอินได้ และถูกอัปเกรดเป็น PBKDF2 ให้อัตโนมัติหลังล็อกอินสำเร็จ (มี pure-JS fallback ให้ใช้ได้แม้เปิด file://)',
         '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้',
         '🔕 แก้ toast เข้าสู่ระบบ/ออกจากระบบ เด้งรัวๆ ทั้งวัน — แจ้งเฉพาะบัญชีแอดมินเท่านั้น + กันซ้ำต่อคนภายใน 10 วิ (และเครื่องที่โดนไล่ออกไม่เขียนสถานะออฟไลน์ทับเครื่องใหม่)',
-        '🐛 แก้ toast แดง "ถูกเข้าสู่ระบบจากเครื่องอื่น" เด้งตอนกดออกจากระบบเอง — หมุน session token แล้วไม่ให้ snapshot ตัวเองเด้งเตือนหลอก (เด้งเฉพาะตอนล็อกอินซ้อนจริง ๆ)'
+        '🐛 แก้ toast แดง "ถูกเข้าสู่ระบบจากเครื่องอื่น" เด้งตอนกดออกจากระบบเอง — หมุน session token แล้วไม่ให้ snapshot ตัวเองเด้งเตือนหลอก (เด้งเฉพาะตอนล็อกอินซ้อนจริง ๆ)',
+        '👥 ยกเลิก toast เข้าสู่ระบบ/ออกจากระบบทั้งหมด — แอดมินเห็นรายชื่อคนออนไลน์สด ๆ เป็นการ์ดเล็กบนหน้าแรก (แทนเสียงเตือนรัวๆ) ส่วนผู้ใช้ทั่วไปไม่เห็นใครออน/ออฟเลย'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
