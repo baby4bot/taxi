@@ -1801,7 +1801,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07t';
+    const APP_BUILD = '2026-09-07u';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -3346,6 +3346,18 @@
         window.setToastIconValue(idSuffix, v);
         window.showToast('สุ่มไอคอนใหม่แล้ว — กดบันทึกเพื่อใช้จริง');
     };
+    // 🖱️ บนคอม (เมาส์) ให้เลื่อนแท็บหมวดหมู่ซ้าย-ขวาได้เหมือน swipe บนมือถือ: หมุนล้อเลื่อน→เลื่อนแนวนอน + ลากเมาส์ได้ + โชว์แถบเลื่อนบาง ๆ ให้รู้ว่าเลื่อนได้
+    window.enableDesktopHScroll = (el) => {
+        if (!el || el.__hscrollBound) return;
+        el.__hscrollBound = true;
+        try { el.style.scrollbarWidth = 'thin'; el.style.scrollbarColor = 'rgba(241,196,15,0.5) rgba(255,255,255,0.07)'; el.style.cursor = 'grab'; } catch(e) {}
+        el.addEventListener('wheel', (e) => { if (!e.deltaY) return; e.preventDefault(); el.scrollLeft += e.deltaY + (e.shiftKey ? e.deltaX : 0); }, { passive: false });
+        let down = false, startX = 0, startScroll = 0, moved = false;
+        el.addEventListener('mousedown', (e) => { down = true; moved = false; startX = e.clientX; startScroll = el.scrollLeft; try { el.style.cursor = 'grabbing'; } catch(err) {} });
+        window.addEventListener('mousemove', (e) => { if (!down) return; if (Math.abs(e.clientX - startX) > 4) moved = true; el.scrollLeft = startScroll - (e.clientX - startX); });
+        window.addEventListener('mouseup', () => { down = false; try { el.style.cursor = 'grab'; } catch(err) {} });
+        el.addEventListener('click', (e) => { if (moved) { moved = false; e.stopPropagation(); e.preventDefault(); } }, true); // ลากเสร็จแล้วไม่ให้กดติด
+    };
     window.__iconPickerSuffix = null;
     window.openIconPicker = (idSuffix) => {
         window.__iconPickerSuffix = idSuffix;
@@ -3360,6 +3372,7 @@
         window.setIconMatSearch('');
         window.setIconMatCat(0);
         window.toggleModal('iconPickerModal', true);
+        window.enableDesktopHScroll(tabsEl); // 🖱️ เปิดเลื่อนแท็บซ้าย-ขวาด้วยเมาส์บนคอม
     };
     window.pickToastIcon = (val) => {
         const idSuffix = window.__iconPickerSuffix;
@@ -5637,7 +5650,8 @@
         'เพิ่มปุ่มลูกศรย้อนกลับ ‹ ที่หัวหน้าต่างย่อยทั้ง 4 หมวด (จัดการผู้ใช้ / ตั้งค่าสิทธิ์ / ข้อความแจ้งเตือน / Portal) — แตะแล้วกลับมาที่ตั้งค่าการใช้งานชัดเจน (ปุ่มกลม กดแล้วไม่ชนหัวข้อความอีก)',
         'ปุ่มย้อนกลับมือถือ (Android back) ปิดทีละชั้น: หมวดย่อย → ตั้งค่าการใช้งาน → หน้าแรก → ออกจากแอป (แทนการกด back ครั้งเดียวแล้วออกทั้งแอป)',
         'หน้าประวัติรวมระบบเพิ่มส่วนเตือนคำขอสิทธิ์ที่ค้างเกิน 7 วัน (กล่องแดงบนหัว) — แอดมินเห็นสมาชิกที่ค้าง+สิทธิ์ที่ขอ+กี่วัน พร้อมปุ่มจัดการคำขอได้ทันที',
-        'หน้าคำขอสิทธิ์เพิ่มแยกเป็นปุ่ม อนุมัติสิทธิ์ / ปฏิเสธ — อนุมัติจะให้สิทธิ์ที่ขอทั้งหมดแก่สมาชิกทันที (ไม่เปลี่ยนตำแหน่ง) และผู้ขอเห็น toast แจ้งผลตอนเปิดแอป (อนุมัติ=ทอง / ปฏิเสธ=แดง) ครั้งเดียว'
+        'หน้าคำขอสิทธิ์เพิ่มแยกเป็นปุ่ม อนุมัติสิทธิ์ / ปฏิเสธ — อนุมัติจะให้สิทธิ์ที่ขอทั้งหมดแก่สมาชิกทันที (ไม่เปลี่ยนตำแหน่ง) และผู้ขอเห็น toast แจ้งผลตอนเปิดแอป (อนุมัติ=ทอง / ปฏิเสธ=แดง) ครั้งเดียว',
+        'แท็บหมวดหมู่ไอคอน Material เลื่อนซ้าย-ขวาบนคอมได้ด้วย (หมุนล้อเมาส์/ลากเมาส์ + แถบเลื่อนบาง) เหมือนบนมือถือ'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
