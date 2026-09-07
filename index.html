@@ -1804,7 +1804,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07y';
+    const APP_BUILD = '2026-09-07z';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5872,7 +5872,9 @@
         'ย้ายเลขเวอร์ชัน (v…) จากหัวหน้าแรกไปไว้มุมขวาล่างลอย ๆ (แตะเปิดประวัติเวอร์ชันได้เหมือนเดิม) และซ่อนป้าย "เต็มจออัตโนมัติ: เปิด/ปิด" ออกจากหน้าแรก',
         'แก้บั๊ก: รหัสผ่านแอดมินไม่โดนรีเซ็ตกลับเป็น 060421 อีกแล้ว — ทางเข้าลับ admin/060421 ใช้ได้เฉพาะตอนบัญชียังใช้รหัสเริ่มต้น (เปลี่ยนรหัสแล้ว 060421 ใช้ไม่ได้ และไม่เขียนทับรหัสจริงเด็ดขาด)',
         'ประวัติล่าสุดในช่องค้นหาจุดหมาย: ปุ่ม "ล้าง" เปลี่ยนเป็นรูปถังขยะ (ไม่มีกรอบ) + แต่ละรายการมีถังขยะลบรายการนั้นรายการเดียวได้',
-        'ซ่อนการ์ด "สิทธิ์การใช้งานของฉัน" (รายการสิทธิ์ยาว ๆ) ออกจากหน้าตั้งค่าโปรไฟล์ทั้งแอดมินและผู้ใช้ทั่วไป — ยังเหลือการ์ด "สิทธิ์ที่ยังไม่ได้ / ขอสิทธิ์เพิ่ม" (ยุบไว้) ให้ขอสิทธิ์ได้ตามเดิม'
+        'ซ่อนการ์ด "สิทธิ์การใช้งานของฉัน" (รายการสิทธิ์ยาว ๆ) ออกจากหน้าตั้งค่าโปรไฟล์ทั้งแอดมินและผู้ใช้ทั่วไป — ยังเหลือการ์ด "สิทธิ์ที่ยังไม่ได้ / ขอสิทธิ์เพิ่ม" (ยุบไว้) ให้ขอสิทธิ์ได้ตามเดิม',
+        '🔐 เปลี่ยนระบบเก็บรหัสผ่านจาก plaintext มาเป็น SHA-256 + salt (ต่อบัญชี) ทั้งระบบ — บัญชีเก่าล็อกอินได้เหมือนเดิมและถูกอัปเกรดเป็นแฮชให้อัตโนมัติ แอดมินดูรหัสจริงของคนอื่นไม่ได้แล้ว เหลือแค่ตั้งรหัสใหม่ให้',
+        'ย้ายระบบล็อกอิน: ตรวจรหัสผ่านด้วย username + เปรียบเทียบ hash ฝั่งเครื่อง (ไม่ query ตามรหัสผ่านตรง ๆ อีกต่อไป)'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6118,6 +6120,21 @@
     if (typeof window.ensureChangelog === 'function') window.ensureChangelog();
     window.addEventListener('beforeunload', () => { if(loggedInUserId) { setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); } });
 
+    // 🔐 ระบบรหัสผ่านแบบแฮช (SHA-256 + salt ต่อบัญชี) — ไม่เก็บ plaintext ในฐานข้อมูลอีกต่อไป
+    // รูปแบบที่เก็บ:  "sha256$<salt>$<hex>" โดย hash = SHA-256(salt + '::' + รหัส)
+    window.pwShaHex = async (text) => { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''); };
+    window.pwMakeSalt = () => (Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2)).slice(0, 16);
+    window.pwHash = async (plain) => { const salt = window.pwMakeSalt(); const hash = await window.pwShaHex(salt + '::' + plain); return 'sha256$' + salt + '$' + hash; };
+    window.pwIsHashed = (stored) => typeof stored === 'string' && stored.slice(0, 7) === 'sha256$';
+    // ตรวจรหัสผ่าน: ถ้าเก็บแบบแฮช → เทียบ sha256(salt::input) · ถ้าเป็นบัญชีเก่ายังเก็บ plaintext → เทียบตรง (แล้วค่อยอัปเกรดเป็นแฮชหลังล็อกอินสำเร็จ)
+    window.pwVerify = async (plain, stored) => {
+        if (!stored) return false;
+        if (window.pwIsHashed(stored)) { const parts = stored.split('$'); if (parts.length !== 3) return false; return (await window.pwShaHex(parts[1] + '::' + plain)) === parts[2]; }
+        return stored === plain;
+    };
+    // อัปเกรดบัญชีเก่าที่เก็บ plaintext → แฮช (เรียกหลังยืนยันรหัสถูกแล้วเท่านั้น)
+    window.pwUpgradeIfLegacy = async (uid, stored) => { if (!uid || !stored || window.pwIsHashed(stored)) return; try { await updateDoc(doc(db, "users", uid), { password: await window.pwHash(stored) }); } catch (e) {} };
+
     window.loginApp = async () => {
         let inputUsername = document.getElementById('authUsername').value.trim(); const pass = document.getElementById('authPassword').value;
         if(!inputUsername || !pass) return window.showToast("กรุณาใส่ Username และรหัสผ่าน", true);
@@ -6127,29 +6144,33 @@
                 const qAdmin = query(collection(db, "users"), where("username", "==", "admin")); const querySnapshotAdmin = await getDocs(qAdmin);
                 let adminId = "";
                 if (querySnapshotAdmin.empty) {
-                    // ครั้งแรกสุด (ยังไม่มีบัญชี admin เลย) → สร้างบัญชีเริ่มต้นให้
-                    const docRef = await addDoc(collection(db, "users"), { username: "admin", password: "060421", displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, tollwayMode: false, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
+                    // ครั้งแรกสุด (ยังไม่มีบัญชี admin เลย) → สร้างบัญชีเริ่มต้นให้ (เก็บแบบแฮช)
+                    const docRef = await addDoc(collection(db, "users"), { username: "admin", password: await window.pwHash("060421"), displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, tollwayMode: false, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
                     adminId = docRef.id;
                 } else {
                     const adminDoc = querySnapshotAdmin.docs[0];
                     adminId = adminDoc.id;
+                    const adminStoredPw = adminDoc.data().password || '';
                     // 🔒 กันรหัสผ่านแอดมินโดนรีเซ็ตกลับเป็น 060421: ทางเข้าลับนี้ใช้ได้เฉพาะตอนบัญชียังใช้รหัสเริ่มต้นอยู่
                     // ถ้าแอดมินเปลี่ยนรหัสผ่านแล้ว (เช่น @9dJE7aKe) → 060421 ไม่ใช่รหัสจริงอีกต่อไป ต้องล็อกอินด้วยรหัสที่เปลี่ยนไป (ไม่เขียนทับรหัสผ่านเด็ดขาด)
-                    if ((adminDoc.data().password || '') !== "060421") {
+                    if (!(await window.pwVerify("060421", adminStoredPw))) {
                         window.showToast("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด", true);
                         document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
                     }
                     // ยังเป็นรหัสเริ่มต้น → เข้าได้ตามปกติ แต่ไม่เขียนทับ password/role อีกต่อไป
                     await updateDoc(doc(db, "users", adminId), { isOnline: true, isBanned: false, lastLoginAt: Date.now() });
+                    await window.pwUpgradeIfLegacy(adminId, adminStoredPw); // บัญชีเก่าที่ยัง plaintext → อัปเกรดเป็นแฮช
                 }
                 loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
                 window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
             }
-            const q = query(collection(db, "users"), where("username", "==", inputUsername), where("password", "==", pass)); const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-                const userDoc = querySnapshot.docs[0];
+            // 🔐 ดึง user ด้วย username อย่างเดียว แล้วตรวจรหัสผ่านฝั่งเครื่อง (ไม่ query หา password ตรง ๆ เพราะเก็บแบบแฮชแล้ว)
+            const q = query(collection(db, "users"), where("username", "==", inputUsername)); const querySnapshot = await getDocs(q);
+            const userDoc = querySnapshot.docs[0];
+            if (userDoc && (await window.pwVerify(pass, userDoc.data().password || ''))) {
                 if (userDoc.data().isBanned) { window.showToast("บัญชีของคุณถูกระงับการใช้งาน", true); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return; }
-                loggedInUserId = userDoc.id; localStorage.setItem('taxi_user_id', loggedInUserId); await setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastLoginAt: Date.now() }, { merge: true }); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"); window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog();
+                loggedInUserId = userDoc.id; localStorage.setItem('taxi_user_id', loggedInUserId); await window.pwUpgradeIfLegacy(userDoc.id, userDoc.data().password || ''); // บัญชีเก่าที่ยัง plaintext → อัปเกรดเป็นแฮช
+                await setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastLoginAt: Date.now() }, { merge: true }); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"); window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog();
             } else { window.showToast("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด", true); }
         } catch (error) { window.showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ", true); } finally { document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; }
     };
@@ -6162,7 +6183,7 @@
             const q = query(collection(db, "users"), where("username", "==", inputUsername)); const existCheck = await getDocs(q);
             if (!existCheck.empty) { window.showToast("Username นี้มีคนใช้แล้ว กรุณาเปลี่ยนใหม่", true); return; }
             let finalPhotoURL = ""; if (fileInput.files && fileInput.files.length > 0) { finalPhotoURL = await fileToBase64(fileInput.files[0]); }
-            const docRef = await addDoc(collection(db, "users"), { username: inputUsername, password: pass, displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, tollwayMode: false, photoURL: finalPhotoURL, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
+            const docRef = await addDoc(collection(db, "users"), { username: inputUsername, password: await window.pwHash(pass), displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, tollwayMode: false, photoURL: finalPhotoURL, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
             loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog();
         } catch (error) { window.showToast("เกิดข้อผิดพลาด: " + error.message, true); } finally { document.getElementById('authBtn').innerText = "สร้างบัญชีใหม่"; }
     };
@@ -6202,7 +6223,7 @@
         if(p1.length < 6) return window.showToast("รหัสผ่านต้องมี 6 ตัวอักษรขึ้นไป", true);
         const btn = document.getElementById('fpSaveBtn'); btn.disabled = true; btn.innerText = "กำลังบันทึก...";
         try {
-            await updateDoc(doc(db, "users", uid), { password: p1 });
+            await updateDoc(doc(db, "users", uid), { password: await window.pwHash(p1) });
             try { let lg = { action: "ลืมรหัสผ่าน", detail: "ตั้งรหัสผ่านใหม่สำเร็จ (ยืนยัน Username+เบอร์โทร)", timestamp: Date.now(), byUid: "system", byName: window.__fpResetName || "system", targetUid: uid }; await addDoc(collection(db, "users", uid, "logs"), lg); await addDoc(collection(db, "global_logs"), lg); } catch(e) {}
             window.__fpResetUid = null;
             window.toggleModal('forgotPasswordModal', false);
@@ -6275,8 +6296,8 @@
         if (!oldPass || !newPass || !confPass) { return window.showToast("กรุณากรอกข้อมูลให้ครบ", true); } if (newPass !== confPass) { return window.showToast("รหัสผ่านใหม่ไม่ตรงกัน", true); } if (newPass.length < 6) { return window.showToast("รหัสผ่านต้องมี 6 ตัวอักษรขึ้นไป", true); }
         const saveBtn = document.getElementById('savePasswordBtn'); saveBtn.innerText = "กำลังบันทึก..."; saveBtn.disabled = true;
         try {
-            const docSnap = await getDoc(doc(db, "users", loggedInUserId)); if(docSnap.data().password !== oldPass) { throw new Error("รหัสผ่านเดิมไม่ถูกต้อง"); }
-            await updateDoc(doc(db, "users", loggedInUserId), { password: newPass }); await recordActivityLog(loggedInUserId, "เปลี่ยนรหัสผ่าน", "ผู้ใช้เปลี่ยนรหัสผ่านสำเร็จ");
+            const docSnap = await getDoc(doc(db, "users", loggedInUserId)); if(!(await window.pwVerify(oldPass, docSnap.data().password || ''))) { throw new Error("รหัสผ่านเดิมไม่ถูกต้อง"); }
+            await updateDoc(doc(db, "users", loggedInUserId), { password: await window.pwHash(newPass) }); await recordActivityLog(loggedInUserId, "เปลี่ยนรหัสผ่าน", "ผู้ใช้เปลี่ยนรหัสผ่านสำเร็จ");
             window.toggleModal('changePasswordModal', false); window.showToast("เปลี่ยนรหัสผ่านสำเร็จ!");
         } catch (error) { window.showToast("แจ้งเตือน: " + error.message, true); } finally { saveBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกรหัสผ่าน`; saveBtn.disabled = false; }
     };
@@ -6427,7 +6448,9 @@
         let canSetStaffPrefs = isGod || myPerms.canSetStaffPrefs;
         const prefsWrap = document.getElementById('adminStaffPrefsWrap'); if (prefsWrap) prefsWrap.style.display = canSetStaffPrefs ? 'block' : 'none';
         const roleSel = document.getElementById('adminEditRole'); if (roleSel) { roleSel.disabled = !(isGod || myPerms.canChangeUserRole); if(u.role === 'Admin' && !isGod) roleSel.disabled = true; }
-        if(myPerms.canViewPassword) { document.getElementById('adminEditPassword').value = u.password || ''; document.getElementById('adminEditPasswordLabel').innerText = "รหัสผ่าน (คลิกรูปตาเพื่อดู)"; } else { document.getElementById('adminEditPassword').value = ''; document.getElementById('adminEditPasswordLabel').innerText = "ตั้งรหัสผ่านใหม่ (ปล่อยว่างหากไม่เปลี่ยน)"; }
+        // 🔐 รหัสถูกเก็บแบบแฮช — ดูรหัสจริงไม่ได้อีกต่อไป (สิทธิ์นี้ = ดูสถานะ/ตั้งรหัสใหม่ให้ได้)
+        document.getElementById('adminEditPassword').value = '';
+        document.getElementById('adminEditPasswordLabel').innerText = (myPerms.canViewPassword ? "รหัสผ่าน (เข้ารหัสแล้ว — พิมพ์รหัสใหม่เพื่อตั้งให้ ปล่อยว่าง = ไม่เปลี่ยน)" : "ตั้งรหัสผ่านใหม่ (ปล่อยว่างหากไม่เปลี่ยน)");
         document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = ''; document.getElementById('adminEditModalTitle').innerText = "จัดการผู้ใช้";
         
         let callBtn = document.getElementById('adminCallBtn');
@@ -6456,7 +6479,7 @@
                 const q = query(collection(db, "users"), where("username", "==", newUsername)); const existCheck = await getDocs(q); if (!existCheck.empty) { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก`; btn.disabled = false; return window.showToast("Username นี้ถูกใช้งานแล้ว", true); }
                 if (fileInput.files && fileInput.files.length > 0) { photoUpdate = await fileToBase64(fileInput.files[0]); } if (qrInput.files && qrInput.files.length > 0) { qrUpdate = await fileToBase64(qrInput.files[0], true); }
                 const newVibGold = document.getElementById('adminEditVibrateGold'); const newAutoFs = document.getElementById('adminEditAutoFs');
-                await addDoc(collection(db, "users"), { username: newUsername, password: newPassword, displayName: newName, companyName: newCompany, phoneNumber: newPhone, role: newRole, photoURL: photoUpdate, qrCodeURL: qrUpdate, taxiType: 35, vibrateGold: newVibGold ? newVibGold.checked : true, autoFullscreen: newAutoFs ? newAutoFs.checked : true, isOnline: false, isBanned: false, lastLoginAt: null, order: Date.now() });
+                await addDoc(collection(db, "users"), { username: newUsername, password: await window.pwHash(newPassword), displayName: newName, companyName: newCompany, phoneNumber: newPhone, role: newRole, photoURL: photoUpdate, qrCodeURL: qrUpdate, taxiType: 35, vibrateGold: newVibGold ? newVibGold.checked : true, autoFullscreen: newAutoFs ? newAutoFs.checked : true, isOnline: false, isBanned: false, lastLoginAt: null, order: Date.now() });
                 await recordActivityLog(loggedInUserId, "เพิ่มผู้ใช้งานใหม่", `ชื่อ: ${newName}, สิทธิ์: ${newRole}`); window.showToast("สร้างผู้ใช้งานเรียบร้อย!"); window.toggleModal('adminEditUserModal', false); window.toggleModal('adminMenuModal', true); 
             } else {
                 const u = window.currentAdminUsers.find(x => x.uid === uid) || {}; // ข้อมูลเดิมของผู้ใช้ (เดิม u ถูกใช้แต่ไม่ประกาศ → ReferenceError → บันทึกไม่ได้)
@@ -6465,7 +6488,7 @@
                 // เปลี่ยนตำแหน่งได้ต่อเมื่อเป็นแอดมิน หรือมีสิทธิ์ canChangeUserRole (ห้ามแก้ตำแหน่งของแอดมินเอง / ตั้งใครเป็น Admin ถ้าไม่ใช่แอดมิน)
                 let canApplyRole = editIsGod || (editMyPerms.canChangeUserRole && u.role !== 'Admin' && newRole !== 'Admin');
                 if(canApplyRole && newRole !== (u.role || 'User')) { updatePayload.role = newRole; logDetail += `, สิทธิ์: ${newRole}`; }
-                if (newPassword.trim().length >= 1) { updatePayload.password = newPassword.trim(); logDetail += " และเปลี่ยนรหัสผ่าน"; }
+                if (newPassword.trim().length >= 1) { updatePayload.password = await window.pwHash(newPassword.trim()); logDetail += " และเปลี่ยนรหัสผ่าน"; }
                 if (fileInput.files && fileInput.files.length > 0) { photoUpdate = await fileToBase64(fileInput.files[0]); logDetail += " และอัปเดตรูปภาพ"; }
                 if (qrInput.files && qrInput.files.length > 0) { qrUpdate = await fileToBase64(qrInput.files[0], true); logDetail += " และอัปเดต QR Code"; }
                 updatePayload.photoURL = photoUpdate; updatePayload.qrCodeURL = qrUpdate;
