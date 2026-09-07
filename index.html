@@ -1781,7 +1781,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07i';
+    const APP_BUILD = '2026-09-07j';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -3307,8 +3307,15 @@
             '<div style="display: flex; flex-wrap: wrap; gap: 8px;">' + missChips + '</div>' +
             '</div>' : '');
     };
+    // 📳 สั่นเบา ๆ + เสียงติ๊ง เมื่อแตะชิปสิทธิ์ที่เปิดหน้าต่างได้ (เพื่อให้รู้ว่ากดติด) — ใช้ค่าที่ตั้งในหน้าโปรไฟล์
+    window.tapPermFeedback = () => {
+        if (navigator.vibrate && window.userVibrateGold !== false) { try { navigator.vibrate([45, 35, 45]); } catch(e) {} }
+        if (window.playToastTing && window.userToastSound !== false) { try { window.playToastTing(); } catch(e) {} }
+    };
     // 🖱️ แตะชิปสิทธิ์ → เปิดหน้าต่าง/เมนูที่ตรงกับสิทธินั้น (เปิดซ้อนบนหน้าโปรไฟล์ ปิดแล้วกลับมาที่โปรไฟล์)
     window.openPermTarget = (permId) => {
+        const opensWindow = permId !== 'perm_canEditOwn' && permId !== 'perm_canDeleteMedia';
+        if (opensWindow && window.tapPermFeedback) window.tapPermFeedback(); // สั่น + เสียงติ๊ง ก่อนเปิดหน้าต่าง
         if (permId === 'perm_canManageRoles') { if (typeof window.openRoleSettingsModal === 'function') window.openRoleSettingsModal(); else window.showToast('คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน', true); return; }
         if (permId === 'perm_canManageToastMsg') { if (typeof window.openToastMsgModal === 'function') window.openToastMsgModal(); else window.showToast('คุณไม่มีสิทธิ์จัดการข้อความแจ้งเตือน', true); return; }
         if (permId === 'perm_canManageService') { if (typeof window.openServicePortal === 'function') window.openServicePortal(true); else window.showToast('คุณไม่มีสิทธิ์จัดการ Portal', true); return; }
