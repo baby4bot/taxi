@@ -1801,7 +1801,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07o';
+    const APP_BUILD = '2026-09-07p';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -3212,6 +3212,7 @@
                 <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
                     <input type="text" id="tmIcon_${idSuffix}" value="${iVal}" placeholder="ไอคอน: ชื่อ material หรืออีโมจิ (เว้นว่าง = เดิม)" style="flex:1; text-align:left; font-size:14px;" maxlength="40" oninput="window.syncToastSaveBtn()">
                     <button onclick="window.openIconPicker(${idSuffix})" title="เลือกรูปไอคอน" style="width:44px; height:44px; border-radius:12px; background:rgba(241,196,15,0.12); border:1px solid rgba(241,196,15,0.4); cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 8px rgba(241,196,15,0.25);"><span class="material-symbols-outlined" id="tmIconShow_${idSuffix}" style="color:var(--neon-yellow); ${iconSpanStyle}">${curIcon}</span></button>
+                    <button onclick="window.randomToastIcon(${idSuffix})" title="สุ่มไอคอน" style="width:44px; height:44px; border-radius:12px; background:rgba(155,89,182,0.14); border:1px solid rgba(155,89,182,0.45); cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 8px rgba(155,89,182,0.3);"><span class="material-symbols-outlined" style="color:#c39bd3; font-size:24px;">casino</span></button>
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <span style="font-size:12px; color:var(--text-dim); white-space:nowrap;">⏱️ วินาที:</span>
@@ -3298,6 +3299,27 @@
         }
     };
     window.clearIconMatSearch = () => { const s = document.getElementById('iconPickerSearch'); if (s) s.value = ''; window.setIconMatSearch(''); };
+    const RAND_ICON_POOL = (() => { const s = new Set(); TOAST_ICON_MATERIAL.forEach(x => s.add(x)); TOAST_ICON_EMOJI.forEach(e => s.add(e)); return Array.from(s); })();
+    window.setToastIconValue = (idSuffix, val) => {
+        const input = document.getElementById('tmIcon_' + idSuffix);
+        const showEl = document.getElementById('tmIconShow_' + idSuffix);
+        if (input) input.value = val;
+        if (showEl) {
+            if (/[^\x00-\x7F]/.test(val)) { showEl.style.fontFamily = 'inherit'; showEl.style.fontSize = '24px'; }
+            else { showEl.style.fontFamily = ''; showEl.style.fontSize = '22px'; }
+            showEl.innerText = val;
+        }
+        window.syncToastSaveBtn();
+    };
+    window.randomToastIcon = (idSuffix) => {
+        const input = document.getElementById('tmIcon_' + idSuffix);
+        const cur = input ? String(input.value || '').trim() : '';
+        let v = RAND_ICON_POOL[Math.floor(Math.random() * RAND_ICON_POOL.length)];
+        let guard = 0;
+        while (v === cur && RAND_ICON_POOL.length > 1 && guard++ < 40) v = RAND_ICON_POOL[Math.floor(Math.random() * RAND_ICON_POOL.length)];
+        window.setToastIconValue(idSuffix, v);
+        window.showToast('สุ่มไอคอนใหม่แล้ว — กดบันทึกเพื่อใช้จริง');
+    };
     window.__iconPickerSuffix = null;
     window.openIconPicker = (idSuffix) => {
         window.__iconPickerSuffix = idSuffix;
@@ -5541,7 +5563,8 @@
         'เบิกเวลารถติดช่วงปิด/ซ่อนแอปให้ตรงมิเตอร์มากขึ้น (เทียบเวลาวิ่งโล่งของเส้นทาง TomTom — ไม่เบิกเกิน ไม่หาย)',
         'ปรับ UI/แก้บั๊กรวม: ใบเสร็จ QR เป็นสัดส่วนจอมือถือ 9:16, ปุ่ม × ในช่องค้นหา/การ์ดประเมินราคา, การ์ดประเมินราคาสูงขึ้น, ทุก modal เปิดแล้วเลื่อนขึ้นบนสุด, ลบปุ่มแบนออกจากหน้าแก้ไขสมาชิก, เปิดแอปกลางเที่ยวเด้งเข้าจอมิเตอร์ใหญ่ตรง ๆ + แก้ modal ซ้อนกัน, แบนเนอร์ชวนติดตั้งกลับมาใหม่หลังลบไอคอน',
         'กริดเลือกไอคอน Material แบ่งเป็น 19 หมวดหมู่พร้อมแท็บเลือก (แจ้งเตือน/ยานพาหนะ/แผนที่/อาหาร/เงิน/เวลา ฯลฯ) + แท็บ ทั้งหมด — เปิดมาอยู่หมวดแจ้งเตือนโดยอัตโนมัติ เลือกง่าย ไม่ต้องเลื่อนยาวทั้งรายการเดียว',
-        'เพิ่มช่องค้นหาไอคอนในหน้าต่างเลือกรูป — พิมพ์ชื่อ (เช่น taxi, bell) กรองทันทีทั้ง 465 ตัว พร้อมปุ่มล้าง กลับไปหมวดเดิมเมื่อเว้นว่าง'
+        'เพิ่มช่องค้นหาไอคอนในหน้าต่างเลือกรูป — พิมพ์ชื่อ (เช่น taxi, bell) กรองทันทีทั้ง 465 ตัว พร้อมปุ่มล้าง กลับไปหมวดเดิมเมื่อเว้นว่าง',
+        'เพิ่มปุ่มสุ่มไอคอน (ลูกเต๋า) ข้างปุ่มเลือกรูปในจัดการข้อความแจ้งเตือน — แตะแล้วสลับไอคอน toast นั้นแบบสุ่ม (จากไอคอน Material + อีโมจิทั้งหมด) พร้อมปุ่มบันทึกเขียวให้กดบันทึกทันที'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
