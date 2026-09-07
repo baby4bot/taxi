@@ -112,6 +112,8 @@
         .fs-status-badge.clickable:active { transform: scale(0.94); }
         @keyframes rowFlash { 0%, 60% { background: rgba(241,196,15,0.28); border-radius: 12px; box-shadow: 0 0 0 1px rgba(241,196,15,0.5); } 100% { background: transparent; box-shadow: none; } }
         .profile-row-flash { animation: rowFlash 1.6s ease; }
+        /* 🔴 ป้ายจำนวนสิทธิ์ที่ยังไม่ได้ บนไอคอนโปรไฟล์/เมนู */
+        .perm-badge { position: absolute; top: -5px; right: -6px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 4px rgba(0,0,0,0.55); border: 1.5px solid #10131b; font-family: 'Kanit', sans-serif; }
         .header-avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--neon-green); background: rgba(0,0,0,0.3); box-shadow: 0 2px 10px rgba(0,0,0,0.5); flex-shrink: 0; }
         #userMenu .hamburger-btn { width: 44px; height: 44px; }
         #userMenu .hamburger-btn .material-symbols-outlined { font-size: 30px !important; }
@@ -1389,7 +1391,10 @@
     
     <div class="app-header">
         <div id="mainUserInfo" class="header-left" style="display: none;">
-            <img id="mainProfilePic" src="" class="header-avatar" alt="profile" />
+            <div style="position: relative;">
+                <img id="mainProfilePic" src="" class="header-avatar" alt="profile" onclick="window.openProfileModal()" />
+                <span id="mainProfileBadge" class="perm-badge" style="display: none;"></span>
+            </div>
             <div style="text-align: left; display: none;">
                 <div id="mainUserName" style="font-size: 15px; font-weight: 600; color: white; line-height: 1;">กำลังโหลด...</div>
                 <div id="mainUserRole" style="font-size: 12px; font-weight: 500; color: var(--neon-yellow); margin-top: 4px;">...</div>
@@ -1567,14 +1572,17 @@
 <div id="sideMenuOverlay" class="side-menu-overlay" onclick="window.toggleSideMenu(false)">
     <div id="sideMenuBox" class="side-menu" onclick="event.stopPropagation()">
         <div class="side-menu-header">
-            <img id="profilePic" src="" class="side-profile-pic" onclick="window.openProfileModal(); window.toggleSideMenu(false);">
+            <div style="position: relative;">
+                <img id="profilePic" src="" class="side-profile-pic" onclick="window.openProfileModal(); window.toggleSideMenu(false);">
+                <span id="sideProfileBadge" class="perm-badge" style="display: none;"></span>
+            </div>
             <div id="displayUserName" class="side-user-name">กำลังโหลด...</div>
             <div id="displayUserRole" class="side-user-role">...</div>
         </div>
         <hr class="side-divider">
         <div class="side-menu-items">
             <div class="side-menu-item" onclick="window.toggleSideMenu(false)"><span class="material-symbols-outlined">home</span><span>หน้าแรก</span></div>
-            <div class="side-menu-item" onclick="window.toggleSideMenu(false); window.openProfileModal();"><span class="material-symbols-outlined">person</span><span>โปรไฟล์</span></div>
+            <div class="side-menu-item" onclick="window.toggleSideMenu(false); window.openProfileModal();"><span class="material-symbols-outlined" style="position: relative;">person<span id="menuProfileBadge" class="perm-badge" style="display: none;"></span></span><span>โปรไฟล์</span></div>
             <div class="side-menu-item" onclick="window.toggleAppFullscreen()"><span class="material-symbols-outlined">fullscreen</span><span id="fullscreenLabel">เปิดเต็มจอ</span></div>
             <div id="settingsMenuBtn" class="side-menu-item" onclick="window.toggleSideMenu(false); setTimeout(() => { window.openSettingsHub(); }, 300);" style="display: none;"><span class="material-symbols-outlined">settings</span><span>ตั้งค่าการใช้งาน</span></div>
         </div>
@@ -1785,7 +1793,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07k';
+    const APP_BUILD = '2026-09-07l';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -3323,6 +3331,7 @@
             '<div style="display: flex; flex-wrap: wrap; gap: 8px;">' + missChips + '</div>' +
             '</div>' +
             '</div>' : '');
+        if (window.updateMissingPermsBadge) window.updateMissingPermsBadge();
     };
     // 🔽 ยุบ/ขยาย การ์ด "สิทธิ์ที่ยังไม่ได้" — เริ่มจากยุบไว้เพื่อกันหน้าโปรไฟล์ยาวเกินไป
     window.toggleMissingPerms = () => {
@@ -3332,6 +3341,23 @@
         const open = body.style.display !== 'none';
         body.style.display = open ? 'none' : 'block';
         if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+    };
+    // 🔴 ป้ายจำนวนสิทธิ์ที่ยังไม่ได้ บนไอคอนโปรไฟล์ (หน้าแรก + เมนู) — อัปเดตทุกครั้งที่ข้อมูลเปลี่ยน
+    window.updateMissingPermsBadge = () => {
+        try {
+            let count = 0;
+            if (currentUserRole !== 'Admin') {
+                const perms = (typeof window.currentUserPerms === 'function') ? window.currentUserPerms() : {};
+                const list = (window.currentPermConfig && window.currentPermConfig.length ? window.currentPermConfig : window.defaultPermConfig) || [];
+                count = list.filter(p => !perms[p.id.replace('perm_', '')]).length;
+            }
+            ['mainProfileBadge', 'sideProfileBadge', 'menuProfileBadge'].forEach(id => {
+                const b = document.getElementById(id);
+                if (!b) return;
+                if (count > 0) { b.innerText = count > 99 ? '99+' : String(count); b.style.display = 'flex'; }
+                else b.style.display = 'none';
+            });
+        } catch (e) {}
     };
     // 📳 สั่นเบา ๆ + เสียงติ๊ง เมื่อแตะชิปสิทธิ์ที่เปิดหน้าต่างได้ (เพื่อให้รู้ว่ากดติด) — ใช้ค่าที่ตั้งในหน้าโปรไฟล์
     window.tapPermFeedback = () => {
@@ -5473,7 +5499,7 @@
 
     const listenToMyUser = () => {
         if(!loggedInUserId) return;
-        if(!permsUnsub) { permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { window.globalPermissions = docSnap.exists() ? docSnap.data() : {}; window.fillRoleSelects(); window.applyPermissionsUI(); }); }
+        if(!permsUnsub) {            permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { window.globalPermissions = docSnap.exists() ? docSnap.data() : {}; window.fillRoleSelects(); window.applyPermissionsUI(); if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); }); }
         if(!permConfigUnsub) { 
             permConfigUnsub = onSnapshot(doc(db, "settings", "permission_config"), (docSnap) => { 
                 // เอารายการที่เคยบันทึกไว้มารวมกับรายการใหม่ในโค้ด (กันของใหม่ที่เพิ่มมาหายไปถ้าใน DB มีของเก่า 9 รายการ)
@@ -5482,6 +5508,7 @@
                 let merged = [...stored];
                 window.defaultPermConfig.forEach(d => { if(!haveIds[d.id]) { merged.push(d); haveIds[d.id] = true; } });
                 window.currentPermConfig = merged.length ? merged : [...window.defaultPermConfig];
+                if (window.updateMissingPermsBadge) window.updateMissingPermsBadge();
                 if(document.getElementById('roleSettingsModal').style.display === 'flex') { window.renderPermList(); }
             }); 
         }
@@ -5499,7 +5526,7 @@
                 document.getElementById('userMenu').style.display = 'flex'; 
                 document.getElementById('mainUserInfo').style.display = 'flex';
                 
-                currentUserRole = data.role || "User"; let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
+                currentUserRole = data.role || "User"; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
                 document.getElementById('displayUserName').innerText = displayNameVal; document.getElementById('mainUserName').innerText = displayNameVal;
                 document.getElementById('editPhone').value = data.phoneNumber || "";
                 
