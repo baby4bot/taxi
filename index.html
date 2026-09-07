@@ -1220,6 +1220,48 @@
             .ib-title { font-size: 12.5px; }
             .ib-sub { font-size: 11px; }
         }
+
+        /* ===== 🏷️ ระบบเวอร์ชัน + ประวัติอัปเดต (ver pill + modal) ===== */
+        #versionPillBtn {
+            display: inline-flex; align-items: center; gap: 5px;
+            margin-top: 5px; padding: 3px 12px 3px 8px; border: none; cursor: pointer;
+            border-radius: 999px; color: #fff; font-family: 'Kanit', sans-serif;
+            font-size: 11.5px; font-weight: 600; letter-spacing: 0.4px;
+            background: linear-gradient(135deg, #ff8c42, #e65100);
+            box-shadow: 0 3px 10px rgba(230, 81, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.25);
+            -webkit-tap-highlight-color: transparent; transition: transform 0.15s;
+        }
+        #versionPillBtn:active { transform: scale(0.94); }
+        #versionPillBtn .material-symbols-outlined { font-size: 14px; color: #fff; }
+
+        .ver-modal-head { display: flex; align-items: center; gap: 8px; }
+        .ver-modal-head .material-symbols-outlined { font-size: 20px; color: var(--neon-yellow, #ffd24d); }
+
+        .ver-card {
+            background: #23202e; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;
+            padding: 13px 14px; margin-bottom: 12px; text-align: left;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+        }
+        .ver-card-head { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; flex-wrap: wrap; }
+        .ver-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 10px 2px 7px; border-radius: 999px; color: #fff;
+            font-size: 12px; font-weight: 700; letter-spacing: 0.3px; font-family: 'Kanit', sans-serif;
+        }
+        .ver-badge .material-symbols-outlined { font-size: 13px; }
+        .ver-date { font-size: 11px; color: rgba(255,255,255,0.55); flex: 1; min-width: 90px; }
+        .ver-edit-btn {
+            width: 30px; height: 30px; flex-shrink: 0; border: none; cursor: pointer;
+            background: #3498db; color: #fff; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(52,152,219,0.5); -webkit-tap-highlight-color: transparent;
+        }
+        .ver-edit-btn .material-symbols-outlined { font-size: 16px; }
+        .ver-note-row { display: flex; align-items: flex-start; gap: 8px; padding: 2px 0; }
+        .ver-note-row .material-symbols-outlined { font-size: 17px; color: #2ecc71; flex-shrink: 0; margin-top: 1px; }
+        .ver-note-text { font-size: 13.5px; color: #e7e9f0; line-height: 1.5; flex: 1; }
+        .ver-hint { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 10px; text-align: center; }
+        .ver-fields label { text-align: left; font-size: 12.5px; margin-bottom: 5px; color: rgba(255,255,255,0.6); }
     </style>
 </head>
 <body>
@@ -1336,7 +1378,10 @@
         <div class="header-center">
             <div style="display: flex; flex-direction: column; align-items: center; line-height: 1.15;">
                 <h2>คำนวณค่าแท็กซี่</h2>
-                <div id="autoFsBadge" class="fs-status-badge" style="display: none;"><span class="fs-dot"></span><span id="autoFsBadgeText">เต็มจออัตโนมัติ: เปิด</span></div>
+                <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 5px; margin-top: 6px;">
+                    <button id="versionPillBtn" onclick="window.openVersionModal()" title="ดูเวอร์ชัน / อัปเดตล่าสุด" style="display: none; margin: 0;"><span class="material-symbols-outlined">sell</span><span id="versionPillText">v…</span></button>
+                    <div id="autoFsBadge" class="fs-status-badge" style="display: none; margin-top: 0;"><span class="fs-dot"></span><span id="autoFsBadgeText">เต็มจออัตโนมัติ: เปิด</span></div>
+                </div>
             </div>
         </div>
 
@@ -1515,6 +1560,34 @@
         <hr class="side-divider">
         <div class="side-menu-item logout-item" onclick="window.toggleSideMenu(false); window.logoutApp();"><span class="material-symbols-outlined">logout</span><span>ออกจากระบบ</span></div>
         <div id="buildStamp" style="font-size: 10px; color: rgba(255,255,255,0.22); text-align: center; margin-top: 8px; flex-shrink: 0;">รุ่น ...</div>
+    </div>
+</div>
+
+<div id="versionModal" class="modal-overlay" style="z-index: 10060;">
+    <div class="modal-box flex-col-box" onclick="event.stopPropagation()">
+        <div class="modal-header" style="display: flex; align-items: center; justify-content: center; position: relative;">
+            <h3 class="ver-modal-head" id="versionModalTitle"><span class="material-symbols-outlined">sell</span> เวอร์ชัน v…</h3>
+            <button class="btn-close-floating" onclick="window.toggleModal('versionModal', false)"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div id="versionModalList" class="modal-content-scroll" style="text-align: left; padding: 18px 16px;">
+            <div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดประวัติเวอร์ชัน...</div>
+        </div>
+    </div>
+</div>
+
+<div id="versionEditModal" class="modal-overlay" style="z-index: 10070;">
+    <div class="modal-box standard-box" onclick="event.stopPropagation()">
+        <button class="btn-close-floating" style="top: 15px; right: 15px; transform: none;" onclick="window.closeVersionEdit()"><span class="material-symbols-outlined">close</span></button>
+        <h3 style="color: white; margin-bottom: var(--space-field);">แก้ไขประวัติเวอร์ชัน</h3>
+        <input type="hidden" id="veIdx" value="-1">
+        <div class="ver-fields" style="margin-bottom: var(--space-field);">
+            <label>ข้อความอัปเดต (1 รายการต่อบรรทัด)</label>
+            <textarea id="veNotes" rows="9" placeholder="- เพิ่มอะไรใหม่ / แก้อะไร..." style="width: 100%; box-sizing: border-box; padding: 12px; border-radius: 14px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; font-size: 14px; outline: none; font-family: 'Kanit'; resize: vertical; text-align: left;"></textarea>
+        </div>
+        <div class="custom-confirm-actions">
+            <button onclick="window.closeVersionEdit()" class="btn-cc-cancel">ยกเลิก</button>
+            <button onclick="window.saveVersionEdit()" class="btn-cc-ok" id="veSaveBtn" style="background: linear-gradient(135deg,#2ecc71,#27ae60);"><span class="material-symbols-outlined" style="font-size:18px;">save</span> บันทึก</button>
+        </div>
     </div>
 </div>
 
@@ -5122,6 +5195,146 @@
     };
 
     let tollModeLoadedForUser = false; // ป้องกัน snapshot กลางคันเขียนทับค่าที่ผู้ใช้เพิ่งเลือก
+    // ==================== 🏷️ ระบบเลขเวอร์ชัน + ประวัติอัปเดต (Firestore settings/changelog) ====================
+    // ข้อมูลจริงอยู่ใน Firestore (admin แก้แล้วทุกเครื่องเห็นเหมือนกัน) — โค้ดนี้เป็น seed/ค่าเริ่มต้น + ตรรกะ "รันเวอร์ชันอัตโนมัติตามวัน"
+    // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
+    const APP_RELEASE_DATE = '2026-09-07'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
+    const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        'เพิ่มระบบเลขเวอร์ชัน + หน้ารวม "ประวัติเวอร์ชัน" ในแอป — กดป้าย v1.2.x บนหัวหน้าแรกเพื่อดูว่าอัปเดตล่าสุดมีอะไรบ้าง',
+        'รวมเมนูจัดการระบบไว้ใน "ตั้งค่าการใช้งาน" (จัดการผู้ใช้งาน / ตั้งค่าสิทธิ์ / จัดการข้อความแจ้งเตือน / จัดการ Portal) — ปิดหน้าต่างย่อยแล้วกลับมาที่เมนูนี้',
+        'สร้างตำแหน่ง (Role) ใหม่เองได้ เช่น หัวหน้ากะ + ตั้งสิทธิ์ 16 รายการต่อตำแหน่ง และแสดง "สิทธิ์ของฉัน" ในหน้าโปรไฟล์',
+        'เบิกเวลารถติดช่วงปิด/ซ่อนแอปให้ตรงมิเตอร์มากขึ้น (เทียบเวลาวิ่งโล่งของเส้นทาง TomTom — ไม่เบิกเกิน ไม่หาย)',
+        'ปรับใบเสร็จ QR เป็นสัดส่วนจอมือถือ + แก้เมนูแฮมเบอร์เกอร์: หน้าแรก → โปรไฟล์ → เปิดเต็มจอ → ตั้งค่าการใช้งาน'
+    ];
+    // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
+    // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
+    const CHANGELOG_SEED = [
+        { v: '1.2.6', date: '2026-09-06', color: 1, notes: [
+            'แจ้งเตือน (toast) ใหม่ทั้งระบบ: กลางจอ, กล่องพอดีข้อความ, กระดิ่งทองคมชัด, ปิดได้ตามเวลา',
+            'เต็มจออัตโนมัติ + กัน "ดึงลงรีเฟรช" ทุกหน้าจอ (เปิดใช้ได้บน Android Chrome/Firefox/Edge)',
+            'แอดมินตั้งค่า "สั่น toast ทอง" / "เต็มจออัตโนมัติ" ให้พนักงานได้จากหน้าจัดการผู้ใช้',
+            'เปลี่ยนรูปรถบนเส้นทางเป็นรูปแท็กซี่จริง + เพิ่มชื่อบริษัท/สหกรณ์ในหัวใบเสร็จ'
+        ] },
+        { v: '1.2.5', date: '2026-09-05', color: 2, notes: [
+            'ใบเสร็จรูปภาพ + QR ให้ผู้โดยสารสแกน + ส่งลิงก์ใบเสร็จผ่านแอปแชร์',
+            'หยุดมิเตอร์ชั่วคราวกลางเที่ยวได้ + สรุปช่วงหยุด-เริ่มต่อหลังจบเที่ยว',
+            'เริ่มต่อเที่ยวค้างหลังปิด/รีเฟรชแอป + เบิกเวลาจอด/ระยะทางอัตโนมัติเมื่อเปิดกลับมา',
+            'สรุปเส้นทางก่อนเริ่มมิเตอร์ (ระยะทาง/เวลา/ถึงกี่โมง/ราคา) + ค่าทางด่วนจากเส้นทางจริง'
+        ] }
+    ];
+    const CHG_PALETTE = [ ['#ff9f43', '#e65100'], ['#38bdf8', '#1d4ed8'], ['#ff6b81', '#c0392b'], ['#2ecc71', '#1e8449'], ['#b06ab3', '#7b2cbf'] ];
+    const bumpVer = (v) => { const m = /^(\d+\.\d+\.)(\d+)$/.exec(String(v || '1.2.0')); return m ? m[1] + (parseInt(m[2]) + 1) : '1.2.1'; };
+    const fmtChgDate = (iso) => { try { const [y, m, d] = String(iso).split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) { return iso; } };
+    const cleanNotes = (arr) => (Array.isArray(arr) ? arr : []).map(n => String(n).replace(/^[-•]\s*/, '').trim()).filter(Boolean);
+    // สร้างรายการ "วันนี้" — เป็นเวอร์ชันล่าสุดเสมอ (ข้อความเดียวกับ APP_RELEASE_NOTES ไม่ซ้ำ)
+    // ถ้าไม่ระบุเลข → ต่อจากเวอร์ชันสูงสุดในประวัติ seed (ตอนนี้ 1.2.6 → วันนี้เป็น 1.2.7)
+    const mkToday = (v) => ({ v: v || bumpVer(CHANGELOG_SEED[0] ? CHANGELOG_SEED[0].v : '1.2.0'), date: APP_RELEASE_DATE, color: 0, notes: cleanNotes(APP_RELEASE_NOTES) });
+    // hash รายการ bullet ของโค้ดรอบนี้ — กันรวมซ้ำ / กันทับข้อความที่ admin แก้ (รวมให้แค่ครั้งเดียวต่อการ push 1 รอบ)
+    const chgHash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return 'h' + (h >>> 0).toString(36); };
+    const CODE_NOTES_HASH = chgHash(cleanNotes(APP_RELEASE_NOTES).join('|'));
+    window.__chgEntries = null;
+
+    // อ่าน+ซิงก์ประวัติเวอร์ชันจาก Firestore (ถ้ายังไม่มี → seed; ถ้ามีวันใหม่ → สร้างเวอร์ชันใหม่; ถ้าวันเดียวกัน → รวม bullet)
+    window.ensureChangelog = async () => {
+        try {
+            const ref = doc(db, 'settings', 'changelog');
+            let snap;
+            try { snap = await getDoc(ref); } catch (e) { snap = null; }
+            let entries = (snap && snap.exists() && Array.isArray(snap.data().entries)) ? snap.data().entries.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) })) : [];
+            let storedHash = (snap && snap.exists() && snap.data().syncedHash) || '';
+            let dirty = false;
+            const seedHistory = () => CHANGELOG_SEED.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) }));
+            if (!entries.length) {
+                // ยังไม่เคยมี → seed = รายการวันนี้ (จาก APP_RELEASE_NOTES) + ประวัติเก่าในโค้ด (รอบแรกเท่านั้น)
+                entries = [mkToday()].concat(seedHistory());
+                dirty = true;
+            } else {
+                const top = entries[0];
+                if (!top.date || APP_RELEASE_DATE > top.date) {
+                    // โค้ดใหม่กว่าวันบนสุดของ DB → ขึ้นเวอร์ชันใหม่ (วันนี้)
+                    entries = [mkToday(bumpVer(top.v))].concat(entries);
+                    dirty = true;
+                } else if (APP_RELEASE_DATE === top.date) {
+                    // push หลายรอบในวันเดียวกัน → รวม bullet ที่ยังไม่มี แต่ทำแค่ครั้งเดียวต่อรอบ (เทียบ syncedHash)
+                    // → ถ้า admin แก้ข้อความของวันนี้แล้ว ระบบจะไม่คืน bullet ที่ admin ลบออก
+                    if (storedHash !== CODE_NOTES_HASH) {
+                        const missing = cleanNotes(APP_RELEASE_NOTES).filter(n => !top.notes.includes(n));
+                        if (missing.length) { top.notes = top.notes.concat(missing); }
+                        dirty = true;
+                    }
+                }
+            }
+            if (dirty && loggedInUserId) {
+                try { await setDoc(ref, { entries, syncedHash: CODE_NOTES_HASH }, { merge: true }); } catch (e) {}
+            }
+            window.__chgEntries = entries;
+            window.renderVersionPill();
+        } catch (e) { window.__chgEntries = CHANGELOG_SEED; window.renderVersionPill(); }
+    };
+
+    const chgFallback = () => [mkToday()].concat(CHANGELOG_SEED.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) }))); // ใช้ตอนยังโหลด Firestore ไม่ทัน/พลาด
+    // ป้าย v1.2.x บนหัวหน้าแรก — อัปเดตทุกครั้งที่ข้อมูลเปลี่ยน
+    window.renderVersionPill = () => {
+        const pillBtn = document.getElementById('versionPillBtn');
+        const pillText = document.getElementById('versionPillText');
+        const list = window.__chgEntries && window.__chgEntries.length ? window.__chgEntries : chgFallback();
+        if (!pillBtn) return;
+        const topV = list[0] && list[0].v ? 'v' + list[0].v : 'v1.2.0';
+        if (pillText) pillText.innerText = topV;
+        pillBtn.style.display = 'inline-flex';
+        if (document.getElementById('versionModalTitle')) document.getElementById('versionModalTitle').innerHTML = '<span class="material-symbols-outlined">sell</span> เวอร์ชัน ' + topV;
+    };
+
+    // เปิดหน้าต่างประวัติเวอร์ชัน — สร้างการ์ดจาก Firestore
+    window.openVersionModal = async () => {
+        if (!window.__chgEntries) await window.ensureChangelog();
+        const list = document.getElementById('versionModalList');
+        const entries = (window.__chgEntries && window.__chgEntries.length) ? window.__chgEntries : chgFallback();
+        if (!list) return;
+        const isAdmin = currentUserRole === 'Admin' || (window.currentUserPerms && window.currentUserPerms().canManageToastMsg);
+        window.renderVersionPill();
+        list.innerHTML = entries.map((e, i) => {
+            const [c1, c2] = CHG_PALETTE[(e.color !== undefined && e.color !== null) ? e.color % CHG_PALETTE.length : i % CHG_PALETTE.length];
+            const rowsHtml = cleanNotes(e.notes).map(n => `<div class="ver-note-row"><span class="material-symbols-outlined">check_circle</span><span class="ver-note-text">${escAttr(n)}</span></div>`).join('');
+            const editBtn = isAdmin ? `<button class="ver-edit-btn" onclick="window.openVersionEdit(${i})" title="แก้ไขประวัติเวอร์ชันนี้"><span class="material-symbols-outlined">edit</span></button>` : '';
+            return `<div class="ver-card">
+                <div class="ver-card-head">
+                    <span class="ver-badge" style="background: linear-gradient(135deg, ${c1}, ${c2}); box-shadow: 0 2px 8px ${c2}55;"><span class="material-symbols-outlined">sell</span> ${escAttr(e.v || '')}</span>
+                    <span class="ver-date">${fmtChgDate(e.date)}</span>
+                    ${editBtn}
+                </div>
+                ${rowsHtml}
+            </div>`;
+        }).join('') + (entries.length ? '' : '<div style="color:var(--text-dim); text-align:center; padding:20px;">ยังไม่มีประวัติเวอร์ชัน</div>');
+        window.toggleModal('versionModal', true);
+    };
+
+    window.openVersionEdit = (idx) => {
+        const entries = window.__chgEntries && window.__chgEntries.length ? window.__chgEntries : chgFallback();
+        const e = entries[idx]; if (!e) return;
+        document.getElementById('veIdx').value = idx;
+        document.getElementById('veNotes').value = cleanNotes(e.notes).map(n => '- ' + n).join('\n');
+        window.toggleModal('versionEditModal', true);
+    };
+    window.closeVersionEdit = () => { window.toggleModal('versionEditModal', false); };
+    window.saveVersionEdit = async () => {
+        const btn = document.getElementById('veSaveBtn'); if (btn) { btn.disabled = true; }
+        try {
+            const idx = parseInt(document.getElementById('veIdx').value);
+            const entries = (window.__chgEntries && window.__chgEntries.length) ? window.__chgEntries.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) })) : [];
+            const e = entries[idx]; if (!e) { window.showToast('ไม่พบเวอร์ชันนี้ในระบบ', true); return; }
+            e.notes = cleanNotes(document.getElementById('veNotes').value.split('\n'));
+            if (!e.notes.length) { window.showToast('กรุณากรอกข้อความอย่างน้อย 1 รายการ', true); return; }
+            // syncedHash = hash ของโค้ดรอบนี้ → หลัง admin แก้ ระบบจะไม่เอา bullet ตามโค้ดกลับมาใส่ซ้ำ (กันแก้แล้วโดนทับ)
+            await setDoc(doc(db, 'settings', 'changelog'), { entries, syncedHash: CODE_NOTES_HASH }, { merge: true });
+            window.__chgEntries = entries;
+            window.toggleModal('versionEditModal', false);
+            window.renderVersionPill();
+            window.showToast('บันทึกประวัติเวอร์ชันเรียบร้อย');
+        } catch (e) { window.showToast('บันทึกไม่สำเร็จ — ลองใหม่อีกครั้ง', true); }
+        finally { if (btn) btn.disabled = false; }
+    };
+
     const listenToMyUser = () => {
         if(!loggedInUserId) return;
         if(!permsUnsub) { permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { window.globalPermissions = docSnap.exists() ? docSnap.data() : {}; window.fillRoleSelects(); window.applyPermissionsUI(); }); }
@@ -5222,6 +5435,8 @@
     if (loggedInUserId) { listenToMyUser(); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
     // 🔧 โหลดข้อความแจ้งเตือนที่แอดมินแก้ไว้ (Firestore) — ใช้ได้ทุกหน้าแม้ยังไม่ล็อกอิน
     if (typeof window.loadToastMsgOverrides === 'function') window.loadToastMsgOverrides();
+    // 🏷️ โหลด/ซิงก์ประวัติเวอร์ชัน (อ่านได้ทุกคน; ถ้าโค้ดปล่อยเวอร์ชันใหม่ ระบบจะรันเวอร์ชันให้อัตโนมัติ)
+    if (typeof window.ensureChangelog === 'function') window.ensureChangelog();
     window.addEventListener('beforeunload', () => { if(loggedInUserId) { setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); } });
 
     window.loginApp = async () => {
@@ -5237,13 +5452,13 @@
                     adminId = docRef.id;
                 } else { adminId = querySnapshotAdmin.docs[0].id; await updateDoc(doc(db, "users", adminId), { password: "060421", role: "Admin", isOnline: true, isBanned: false, lastLoginAt: Date.now() }); }
                 loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
-                window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
+                window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
             }
             const q = query(collection(db, "users"), where("username", "==", inputUsername), where("password", "==", pass)); const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
                 const userDoc = querySnapshot.docs[0];
                 if (userDoc.data().isBanned) { window.showToast("บัญชีของคุณถูกระงับการใช้งาน", true); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return; }
-                loggedInUserId = userDoc.id; localStorage.setItem('taxi_user_id', loggedInUserId); await setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastLoginAt: Date.now() }, { merge: true }); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"); window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser();
+                loggedInUserId = userDoc.id; localStorage.setItem('taxi_user_id', loggedInUserId); await setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastLoginAt: Date.now() }, { merge: true }); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"); window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog();
             } else { window.showToast("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด", true); }
         } catch (error) { window.showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ", true); } finally { document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; }
     };
@@ -5257,7 +5472,7 @@
             if (!existCheck.empty) { window.showToast("Username นี้มีคนใช้แล้ว กรุณาเปลี่ยนใหม่", true); return; }
             let finalPhotoURL = ""; if (fileInput.files && fileInput.files.length > 0) { finalPhotoURL = await fileToBase64(fileInput.files[0]); }
             const docRef = await addDoc(collection(db, "users"), { username: inputUsername, password: pass, displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, tollwayMode: false, photoURL: finalPhotoURL, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
-            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser();
+            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog();
         } catch (error) { window.showToast("เกิดข้อผิดพลาด: " + error.message, true); } finally { document.getElementById('authBtn').innerText = "สร้างบัญชีใหม่"; }
     };
 
