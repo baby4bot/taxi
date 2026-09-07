@@ -1801,7 +1801,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07r';
+    const APP_BUILD = '2026-09-07s';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5591,7 +5591,8 @@
         'เพิ่มช่องค้นหาไอคอนในหน้าต่างเลือกรูป — พิมพ์ชื่อ (เช่น taxi, bell) กรองทันทีทั้ง 465 ตัว พร้อมปุ่มล้าง กลับไปหมวดเดิมเมื่อเว้นว่าง',
         'เพิ่มปุ่มสุ่มไอคอน (ลูกเต๋า) ข้างปุ่มเลือกรูปในจัดการข้อความแจ้งเตือน — แตะแล้วสลับไอคอน toast นั้นแบบสุ่ม (จากไอคอน Material + อีโมจิทั้งหมด) พร้อมปุ่มบันทึกเขียวให้กดบันทึกทันที',
         'เพิ่มปุ่มลูกศรย้อนกลับ ‹ ที่หัวหน้าต่างย่อยทั้ง 4 หมวด (จัดการผู้ใช้ / ตั้งค่าสิทธิ์ / ข้อความแจ้งเตือน / Portal) — แตะแล้วกลับมาที่ตั้งค่าการใช้งานชัดเจน (ปุ่มกลม กดแล้วไม่ชนหัวข้อความอีก)',
-        'ปุ่มย้อนกลับมือถือ (Android back) ปิดทีละชั้น: หมวดย่อย → ตั้งค่าการใช้งาน → หน้าแรก → ออกจากแอป (แทนการกด back ครั้งเดียวแล้วออกทั้งแอป)'
+        'ปุ่มย้อนกลับมือถือ (Android back) ปิดทีละชั้น: หมวดย่อย → ตั้งค่าการใช้งาน → หน้าแรก → ออกจากแอป (แทนการกด back ครั้งเดียวแล้วออกทั้งแอป)',
+        'หน้าประวัติรวมระบบเพิ่มส่วนเตือนคำขอสิทธิ์ที่ค้างเกิน 7 วัน (กล่องแดงบนหัว) — แอดมินเห็นสมาชิกที่ค้าง+สิทธิ์ที่ขอ+กี่วัน พร้อมปุ่มจัดการคำขอได้ทันที'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6212,6 +6213,28 @@
             const querySnapshot = await getDocs(q);
             let html = `<div style="font-size:14px; margin-bottom:15px; color:var(--neon-yellow); text-align:center;">ประวัติการใช้งานทั้งหมดในระบบ</div>`;
             const formatDate = (timestamp) => { if(!timestamp) return "-"; const d = new Date(timestamp); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+            // ⏰ ส่วนเตือน: คำขอสิทธิ์เพิ่มที่ค้างนานเกิน 7 วัน — ขึ้นเป็นกล่องแดงอยู่หัวประวัติรวมเพื่อให้แอดมินเห็นแล้วจัดการ
+            const STALE_DAYS = 7;
+            let staleHtml = '';
+            try {
+                const pq = await getDocs(collection(db, 'perm_requests'));
+                const now = Date.now(); const stale = [];
+                pq.forEach(d => { const x = d.data(); if (x && x.status === 'pending' && x.requestedAt && (now - x.requestedAt) > STALE_DAYS * 86400000) { x.reqId = d.id; stale.push(x); } });
+                stale.sort((a, b) => (a.requestedAt || 0) - (b.requestedAt || 0));
+                if (stale.length) {
+                    staleHtml = '<div style="border:1px solid rgba(255,77,95,0.45); background:rgba(255,77,95,0.08); border-radius:12px; padding:10px 12px; margin-bottom:15px; text-align:left;">' +
+                        '<div style="display:flex; align-items:center; gap:6px; color:#ff8491; font-size:13.5px; font-weight:700; margin-bottom:8px;"><span class="material-symbols-outlined" style="font-size:18px;">timer_off</span> คำขอสิทธิ์ที่ค้างเกิน ' + STALE_DAYS + ' วัน (' + stale.length + ' รายการ)</div>';
+                    stale.forEach(r => {
+                        const when = r.requestedAt ? new Date(r.requestedAt).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-';
+                        const days = Math.floor((now - r.requestedAt) / 86400000);
+                        const miss = r.missingLabels || [];
+                        const chips = miss.slice(0, 4).map(l => '<span class="myperm-chip missing" style="font-size:10.5px; padding:2px 7px;"><span class="material-symbols-outlined" style="font-size:12px;">lock</span>' + l + '</span>').join('');
+                        staleHtml += '<div class="admin-user-card" style="align-items:flex-start; margin-bottom:8px; background:rgba(0,0,0,0.3);"><img class="admin-avatar" src="' + ((r.photoURL && r.photoURL.length > 10) ? r.photoURL : window.DEFAULT_AVATAR) + '"><div style="flex:1; min-width:0;"><div class="admin-user-head"><div class="admin-user-name">' + (r.displayName || r.username || '') + ' <span class="admin-role-badge" style="background:rgba(255,77,95,0.15); color:#ff8491; border-color:rgba(255,77,95,0.4);">ค้าง ' + days + ' วัน</span></div><div class="admin-user-sub"><span class="admin-user-uname">@' + (r.username || r.uid || '') + '</span><span class="admin-user-statusline">ขอเมื่อ ' + when + '</span></div></div>' + (chips ? '<div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:7px;">' + chips + (miss.length > 4 ? '<span style="font-size:11px; color:var(--text-dim); align-self:center;">+' + (miss.length - 4) + ' รายการ</span>' : '') + '</div>' : '') + '<button onclick="window.openPermRequests()" class="manual-timer-btn" style="margin-top:9px; padding:7px 12px; font-size:12.5px; background:var(--neon-yellow); color:#121212; justify-content:center;"><span class="material-symbols-outlined" style="font-size:15px;">campaign</span> จัดการคำขอ</button></div></div>';
+                    });
+                    staleHtml += '</div>';
+                }
+            } catch(e) {}
+            html = staleHtml + html;
             if(querySnapshot.empty) { html += `<div style="text-align:center; color:var(--text-dim); font-size:12px;">ไม่มีประวัติการทำรายการ</div>`; } 
             else { 
                 querySnapshot.forEach((doc) => { 
