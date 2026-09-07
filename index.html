@@ -1826,7 +1826,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08g';
+    const APP_BUILD = '2026-09-08h';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5903,7 +5903,8 @@
         'แก้บั๊กเด้งหลุดล็อกอิน: ตอนรีเฟรช/เปิดแอปใหม่ ระบบจะไม่ไล่ออกจากระบบเพราะ snapshot แรกมาไม่ครบอีกแล้ว (เช็คข้อมูลจริงจากเซิร์ฟเวอร์ก่อน) — session อยู่จนกว่าจะกดออกจากระบบเอง',
         'ข้อความชิปทางด่วนทั้งจอมิเตอร์ขยายและหน้าแรก เปลี่ยนจาก "ค่าทางด่วน X฿" เป็น "ทางด่วน X บ."',
         'ย้ายชิปทางด่วนที่เพิ่ม + ยอดรวม "รวมค่าทางด่วน" จากด้านบนการ์ดเข้าไปอยู่ในการ์ดประเมินราคา ใต้ปุ่ม + ค่าทางด่วน (มุมซ้ายบนในตัวการ์ด)',
-        'เพิ่ม SHA-256 แบบ pure-JS เป็นตัวสำรอง — เปิดไฟล์ index.html แบบ file:// ตรง ๆ ก็ล็อกอินบัญชีที่แฮชแล้วได้ (เบราว์เซอร์ปกติปิด crypto.subtle ในหน้าไม่ปลอดภัย)'
+        'เพิ่ม SHA-256 แบบ pure-JS เป็นตัวสำรอง — เปิดไฟล์ index.html แบบ file:// ตรง ๆ ก็ล็อกอินบัญชีที่แฮชแล้วได้ (เบราว์เซอร์ปกติปิด crypto.subtle ในหน้าไม่ปลอดภัย)',
+        '🔒 อัปเกรดแฮชรหัสผ่านใหม่เป็น PBKDF2-HMAC-SHA256 (100,000 รอบ + salt ต่อบัญชี) — รุ่นเก่า sha256$/plaintext ยังล็อกอินได้ และถูกอัปเกรดเป็น PBKDF2 ให้อัตโนมัติหลังล็อกอินสำเร็จ (มี pure-JS fallback ให้ใช้ได้แม้เปิด file://)'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6168,25 +6169,15 @@
     document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') window.markMeOnline(); });
     setInterval(() => { window.markMeOnline(); }, 45000); // เต้นหัวใจทุก 45 วิ กันสถานะหลุดตอนแอปค้างทั้งวัน
 
-    // 🔐 ระบบรหัสผ่านแบบแฮช (SHA-256 + salt ต่อบัญชี) — ไม่เก็บ plaintext ในฐานข้อมูลอีกต่อไป
-    // รูปแบบที่เก็บ:  "sha256$<salt>$<hex>" โดย hash = SHA-256(salt + '::' + รหัส)
-    // Pure-JS SHA-256 (FIPS 180-4) — ใช้เป็น fallback ตอนเปิดแบบ file:// ตรง ๆ (เบราว์เซอร์ปิด crypto.subtle ใน insecure context)
-    window.pwSha256Fallback = (text) => {
+    // 🔐 ระบบรหัสผ่านแบบแฮช (PBKDF2-HMAC-SHA256 สำหรับรหัสใหม่ + รองรับรุ่นเก่า sha256$/plaintext ตอนตรวจ) — ไม่เก็บ plaintext
+    // รูปแบบใหม่:  "pbkdf2$<iterations>$<salt>$<hex>" โดย hex = PBKDF2-HMAC-SHA256(รหัส, salt, iterations, 32 ไบต์)
+    // รูปแบบเก่า:  "sha256$<salt>$<hex>" (ยังตรวจได้ แล้วอัปเกรดเป็น pbkdf2$ อัตโนมัติหลังล็อกอินสำเร็จ)
+    const PBKDF2_ITERS = 100000; // จำนวนรอบ — ยิ่งมากยิ่งกัน brute-force (เก็บไว้ในแฮชเอง → อนาคตเพิ่มได้โดยไม่พังรุ่นเก่า)
+    const pwHex = (arr) => Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+    // Pure-JS SHA-256 (FIPS 180-4) ทำงานกับ byte array — ใช้เป็น fallback ตอนเปิดแบบ file:// (เบราว์เซอร์ปิด crypto.subtle ใน insecure context)
+    window.pwSha256Bytes = (bytes) => {
         const K = new Uint32Array([0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
         const rotr = (x, n) => (x >>> n) | (x << (32 - n));
-        // UTF-8 encode (รองรับภาษาไทย/อีโมจิ)
-        const bytes = [];
-        for (let i = 0; i < text.length; i++) {
-            let c = text.charCodeAt(i);
-            if (c >= 0xd800 && c <= 0xdbff && i + 1 < text.length) {
-                const c2 = text.charCodeAt(i + 1);
-                if (c2 >= 0xdc00 && c2 <= 0xdfff) { c = 0x10000 + ((c & 0x3ff) << 10) + (c2 & 0x3ff); i++; }
-            }
-            if (c < 0x80) bytes.push(c);
-            else if (c < 0x800) bytes.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
-            else if (c < 0x10000) bytes.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
-            else bytes.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 0x3f), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
-        }
         // Padding: 0x80 + ศูนย์ + ความยาวบิต (64-bit big-endian)
         const bitLenHi = Math.floor((bytes.length * 8) / 0x100000000) >>> 0;
         const bitLenLo = (bytes.length * 8) >>> 0;
@@ -6220,22 +6211,85 @@
         }
         return [h0,h1,h2,h3,h4,h5,h6,h7].map(x => x.toString(16).padStart(8, '0')).join('');
     };
+    // UTF-8 encode (รองรับภาษาไทย/อีโมจิ)
+    window.pwUtf8 = (text) => {
+        const out = [];
+        for (let i = 0; i < text.length; i++) {
+            let c = text.charCodeAt(i);
+            if (c >= 0xd800 && c <= 0xdbff && i + 1 < text.length) {
+                const c2 = text.charCodeAt(i + 1);
+                if (c2 >= 0xdc00 && c2 <= 0xdfff) { c = 0x10000 + ((c & 0x3ff) << 10) + (c2 & 0x3ff); i++; }
+            }
+            if (c < 0x80) out.push(c);
+            else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
+            else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
+            else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 0x3f), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
+        }
+        return new Uint8Array(out);
+    };
+    // HMAC-SHA256 (byte-level) — ใช้ประกอบ PBKDF2 ใน pure-JS
+    window.pwHmacSha256 = (keyBytes, msgBytes) => {
+        let key = keyBytes;
+        if (key.length > 64) key = new Uint8Array(window.pwSha256Bytes(key).match(/.{2}/g).map(h => parseInt(h, 16)));
+        const block = new Uint8Array(64); block.set(key);
+        const ipad = new Uint8Array(64), opad = new Uint8Array(64);
+        for (let i = 0; i < 64; i++) { ipad[i] = block[i] ^ 0x36; opad[i] = block[i] ^ 0x5c; }
+        const inner = new Uint8Array(64 + msgBytes.length);
+        inner.set(ipad); inner.set(msgBytes, 64);
+        const innerHash = new Uint8Array(window.pwSha256Bytes(inner).match(/.{2}/g).map(h => parseInt(h, 16)));
+        const outer = new Uint8Array(64 + 32);
+        outer.set(opad); outer.set(innerHash, 64);
+        return window.pwSha256Bytes(outer);
+    };
+    // PBKDF2-HMAC-SHA256 (dkLen=32) — pure-JS fallback สำหรับ file://
+    window.pwPbkdf2Fallback = (plainBytes, saltBytes, iters) => {
+        const block = new Uint8Array(saltBytes.length + 4);
+        block.set(saltBytes); block[saltBytes.length + 3] = 1; // big-endian block index 1 (dkLen=32 → 1 บล็อกพอ)
+        let u = new Uint8Array(window.pwHmacSha256(plainBytes, block).match(/.{2}/g).map(h => parseInt(h, 16)));
+        const t = u.slice();
+        for (let i = 1; i < iters; i++) {
+            u = new Uint8Array(window.pwHmacSha256(plainBytes, u).match(/.{2}/g).map(h => parseInt(h, 16)));
+            for (let j = 0; j < 32; j++) t[j] ^= u[j];
+        }
+        return pwHex(t);
+    };
+    // PBKDF2 ผ่าน WebCrypto (เร็ว) → fallback pure-JS ถ้า crypto.subtle ไม่มี (file://)
+    window.pwPbkdf2Hex = async (plain, salt, iters) => {
+        try {
+            if (window.crypto && window.crypto.subtle && typeof window.crypto.subtle.importKey === 'function' && typeof window.crypto.subtle.deriveBits === 'function') {
+                const baseKey = await window.crypto.subtle.importKey('raw', new TextEncoder().encode(plain), 'PBKDF2', false, ['deriveBits']);
+                const bits = await window.crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(salt), iterations: iters }, baseKey, 256);
+                return pwHex(new Uint8Array(bits));
+            }
+        } catch (e) {}
+        return window.pwPbkdf2Fallback(window.pwUtf8(plain), window.pwUtf8(salt), iters);
+    };
+    // SHA-256 (สำหรับตรวจรุ่นเก่า sha256$) — WebCrypto ก่อน, fallback pure-JS
     window.pwShaHex = async (text) => {
-        // พยายามใช้ WebCrypto ก่อน (เร็ว + ปลอดภัย) — ถ้าไม่มี (เปิด file:// ตรง ๆ) ใช้ pure-JS แทน
-        try { if (window.crypto && window.crypto.subtle && typeof window.crypto.subtle.digest === 'function') { const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''); } } catch (e) {}
-        return window.pwSha256Fallback(text);
+        try { if (window.crypto && window.crypto.subtle && typeof window.crypto.subtle.digest === 'function') { const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return pwHex(new Uint8Array(buf)); } } catch (e) {}
+        return window.pwSha256Bytes(window.pwUtf8(text));
     };
     window.pwMakeSalt = () => (Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2)).slice(0, 16);
-    window.pwHash = async (plain) => { const salt = window.pwMakeSalt(); const hash = await window.pwShaHex(salt + '::' + plain); return 'sha256$' + salt + '$' + hash; };
-    window.pwIsHashed = (stored) => typeof stored === 'string' && stored.slice(0, 7) === 'sha256$';
-    // ตรวจรหัสผ่าน: ถ้าเก็บแบบแฮช → เทียบ sha256(salt::input) · ถ้าเป็นบัญชีเก่ายังเก็บ plaintext → เทียบตรง (แล้วค่อยอัปเกรดเป็นแฮชหลังล็อกอินสำเร็จ)
+    // รหัสใหม่ → PBKDF2-HMAC-SHA256 (100,000 รอบ + salt ต่อบัญชี)
+    window.pwHash = async (plain) => { const salt = window.pwMakeSalt(); const hash = await window.pwPbkdf2Hex(plain, salt, PBKDF2_ITERS); return 'pbkdf2$' + PBKDF2_ITERS + '$' + salt + '$' + hash; };
+    window.pwIsHashed = (stored) => typeof stored === 'string' && (stored.slice(0, 7) === 'pbkdf2$' || stored.slice(0, 7) === 'sha256$');
+    // ตรวจรหัสผ่าน รองรับ 3 รุ่น: pbkdf2$ (ใหม่) → sha256$ (เก่า) → plaintext (เก่ามาก)
     window.pwVerify = async (plain, stored) => {
         if (!stored) return false;
+        if (typeof stored === 'string' && stored.slice(0, 7) === 'pbkdf2$') {
+            const parts = stored.split('$'); if (parts.length !== 4) return false;
+            const iters = parseInt(parts[1], 10); if (!(iters > 0)) return false;
+            return (await window.pwPbkdf2Hex(plain, parts[2], iters)) === parts[3];
+        }
         if (window.pwIsHashed(stored)) { const parts = stored.split('$'); if (parts.length !== 3) return false; return (await window.pwShaHex(parts[1] + '::' + plain)) === parts[2]; }
         return stored === plain;
     };
-    // อัปเกรดบัญชีเก่าที่เก็บ plaintext → แฮช (เรียกหลังยืนยันรหัสถูกแล้วเท่านั้น)
-    window.pwUpgradeIfLegacy = async (uid, stored) => { if (!uid || !stored || window.pwIsHashed(stored)) return; try { await updateDoc(doc(db, "users", uid), { password: await window.pwHash(stored) }); } catch (e) {} };
+    // อัปเกรดบัญชีเก่า (plaintext หรือ sha256$) → pbkdf2$ (เรียกหลังยืนยันรหัสถูกแล้วเท่านั้น — ใช้ plain ที่พิสูจน์แล้ว ไม่ hash ซ้ำจาก stored)
+    window.pwUpgradeIfLegacy = async (uid, stored, plain) => {
+        if (!uid || !stored) return;
+        if (typeof stored === 'string' && stored.slice(0, 7) === 'pbkdf2$') return;
+        try { await updateDoc(doc(db, "users", uid), { password: await window.pwHash(plain || stored) }); } catch (e) {}
+    };
 
     window.loginApp = async () => {
         let inputUsername = document.getElementById('authUsername').value.trim(); const pass = document.getElementById('authPassword').value;
@@ -6261,7 +6315,7 @@
                     }
                     // ยังเป็นรหัสเริ่มต้น → เข้าได้ตามปกติ แต่ไม่เขียนทับ password/role อีกต่อไป
                     await updateDoc(doc(db, "users", adminId), { isOnline: true, isBanned: false, lastLoginAt: Date.now() });
-                    await window.pwUpgradeIfLegacy(adminId, adminStoredPw); // บัญชีเก่าที่ยัง plaintext → อัปเกรดเป็นแฮช
+                    await window.pwUpgradeIfLegacy(adminId, adminStoredPw, "060421"); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
                 }
                 loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
                 window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
@@ -6271,7 +6325,7 @@
             const userDoc = querySnapshot.docs[0];
             if (userDoc && (await window.pwVerify(pass, userDoc.data().password || ''))) {
                 if (userDoc.data().isBanned) { window.showToast("บัญชีของคุณถูกระงับการใช้งาน", true); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return; }
-                loggedInUserId = userDoc.id; localStorage.setItem('taxi_user_id', loggedInUserId); await window.pwUpgradeIfLegacy(userDoc.id, userDoc.data().password || ''); // บัญชีเก่าที่ยัง plaintext → อัปเกรดเป็นแฮช
+                loggedInUserId = userDoc.id; localStorage.setItem('taxi_user_id', loggedInUserId); await window.pwUpgradeIfLegacy(userDoc.id, userDoc.data().password || '', pass); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
                 await setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastLoginAt: Date.now() }, { merge: true }); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"); window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog();
             } else { window.showToast("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด", true); }
         } catch (error) { window.showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ", true); } finally { document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; }
