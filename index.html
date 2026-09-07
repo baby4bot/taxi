@@ -1841,10 +1841,10 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, limit, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08l';
+    const APP_BUILD = '2026-09-08m';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -1974,6 +1974,8 @@
     let isBannedState = false;
     let globalUsersUnsub = null, permsUnsub = null, permConfigUnsub = null, myUserUnsub = null, serviceDataUnsub = null, adminSnapshotUnsub = null, permReqUnsub = null;
     let userOnlineStates = {}; let isInitialUserLoad = true;
+    // 🔔 แจ้งเตือน login/logout ให้แอดมินแบบเชื่อถือได้ — ใช้ log จริง (global_logs) แทนการเดาจากค่า isOnline (กันสลับกัน login/logout ไม่ครบ + กันซ้ำ/รัว)
+    let globalLogsUnsub = null; let seenGlobalLogIds = new Set(); let logInitialLoad = true; let lastLogToastAt = {};
     window.myCurrentQrCodeURL = ""; window.myCurrentDisplayName = ""; window.myCurrentPhotoURL = ""; window.myCurrentCompanyName = ""; window.myCurrentPlateNo = ""; window.currentAdminUsers = [];
 
     // รายการสิทธิ์ทั้งหมด — แต่ละข้อผูกกับฟีเจอร์/ปุ่มจริงในแอป (Admin เป็น god เห็นหมดเสมอ; Manager/User ตั้งได้ตามที่ admin ติ๊ก)
@@ -5833,8 +5835,57 @@
         }).join('');
     }
 
+    // 🔔 toast login/logout แบบเชื่อถือได้ (เฉพาะแอดมิน) — ใช้ global_logs ที่แอปเขียนทุกครั้งจริง ๆ
+    function toastLoginLogout(data, now) {
+        const uid = data.targetUid || data.byUid || '';
+        const uinfo = (uid && userOnlineStates[uid]) || {};
+        const name = uinfo.displayName || uinfo.username || data.byName || 'ผู้ใช้';
+        const photo = uinfo.photoURL || undefined;
+        const isLogin = data.action === 'เข้าสู่ระบบ';
+        // กันซ้ำต่อคนภายใน 10 วิ (กันสถานะดีดไปมา/เหตุการณ์ซ้ำเด้งรัว)
+        if ((lastLogToastAt[uid] || 0) + 10000 > now) return;
+        lastLogToastAt[uid] = now;
+        window.showToast(`${name} ${isLogin ? 'เข้าสู่ระบบ' : 'ออกจากระบบ'}`, !isLogin, photo);
+    }
+
+    function setupGlobalLogListener() {
+        if(globalLogsUnsub) { globalLogsUnsub(); globalLogsUnsub = null; }
+        seenGlobalLogIds = new Set(); logInitialLoad = true;
+        const isAdmin = (currentUserRole === 'Admin' || currentUserRole === 'admin');
+        if(!loggedInUserId || !isAdmin) return; // เฉพาะแอดมิน
+        const LOG_FILTER = (act) => (act === 'เข้าสู่ระบบ' || act === 'ออกจากระบบ');
+        globalLogsUnsub = onSnapshot(
+            query(collection(db, "global_logs"), orderBy("timestamp", "desc"), limit(25)),
+            (snapshot) => {
+                const now = Date.now();
+                if(logInitialLoad) {
+                    logInitialLoad = false;
+                    snapshot.docs.forEach(d => seenGlobalLogIds.add(d.id));
+                    // กรณีเพิ่งเปิด/รีเฟรช: เตือนเฉพาะเหตุการณ์ย้อนหลังไม่เกิน 30 วิ (ไม่งั้นเด้งกองเก่าทิ้ง)
+                    snapshot.docs.forEach(d => {
+                        const data = d.data(); if(!data) return;
+                        if(!LOG_FILTER(data.action)) return;
+                        if(String(data.targetUid) === String(loggedInUserId)) return;
+                        if(data.timestamp && (now - data.timestamp) <= 30000) toastLoginLogout(data, now);
+                    });
+                    return;
+                }
+                snapshot.docChanges().forEach((change) => {
+                    if(change.type !== 'added' && change.type !== 'modified') return;
+                    const data = change.doc.data(); if(!data) return;
+                    if(!LOG_FILTER(data.action)) return;
+                    if(seenGlobalLogIds.has(change.doc.id)) return;
+                    seenGlobalLogIds.add(change.doc.id);
+                    if(String(data.targetUid) === String(loggedInUserId)) return;
+                    toastLoginLogout(data, now);
+                });
+            }
+        );
+    }
+
     function startGlobalUserListener() {
         if(globalUsersUnsub) return;
+        setupGlobalLogListener(); // 🔔 แจ้งเตือน login/logout ให้แอดมิน (จาก log จริง)
         globalUsersUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
             if(isInitialUserLoad) { snapshot.forEach(doc => { userOnlineStates[doc.id] = doc.data(); }); isInitialUserLoad = false; renderAdminOnlineCard(); return; }
             snapshot.docChanges().forEach((change) => {
@@ -5844,7 +5895,7 @@
                     delete userOnlineStates[change.doc.id];
                 }
             });
-            // 👥 ใช้การ์ดรายชื่อออนไลน์เฉพาะแอดมินบนหน้าแรก แทน toast เตือนรัวๆ
+            // 👥 การ์ดรายชื่อคนออนไลน์เฉพาะแอดมิน (อัปเดตสด)
             renderAdminOnlineCard();
         });
     }
@@ -5856,6 +5907,8 @@
         if(permsUnsub) { permsUnsub(); permsUnsub = null; }
         if(permConfigUnsub) { permConfigUnsub(); permConfigUnsub = null; }
         isInitialUserLoad = true; userOnlineStates = {};
+        if(globalLogsUnsub) { globalLogsUnsub(); globalLogsUnsub = null; }
+        seenGlobalLogIds = new Set(); logInitialLoad = true; lastLogToastAt = {};
         if(serviceDataUnsub) { serviceDataUnsub(); serviceDataUnsub = null; } 
     }
 
@@ -5948,7 +6001,7 @@
         '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้',
         '🔕 แก้ toast เข้าสู่ระบบ/ออกจากระบบ เด้งรัวๆ ทั้งวัน — แจ้งเฉพาะบัญชีแอดมินเท่านั้น + กันซ้ำต่อคนภายใน 10 วิ (และเครื่องที่โดนไล่ออกไม่เขียนสถานะออฟไลน์ทับเครื่องใหม่)',
         '🐛 แก้ toast แดง "ถูกเข้าสู่ระบบจากเครื่องอื่น" เด้งตอนกดออกจากระบบเอง — หมุน session token แล้วไม่ให้ snapshot ตัวเองเด้งเตือนหลอก (เด้งเฉพาะตอนล็อกอินซ้อนจริง ๆ)',
-        '👥 ยกเลิก toast เข้าสู่ระบบ/ออกจากระบบทั้งหมด — แอดมินเห็นรายชื่อคนออนไลน์สด ๆ เป็นการ์ดเล็กบนหน้าแรก (แทนเสียงเตือนรัวๆ) ส่วนผู้ใช้ทั่วไปไม่เห็นใครออน/ออฟเลย'
+        '👥 แอดมินเห็นการ์ดรายชื่อคนออนไลน์สด ๆ บนหน้าแรก + toast แจ้ง login/logout แบบเชื่อถือได้ (อ่านจาก log จริงของระบบ ไม่ใช่การเดาจากค่า isOnline — เตือนครบทั้ง login และ logout ไม่สลับ/ไม่ตกหล่น กันซ้ำ 10 วิ ไม่รัว) ส่วนผู้ใช้ทั่วไปไม่เห็นใครออน/ออฟเลย'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
