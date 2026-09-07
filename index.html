@@ -660,9 +660,8 @@
         .online-users-card .ouc-list { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; padding-bottom: 3px; scrollbar-width: none; -webkit-overflow-scrolling: touch; cursor: grab; touch-action: pan-x; }
         .online-users-card .ouc-list::-webkit-scrollbar { display: none; }
         .online-users-card .ouc-list.ouc-dragging { cursor: grabbing; scroll-snap-type: none; }
-        .online-users-card .ouc-item { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; padding: 3px 10px 3px 3px; font-size: 12px; color: #e5edf7; white-space: nowrap; flex-shrink: 0; -webkit-user-select: none; user-select: none; }
-        .online-users-card .ouc-item img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; background: rgba(0,0,0,0.4); flex-shrink: 0; border: 2px solid var(--rc, #2fd883); box-sizing: border-box; }
-        .online-users-card .ouc-item .ouc-name { font-weight: 600; }
+        .online-users-card .ouc-item { display: inline-flex; align-items: center; flex-shrink: 0; -webkit-user-select: none; user-select: none; }
+        .online-users-card .ouc-item img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: rgba(0,0,0,0.4); flex-shrink: 0; border: 2px solid var(--rc, #2fd883); box-sizing: border-box; box-shadow: 0 0 8px rgba(0,0,0,0.45); }
         .online-users-card .ouc-empty { font-size: 12px; color: rgba(255,255,255,0.5); padding: 2px 0; }
 
         /* Dropdown results */
@@ -1845,7 +1844,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, limit, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08p';
+    const APP_BUILD = '2026-09-08q';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5835,8 +5834,9 @@
             const name = d.displayName || d.username || 'ไม่ระบุ';
             const role = d.role || 'User';
             const bc = OUROLE_BORDER[role] || OUROLE_BORDER.User;
-            const avatar = d.photoURL ? `<img src="${d.photoURL}" alt="" onerror="this.style.visibility='hidden'">` : '<img src="" alt="" style="visibility:hidden">';
-            return `<div class="ouc-item" style="--rc:${bc}">${avatar}<span class="ouc-name">${name}</span></div>`;
+            const avatar = d.photoURL ? `<img src="${d.photoURL}" alt="${name}" title="${name}" onerror="this.style.visibility='hidden'">` : `<img src="" alt="${name}" title="${name}" style="visibility:hidden">`;
+            // 👤 แสดงเฉพาะรูปโปรไฟล์ (ชื่อซ่อนไว้ — เอาเมาส์ชี้บนคอมเพื่อดูชื่อได้)
+            return `<div class="ouc-item" style="--rc:${bc}">${avatar}</div>`;
         }).join('');
     }
     window.renderOnlineUsersCard = renderOnlineUsersCard;
@@ -6026,7 +6026,7 @@
         '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้',
         '🔕 แก้ toast เข้าสู่ระบบ/ออกจากระบบ เด้งรัวๆ ทั้งวัน — แจ้งเฉพาะบัญชีแอดมินเท่านั้น + กันซ้ำต่อคนภายใน 10 วิ (และเครื่องที่โดนไล่ออกไม่เขียนสถานะออฟไลน์ทับเครื่องใหม่)',
         '🐛 แก้ toast แดง "ถูกเข้าสู่ระบบจากเครื่องอื่น" เด้งตอนกดออกจากระบบเอง — หมุน session token แล้วไม่ให้ snapshot ตัวเองเด้งเตือนหลอก (เด้งเฉพาะตอนล็อกอินซ้อนจริง ๆ)',
-        '👥 การ์ด "ออนไลน์ตอนนี้" เห็นทุก user (รวมแอดมิน): รายชื่อ 1 แถวเลื่อนสไลด์ได้ (เมาส์ลาก/นิ้วปัด) แสดงแค่รูปโปรไฟล์+ชื่อ และกรอบรูปสีตามตำแหน่ง (แอดมินทอง/ผู้จัดการฟ้า/ผู้ใช้เขียว) + toast แจ้ง login/logout ให้แอดมินแบบเชื่อถือได้ (อ่านจาก log จริง ไม่ใช่การเดาจาก isOnline — ครบทั้งสองทาง กันซ้ำ 10 วิ ไม่รัว)',
+        '👥 การ์ด "ออนไลน์ตอนนี้" เห็นทุก user (รวมแอดมิน): รายชื่อ 1 แถวเลื่อนสไลด์ได้ (เมาส์ลาก/นิ้วปัด) แสดงเฉพาะรูปโปรไฟล์ (ชื่อเป็น tooltip เมื่อเอาเมาส์ชี้) + กรอบรูปสีตามตำแหน่ง (แอดมินทอง/ผู้จัดการฟ้า/ผู้ใช้เขียว) + toast แจ้ง login/logout ให้แอดมินแบบเชื่อถือได้ (อ่านจาก log จริง ไม่ใช่การเดาจาก isOnline — ครบทั้งสองทาง กันซ้ำ 10 วิ ไม่รัว)',
         '🕐 สถานะออนไลน์เรียลไทม์แม่นยำ: เขียน lastSeen ครั้งละ 30 วิ + กันปิดแอป/คิลแอปโดยไม่ log out (pagehide + lastSeen เก่าเกิน 90 วิ) — ปิดแอปปุ๊บรูปหายจากรายชื่อทันที กลับมาเปิดแอปปั๊บขึ้นรูปทันที ไม่ต้องรีเฟรช'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
