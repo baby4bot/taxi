@@ -100,7 +100,7 @@
         .side-menu-item.logout-item { color: #ff4757; margin-top: auto; }
         .side-menu-item.logout-item .material-symbols-outlined { color: #ff4757; }
 
-        .app-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0 16px 0; flex-shrink: 0; }
+        .app-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0 8px 0; flex-shrink: 0; }
         .header-left, .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
         .header-center { flex: 1; min-width: 0; display: flex; justify-content: center; padding: 0 2px; }
         .header-center h2 { font-size: clamp(15px, calc((100vw - 250px) * 0.12), 21px); white-space: nowrap; }
@@ -522,7 +522,7 @@
         }
 
         /* ---------- Header ---------- */
-        .app-header { margin: 6px 0 14px 0; padding-bottom: 12px; }
+        .app-header { margin: 6px 0 6px 0; padding-bottom: 12px; }
         .header-center h2 {
             font-size: clamp(17px, 4.4vw, 22px);
             font-weight: 700;
@@ -1844,7 +1844,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, limit, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08m';
+    const APP_BUILD = '2026-09-08n';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
