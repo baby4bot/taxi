@@ -1826,7 +1826,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08h';
+    const APP_BUILD = '2026-09-08i';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5904,7 +5904,8 @@
         'ข้อความชิปทางด่วนทั้งจอมิเตอร์ขยายและหน้าแรก เปลี่ยนจาก "ค่าทางด่วน X฿" เป็น "ทางด่วน X บ."',
         'ย้ายชิปทางด่วนที่เพิ่ม + ยอดรวม "รวมค่าทางด่วน" จากด้านบนการ์ดเข้าไปอยู่ในการ์ดประเมินราคา ใต้ปุ่ม + ค่าทางด่วน (มุมซ้ายบนในตัวการ์ด)',
         'เพิ่ม SHA-256 แบบ pure-JS เป็นตัวสำรอง — เปิดไฟล์ index.html แบบ file:// ตรง ๆ ก็ล็อกอินบัญชีที่แฮชแล้วได้ (เบราว์เซอร์ปกติปิด crypto.subtle ในหน้าไม่ปลอดภัย)',
-        '🔒 อัปเกรดแฮชรหัสผ่านใหม่เป็น PBKDF2-HMAC-SHA256 (100,000 รอบ + salt ต่อบัญชี) — รุ่นเก่า sha256$/plaintext ยังล็อกอินได้ และถูกอัปเกรดเป็น PBKDF2 ให้อัตโนมัติหลังล็อกอินสำเร็จ (มี pure-JS fallback ให้ใช้ได้แม้เปิด file://)'
+        '🔒 อัปเกรดแฮชรหัสผ่านใหม่เป็น PBKDF2-HMAC-SHA256 (100,000 รอบ + salt ต่อบัญชี) — รุ่นเก่า sha256$/plaintext ยังล็อกอินได้ และถูกอัปเกรดเป็น PBKDF2 ให้อัตโนมัติหลังล็อกอินสำเร็จ (มี pure-JS fallback ให้ใช้ได้แม้เปิด file://)',
+        '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6076,6 +6077,26 @@
                         } else { window.logoutApp(true); }
                     }).catch(() => { /* ไม่มีเน็ตชั่วคราว — รอ snapshot ต่อไป ไม่เด้งออก */ });
                     return;
+                }
+                // 🚫 กันล็อกอินซ้อน (1 บัญชี 1 เครื่อง ยกเว้น Admin): โทเคน session ในเครื่องไม่ตรงกับใน DB → มีคนอื่นล็อกอิน/ล็อกเอาต์ด้วยบัญชีนี้ → ไล่ออกอัตโนมัติ
+                // (ถ้าเครื่องนี้เป็น session เก่าไม่มีโทเคน แต่ใน DB มี sessionId ของคนอื่น → ก็ไล่ออก เพราะมีคนล็อกอินทีหลัง)
+                if (data.role !== 'Admin') {
+                    const localSid = localStorage.getItem('taxi_session_id');
+                    const dbSid = data.sessionId || null;
+                    if (dbSid && localSid !== dbSid) {
+                        // ยืนยันจากเซิร์ฟเวอร์ก่อนไล่ออก (กัน snapshot จาก cache เก่าเด้งหลุดตอนรีเฟรช/เพิ่งล็อกอิน)
+                        getDoc(doc(db, "users", loggedInUserId), { source: "server" }).then(realSnap => {
+                            if (realSnap.exists()) {
+                                const rd = realSnap.data();
+                                const realSid = rd.sessionId || null;
+                                const curLocalSid = localStorage.getItem('taxi_session_id');
+                                if (rd.role !== 'Admin' && realSid && curLocalSid !== realSid) {
+                                    window.showToast("บัญชีนี้ถูกเข้าสู่ระบบจากเครื่องอื่น — ระบบได้ออกจากระบบให้แล้ว", true);
+                                    window.logoutApp(true);
+                                }
+                            }
+                        }).catch(() => { /* ไม่มีเน็ต — รอ snapshot ถัดไป */ });
+                    }
                 }
                 
                 document.getElementById('appLoader').style.display = 'none'; 
@@ -6291,6 +6312,9 @@
         try { await updateDoc(doc(db, "users", uid), { password: await window.pwHash(plain || stored) }); } catch (e) {}
     };
 
+    // 🚫 กันล็อกอินซ้อน (1 บัญชี 1 เครื่อง ยกเว้น Admin): โทเคน session ต่อการล็อกอิน
+    // เก็บ sessionId ไว้ในผู้ใช้ (Firestore) + localStorage เครื่องนี้ — ถ้าเครื่องอื่นล็อกอิน/ล็อกเอาต์ด้วยบัญชีเดียวกัน sessionId จะเปลี่ยน → เครื่องนี้โดนไล่ออกอัตโนมัติ
+    window.newSessionToken = () => (Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 32);
     window.loginApp = async () => {
         let inputUsername = document.getElementById('authUsername').value.trim(); const pass = document.getElementById('authPassword').value;
         if(!inputUsername || !pass) return window.showToast("กรุณาใส่ Username และรหัสผ่าน", true);
@@ -6317,7 +6341,8 @@
                     await updateDoc(doc(db, "users", adminId), { isOnline: true, isBanned: false, lastLoginAt: Date.now() });
                     await window.pwUpgradeIfLegacy(adminId, adminStoredPw, "060421"); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
                 }
-                loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
+                loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.removeItem('taxi_session_id'); // แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง
+                await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
                 window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
             }
             // 🔐 ดึง user ด้วย username อย่างเดียว แล้วตรวจรหัสผ่านฝั่งเครื่อง (ไม่ query หา password ตรง ๆ เพราะเก็บแบบแฮชแล้ว)
@@ -6326,7 +6351,11 @@
             if (userDoc && (await window.pwVerify(pass, userDoc.data().password || ''))) {
                 if (userDoc.data().isBanned) { window.showToast("บัญชีของคุณถูกระงับการใช้งาน", true); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return; }
                 loggedInUserId = userDoc.id; localStorage.setItem('taxi_user_id', loggedInUserId); await window.pwUpgradeIfLegacy(userDoc.id, userDoc.data().password || '', pass); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
-                await setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastLoginAt: Date.now() }, { merge: true }); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"); window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog();
+                // 🚫 กันล็อกอินซ้อน: สร้างโทเคน session ใหม่ทุกครั้งที่ล็อกอิน → เครื่องเก่าที่ล็อกอินค้างจะโดนไล่ออก (แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง)
+                const loginRole = userDoc.data().role || 'User';
+                const sid = (loginRole !== 'Admin') ? window.newSessionToken() : null;
+                localStorage.setItem('taxi_session_id', sid || '');
+                await setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastLoginAt: Date.now(), sessionId: sid }, { merge: true }); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"); window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog();
             } else { window.showToast("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด", true); }
         } catch (error) { window.showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ", true); } finally { document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; }
     };
@@ -6339,7 +6368,8 @@
             const q = query(collection(db, "users"), where("username", "==", inputUsername)); const existCheck = await getDocs(q);
             if (!existCheck.empty) { window.showToast("Username นี้มีคนใช้แล้ว กรุณาเปลี่ยนใหม่", true); return; }
             let finalPhotoURL = ""; if (fileInput.files && fileInput.files.length > 0) { finalPhotoURL = await fileToBase64(fileInput.files[0]); }
-            const docRef = await addDoc(collection(db, "users"), { username: inputUsername, password: await window.pwHash(pass), displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, tollwayMode: false, photoURL: finalPhotoURL, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
+            const regSid = window.newSessionToken(); localStorage.setItem('taxi_session_id', regSid);
+            const docRef = await addDoc(collection(db, "users"), { username: inputUsername, password: await window.pwHash(pass), displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, tollwayMode: false, photoURL: finalPhotoURL, isOnline: true, isBanned: false, lastLoginAt: Date.now(), sessionId: regSid, order: Date.now() });
             loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog();
         } catch (error) { window.showToast("เกิดข้อผิดพลาด: " + error.message, true); } finally { document.getElementById('authBtn').innerText = "สร้างบัญชีใหม่"; }
     };
@@ -6392,8 +6422,16 @@
     window.logoutApp = async (forced = false) => { 
         let isOk = forced ? true : await window.showCustomConfirm("ออกจากระบบ", "คุณต้องการออกจากระบบใช่หรือไม่?", "warning");
         if(isOk) {
-            if(loggedInUserId) { if(!forced) await recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ"); await setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); }
-            stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
+            if(loggedInUserId) {
+                if(!forced) await recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ");
+                if(!forced) {
+                    // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน เพราะจะไปไล่เครื่องที่เพิ่งล็อกอินแทน
+                    await setDoc(doc(db, "users", loggedInUserId), { isOnline: false, sessionId: window.newSessionToken() }, { merge: true });
+                } else {
+                    await setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true });
+                }
+            }
+            stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
             window.updateAutoFsBadge();
             if(!forced) window.showToast("ออกจากระบบเรียบร้อย");
             document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; document.getElementById('authDisplayName').style.display = "none"; document.getElementById('authPhone').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none"; document.getElementById('forgotPassLink').style.display = "flex"; document.getElementById('toggleAuthText').innerHTML = 'ยังไม่มีบัญชีใช่ไหม? <span style="color:#38bdf8;font-weight:600;">คลิกเพื่อสร้างบัญชี</span>'; document.getElementById('authBtn').onclick = window.loginApp; document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authPassword').type = 'password'; document.getElementById('authDisplayName').value = ''; document.getElementById('authPhone').value = ''; document.getElementById('regProfilePicPreview').src = window.DEFAULT_AVATAR;
