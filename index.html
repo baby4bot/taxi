@@ -984,6 +984,7 @@
         .admin-role-badge.role-admin { background: rgba(255,77,95,0.16); color: #ff8491; border: 1px solid rgba(255,77,95,0.45); }
         .admin-role-badge.role-manager { background: rgba(52,152,219,0.16); color: #7db3ff; border: 1px solid rgba(52,152,219,0.45); }
         .admin-role-badge.role-user { background: rgba(255,255,255,0.07); color: #c3cbdd; border: 1px solid rgba(255,255,255,0.18); }
+        .admin-role-badge.role-custom { background: rgba(139,92,246,0.15); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.45); }
         .admin-user-sub { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #8a93a8; margin-top: 3px; }
         .admin-user-uname { color: #aab3c7; }
         .admin-user-statusline { display: inline-flex; align-items: center; }
@@ -1023,12 +1024,18 @@
         /* 🏷️ การ์ด "สิทธิ์ของฉัน" ในหน้าโปรไฟล์ — ให้คนขับเห็นว่าบัญชีตัวเองทำอะไรได้บ้าง */
         .myperms-card { background: rgba(255,255,255,0.04); border: 1px solid var(--border-glass); border-radius: 16px; padding: 14px; text-align: left; }
         .myperms-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-        .myperms-badge { margin-left: auto; font-size: 12px; font-weight: 600; padding: 3px 12px; border-radius: 999px; white-space: nowrap; }
+        .myperms-badge { margin-left: auto; font-size: 12px; font-weight: 600; padding: 3px 12px; border-radius: 999px; white-space: nowrap; background: rgba(148,163,184,0.14); color: #cbd5e1; border: 1px solid rgba(148,163,184,0.4); }
         .myperms-badge.badge-Admin { background: rgba(241,196,15,0.16); color: var(--neon-yellow); border: 1px solid rgba(241,196,15,0.45); }
         .myperms-badge.badge-Manager { background: rgba(52,211,153,0.14); color: #5eead4; border: 1px solid rgba(52,211,153,0.45); }
         .myperms-badge.badge-User { background: rgba(148,163,184,0.14); color: #cbd5e1; border: 1px solid rgba(148,163,184,0.4); }
         .myperm-chip { display: inline-flex; align-items: center; gap: 5px; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4); color: #4ade80; border-radius: 999px; padding: 5px 11px; font-size: 12.5px; line-height: 1.35; }
         .myperm-chip .material-symbols-outlined { font-size: 15px; color: #4ade80; flex-shrink: 0; }
+        /* 🎛️ ปุ่มจัดการตำแหน่ง (Role) ในหน้าตั้งค่าสิทธิ์ */
+        .role-manage-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; padding: 10px; font-size: 14px; cursor: pointer; font-family: 'Kanit'; transition: 0.2s; }
+        .role-manage-btn:hover { filter: brightness(1.15); }
+        .role-btn-add { background: rgba(34,197,94,0.14); color: #4ade80; border: 1px solid rgba(34,197,94,0.45); }
+        .role-btn-rename { background: rgba(241,196,15,0.12); color: #f4d35e; border: 1px solid rgba(241,196,15,0.4); }
+        .role-btn-del { background: rgba(255,77,95,0.12); color: #ff8491; border: 1px solid rgba(255,77,95,0.4); }
         .log-item {
             background: linear-gradient(165deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
             border-left: 3px solid #ffd24d;
@@ -1571,7 +1578,7 @@
 
 <div id="activityLogModal" class="modal-overlay" style="z-index: 10010;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="logModalTitle">ประวัติการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('activityLogModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="activityLogList" class="modal-content-scroll" style="text-align: left; background: rgba(0,0,0,0.2);"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลด...</div></div></div></div>
 
-<div id="roleSettingsModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">ตั้งค่าสิทธิ์การใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('roleSettingsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><label style="color: var(--neon-yellow); font-size: 13px;">เลือกตำแหน่ง (Role) ที่ต้องการตั้งค่าสิทธิ์</label><select id="settingRoleSelect" onchange="window.loadRolePermissionsToUI()" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: var(--space-field); outline: none; font-family: 'Kanit';"><option value="Manager">ผู้จัดการ (Manager)</option><option value="User">ผู้ใช้งานทั่วไป (User)</option></select><div id="permListContainer" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;"></div><button onclick="window.saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: var(--space-field);" id="saveRolePermBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์</button></div></div></div>
+<div id="roleSettingsModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">ตั้งค่าสิทธิ์การใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('roleSettingsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><label style="color: var(--neon-yellow); font-size: 13px;">เลือกตำแหน่ง (Role) ที่ต้องการตั้งค่าสิทธิ์</label><select id="settingRoleSelect" onchange="window.loadRolePermissionsToUI()" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: 10px; outline: none; font-family: 'Kanit';"></select><div style="display: flex; gap: 8px; margin-bottom: 6px;"><button onclick="window.addCustomRole()" id="addRoleBtn" class="role-manage-btn role-btn-add" type="button"><span class="material-symbols-outlined" style="font-size: 18px;">add</span> สร้างตำแหน่งใหม่</button><button onclick="window.renameCustomRole()" id="renameRoleBtn" class="role-manage-btn role-btn-rename" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">edit</span> เปลี่ยนชื่อ</button><button onclick="window.deleteCustomRole()" id="deleteRoleBtn" class="role-manage-btn role-btn-del" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span> ลบ</button></div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: var(--space-field); text-align: left; line-height: 1.5;">ตำแหน่งระบบ (ผู้จัดการ / ผู้ใช้งานทั่วไป) เปลี่ยนชื่อหรือลบไม่ได้ — กด "สร้างตำแหน่งใหม่" เพิ่มตำแหน่งเองได้เรื่อย ๆ ตามหน้าที่จริง แล้วกำหนดสิทธิ์แต่ละแบบด้านล่าง (ติ๊กแล้วกด บันทึกสิทธิ์)</div><div id="permListContainer" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;"></div><button onclick="window.saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: var(--space-field);" id="saveRolePermBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์</button></div></div></div>
 
 <div id="servicePortalModal" class="modal-overlay" style="z-index: 10020;"><div class="modal-box flex-col-box sp-modal-box" onclick="event.stopPropagation()"><div class="sp-header"><div class="sp-neon-line"></div><div class="sp-logo-text"><span style="color: #ef2f2c;">true</span><span style="color: #f7931e;">move</span><span class="h-box">H</span></div><div class="sp-title" id="serviceModalTitle">SERVICE PORTAL</div><button class="btn-close-floating" onclick="window.toggleModal('servicePortalModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="serviceListContainer" class="modal-content-scroll" style="text-align: left; padding: 15px;"><div style="text-align:center; color:gray; padding:20px;">กำลังโหลดข้อมูล...</div></div><div id="adminServiceAddSection" style="display: none; padding: 15px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.6); flex-shrink: 0;"><div style="display: flex; gap: 10px; margin-bottom: 10px;"><input type="text" id="newServiceCategory" list="existingCategories" placeholder="เลือก/พิมพ์ หมวดหมู่" style="font-size: 14px; padding: 12px; flex: 1;"><datalist id="existingCategories"></datalist></div><input type="text" id="newServiceTitle" placeholder="ชื่อรายการ (เช่น เพิ่มวัน 30 วัน)" style="margin-bottom: 10px; font-size: 14px; padding: 12px;"><input type="text" id="newServiceCode" placeholder="รหัส USSD / เบอร์โทร (เช่น *934*30#)" style="margin-bottom: 10px; font-size: 14px; padding: 12px; font-family: monospace;"><div style="display: flex; gap: 10px;"><button id="addServiceBtn" onclick="window.addNewServiceCode()" class="manual-timer-btn" style="background: var(--neon-green); flex: 1; justify-content: center; padding: 12px;"><span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span> เพิ่มรายการเข้าสู่ระบบ</button><button id="cancelEditBtn" onclick="window.cancelEditService()" class="manual-timer-btn" style="background: var(--accent-red); width: 50px; display: none; flex: none; justify-content: center; padding: 12px;"><span class="material-symbols-outlined" style="font-size: 18px;">close</span></button></div></div></div></div>
 
@@ -1842,12 +1849,148 @@
     };
     // ค่าสิทธิ์จริงของ role หนึ่ง = ค่าเริ่มต้น + ค่าที่ admin บันทึก (ค่าที่บันทึกชนะ) → คีย์ใหม่ที่ยังไม่เคยเซฟจะได้ค่าเริ่มต้นที่สมเหตุสมผลทันที
     window.effectiveRolePerms = (role) => {
-        const base = window.DEFAULT_ROLE_PERMS[role] || {};
+        // ตำแหน่งที่สร้างใหม่เอง (custom) หรือไม่รู้จัก → เริ่มจากค่าเริ่มต้นของผู้ใช้ทั่วไป (แก้โปรไฟล์ตัวเองได้)
+        // แล้วให้ค่าที่ admin ตั้งไว้ (stored) ชนะเสมอ — admin อยากให้ไม่มีสิทธิ์ไหนก็ติ๊กออกได้
+        const base = window.DEFAULT_ROLE_PERMS[role] || window.DEFAULT_ROLE_PERMS.User || {};
         const stored = (window.globalPermissions || {})[role] || {};
         return { ...base, ...stored };
     };
     window.godPermsAll = () => { const o = {}; window.currentPermConfig.forEach(p => { o[p.id.replace('perm_', '')] = true; }); return o; }; // Admin = god: ได้ทุกสิทธิ์เสมอ
     window.currentUserPerms = () => { const g = currentUserRole === "Admin"; return g ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole); }; // สิทธิ์จริงของผู้ล็อกอินปัจจุบัน
+
+    // ---------- 🎭 ตำแหน่ง (Role) ที่กำหนดเองได้ — นอกเหนือจากระบบ (Admin/Manager/User) ----------
+    // ตำแหน่งใหม่เก็บเป็นคีย์ของ doc settings/roles เหมือน Manager/User (แต่ละคีย์ = ชุดสิทธิ์ของตำแหน่งนั้น)
+    const SYSTEM_ROLES = ['Admin', 'Manager', 'User'];
+    const isSystemRole = (k) => SYSTEM_ROLES.includes(k);
+    const escAttr = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    window.roleLabelFull = (k) => { if (k === 'Admin') return 'ผู้ดูแลระบบ (Admin)'; if (k === 'Manager') return 'ผู้จัดการ (Manager)'; if (k === 'User') return 'ผู้ใช้งานทั่วไป (User)'; return (k || '') + ' (กำหนดเอง)'; };
+    window.roleLabelShort = (k) => { if (k === 'Admin') return 'แอดมิน'; if (k === 'Manager') return 'ผู้จัดการ'; if (k === 'User') return 'ผู้ใช้'; return (k || 'User'); };
+    window.roleClassKey = (k) => { const m = { Admin: 'admin', Manager: 'manager', User: 'user' }; return m[k] || 'custom'; };
+    // คีย์ตำแหน่งที่กำหนดเอง (ที่มีใน settings/roles แล้ว ไม่ใช่ 3 ตำแหน่งระบบ)
+    window.getCustomRoleKeys = () => { const o = window.globalPermissions || {}; return Object.keys(o).filter(k => !isSystemRole(k)); };
+    window.allAssignableRoles = () => ['User', 'Manager'].concat(window.getCustomRoleKeys().sort((a, b) => a.localeCompare(b, 'th')));
+
+    window.validateRoleKey = (name) => {
+        if (!name) return 'กรุณากรอกชื่อตำแหน่ง';
+        if (/[./~*\[\]\x00]/.test(name)) return 'ชื่อตำแหน่งห้ามมี . / * [ ] ~';
+        if (name.length > 40) return 'ชื่อตำแหน่งยาวเกินไป (สูงสุด 40 ตัวอักษร)';
+        const dup = ['Admin', 'Manager', 'User'].concat(window.getCustomRoleKeys()).some(k => k.toLowerCase() === name.toLowerCase());
+        if (dup) return 'มีตำแหน่งนี้อยู่แล้ว (หรือชื่อซ้ำกับตำแหน่งระบบ)';
+        return '';
+    };
+
+    // เติมรายการตำแหน่งลง select ทั้ง 2 จุด: หน้าตั้งค่าสิทธิ์ (settingRoleSelect) + หน้าตั้งตำแหน่งผู้ใช้ (adminEditRole)
+    window.fillRoleSelects = (preserve = true) => {
+        const sSel = document.getElementById('settingRoleSelect');
+        if (sSel) {
+            const sCur = sSel.value;
+            const opts = ['Manager', 'User'].concat(window.getCustomRoleKeys().sort((a, b) => a.localeCompare(b, 'th')));
+            sSel.innerHTML = opts.map(k => `<option value="${escAttr(k)}">${window.roleLabelFull(k)}</option>`).join('');
+            if (preserve && opts.includes(sCur)) sSel.value = sCur;
+        }
+        const aSel = document.getElementById('adminEditRole');
+        if (aSel) {
+            const aCur = aSel.value || 'User';
+            const opts = window.allAssignableRoles().concat(['Admin']);
+            if (!opts.includes(aCur) && aCur) opts.push(aCur); // กันกรณีตำแหน่งเก่าถูกลบไปแล้ว ยังเห็นค่าเดิม (กันเซฟทับเป็นค่าว่าง)
+            aSel.innerHTML = opts.map(k => `<option value="${escAttr(k)}">${window.roleLabelFull(k)}</option>`).join('');
+            if (opts.includes(aCur)) aSel.value = aCur;
+        }
+    };
+    // เปลี่ยนชื่อ/ลบ จะโชว์เฉพาะเมื่อเลือกตำแหน่งที่กำหนดเอง (ตำแหน่งระบบจัดการไม่ได้)
+    window.syncRoleManageBtns = () => {
+        const sSel = document.getElementById('settingRoleSelect');
+        const role = sSel ? sSel.value : '';
+        const custom = !!role && !isSystemRole(role);
+        const ren = document.getElementById('renameRoleBtn'); if (ren) ren.style.display = custom ? 'flex' : 'none';
+        const del = document.getElementById('deleteRoleBtn'); if (del) del.style.display = custom ? 'flex' : 'none';
+        const add = document.getElementById('addRoleBtn'); if (add) add.style.display = 'flex';
+    };
+
+    // เซ็ตค่าตำแหน่งใน select ผู้ใช้ให้ตรงค่าเป้าหมาย (เพิ่ม option ถ้าตำแหน่งนั้นถูกลบไปแล้วแต่ user ยังใช้อยู่)
+    window.ensureRoleOption = (val) => {
+        const aSel = document.getElementById('adminEditRole');
+        if (!aSel || !val) return;
+        const found = Array.from(aSel.options).some(o => o.value === val);
+        if (!found) { const o = document.createElement('option'); o.value = val; o.text = window.roleLabelFull(val); aSel.appendChild(o); }
+        aSel.value = val;
+    };
+
+    window.addCustomRole = async () => {
+        if (!window.currentUserPerms().canManageRoles) return window.showToast('คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน', true);
+        const name = (window.prompt('สร้างตำแหน่งใหม่ — ตั้งชื่อตามหน้าที่จริง เช่น หัวหน้ากะ / พนักงานขับรถ ฯลฯ', '') || '').trim();
+        if (!name) return;
+        const err = window.validateRoleKey(name);
+        if (err) return window.showToast(err, true);
+        try {
+            await setDoc(doc(db, 'settings', 'roles'), { [name]: {} }, { merge: true }); // คีย์ว่าง = ยังไม่ได้ตั้งสิทธิ์ → ใช้ค่าเริ่มต้นของผู้ใช้ทั่วไปก่อน
+        } catch (e) { return window.showToast('สร้างตำแหน่งไม่ได้ — ชื่อต้องไม่ยาวเกินไปและห้ามมี . หรือ /', true); }
+        if (!window.globalPermissions) window.globalPermissions = {};
+        window.globalPermissions[name] = {}; // อัปเดตในเครื่องทันที (snapshot จะมาแทนที่อีกที)
+        window.fillRoleSelects();
+        const sSel = document.getElementById('settingRoleSelect'); if (sSel) sSel.value = name;
+        window.syncRoleManageBtns();
+        window.renderPermList();
+        window.showToast(`สร้างตำแหน่ง "${name}" แล้ว — ติ๊กสิทธิ์ด้านล่างแล้วกด บันทึกสิทธิ์`);
+    };
+
+    window.renameCustomRole = async () => {
+        if (!window.currentUserPerms().canManageRoles) return window.showToast('คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน', true);
+        const sSel = document.getElementById('settingRoleSelect'); const old = sSel ? sSel.value : '';
+        if (!old || isSystemRole(old)) return window.showToast('ตำแหน่งระบบเปลี่ยนชื่อไม่ได้', true);
+        const name = (window.prompt('เปลี่ยนชื่อตำแหน่ง (สมาชิกที่ใช้ตำแหน่งนี้จะอัปเดตตามด้วยอัตโนมัติ):', old) || '').trim();
+        if (!name || name === old) return;
+        const err = window.validateRoleKey(name); if (err) return window.showToast(err, true);
+        try {
+            const snap = await getDoc(doc(db, 'settings', 'roles'));
+            const data = (snap.exists() && snap.data()) || {};
+            if (data[old] === undefined) return window.showToast('ไม่พบตำแหน่งนี้ในระบบแล้ว', true);
+            data[name] = data[old]; delete data[old];
+            await setDoc(doc(db, 'settings', 'roles'), data); // เขียนทับทั้ง doc (ย้ายคีย์เก่า → ใหม่)
+            const q = query(collection(db, 'users'), where('role', '==', old));
+            const us = await getDocs(q);
+            if (!us.empty) {
+                const batch = writeBatch(db);
+                us.forEach(d => batch.update(doc(db, 'users', d.id), { role: name }));
+                await batch.commit();
+            }
+            window.globalPermissions = data;
+            window.fillRoleSelects();
+            if (sSel) sSel.value = name;
+            window.syncRoleManageBtns(); window.renderPermList();
+            window.showToast(`เปลี่ยนชื่อตำแหน่งเป็น "${name}" เรียบร้อย (${us.size} คน)`);
+        } catch (e) { window.showToast('เปลี่ยนชื่อล้มเหลว — ลองใหม่อีกครั้ง', true); }
+    };
+
+    window.deleteCustomRole = async () => {
+        if (!window.currentUserPerms().canManageRoles) return window.showToast('คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน', true);
+        const sSel = document.getElementById('settingRoleSelect'); const role = sSel ? sSel.value : '';
+        if (!role || isSystemRole(role)) return window.showToast('ตำแหน่งระบบลบไม่ได้', true);
+        let userCount = 0;
+        try { const us = await getDocs(query(collection(db, 'users'), where('role', '==', role))); userCount = us.size; } catch (e) {}
+        const msg = userCount > 0
+            ? `ลบตำแหน่ง "${role}" ใช่หรือไม่?\nสมาชิก ${userCount} คนที่ใช้ตำแหน่งนี้จะถูกเปลี่ยนเป็น "ผู้ใช้งานทั่วไป" (สิทธิ์เดิมของตำแหน่งจะหาย)`
+            : `ลบตำแหน่ง "${role}" ใช่หรือไม่? (สิทธิ์ของตำแหน่งนี้จะหาย)`;
+        const isOk = await window.showCustomConfirm('ลบตำแหน่ง (Role)', msg, 'danger', 'ลบตำแหน่ง');
+        if (!isOk) return;
+        try {
+            const snap = await getDoc(doc(db, 'settings', 'roles'));
+            const data = (snap.exists() && snap.data()) || {};
+            delete data[role];
+            await setDoc(doc(db, 'settings', 'roles'), data);
+            if (userCount > 0) {
+                const us = await getDocs(query(collection(db, 'users'), where('role', '==', role)));
+                const batch = writeBatch(db);
+                us.forEach(d => batch.update(doc(db, 'users', d.id), { role: 'User' }));
+                await batch.commit();
+            }
+            window.globalPermissions = data;
+            window.fillRoleSelects();
+            if (sSel) sSel.value = 'Manager';
+            window.syncRoleManageBtns(); window.renderPermList();
+            window.showToast(userCount > 0 ? `ลบตำแหน่งแล้ว — ย้าย ${userCount} คนไปเป็นผู้ใช้งานทั่วไป` : 'ลบตำแหน่งเรียบร้อย');
+        } catch (e) { window.showToast('ลบตำแหน่งล้มเหลว — ลองใหม่อีกครั้ง', true); }
+    };
 
     const onlineAudio = new Audio('https://actions.google.com/sounds/v1/ui/bell_ping.ogg');
     const offlineAudio = new Audio('https://actions.google.com/sounds/v1/ui/pop.ogg');
@@ -2979,9 +3122,10 @@
         const wrap = document.getElementById('myPermsWrap');
         if (!wrap) return;
         const role = currentUserRole || 'User';
-        let roleTH = 'ผู้ใช้งานทั่วไป';
+        let roleTH = role; // ตำแหน่งที่สร้างเอง → แสดงชื่อตำแหน่งนั้น
         if (role === 'Admin') roleTH = 'ผู้ดูแลระบบ';
         else if (role === 'Manager') roleTH = 'ผู้จัดการ';
+        else if (role === 'User') roleTH = 'ผู้ใช้งานทั่วไป';
         const isGod = role === 'Admin';
         const perms = (typeof window.currentUserPerms === 'function') ? window.currentUserPerms() : {};
         const list = (window.currentPermConfig && window.currentPermConfig.length ? window.currentPermConfig : window.defaultPermConfig) || [];
@@ -4980,7 +5124,7 @@
     let tollModeLoadedForUser = false; // ป้องกัน snapshot กลางคันเขียนทับค่าที่ผู้ใช้เพิ่งเลือก
     const listenToMyUser = () => {
         if(!loggedInUserId) return;
-        if(!permsUnsub) { permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { if(docSnap.exists()) { window.globalPermissions = { ...(window.globalPermissions || {}), ...docSnap.data() }; } window.applyPermissionsUI(); }); }
+        if(!permsUnsub) { permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { window.globalPermissions = docSnap.exists() ? docSnap.data() : {}; window.fillRoleSelects(); window.applyPermissionsUI(); }); }
         if(!permConfigUnsub) { 
             permConfigUnsub = onSnapshot(doc(db, "settings", "permission_config"), (docSnap) => { 
                 // เอารายการที่เคยบันทึกไว้มารวมกับรายการใหม่ในโค้ด (กันของใหม่ที่เพิ่มมาหายไปถ้าใน DB มีของเก่า 9 รายการ)
@@ -5011,7 +5155,7 @@
                 document.getElementById('editPhone').value = data.phoneNumber || "";
                 
                 let displayRoleTH = currentUserRole;
-                if(currentUserRole === "Admin") displayRoleTH = "ผู้ดูแลระบบ"; else if(currentUserRole === "Manager") displayRoleTH = "ผู้จัดการ"; else displayRoleTH = "ผู้ใช้งานทั่วไป";
+                if(currentUserRole === "Admin") displayRoleTH = "ผู้ดูแลระบบ"; else if(currentUserRole === "Manager") displayRoleTH = "ผู้จัดการ"; else if(currentUserRole === "User") displayRoleTH = "ผู้ใช้งานทั่วไป"; // ตำแหน่งที่สร้างเอง → โชว์ชื่อตำแหน่งนั้น
                 document.getElementById('displayUserRole').innerText = displayRoleTH; document.getElementById('mainUserRole').innerText = displayRoleTH; document.getElementById('editDisplayName').value = data.displayName || "";
                 window.myCurrentCompanyName = data.companyName || "";
                 const coInp = document.getElementById('editCompanyName'); if(coInp) coInp.value = window.myCurrentCompanyName;
@@ -5253,9 +5397,8 @@
                     let uid = u.uid; let statusHtml = '';
                     if(u.isBanned) { statusHtml = '<span class="status-dot status-banned"></span><span style="color:var(--accent-red)">ถูกระงับ (Ban)</span>'; } else if(u.isOnline) { statusHtml = '<span class="status-dot status-online"></span><span style="color:var(--neon-green)">ออนไลน์</span>'; } else { statusHtml = '<span class="status-dot status-offline"></span><span style="color:#a0a5b5">ออฟไลน์</span>'; }
                     const formatDate = (timestamp) => { if(!timestamp) return "-"; const d = new Date(timestamp); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
-                    const roleLower = (u.role || 'User').toLowerCase();
-                    const roleLabel = (u.role === 'Admin') ? 'แอดมิน' : ((u.role === 'Manager') ? 'ผู้จัดการ' : 'ผู้ใช้');
-                    const roleBadge = `<span class="admin-role-badge role-${roleLower}">${roleLabel}</span>`;
+                    const roleKey = u.role || 'User';
+                    const roleBadge = `<span class="admin-role-badge role-${window.roleClassKey(roleKey)}">${window.roleLabelShort(roleKey)}</span>`;
                     const lastLoginChip = u.lastLoginAt ? `<span class="admin-meta-chip"><span class="material-symbols-outlined">lightbulb</span>เข้าใช้: ${formatDate(u.lastLoginAt)}</span>` : '';
                     let safePhoto = u.photoURL && u.photoURL.length > 10 ? u.photoURL : window.DEFAULT_AVATAR; let safeName = u.displayName || u.username; let safeRole = u.role || 'User'; let safeUsername = u.username || '';
                     
@@ -5306,8 +5449,8 @@
     };
 
     window.openSettingsHub = () => { window.applyPermissionsUI(); window.toggleModal('settingsHubModal', true); };
-    window.openRoleSettingsModal = () => { if(!window.currentUserPerms().canManageRoles) return window.showToast("คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน", true); window.toggleModal('roleSettingsModal', true); window.renderPermList(); };
-    window.loadRolePermissionsToUI = () => { window.renderPermList(); };
+    window.openRoleSettingsModal = () => { if(!window.currentUserPerms().canManageRoles) return window.showToast("คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน", true); window.fillRoleSelects(); window.syncRoleManageBtns(); window.toggleModal('roleSettingsModal', true); window.renderPermList(); };
+    window.loadRolePermissionsToUI = () => { window.syncRoleManageBtns(); window.renderPermList(); };
     
     window.renderPermList = () => {
         let html = ''; let perms = window.currentPermConfig; let role = document.getElementById('settingRoleSelect').value; let rolePerms = window.effectiveRolePerms(role);
@@ -5353,7 +5496,7 @@
     window.openAdminAddUser = () => {
         if(!window.currentUserPerms().canAdd) return window.showToast("คุณไม่มีสิทธิ์เพิ่มพนักงานใหม่", true);
         currentEditUid = ""; isBannedState = false;
-        document.getElementById('adminEditUid').value = ""; document.getElementById('adminEditUsername').value = ""; document.getElementById('adminEditUsername').disabled = false; document.getElementById('adminEditUsernameLabel').style.display = "block"; document.getElementById('adminEditName').value = ""; document.getElementById('adminEditPhone').value = ""; document.getElementById('adminEditPic').src = window.DEFAULT_AVATAR; document.getElementById('adminEditQrPic').src = window.DEFAULT_QR;        document.getElementById('adminEditRole').value = "User"; document.getElementById('adminEditPassword').value = ""; document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = ''; let addIsGod = currentUserRole === "Admin"; let addMyPerms = addIsGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole); document.getElementById('adminEditRole').disabled = !(addIsGod || addMyPerms.canChangeUserRole); const newVib = document.getElementById('adminEditVibrateGold'); if (newVib) newVib.checked = true; const newAutoFs = document.getElementById('adminEditAutoFs'); if (newAutoFs) newAutoFs.checked = true; const addPrefsWrap = document.getElementById('adminStaffPrefsWrap'); if (addPrefsWrap) addPrefsWrap.style.display = (addIsGod || addMyPerms.canSetStaffPrefs) ? 'block' : 'none';  
+        document.getElementById('adminEditUid').value = ""; document.getElementById('adminEditUsername').value = ""; document.getElementById('adminEditUsername').disabled = false; document.getElementById('adminEditUsernameLabel').style.display = "block"; document.getElementById('adminEditName').value = ""; document.getElementById('adminEditPhone').value = ""; document.getElementById('adminEditPic').src = window.DEFAULT_AVATAR; document.getElementById('adminEditQrPic').src = window.DEFAULT_QR; window.fillRoleSelects(); document.getElementById('adminEditRole').value = "User"; document.getElementById('adminEditPassword').value = ""; document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = ''; let addIsGod = currentUserRole === "Admin"; let addMyPerms = addIsGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole); document.getElementById('adminEditRole').disabled = !(addIsGod || addMyPerms.canChangeUserRole); const newVib = document.getElementById('adminEditVibrateGold'); if (newVib) newVib.checked = true; const newAutoFs = document.getElementById('adminEditAutoFs'); if (newAutoFs) newAutoFs.checked = true; const addPrefsWrap = document.getElementById('adminStaffPrefsWrap'); if (addPrefsWrap) addPrefsWrap.style.display = (addIsGod || addMyPerms.canSetStaffPrefs) ? 'block' : 'none';  
         document.getElementById('adminEditPassword').type = 'password'; document.querySelectorAll('#adminEditUserModal .toggle-password').forEach(icon => icon.innerText = 'visibility_off'); document.getElementById('adminEditPasswordLabel').innerText = "รหัสผ่าน (คลิกรูปตาเพื่อดู)";
         document.getElementById('adminEditModalTitle').innerText = "เพิ่มผู้ใช้งานใหม่"; document.getElementById('deleteUserBtn').style.display = 'none'; 
         window.toggleModal('adminMenuModal', false); window.toggleModal('adminEditUserModal', true);
@@ -5363,7 +5506,7 @@
     window.openAdminEditUser = (uid) => {
         const opPerms = window.currentUserPerms(); if(!(opPerms.canEdit || opPerms.canChangeUserRole || opPerms.canSetStaffPrefs || opPerms.canViewPassword)) return window.showToast("คุณไม่มีสิทธิ์จัดการข้อมูลพนักงานคนนี้", true);
         let u = window.currentAdminUsers.find(x => x.uid === uid); if(!u) return; currentEditUid = uid; isBannedState = u.isBanned || false;
-        document.getElementById('adminEditUid').value = uid; document.getElementById('adminEditUsername').value = u.username || ''; document.getElementById('adminEditUsername').disabled = true; document.getElementById('adminEditUsernameLabel').style.display = "block"; document.getElementById('adminEditName').value = u.displayName || u.username; document.getElementById('adminEditCompanyName').value = u.companyName || ''; document.getElementById('adminEditPhone').value = u.phoneNumber || ''; document.getElementById('adminEditPic').src = (u.photoURL && u.photoURL.length > 10) ? u.photoURL : window.DEFAULT_AVATAR; document.getElementById('adminEditQrPic').src = (u.qrCodeURL && u.qrCodeURL.length > 10) ? u.qrCodeURL : window.DEFAULT_QR; document.getElementById('adminEditRole').value = u.role || 'User'; document.getElementById('adminEditPlateNo').value = u.plateNo || ''; const editVib = document.getElementById('adminEditVibrateGold'); if (editVib) editVib.checked = u.vibrateGold !== false; const editAutoFs = document.getElementById('adminEditAutoFs'); if (editAutoFs) editAutoFs.checked = u.autoFullscreen !== false; 
+        document.getElementById('adminEditUid').value = uid; document.getElementById('adminEditUsername').value = u.username || ''; document.getElementById('adminEditUsername').disabled = true; document.getElementById('adminEditUsernameLabel').style.display = "block"; document.getElementById('adminEditName').value = u.displayName || u.username; document.getElementById('adminEditCompanyName').value = u.companyName || ''; document.getElementById('adminEditPhone').value = u.phoneNumber || ''; document.getElementById('adminEditPic').src = (u.photoURL && u.photoURL.length > 10) ? u.photoURL : window.DEFAULT_AVATAR; document.getElementById('adminEditQrPic').src = (u.qrCodeURL && u.qrCodeURL.length > 10) ? u.qrCodeURL : window.DEFAULT_QR; document.getElementById('adminEditRole').value = u.role || 'User'; document.getElementById('adminEditPlateNo').value = u.plateNo || ''; window.fillRoleSelects(); window.ensureRoleOption(u.role || 'User'); const editVib = document.getElementById('adminEditVibrateGold'); if (editVib) editVib.checked = u.vibrateGold !== false; const editAutoFs = document.getElementById('adminEditAutoFs'); if (editAutoFs) editAutoFs.checked = u.autoFullscreen !== false; 
         document.getElementById('adminEditPassword').type = 'password'; document.querySelectorAll('#adminEditUserModal .toggle-password').forEach(icon => icon.innerText = 'visibility_off');
         let isGod = currentUserRole === "Admin"; let myPerms = isGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
         let canSetStaffPrefs = isGod || myPerms.canSetStaffPrefs;
