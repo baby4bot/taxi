@@ -1801,7 +1801,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07q';
+    const APP_BUILD = '2026-09-07r';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -2960,8 +2960,33 @@
         else { window.toggleModal('zoomOverlay', true); }
     };
 
+    // ── ปุ่มย้อนกลับมือถือ (Android back): ปิดทีละชั้น หมวดย่อย → ตั้งค่าการใช้งาน → หน้าแรก → ออกจากแอป ──
+    const BACK_MODALS = new Set(['profileModal', 'settingsHubModal', 'adminMenuModal', 'roleSettingsModal', 'toastMsgModal', 'servicePortalModal', 'permRequestsModal', 'versionModal']);
+    window.__backStack = []; // กองหน้าต่างที่เปิดอยู่ (เรียงตามลำดับเปิด) — ใช้กับปุ่ม back ของมือถือ
+    const BACK_SENTINEL = { t: '__freebuff_back' };
+    const backPush = () => { try { history.pushState(BACK_SENTINEL, ''); } catch (e) {} };
+    const backTrack = (id, show) => {
+        if (!BACK_MODALS.has(id)) return;
+        const st = window.__backStack;
+        if (show) {
+            if (!st.includes(id)) { st.push(id); backPush(); }
+        } else {
+            for (let i = st.length - 1; i >= 0; i--) if (st[i] === id) st.splice(i, 1);
+        }
+    };
+    window.addEventListener('popstate', (e) => {
+        if (!e.state || e.state.t !== '__freebuff_back') return; // ปล่อยให้ย้อนจริง (ออกแอป)
+        const st = window.__backStack;
+        const top = st.length ? st[st.length - 1] : null;
+        if (top && document.getElementById(top)) {
+            window.toggleModal(top, false); // ปิดหน้าต่างบนสุดหนึ่งชั้น
+            if (window.__backStack.length) backPush(); // ยังมีชั้นเหลือ → กันย้อนหนีหน้าเว็บ
+        }
+        // ถ้าไม่มีหน้าต่างค้างเหลือ → ปล่อยย้อนกลับตามปกติ (ออกจากแอป)
+    });
     window.toggleModal = (id, show) => {
         $(id).style.display = show ? 'flex' : 'none';
+        backTrack(id, show);
         
         if (show) {
             // เลื่อน modal ขึ้นบนสุดเสมอทุกครั้งที่เปิด (กันค้างตำแหน่งเลื่อนจากครั้งก่อน)
@@ -5565,7 +5590,8 @@
         'กริดเลือกไอคอน Material แบ่งเป็น 19 หมวดหมู่พร้อมแท็บเลือก (แจ้งเตือน/ยานพาหนะ/แผนที่/อาหาร/เงิน/เวลา ฯลฯ) + แท็บ ทั้งหมด — เปิดมาอยู่หมวดแจ้งเตือนโดยอัตโนมัติ เลือกง่าย ไม่ต้องเลื่อนยาวทั้งรายการเดียว',
         'เพิ่มช่องค้นหาไอคอนในหน้าต่างเลือกรูป — พิมพ์ชื่อ (เช่น taxi, bell) กรองทันทีทั้ง 465 ตัว พร้อมปุ่มล้าง กลับไปหมวดเดิมเมื่อเว้นว่าง',
         'เพิ่มปุ่มสุ่มไอคอน (ลูกเต๋า) ข้างปุ่มเลือกรูปในจัดการข้อความแจ้งเตือน — แตะแล้วสลับไอคอน toast นั้นแบบสุ่ม (จากไอคอน Material + อีโมจิทั้งหมด) พร้อมปุ่มบันทึกเขียวให้กดบันทึกทันที',
-        'เพิ่มปุ่มลูกศรย้อนกลับ ‹ ที่หัวหน้าต่างย่อยทั้ง 4 หมวด (จัดการผู้ใช้ / ตั้งค่าสิทธิ์ / ข้อความแจ้งเตือน / Portal) — แตะแล้วกลับมาที่ตั้งค่าการใช้งานชัดเจน (ปุ่มกลม กดแล้วไม่ชนหัวข้อความอีก)'
+        'เพิ่มปุ่มลูกศรย้อนกลับ ‹ ที่หัวหน้าต่างย่อยทั้ง 4 หมวด (จัดการผู้ใช้ / ตั้งค่าสิทธิ์ / ข้อความแจ้งเตือน / Portal) — แตะแล้วกลับมาที่ตั้งค่าการใช้งานชัดเจน (ปุ่มกลม กดแล้วไม่ชนหัวข้อความอีก)',
+        'ปุ่มย้อนกลับมือถือ (Android back) ปิดทีละชั้น: หมวดย่อย → ตั้งค่าการใช้งาน → หน้าแรก → ออกจากแอป (แทนการกด back ครั้งเดียวแล้วออกทั้งแอป)'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
