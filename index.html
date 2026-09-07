@@ -1811,7 +1811,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08c';
+    const APP_BUILD = '2026-09-08d';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -4015,7 +4015,7 @@
         if (!box) return;
         if (window.surchargeList.length > 0) {
             box.innerHTML = window.surchargeList.map(item =>
-                `<div class="tz-toll-item"><span>${item.name} ${item.amount}฿</span><span class="material-symbols-outlined tz-toll-del" onclick="window.removeSurcharge(${item.id})">close</span></div>`
+                `<div class="tz-toll-item"><span>${item.name === 'ค่าทางด่วน' ? 'ทางด่วน' : item.name} ${item.amount} บ.</span><span class="material-symbols-outlined tz-toll-del" onclick="window.removeSurcharge(${item.id})">close</span></div>`
             ).join('');
             box.style.display = 'flex';
         } else {
@@ -5885,7 +5885,8 @@
         'การ์ดในระบบจัดการผู้ใช้งาน: สถานะ ออนไลน์/ออฟไลน์ ตรงจริงและสด (เปิดแอปค้าง/กลับมาที่แอป/เปิดหน้าจัดการ → ปักหมุดออนไลน์ทันที + เต้นหัวใจทุก 45 วิ)',
         'การ์ดในระบบจัดการผู้ใช้งาน: เอาช่องชื่อบริษัท/สหกรณ์ (หัวบิล) ออก เหลือ เข้าใช้ล่าสุด + ทะเบียนรถ และจัดปุ่ม โทร/แบน/ประวัติ/แก้ไข/ลบ ไว้กึ่งกลางแบบใหม่สวยขึ้น',
         'จอมิเตอร์ขยาย: ปุ่ม "+ ทางด่วน" เป็นสีส้มทึบ (ไม่มีเงา) และรายการ "ค่าทางด่วน X฿" ที่เพิ่มไว้เป็นสีฟ้าทึบ — เห็นชัดไม่กลืนกับพื้นหลัง',
-        'แก้บั๊กเด้งหลุดล็อกอิน: ตอนรีเฟรช/เปิดแอปใหม่ ระบบจะไม่ไล่ออกจากระบบเพราะ snapshot แรกมาไม่ครบอีกแล้ว (เช็คข้อมูลจริงจากเซิร์ฟเวอร์ก่อน) — session อยู่จนกว่าจะกดออกจากระบบเอง'
+        'แก้บั๊กเด้งหลุดล็อกอิน: ตอนรีเฟรช/เปิดแอปใหม่ ระบบจะไม่ไล่ออกจากระบบเพราะ snapshot แรกมาไม่ครบอีกแล้ว (เช็คข้อมูลจริงจากเซิร์ฟเวอร์ก่อน) — session อยู่จนกว่าจะกดออกจากระบบเอง',
+        'จอมิเตอร์ขยาย: ข้อความชิปทางด่วนเปลี่ยนจาก "ค่าทางด่วน 10฿" เป็น "ทางด่วน 10 บ."'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
