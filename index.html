@@ -1826,7 +1826,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08j';
+    const APP_BUILD = '2026-09-08k';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5912,7 +5912,8 @@
         'เพิ่ม SHA-256 แบบ pure-JS เป็นตัวสำรอง — เปิดไฟล์ index.html แบบ file:// ตรง ๆ ก็ล็อกอินบัญชีที่แฮชแล้วได้ (เบราว์เซอร์ปกติปิด crypto.subtle ในหน้าไม่ปลอดภัย)',
         '🔒 อัปเกรดแฮชรหัสผ่านใหม่เป็น PBKDF2-HMAC-SHA256 (100,000 รอบ + salt ต่อบัญชี) — รุ่นเก่า sha256$/plaintext ยังล็อกอินได้ และถูกอัปเกรดเป็น PBKDF2 ให้อัตโนมัติหลังล็อกอินสำเร็จ (มี pure-JS fallback ให้ใช้ได้แม้เปิด file://)',
         '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้',
-        '🔕 แก้ toast เข้าสู่ระบบ/ออกจากระบบ เด้งรัวๆ ทั้งวัน — แจ้งเฉพาะบัญชีแอดมินเท่านั้น + กันซ้ำต่อคนภายใน 10 วิ (และเครื่องที่โดนไล่ออกไม่เขียนสถานะออฟไลน์ทับเครื่องใหม่)'
+        '🔕 แก้ toast เข้าสู่ระบบ/ออกจากระบบ เด้งรัวๆ ทั้งวัน — แจ้งเฉพาะบัญชีแอดมินเท่านั้น + กันซ้ำต่อคนภายใน 10 วิ (และเครื่องที่โดนไล่ออกไม่เขียนสถานะออฟไลน์ทับเครื่องใหม่)',
+        '🐛 แก้ toast แดง "ถูกเข้าสู่ระบบจากเครื่องอื่น" เด้งตอนกดออกจากระบบเอง — หมุน session token แล้วไม่ให้ snapshot ตัวเองเด้งเตือนหลอก (เด้งเฉพาะตอนล็อกอินซ้อนจริง ๆ)'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6429,17 +6430,20 @@
     window.logoutApp = async (forced = false, skipOnlineWrite = false) => { 
         let isOk = forced ? true : await window.showCustomConfirm("ออกจากระบบ", "คุณต้องการออกจากระบบใช่หรือไม่?", "warning");
         if(isOk) {
-            if(loggedInUserId) {
-                if(!forced) await recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ");
+            const logoutUid = loggedInUserId;
+            // หยุดฟัง snapshot ตัวเอง ก่อนเขียนอะไรลง DB — กันการหมุน sessionId ไปเด้ง toast "ถูกเข้าสู่ระบบจากเครื่องอื่น" ให้ตัวเองตอนล็อกเอาต์
+            if(myUserUnsub) { myUserUnsub(); myUserUnsub = null; }
+            if(logoutUid) {
+                if(!forced) await recordActivityLog(logoutUid, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ");
                 if(!forced) {
                     // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน เพราะจะไปไล่เครื่องที่เพิ่งล็อกอินแทน
-                    await setDoc(doc(db, "users", loggedInUserId), { isOnline: false, sessionId: window.newSessionToken() }, { merge: true });
+                    await setDoc(doc(db, "users", logoutUid), { isOnline: false, sessionId: window.newSessionToken() }, { merge: true });
                 } else if(!skipOnlineWrite) {
                     // โดนไล่ออก (skipOnlineWrite=true) → ไม่เขียน isOnline:false เพราะเครื่องใหม่ของบัญชีนี้ยังออนไลน์อยู่ (กันสถานะดีดไปมา)
-                    await setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true });
+                    await setDoc(doc(db, "users", logoutUid), { isOnline: false }, { merge: true });
                 }
             }
-            stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
+            stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); loggedInUserId = null; tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
             window.updateAutoFsBadge();
             if(!forced) window.showToast("ออกจากระบบเรียบร้อย");
             document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; document.getElementById('authDisplayName').style.display = "none"; document.getElementById('authPhone').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none"; document.getElementById('forgotPassLink').style.display = "flex"; document.getElementById('toggleAuthText').innerHTML = 'ยังไม่มีบัญชีใช่ไหม? <span style="color:#38bdf8;font-weight:600;">คลิกเพื่อสร้างบัญชี</span>'; document.getElementById('authBtn').onclick = window.loginApp; document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authPassword').type = 'password'; document.getElementById('authDisplayName').value = ''; document.getElementById('authPhone').value = ''; document.getElementById('regProfilePicPreview').src = window.DEFAULT_AVATAR;
