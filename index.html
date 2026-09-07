@@ -1678,7 +1678,7 @@
 
 <div id="adminMenuModal" class="modal-overlay" style="z-index: 10004;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('adminMenuModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>ระบบจัดการผู้ใช้งาน</h3><button id="adminGlobalLogsBtn" class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><button id="permReqBanner" class="perm-req-banner" style="display: none;" onclick="window.openPermRequests()"></button><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
 
-<div id="permRequestsModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.toggleModal('permRequestsModal', false)" title="กลับ"><span class="material-symbols-outlined">arrow_back</span>กลับ</button><h3 style="color: var(--neon-yellow);">คำขอสิทธิ์เพิ่ม</h3><button class="btn-close-floating" onclick="window.toggleModal('permRequestsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">รายชื่อสมาชิกที่ขอสิทธิ์เพิ่ม — แตะ <b>เปิดโปรไฟล์สมาชิก</b> เพื่อตั้งตำแหน่ง/สิทธิ์ให้ แล้วแตะ <b>จัดการแล้ว</b> เพื่อปิดคำขอ</p><div id="permReqListBody" style="min-height: 150px;"></div></div></div></div>
+<div id="permRequestsModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.toggleModal('permRequestsModal', false)" title="กลับ"><span class="material-symbols-outlined">arrow_back</span>กลับ</button><h3 style="color: var(--neon-yellow);">คำขอสิทธิ์เพิ่ม</h3><button class="btn-close-floating" onclick="window.toggleModal('permRequestsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">รายชื่อสมาชิกที่ขอสิทธิ์เพิ่ม — กด <b style="color:#4ade80;">อนุมัติสิทธิ์</b> เพื่อให้สิทธิ์ที่ขอกับสมาชิกทันที (ไม่เปลี่ยนตำแหน่ง — ผู้ขอจะเห็นแจ้งเตือนตอนเปิดแอป) หรือกด <b style="color:#ff8a95;">ปฏิเสธ</b> เพื่อไม่ให้สิทธิ์</p><div id="permReqListBody" style="min-height: 150px;"></div></div></div></div>
 
 <div id="toastMsgModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('toastMsgModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>จัดการข้อความแจ้งเตือน</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetToastMsgOverrides()" title="รีเซ็ตข้อความทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('toastMsgModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">แก้ไขข้อความ/ไอคอน/เวลาของป๊อปอัปแจ้งเตือนทุกแบบ — บันทึกแล้วมีผลกับทุกคนทันที (ทั้งผู้ใช้และแอดมินเห็นเหมือนกัน)<br>แตะปุ่มรูปไอคอนสีเหลืองข้างช่องเพื่อเลือกรูปจากกริด หรือพิมพ์ชื่อไอคอน material (เช่น <b>sync</b>, <b>toll</b>) / อีโมจิเองก็ได้ · ช่อง <b>วินาที</b> ตั้งเวลาที่ toast อยู่บนจอ (default <b>1.5 วิ</b> — เว้นว่าง = 1.5)</p><div id="toastMsgList" style="min-height: 200px;"></div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveToastMsgsBtn" onclick="window.saveToastMsgOverrides()" class="manual-timer-btn" disabled style="background: #3a3f4b; width: 100%; justify-content: center; opacity: 0.55; cursor: not-allowed;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก</button></div></div></div><div id="iconPickerModal" class="modal-overlay" style="z-index: 10010;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="font-size:18px;">เลือกรูปไอคอน</h3><button class="btn-close-floating" onclick="window.toggleModal('iconPickerModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><div style="font-size:12px; color:var(--text-dim); margin-bottom:8px;">🅰️ ไอคอน Material — เลือกหมวดหมู่</div><div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;"><input id="iconPickerSearch" type="text" placeholder="ค้นหาไอคอน (พิมพ์ชื่อ เช่น taxi, bell, เงิน)…" oninput="window.setIconMatSearch(this.value)" style="flex:1; min-width:0; padding:10px 12px; border-radius:14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:white; font-family:'Kanit'; font-size:13px; outline:none;"><span id="iconPickerSearchClear" onclick="window.clearIconMatSearch()" style="display:none; cursor:pointer; color:var(--neon-yellow); flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:22px;">close</span></span></div><div id="iconPickerSearchHint" style="display:none; font-size:12px; color:var(--neon-yellow); margin-bottom:8px;"></div><div id="iconPickerMatTabs" style="display:flex; gap:6px; overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch; padding:2px 2px 6px; margin-bottom:8px;"></div><div id="iconPickerMat" style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px;"></div><div style="font-size:12px; color:var(--text-dim); margin-bottom:8px;">🔤 อีโมจิ</div><div id="iconPickerEmoji" style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px;"></div></div></div></div>
 
@@ -1801,7 +1801,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07s';
+    const APP_BUILD = '2026-09-07t';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -1927,6 +1927,7 @@
 
     let loggedInUserId = localStorage.getItem('taxi_user_id');
     let currentUserRole = "User";
+    let myExtraPerms = {}; // สิทธิ์พิเศษที่แอดมินอนุมัติให้บัญชีนี้โดยเฉพาะ (extraPerms ใน user doc — ไม่เปลี่ยนตำแหน่ง)
     let isBannedState = false;
     let globalUsersUnsub = null, permsUnsub = null, permConfigUnsub = null, myUserUnsub = null, serviceDataUnsub = null, adminSnapshotUnsub = null, permReqUnsub = null;
     let userOnlineStates = {}; let isInitialUserLoad = true;
@@ -1968,7 +1969,7 @@
         return { ...base, ...stored };
     };
     window.godPermsAll = () => { const o = {}; window.currentPermConfig.forEach(p => { o[p.id.replace('perm_', '')] = true; }); return o; }; // Admin = god: ได้ทุกสิทธิ์เสมอ
-    window.currentUserPerms = () => { const g = currentUserRole === "Admin"; return g ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole); }; // สิทธิ์จริงของผู้ล็อกอินปัจจุบัน
+    window.currentUserPerms = () => { const g = currentUserRole === "Admin"; return g ? window.godPermsAll() : { ...window.effectiveRolePerms(currentUserRole), ...(myExtraPerms || {}) }; }; // สิทธิ์จริงของผู้ล็อกอินปัจจุบัน (รวมสิทธิ์พิเศษที่แอดมินอนุมัติให้บัญชีนี้)
 
     // ---------- 🎭 ตำแหน่ง (Role) ที่กำหนดเองได้ — นอกเหนือจากระบบ (Admin/Manager/User) ----------
     // ตำแหน่งใหม่เก็บเป็นคีย์ของ doc settings/roles เหมือน Manager/User (แต่ละคีย์ = ชุดสิทธิ์ของตำแหน่งนั้น)
@@ -3562,17 +3563,60 @@
             list.forEach(r => {
                 const when = r.requestedAt ? new Date(r.requestedAt).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
                 const chips = (r.missingLabels || []).map(l => '<span class="myperm-chip missing" style="font-size:11px; padding:3px 9px;"><span class="material-symbols-outlined" style="font-size:13px;">lock</span>' + l + '</span>').join('');
-                html += '<div class="admin-user-card" style="align-items: flex-start;"><img class="admin-avatar" src="' + ((r.photoURL && r.photoURL.length > 10) ? r.photoURL : window.DEFAULT_AVATAR) + '"><div style="flex:1; min-width:0;"><div class="admin-user-head"><div class="admin-user-name">' + (r.displayName || r.username || '') + ' <span class="admin-role-badge" style="background: rgba(239,68,68,0.15); color:#ff8a95; border-color:rgba(239,68,68,0.4);">ขอสิทธิ์</span></div><div class="admin-user-sub"><span class="admin-user-uname">@' + (r.username || r.uid || '') + '</span><span class="admin-user-statusline">' + when + '</span></div></div>' + (chips ? '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' + chips + '</div>' : '') + '<div style="display:flex; gap:8px; margin-top:12px;"><button onclick="window.openAdminEditUser(\'' + r.uid + '\')" class="manual-timer-btn" style="flex:1; padding:9px; font-size:13px; background:#4285F4; justify-content:center;"><span class="material-symbols-outlined" style="font-size:16px;">person_search</span> เปิดโปรไฟล์สมาชิก</button><button onclick="window.resolvePermRequest(\'' + r.uid + '\')" class="manual-timer-btn" style="flex:1; padding:9px; font-size:13px; background:var(--neon-green); justify-content:center;"><span class="material-symbols-outlined" style="font-size:16px;">check_circle</span> จัดการแล้ว</button></div></div></div>';
+                html += '<div class="admin-user-card" style="align-items: flex-start;"><img class="admin-avatar" src="' + ((r.photoURL && r.photoURL.length > 10) ? r.photoURL : window.DEFAULT_AVATAR) + '"><div style="flex:1; min-width:0;"><div class="admin-user-head"><div class="admin-user-name">' + (r.displayName || r.username || '') + ' <span class="admin-role-badge" style="background: rgba(239,68,68,0.15); color:#ff8a95; border-color:rgba(239,68,68,0.4);">ขอสิทธิ์</span></div><div class="admin-user-sub"><span class="admin-user-uname">@' + (r.username || r.uid || '') + '</span><span class="admin-user-statusline">' + when + '</span></div></div>' + (chips ? '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' + chips + '</div>' : '') + '<div style="display:flex; gap:8px; margin-top:12px;"><button onclick="window.openAdminEditUser(\'' + r.uid + '\')" class="manual-timer-btn" style="flex:1; padding:9px; font-size:13px; background:#4285F4; justify-content:center;"><span class="material-symbols-outlined" style="font-size:16px;">person_search</span> เปิดโปรไฟล์สมาชิก</button><button onclick="window.approvePermRequest(\'' + r.uid + '\')" class="manual-timer-btn" style="flex:1; padding:9px; font-size:13px; background:var(--neon-green); justify-content:center;"><span class="material-symbols-outlined" style="font-size:16px;">check_circle</span> อนุมัติสิทธิ์</button></div><button onclick="window.rejectPermRequest(\'' + r.uid + '\')" class="manual-timer-btn" style="margin-top:8px; padding:8px; font-size:13px; background:rgba(239,68,68,0.15); color:#ff8a95; border:1px solid rgba(239,68,68,0.4); justify-content:center; width:100%;"><span class="material-symbols-outlined" style="font-size:16px;">block</span> ปฏิเสธ (ไม่ให้สิทธิ์)</button></div></div>';
             });
             body.innerHTML = html;
         }
         window.toggleModal('permRequestsModal', true);
     };
-    // ✅ แอดมินกด "จัดการแล้ว" — ปิดคำขอ (ลบเอกสาร) แล้วอัปเดตป้าย
-    window.resolvePermRequest = async (uid) => {
-        try { await deleteDoc(doc(db, 'perm_requests', uid)); window.showToast('จัดการคำขอนี้แล้ว ✅'); } catch (e) { window.showToast('จัดการไม่สำเร็จ — ลองใหม่', true); }
+    // ✅ แอดมินกด "อนุมัติสิทธิ์" — ให้สิทธิ์ที่ขอทั้งหมดลงตัวผู้ใช้นั้น (extraPerms — ไม่เปลี่ยนตำแหน่ง) + แจ้งผู้ขอ + ลบคำขอ
+    window.approvePermRequest = async (uid) => {
+        if (!uid) return;
+        try {
+            const reqSnap = await getDoc(doc(db, 'perm_requests', uid));
+            if (!reqSnap.exists()) { window.showToast('ไม่พบคำขอนี้แล้ว', true); return; }
+            const r = reqSnap.data();
+            const ids = r.missingIds || []; const labels = r.missingLabels || [];
+            const userSnap = await getDoc(doc(db, 'users', uid));
+            const existing = (userSnap.exists() && userSnap.data().extraPerms) || {};
+            const toAdd = {};
+            ids.forEach(id => { if (id && id.indexOf('perm_') === 0) toAdd[id.slice(5)] = true; });
+            if (Object.keys(toAdd).length) { await updateDoc(doc(db, 'users', uid), { extraPerms: { ...existing, ...toAdd } }); }
+            // แจ้งผู้ขอ (เปิดแอปแล้วเห็น toast ทอง) + ลบคำขอ
+            await setDoc(doc(db, 'perm_notices', uid), { outcome: 'approved', grantedIds: ids, grantedLabels: labels, at: Date.now() });
+            await deleteDoc(doc(db, 'perm_requests', uid));
+            window.showToast('อนุมัติสิทธิ์แล้ว ✅ (' + (labels.length || 0) + ' สิทธิ์)');
+            if (typeof window.recordActivityLog === 'function') { try { window.recordActivityLog(uid, 'คำขอสิทธิ์ถูกอนุมัติ', 'แอดมินให้สิทธิ์: ' + (labels.join(', ') || '—')); } catch(e){} }
+        } catch (e) { window.showToast('อนุมัติไม่สำเร็จ — ลองใหม่', true); }
         window.toggleModal('permRequestsModal', false);
         if (typeof window.refreshPermReqBadges === 'function') window.refreshPermReqBadges();
+    };
+    // ❌ แอดมินกด "ปฏิเสธ" — แจ้งผู้ขอว่าไม่ให้ + ลบคำขอ (ไม่เปลี่ยนสิทธิ์ใด ๆ)
+    window.rejectPermRequest = async (uid) => {
+        try {
+            await setDoc(doc(db, 'perm_notices', uid), { outcome: 'rejected', grantedIds: [], grantedLabels: [], at: Date.now() });
+            await deleteDoc(doc(db, 'perm_requests', uid));
+            window.showToast('ปฏิเสธคำขอนี้แล้ว');
+            if (typeof window.recordActivityLog === 'function') { try { window.recordActivityLog(uid, 'คำขอสิทธิ์ถูกปฏิเสธ', 'แอดมินปฏิเสธคำขอสิทธิ์'); } catch(e){} }
+        } catch (e) { window.showToast('จัดการไม่สำเร็จ — ลองใหม่', true); }
+        window.toggleModal('permRequestsModal', false);
+        if (typeof window.refreshPermReqBadges === 'function') window.refreshPermReqBadges();
+    };
+    // 🔔 ผู้ขอเปิดแอป → ตรวจคำขอที่แอดมินจัดการแล้ว (อนุมัติ/ปฏิเสธ) แล้วแจ้ง toast ครั้งเดียว + ลบข้อมูลแจ้ง
+    window.checkPermNotice = async () => {
+        if (!loggedInUserId || window.__permNoticeChecked) return;
+        window.__permNoticeChecked = true;
+        try {
+            const ds = await getDoc(doc(db, 'perm_notices', loggedInUserId));
+            if (ds.exists()) {
+                const d = ds.data();
+                const ok = d.outcome === 'approved';
+                const n = (d.grantedLabels && d.grantedLabels.length) ? d.grantedLabels.length : 0;
+                const msg = ok ? ('คำขอสิทธิ์ของคุณถูกอนุมัติแล้ว ✅' + (n ? ' (' + n + ' สิทธิ์)' : '')) : 'คำขอสิทธิ์ของคุณถูกปฏิเสธ ❌';
+                window.showToast(msg, !ok, null, ok); // อนุมัติ = toast ทอง, ปฏิเสธ = toast แดง
+                await deleteDoc(doc(db, 'perm_notices', loggedInUserId));
+            }
+        } catch (e) {}
     };
     // 📳 สั่นเบา ๆ + เสียงติ๊ง เมื่อแตะชิปสิทธิ์ที่เปิดหน้าต่างได้ (เพื่อให้รู้ว่ากดติด) — ใช้ค่าที่ตั้งในหน้าโปรไฟล์
     window.tapPermFeedback = () => {
@@ -5592,7 +5636,8 @@
         'เพิ่มปุ่มสุ่มไอคอน (ลูกเต๋า) ข้างปุ่มเลือกรูปในจัดการข้อความแจ้งเตือน — แตะแล้วสลับไอคอน toast นั้นแบบสุ่ม (จากไอคอน Material + อีโมจิทั้งหมด) พร้อมปุ่มบันทึกเขียวให้กดบันทึกทันที',
         'เพิ่มปุ่มลูกศรย้อนกลับ ‹ ที่หัวหน้าต่างย่อยทั้ง 4 หมวด (จัดการผู้ใช้ / ตั้งค่าสิทธิ์ / ข้อความแจ้งเตือน / Portal) — แตะแล้วกลับมาที่ตั้งค่าการใช้งานชัดเจน (ปุ่มกลม กดแล้วไม่ชนหัวข้อความอีก)',
         'ปุ่มย้อนกลับมือถือ (Android back) ปิดทีละชั้น: หมวดย่อย → ตั้งค่าการใช้งาน → หน้าแรก → ออกจากแอป (แทนการกด back ครั้งเดียวแล้วออกทั้งแอป)',
-        'หน้าประวัติรวมระบบเพิ่มส่วนเตือนคำขอสิทธิ์ที่ค้างเกิน 7 วัน (กล่องแดงบนหัว) — แอดมินเห็นสมาชิกที่ค้าง+สิทธิ์ที่ขอ+กี่วัน พร้อมปุ่มจัดการคำขอได้ทันที'
+        'หน้าประวัติรวมระบบเพิ่มส่วนเตือนคำขอสิทธิ์ที่ค้างเกิน 7 วัน (กล่องแดงบนหัว) — แอดมินเห็นสมาชิกที่ค้าง+สิทธิ์ที่ขอ+กี่วัน พร้อมปุ่มจัดการคำขอได้ทันที',
+        'หน้าคำขอสิทธิ์เพิ่มแยกเป็นปุ่ม อนุมัติสิทธิ์ / ปฏิเสธ — อนุมัติจะให้สิทธิ์ที่ขอทั้งหมดแก่สมาชิกทันที (ไม่เปลี่ยนตำแหน่ง) และผู้ขอเห็น toast แจ้งผลตอนเปิดแอป (อนุมัติ=ทอง / ปฏิเสธ=แดง) ครั้งเดียว'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -5760,7 +5805,7 @@
                 document.getElementById('userMenu').style.display = 'flex'; 
                 document.getElementById('mainUserInfo').style.display = 'flex';
                 
-                currentUserRole = data.role || "User"; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
+                currentUserRole = data.role || "User"; myExtraPerms = data.extraPerms || {}; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
                 document.getElementById('displayUserName').innerText = displayNameVal; document.getElementById('mainUserName').innerText = displayNameVal;
                 document.getElementById('editPhone').value = data.phoneNumber || "";
                 
@@ -5826,6 +5871,7 @@
                     else { window.applySavedTollMode(); }
                 }
                 if (typeof window.maybeShowResumeBanner === 'function') window.maybeShowResumeBanner();
+                if (typeof window.checkPermNotice === 'function') window.checkPermNotice(); // 🔔 แจ้งผลคำขอสิทธิ์ (อนุมัติ/ปฏิเสธ) ตอนเปิดแอป
             } else { window.logoutApp(true); }
         });
     };
@@ -5923,7 +5969,7 @@
         let isOk = forced ? true : await window.showCustomConfirm("ออกจากระบบ", "คุณต้องการออกจากระบบใช่หรือไม่?", "warning");
         if(isOk) {
             if(loggedInUserId) { if(!forced) await recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ"); await setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); }
-            stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
+            stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
             window.updateAutoFsBadge();
             if(!forced) window.showToast("ออกจากระบบเรียบร้อย");
             document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; document.getElementById('authDisplayName').style.display = "none"; document.getElementById('authPhone').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none"; document.getElementById('forgotPassLink').style.display = "flex"; document.getElementById('toggleAuthText').innerHTML = 'ยังไม่มีบัญชีใช่ไหม? <span style="color:#38bdf8;font-weight:600;">คลิกเพื่อสร้างบัญชี</span>'; document.getElementById('authBtn').onclick = window.loginApp; document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authPassword').type = 'password'; document.getElementById('authDisplayName').value = ''; document.getElementById('authPhone').value = ''; document.getElementById('regProfilePicPreview').src = window.DEFAULT_AVATAR;
