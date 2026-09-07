@@ -1811,7 +1811,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08b';
+    const APP_BUILD = '2026-09-08c';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5884,7 +5884,8 @@
         'ย้ายระบบล็อกอิน: ตรวจรหัสผ่านด้วย username + เปรียบเทียบ hash ฝั่งเครื่อง (ไม่ query ตามรหัสผ่านตรง ๆ อีกต่อไป)',
         'การ์ดในระบบจัดการผู้ใช้งาน: สถานะ ออนไลน์/ออฟไลน์ ตรงจริงและสด (เปิดแอปค้าง/กลับมาที่แอป/เปิดหน้าจัดการ → ปักหมุดออนไลน์ทันที + เต้นหัวใจทุก 45 วิ)',
         'การ์ดในระบบจัดการผู้ใช้งาน: เอาช่องชื่อบริษัท/สหกรณ์ (หัวบิล) ออก เหลือ เข้าใช้ล่าสุด + ทะเบียนรถ และจัดปุ่ม โทร/แบน/ประวัติ/แก้ไข/ลบ ไว้กึ่งกลางแบบใหม่สวยขึ้น',
-        'จอมิเตอร์ขยาย: ปุ่ม "+ ทางด่วน" เป็นสีส้มทึบ (ไม่มีเงา) และรายการ "ค่าทางด่วน X฿" ที่เพิ่มไว้เป็นสีฟ้าทึบ — เห็นชัดไม่กลืนกับพื้นหลัง'
+        'จอมิเตอร์ขยาย: ปุ่ม "+ ทางด่วน" เป็นสีส้มทึบ (ไม่มีเงา) และรายการ "ค่าทางด่วน X฿" ที่เพิ่มไว้เป็นสีฟ้าทึบ — เห็นชัดไม่กลืนกับพื้นหลัง',
+        'แก้บั๊กเด้งหลุดล็อกอิน: ตอนรีเฟรช/เปิดแอปใหม่ ระบบจะไม่ไล่ออกจากระบบเพราะ snapshot แรกมาไม่ครบอีกแล้ว (เช็คข้อมูลจริงจากเซิร์ฟเวอร์ก่อน) — session อยู่จนกว่าจะกดออกจากระบบเอง'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6044,7 +6045,19 @@
                 const data = docSnap.data();
                 if(data.isBanned) { window.showToast("บัญชีนี้ถูกระงับการใช้งาน", true); window.logoutApp(true); return; }
                 // กันบัญชีที่ข้อมูลถูกเขียนทับ/เสียหาย (ไม่มี username/role) แสดงผลผิดๆ เป็นผู้ใช้ทั่วไป — บังคับออกจากระบบแล้วเข้าสู่ระบบใหม่
-                if(!data.username || !data.role) { window.showToast("ข้อมูลบัญชีเสียหาย — กรุณาเข้าสู่ระบบใหม่อีกครั้ง", true); window.logoutApp(true); return; }
+                if(!data.username || !data.role) {
+                    // 🔁 snapshot แรกอาจมาแค่บางส่วนจาก cache (เช่น เพิ่งเขียน isOnline ตอนเปิดแอป — ยังไม่ทันซิงก์กับเซิร์ฟเวอร์)
+                    // ขอข้อมูลจริงจากเซิร์ฟเวอร์ก่อนตัดสินใจ — กันเด้งหลุดล็อกอินทุกครั้งที่รีเฟรช
+                    getDoc(doc(db, "users", loggedInUserId), { source: "server" }).then(realSnap => {
+                        if (realSnap.exists()) {
+                            const rd = realSnap.data();
+                            if (rd.isBanned) { window.showToast("บัญชีนี้ถูกระงับการใช้งาน", true); window.logoutApp(true); return; }
+                            if (!rd.username || !rd.role) { window.showToast("ข้อมูลบัญชีเสียหาย — กรุณาเข้าสู่ระบบใหม่อีกครั้ง", true); window.logoutApp(true); return; }
+                            // ข้อมูลครบจริง → ปล่อยผ่าน (รอ snapshot ตัวถัดไปจากเซิร์ฟเวอร์มาแสดงผลตามปกติ)
+                        } else { window.logoutApp(true); }
+                    }).catch(() => { /* ไม่มีเน็ตชั่วคราว — รอ snapshot ต่อไป ไม่เด้งออก */ });
+                    return;
+                }
                 
                 document.getElementById('appLoader').style.display = 'none'; 
                 document.getElementById('loginOverlay').style.display = 'none';
@@ -6119,11 +6132,13 @@
                 }
                 if (typeof window.maybeShowResumeBanner === 'function') window.maybeShowResumeBanner();
                 if (typeof window.checkPermNotice === 'function') window.checkPermNotice(); // 🔔 แจ้งผลคำขอสิทธิ์ (อนุมัติ/ปฏิเสธ) ตอนเปิดแอป
+                if (window.markMeOnline) window.markMeOnline(); // 💚 โหลดข้อมูลตัวเองครบแล้ว → ปักหมุดออนไลน์ (กันขึ้นออฟไลน์ค้างตอนรีเฟรช)
             } else { window.logoutApp(true); }
         });
     };
 
-    if (loggedInUserId) { setDoc(doc(db, "users", loggedInUserId), { isOnline: true }, { merge: true }).catch(() => {}); listenToMyUser(); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
+    // หมายเหตุ: ไม่เขียน isOnline ก่อนผูก snapshot ตอนเปิดแอป (เขียนแล้ว cache จะมี doc แค่บางฟิลด์ → snapshot แรกมาไม่ครบ → เด้งหลุดล็อกอิน) — สถานะออนไลน์ปักหมุดผ่าน markMeOnline (focus/visibility/heartbeat) แทน
+    if (loggedInUserId) { listenToMyUser(); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
     // 🔧 โหลดข้อความแจ้งเตือนที่แอดมินแก้ไว้ (Firestore) — ใช้ได้ทุกหน้าแม้ยังไม่ล็อกอิน
     if (typeof window.loadToastMsgOverrides === 'function') window.loadToastMsgOverrides();
     // 🏷️ โหลด/ซิงก์ประวัติเวอร์ชัน (อ่านได้ทุกคน; ถ้าโค้ดปล่อยเวอร์ชันใหม่ ระบบจะรันเวอร์ชันให้อัตโนมัติ)
