@@ -30,7 +30,7 @@
         <b>วิธีเปิด:</b> ต้องผ่าน HTTP เท่านั้น เช่น <code>https://baby4bot.github.io/taxi/tests/catchup-regression.html</code>
         (เปิดจาก file:// ตรง ๆ ไม่ได้ เพราะ iframe ถูกบล็อก cross-origin) — เปิดแล้วรันอัตโนมัติ หรือกดปุ่มด้านล่างเพื่อรันใหม่
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (13 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (14 สถานการณ์)</button>
     <div id="summary"></div>
     <ol id="results"></ol>
     <iframe id="appFrame" src="../index.html"></iframe>
@@ -538,6 +538,33 @@
                 near(d.km, 0.5, 0.01, 'กิโลเมตรบนจอ (จอดนิ่ง ไม่ควร +0.5 กม. จาก GPS ลอย)');
                 checkFareRange(0.5, 10 + GAP - 8, 10 + GAP + 8, 'ค่าโดยสารบนจอ');
                 return 'GPS ลอย 0.5 กม./10 นาที → เบิกจอด ' + d.traffic + ' วิ (คาด ~610) · km ' + d.km.toFixed(2) + ' (ไม่บวก GPS ลอย)';
+            });
+
+            // 14) วิ่งช่วงปิด + รถติด: เส้นทางคืน noTrafficSec (เวลาวิ่งโล่ง) → เบิกทั้งกิโล + เวลาที่เกิน"โล่ง"เป็นเวลารถติด
+            //     (เดิมเบิกแค่กิโล — เวลารถติดช่วงปิดหายไปทั้งช่วง ตรงกับที่คนขับเจอ: กิโลถูก แต่เวลารถติดเพี้ยน)
+            await runScenario('14. วิ่งช่วงปิด + รถติด (มี noTraffic ของเส้นทาง) → เบิกเวลารถติดที่เกิน"โล่ง" ไม่ใช่ทั้งช่วง', async () => {
+                const straightKm = haversine(P0, P_FAR);
+                const routeKm = straightKm * 1.45;
+                const NO_TRAFFIC_SEC = 30; // เส้นทางช่วงนี้ถ้าโล่งวิ่งแค่ ~30 วิ — เวลาที่เกินไป = ติด/จอด
+                w().fetchRouteFromTomTom = async (dLat, dLon, sLat, sLon) => {
+                    w().__routeCalls = (w().__routeCalls || 0) + 1;
+                    return { km: routeKm, sec: 90 + NO_TRAFFIC_SEC, noTrafficSec: NO_TRAFFIC_SEC, coords: [[P0.lat, P0.lon], [P_FAR.lat, P_FAR.lon]], tolls: { hasTolls: false, booths: [], total: 0 } };
+                };
+                const p = makePayload({ lastPos: P0, lastPath: WIND_PATH });
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                releaseFix(5, P_FAR.lat, P_FAR.lon, 8, 25); // fix ที่จุดที่รถไปถึงช่วงปิด (speed 25 กม./ชม. = ยังวิ่ง ไม่ใช่จอดนิ่ง)
+                await wait(1600);
+                const pp = JSON.parse(w().localStorage.getItem('taxi_active_trip_v1'));
+                // ระยะที่เบิก = 0.5 + เส้นทางจริง (ไม่ใช่เส้นตรง×1.6)
+                near(pp.km, 0.5 + routeKm, 0.05, 'กิโลเมตรใน payload (0.5 + เส้นทางถนนจริง)');
+                // เวลารถติดที่เบิก = 10 (เดิม) + (ช่วงปิด ~90 วิ − เวลาวิ่งโล่ง 30 วิ) ≈ 10 + 60 = 70 — ไม่ใช่เบิกเต็ม 90+10
+                // (ถ้าไม่มี noTraffic/การประเมิน: จะได้แค่ 10 = เวลารถติดช่วงปิดหายไปทั้งหมด)
+                assert(pp.trafficSec >= 10 + 90 - NO_TRAFFIC_SEC - 8, 'ต้องเบิกเวลารถติดส่วนที่เกิน"โล่ง" (ได้ ' + Math.round(pp.trafficSec) + ' วิ คาด ~' + (10 + 90 - NO_TRAFFIC_SEC) + ' วิ)');
+                assert(pp.trafficSec <= 10 + 90 - NO_TRAFFIC_SEC + 12, 'ต้องไม่เบิกทั้งช่วงเป็นจอด (กัน over-bill ได้ ' + Math.round(pp.trafficSec) + ' วิ)');
+                assert((w().__routeCalls || 0) >= 1, 'ต้องขอเส้นทาง (stub) อย่างน้อย 1 ครั้ง');
+                return pp.km.toFixed(2) + ' กม. (คาด ' + (0.5 + routeKm).toFixed(2) + ') · รถติด ' + Math.round(pp.trafficSec) + ' วิ (คาด ~' + (10 + 90 - NO_TRAFFIC_SEC) + ')';
             });
 
             // 7) ประวัติการเบิกคืน: ลง payload (catchUpLog) + โชว์ในหน้าสรุปหลังจบเที่ยว
