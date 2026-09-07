@@ -1007,33 +1007,39 @@
         .admin-user-sub { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #8a93a8; margin-top: 3px; }
         .admin-user-uname { color: #aab3c7; }
         .admin-user-statusline { display: inline-flex; align-items: center; }
-        .admin-meta-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .admin-meta-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
         .admin-meta-chip {
             display: inline-flex; align-items: center; gap: 5px;
-            font-size: 11px; color: #cfd6e4;
+            font-size: 11px; color: #d5dbe8;
             background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
             border-radius: 999px; padding: 4px 11px;
             max-width: 100%;
         }
         .admin-meta-chip .material-symbols-outlined { font-size: 13px; color: #ffd24d; flex-shrink: 0; }
-        .admin-meta-chip .chip-company { color: #7bed9f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 190px; }
-        .admin-actions-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
-        .action-icon-btn {
-            width: 36px; height: 36px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.06);
-            display: flex; justify-content: center; align-items: center;
-            border: none; cursor: pointer; transition: 0.2s; outline: none;
+        .admin-actions-row {
+            display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap;
+            margin-top: 13px; padding-top: 12px;
+            border-top: 1px dashed rgba(255,255,255,0.12);
         }
-        .action-icon-btn:hover { background: rgba(255,255,255,0.14); transform: translateY(-1px); }
-        .action-icon-btn:active { transform: scale(0.88); }
-        .action-icon-btn .material-symbols-outlined { font-size: 20px !important; }
-        .icon-edit { color: #6da9ff !important; }
-        .icon-ban { color: #ff6b7a !important; }
-        .icon-unban { color: #3ce69a !important; }
-        .icon-log { color: #ffd24d !important; }
-        .icon-del { color: #ff6b7a !important; }
+        .action-icon-btn {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            border: 1px solid rgba(255,255,255,0.14);
+            cursor: pointer; outline: none;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+        }
+        .action-icon-btn:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 6px 16px rgba(0,0,0,0.45); }
+        .action-icon-btn:active { transform: scale(0.9); }
+        .action-icon-btn .material-symbols-outlined { font-size: 22px !important; }
+        .icon-edit { color: #6da9ff !important; background: rgba(109,169,255,0.15) !important; }
+        .icon-ban { color: #ff6b7a !important; background: rgba(255,107,122,0.14) !important; }
+        .icon-unban { color: #3ce69a !important; background: rgba(60,230,154,0.14) !important; }
+        .icon-log { color: #ffd24d !important; background: rgba(255,210,77,0.13) !important; }
+        .icon-del { color: #ff6b7a !important; background: rgba(255,107,122,0.14) !important; }
+        .icon-call { color: #3ce69a !important; background: rgba(60,230,154,0.13) !important; }
         .status-online { background: #2fd883; box-shadow: 0 0 10px #2fd883; }
         .status-banned { background: #ff4d5f; box-shadow: 0 0 10px #ff4d5f; }
         .status-offline { background: #5a6478; }
@@ -1804,7 +1810,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07z';
+    const APP_BUILD = '2026-09-08a';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5874,7 +5880,9 @@
         'ประวัติล่าสุดในช่องค้นหาจุดหมาย: ปุ่ม "ล้าง" เปลี่ยนเป็นรูปถังขยะ (ไม่มีกรอบ) + แต่ละรายการมีถังขยะลบรายการนั้นรายการเดียวได้',
         'ซ่อนการ์ด "สิทธิ์การใช้งานของฉัน" (รายการสิทธิ์ยาว ๆ) ออกจากหน้าตั้งค่าโปรไฟล์ทั้งแอดมินและผู้ใช้ทั่วไป — ยังเหลือการ์ด "สิทธิ์ที่ยังไม่ได้ / ขอสิทธิ์เพิ่ม" (ยุบไว้) ให้ขอสิทธิ์ได้ตามเดิม',
         '🔐 เปลี่ยนระบบเก็บรหัสผ่านจาก plaintext มาเป็น SHA-256 + salt (ต่อบัญชี) ทั้งระบบ — บัญชีเก่าล็อกอินได้เหมือนเดิมและถูกอัปเกรดเป็นแฮชให้อัตโนมัติ แอดมินดูรหัสจริงของคนอื่นไม่ได้แล้ว เหลือแค่ตั้งรหัสใหม่ให้',
-        'ย้ายระบบล็อกอิน: ตรวจรหัสผ่านด้วย username + เปรียบเทียบ hash ฝั่งเครื่อง (ไม่ query ตามรหัสผ่านตรง ๆ อีกต่อไป)'
+        'ย้ายระบบล็อกอิน: ตรวจรหัสผ่านด้วย username + เปรียบเทียบ hash ฝั่งเครื่อง (ไม่ query ตามรหัสผ่านตรง ๆ อีกต่อไป)',
+        'การ์ดในระบบจัดการผู้ใช้งาน: สถานะ ออนไลน์/ออฟไลน์ ตรงจริงและสด (เปิดแอปค้าง/กลับมาที่แอป/เปิดหน้าจัดการ → ปักหมุดออนไลน์ทันที + เต้นหัวใจทุก 45 วิ)',
+        'การ์ดในระบบจัดการผู้ใช้งาน: เอาช่องชื่อบริษัท/สหกรณ์ (หัวบิล) ออก เหลือ เข้าใช้ล่าสุด + ทะเบียนรถ และจัดปุ่ม โทร/แบน/ประวัติ/แก้ไข/ลบ ไว้กึ่งกลางแบบใหม่สวยขึ้น'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6113,12 +6121,17 @@
         });
     };
 
-    if (loggedInUserId) { listenToMyUser(); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
+    if (loggedInUserId) { setDoc(doc(db, "users", loggedInUserId), { isOnline: true }, { merge: true }).catch(() => {}); listenToMyUser(); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
     // 🔧 โหลดข้อความแจ้งเตือนที่แอดมินแก้ไว้ (Firestore) — ใช้ได้ทุกหน้าแม้ยังไม่ล็อกอิน
     if (typeof window.loadToastMsgOverrides === 'function') window.loadToastMsgOverrides();
     // 🏷️ โหลด/ซิงก์ประวัติเวอร์ชัน (อ่านได้ทุกคน; ถ้าโค้ดปล่อยเวอร์ชันใหม่ ระบบจะรันเวอร์ชันให้อัตโนมัติ)
     if (typeof window.ensureChangelog === 'function') window.ensureChangelog();
     window.addEventListener('beforeunload', () => { if(loggedInUserId) { setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); } });
+    // 💚 สถานะออนไลน์ให้ตรงจริง: คนที่กำลังใช้แอปอยู่จะโชว์ "ออนไลน์" ในหน้าจัดการผู้ใช้ (อัปเดตสดผ่าน snapshot)
+    window.markMeOnline = () => { if(loggedInUserId && document.visibilityState !== 'hidden') { setDoc(doc(db, "users", loggedInUserId), { isOnline: true }, { merge: true }).catch(() => {}); } };
+    window.addEventListener('focus', () => { window.markMeOnline(); });
+    document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') window.markMeOnline(); });
+    setInterval(() => { window.markMeOnline(); }, 45000); // เต้นหัวใจทุก 45 วิ กันสถานะหลุดตอนแอปค้างทั้งวัน
 
     // 🔐 ระบบรหัสผ่านแบบแฮช (SHA-256 + salt ต่อบัญชี) — ไม่เก็บ plaintext ในฐานข้อมูลอีกต่อไป
     // รูปแบบที่เก็บ:  "sha256$<salt>$<hex>" โดย hash = SHA-256(salt + '::' + รหัส)
@@ -6311,6 +6324,8 @@
 
     window.handleAdminModalState = (isOpen) => {
         if(isOpen) {
+            if (window.markMeOnline) window.markMeOnline(); // เปิดหน้าจัดการผู้ใช้ → ปักหมุดตัวเองออนไลน์ทันที (การ์ดจะรีเฟรชเป็น "ออนไลน์")
+            
             let isGod = currentUserRole === "Admin"; let myPerms = isGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
             // ปุ่มดูประวัติรวมทั้งระบบ (Global Logs) — เฉพาะแอดมินหรือผู้มีสิทธิ์ canViewGlobalLogs
             const glBtn = document.getElementById('adminGlobalLogsBtn'); if (glBtn) glBtn.style.display = (isGod || myPerms.canViewGlobalLogs) ? 'flex' : 'none';
@@ -6326,7 +6341,7 @@
                     const formatDate = (timestamp) => { if(!timestamp) return "-"; const d = new Date(timestamp); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
                     const roleKey = u.role || 'User';
                     const roleBadge = `<span class="admin-role-badge role-${window.roleClassKey(roleKey)}">${window.roleLabelShort(roleKey)}</span>`;
-                    const lastLoginChip = u.lastLoginAt ? `<span class="admin-meta-chip"><span class="material-symbols-outlined">lightbulb</span>เข้าใช้: ${formatDate(u.lastLoginAt)}</span>` : '';
+                    const lastLoginChip = u.lastLoginAt ? `<span class="admin-meta-chip"><span class="material-symbols-outlined">lightbulb</span>เข้าใช้ล่าสุด: ${formatDate(u.lastLoginAt)}</span>` : '';
                     let safePhoto = u.photoURL && u.photoURL.length > 10 ? u.photoURL : window.DEFAULT_AVATAR; let safeName = u.displayName || u.username; let safeRole = u.role || 'User'; let safeUsername = u.username || '';
                     
                     let dragHandleHtml = myPerms.canEdit ? `<div class="drag-handle" style="display:flex; align-items:center; cursor:grab; padding-right:5px; touch-action:none;"><span class="material-symbols-outlined" style="color: rgba(255,255,255,0.4); font-size: 28px;">drag_indicator</span></div>` : '';
@@ -6338,7 +6353,7 @@
                     let canCallThisStaff = (isGod || myPerms.canCallStaff);
                     
                     if(canCallThisStaff && u.phoneNumber && u.phoneNumber.trim() !== '') {
-                        callBtnHtml = `<button onclick="window.location.href='tel:${u.phoneNumber}'" class="action-icon-btn" style="color: var(--neon-green);" title="โทรออก"><span class="material-symbols-outlined" style="font-size:26px;">call</span></button>`;
+                        callBtnHtml = `<button onclick="window.location.href='tel:${u.phoneNumber}'" class="action-icon-btn icon-call" title="โทรออก"><span class="material-symbols-outlined">call</span></button>`;
                     }
 
                     if(canTouchThisUser) {
@@ -6353,8 +6368,7 @@
                     if(canDeleteThisUser) { deleteBtn = `<button onclick="window.quickDeleteUser('${uid}', '${safeName}')" class="action-icon-btn icon-del" title="ลบผู้ใช้"><span class="material-symbols-outlined" style="font-size:26px;">delete</span></button>`; }
 
                     const plateChip = (u.plateNo && u.plateNo.trim()) ? `<span class="admin-meta-chip"><span class="material-symbols-outlined">directions_car</span>ทะเบียน: ${u.plateNo.trim()}</span>` : '';
-                    const companyChip = (u.companyName && u.companyName.trim()) ? `<span class="admin-meta-chip"><span class="material-symbols-outlined">domain</span><span class="chip-company">${u.companyName.trim()}</span></span>` : '';
-                    html += `<div class="admin-user-card">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">@${safeUsername}</span><span class="admin-user-statusline">${statusHtml}</span></div></div><div class="admin-meta-row">${lastLoginChip}${companyChip}${plateChip}</div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div></div>`;
+                    html += `<div class="admin-user-card">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">@${safeUsername}</span><span class="admin-user-statusline">${statusHtml}</span></div></div><div class="admin-meta-row">${lastLoginChip}${plateChip}</div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div></div>`;
                 });
                 document.getElementById('adminUserList').innerHTML = html || '<div style="padding: 20px; color: gray;">ไม่พบข้อมูล</div>';
 
