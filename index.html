@@ -1845,7 +1845,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, limit, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08o';
+    const APP_BUILD = '2026-09-08p';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5826,8 +5826,8 @@
         if (!loggedInUserId) return;
         const list = document.getElementById('oucList');
         if (!list) return;
-        // รวมทุกคนที่ออนไลน์อยู่ (รวมแอดมิน + ตัวเราเอง)
-        const online = Object.keys(userOnlineStates).filter(uid => userOnlineStates[uid] && userOnlineStates[uid].isOnline);
+        // รวมทุกคนที่ออนไลน์อยู่ (รวมแอดมิน + ตัวเราเอง) — ใช้ lastSeen ตัดสินความสด (ปิด/คิลแอป → หายอัตโนมัติ)
+        const online = Object.keys(userOnlineStates).filter(uid => userOnlineStates[uid] && window.isUserOnlineLive(userOnlineStates[uid]));
         document.getElementById('oucCount').textContent = online.length > 0 ? `(${online.length} คน)` : '';
         if (online.length === 0) { list.innerHTML = '<div class="ouc-empty">ไม่มีใครออนไลน์อยู่</div>'; return; }
         list.innerHTML = online.map(uid => {
@@ -6026,7 +6026,8 @@
         '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้',
         '🔕 แก้ toast เข้าสู่ระบบ/ออกจากระบบ เด้งรัวๆ ทั้งวัน — แจ้งเฉพาะบัญชีแอดมินเท่านั้น + กันซ้ำต่อคนภายใน 10 วิ (และเครื่องที่โดนไล่ออกไม่เขียนสถานะออฟไลน์ทับเครื่องใหม่)',
         '🐛 แก้ toast แดง "ถูกเข้าสู่ระบบจากเครื่องอื่น" เด้งตอนกดออกจากระบบเอง — หมุน session token แล้วไม่ให้ snapshot ตัวเองเด้งเตือนหลอก (เด้งเฉพาะตอนล็อกอินซ้อนจริง ๆ)',
-        '👥 การ์ด "ออนไลน์ตอนนี้" เห็นทุก user (รวมแอดมิน): รายชื่อ 1 แถวเลื่อนสไลด์ได้ (เมาส์ลาก/นิ้วปัด) แสดงแค่รูปโปรไฟล์+ชื่อ และกรอบรูปสีตามตำแหน่ง (แอดมินทอง/ผู้จัดการฟ้า/ผู้ใช้เขียว) + toast แจ้ง login/logout ให้แอดมินแบบเชื่อถือได้ (อ่านจาก log จริง ไม่ใช่การเดาจาก isOnline — ครบทั้งสองทาง กันซ้ำ 10 วิ ไม่รัว)'
+        '👥 การ์ด "ออนไลน์ตอนนี้" เห็นทุก user (รวมแอดมิน): รายชื่อ 1 แถวเลื่อนสไลด์ได้ (เมาส์ลาก/นิ้วปัด) แสดงแค่รูปโปรไฟล์+ชื่อ และกรอบรูปสีตามตำแหน่ง (แอดมินทอง/ผู้จัดการฟ้า/ผู้ใช้เขียว) + toast แจ้ง login/logout ให้แอดมินแบบเชื่อถือได้ (อ่านจาก log จริง ไม่ใช่การเดาจาก isOnline — ครบทั้งสองทาง กันซ้ำ 10 วิ ไม่รัว)',
+        '🕐 สถานะออนไลน์เรียลไทม์แม่นยำ: เขียน lastSeen ครั้งละ 30 วิ + กันปิดแอป/คิลแอปโดยไม่ log out (pagehide + lastSeen เก่าเกิน 90 วิ) — ปิดแอปปุ๊บรูปหายจากรายชื่อทันที กลับมาเปิดแอปปั๊บขึ้นรูปทันที ไม่ต้องรีเฟรช'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6304,12 +6305,16 @@
     if (typeof window.loadToastMsgOverrides === 'function') window.loadToastMsgOverrides();
     // 🏷️ โหลด/ซิงก์ประวัติเวอร์ชัน (อ่านได้ทุกคน; ถ้าโค้ดปล่อยเวอร์ชันใหม่ ระบบจะรันเวอร์ชันให้อัตโนมัติ)
     if (typeof window.ensureChangelog === 'function') window.ensureChangelog();
-    window.addEventListener('beforeunload', () => { if(loggedInUserId) { setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }); } });
-    // 💚 สถานะออนไลน์ให้ตรงจริง: คนที่กำลังใช้แอปอยู่จะโชว์ "ออนไลน์" ในหน้าจัดการผู้ใช้ (อัปเดตสดผ่าน snapshot)
-    window.markMeOnline = () => { if(loggedInUserId && document.visibilityState !== 'hidden') { setDoc(doc(db, "users", loggedInUserId), { isOnline: true }, { merge: true }).catch(() => {}); } };
+    window.addEventListener('beforeunload', () => { if(loggedInUserId) { setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }).catch(() => {}); } });
+    window.addEventListener('pagehide', () => { if(loggedInUserId) { setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true }).catch(() => {}); } });
+    // 💚 สถานะออนไลน์ให้ตรงจริง: คนที่กำลังใช้แอปอยู่จะโชว์ "ออนไลน์" (อัปเดตสดผ่าน snapshot)
+    // + เขียน lastSeen ทุกครั้งที่ปักหมุด — ฝั่งคนดูใช้ "lastSeen ยังสดไหม" ตัดสิน (ปิด/คิลแอปโดยไม่ log out → lastSeen ค้างเก่า → หายจากรายชื่ออัตโนมัติ)
+    window.markMeOnline = () => { if(loggedInUserId && document.visibilityState !== 'hidden') { setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastSeen: Date.now() }, { merge: true }).catch(() => {}); } };
     window.addEventListener('focus', () => { window.markMeOnline(); });
     document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') window.markMeOnline(); });
-    setInterval(() => { window.markMeOnline(); }, 45000); // เต้นหัวใจทุก 45 วิ กันสถานะหลุดตอนแอปค้างทั้งวัน
+    setInterval(() => { window.markMeOnline(); }, 30000); // เต้นหัวใจทุก 30 วิ — กันสถานะหลุดตอนแอปค้างทั้งวัน + ใช้เป็นตัวบอก "ยังสดอยู่"
+    // 👁️ เกณฑ์ "ออนไลน์จริง" สำหรับฝั่งดู: isOnline=true และ lastSeen ไม่เก่าเกิน 90 วิ (ปิด/คิลแอปโดยไม่ log out → รูปหายจากรายชื่ออัตโนมัติ แม้ไม่มี event ตอนปิด)
+    window.isUserOnlineLive = (u) => !!(u && u.isOnline === true && (!u.lastSeen || (Date.now() - u.lastSeen) < 90000));
 
     // 🔐 ระบบรหัสผ่านแบบแฮช (PBKDF2-HMAC-SHA256 สำหรับรหัสใหม่ + รองรับรุ่นเก่า sha256$/plaintext ตอนตรวจ) — ไม่เก็บ plaintext
     // รูปแบบใหม่:  "pbkdf2$<iterations>$<salt>$<hex>" โดย hex = PBKDF2-HMAC-SHA256(รหัส, salt, iterations, 32 ไบต์)
@@ -6643,7 +6648,8 @@
                 let html = '';
                 window.currentAdminUsers.forEach((u) => {
                     let uid = u.uid; let statusHtml = '';
-                    if(u.isBanned) { statusHtml = '<span class="status-dot status-banned"></span><span style="color:var(--accent-red)">ถูกระงับ (Ban)</span>'; } else if(u.isOnline) { statusHtml = '<span class="status-dot status-online"></span><span style="color:var(--neon-green)">ออนไลน์</span>'; } else { statusHtml = '<span class="status-dot status-offline"></span><span style="color:#a0a5b5">ออฟไลน์</span>'; }
+                    const uLiveOnline = (typeof window.isUserOnlineLive === 'function') ? window.isUserOnlineLive(u) : u.isOnline; // 👁️ นับเฉพาะคนที่ lastSeen ยังสด (ปิด/คิลแอป → ขึ้นออฟไลน์อัตโนมัติ)
+                    if(u.isBanned) { statusHtml = '<span class="status-dot status-banned"></span><span style="color:var(--accent-red)">ถูกระงับ (Ban)</span>'; } else if(uLiveOnline) { statusHtml = '<span class="status-dot status-online"></span><span style="color:var(--neon-green)">ออนไลน์</span>'; } else { statusHtml = '<span class="status-dot status-offline"></span><span style="color:#a0a5b5">ออฟไลน์</span>'; }
                     const formatDate = (timestamp) => { if(!timestamp) return "-"; const d = new Date(timestamp); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
                     const roleKey = u.role || 'User';
                     const roleBadge = `<span class="admin-role-badge role-${window.roleClassKey(roleKey)}">${window.roleLabelShort(roleKey)}</span>`;
