@@ -1028,8 +1028,12 @@
         .myperms-badge.badge-Admin { background: rgba(241,196,15,0.16); color: var(--neon-yellow); border: 1px solid rgba(241,196,15,0.45); }
         .myperms-badge.badge-Manager { background: rgba(52,211,153,0.14); color: #5eead4; border: 1px solid rgba(52,211,153,0.45); }
         .myperms-badge.badge-User { background: rgba(148,163,184,0.14); color: #cbd5e1; border: 1px solid rgba(148,163,184,0.4); }
-        .myperm-chip { display: inline-flex; align-items: center; gap: 5px; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4); color: #4ade80; border-radius: 999px; padding: 5px 11px; font-size: 12.5px; line-height: 1.35; }
+        .myperm-chip { display: inline-flex; align-items: center; gap: 5px; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4); color: #4ade80; border-radius: 999px; padding: 5px 11px; font-size: 12.5px; line-height: 1.35; transition: 0.15s; -webkit-tap-highlight-color: transparent; }
         .myperm-chip .material-symbols-outlined { font-size: 15px; color: #4ade80; flex-shrink: 0; }
+        .myperm-chip.nav { cursor: pointer; }
+        .myperm-chip.nav:active { transform: scale(0.94); background: rgba(34,197,94,0.22); }
+        .myperm-chip.nav .chip-go { font-size: 16px; color: #86efac; margin-left: 1px; }
+        .myperm-chip.static { cursor: default; opacity: 0.88; }
         /* 🎛️ ปุ่มจัดการตำแหน่ง (Role) ในหน้าตั้งค่าสิทธิ์ */
         .role-manage-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; padding: 10px; font-size: 14px; cursor: pointer; font-family: 'Kanit'; transition: 0.2s; }
         .role-manage-btn:hover { filter: brightness(1.15); }
@@ -1762,7 +1766,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07e';
+    const APP_BUILD = '2026-09-07f';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -3204,15 +3208,33 @@
         const list = (window.currentPermConfig && window.currentPermConfig.length ? window.currentPermConfig : window.defaultPermConfig) || [];
         const allowed = list.filter(p => isGod || perms[p.id.replace('perm_', '')]);
         if (!allowed.length) { wrap.innerHTML = ''; return; }
+        // สิทธิ์กลุ่ม "จัดการตัวเอง" — ทำได้ในหน้าโปรไฟล์นี้อยู่แล้ว ไม่มีหน้าต่างแยกให้เปิด
+        const selfPerms = ['perm_canEditOwn', 'perm_canDeleteMedia'];
+        const navKeys = ['perm_canViewUsers','perm_canAdd','perm_canEdit','perm_canChangeUserRole','perm_canViewPassword','perm_canBan','perm_canDelete','perm_canCallStaff','perm_canSetStaffPrefs','perm_canViewLogs','perm_canViewGlobalLogs','perm_canManageService','perm_canManageToastMsg','perm_canManageRoles'];
         let chips = '';
-        allowed.forEach(p => { chips += '<span class="myperm-chip"><span class="material-symbols-outlined">check_circle</span>' + p.label + '</span>'; });
+        allowed.forEach(p => {
+            const isSelf = selfPerms.indexOf(p.id) !== -1;
+            const isNav = navKeys.indexOf(p.id) !== -1;
+            chips += '<span class="myperm-chip ' + (isSelf ? 'static' : 'nav') + '" ' + (isNav ? 'onclick="window.openPermTarget(\'' + p.id + '\')" title="แตะเพื่อเปิดหน้าต่างที่ตรงกับสิทธินี้"' : '') + '><span class="material-symbols-outlined">' + (isSelf ? 'person' : 'check_circle') + '</span>' + p.label + (isNav ? '<span class="material-symbols-outlined chip-go">chevron_right</span>' : '') + '</span>';
+        });
         wrap.innerHTML = '<div class="myperms-card">' +
             '<div class="myperms-head"><span class="material-symbols-outlined" style="color: var(--neon-yellow); font-size: 22px;">verified_user</span>' +
             '<b style="color: white; font-size: 15px;">สิทธิ์การใช้งานของฉัน</b>' +
             '<span class="myperms-badge badge-' + role + '">' + roleTH + '</span></div>' +
             '<div style="font-size: 12px; color: var(--text-dim); margin-bottom: 10px;">' + (isGod ? 'บัญชีนี้เป็นผู้ดูแลระบบ — เข้าถึงได้ทุกอย่างในแอป:' : 'บัญชีนี้ทำได้ตามสิทธิ์ที่ผู้ดูแลระบบกำหนด:') + '</div>' +
             '<div style="display: flex; flex-wrap: wrap; gap: 8px;">' + chips + '</div>' +
+            (allowed.some(p => navKeys.indexOf(p.id) !== -1) ? '<div style="font-size: 11px; color: #86efac; margin-top: 10px; text-align: left; display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">touch_app</span> แตะชิปเขียวเพื่อเปิดหน้าต่างที่ตรงกับสิทธินั้น</div>' : '') +
             '</div>';
+    };
+    // 🖱️ แตะชิปสิทธิ์ → เปิดหน้าต่าง/เมนูที่ตรงกับสิทธินั้น (เปิดซ้อนบนหน้าโปรไฟล์ ปิดแล้วกลับมาที่โปรไฟล์)
+    window.openPermTarget = (permId) => {
+        if (permId === 'perm_canManageRoles') { if (typeof window.openRoleSettingsModal === 'function') window.openRoleSettingsModal(); else window.showToast('คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน', true); return; }
+        if (permId === 'perm_canManageToastMsg') { if (typeof window.openToastMsgModal === 'function') window.openToastMsgModal(); else window.showToast('คุณไม่มีสิทธิ์จัดการข้อความแจ้งเตือน', true); return; }
+        if (permId === 'perm_canManageService') { if (typeof window.openServicePortal === 'function') window.openServicePortal(true); else window.showToast('คุณไม่มีสิทธิ์จัดการ Portal', true); return; }
+        if (permId === 'perm_canViewGlobalLogs') { if (typeof window.viewGlobalLogs === 'function') window.viewGlobalLogs(); else window.showToast('คุณไม่มีสิทธิ์ดูประวัติรวมทั้งระบบ', true); return; }
+        if (permId === 'perm_canEditOwn' || permId === 'perm_canDeleteMedia') { window.showToast('สิทธิ์นี้ใช้กับหน้าโปรไฟล์ปัจจุบัน — แก้ไขได้จากหน้านี้เลย'); return; }
+        // สิทธิ์ที่เหลือเกี่ยวข้องกับการจัดการพนักงาน → เปิดหน้าจัดการผู้ใช้งาน
+        window.toggleModal('adminMenuModal', true);
     };
     window.openProfileModal = () => {
         // โหลดค่าที่เลือกไว้ (จาก Firestore ตอนล็อกอิน) ลงใน dropdown ของหน้าโปรไฟล์
