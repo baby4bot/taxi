@@ -202,7 +202,11 @@
         .dropdown-box { position: absolute; background: rgba(30, 32, 45, 0.95); width: 100%; z-index: 1000; border-radius: 20px; max-height: 320px; overflow-y: auto; display: none; margin-top: 10px; border: 1px solid var(--border-glass); box-shadow: 0 15px 40px rgba(0,0,0,0.8); backdrop-filter: blur(15px); -ms-overflow-style: none; scrollbar-width: none; }
         .dropdown-box::-webkit-scrollbar { display: none; }
         .history-header { padding: 15px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border-glass); display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--neon-green); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(5px); }
-        .clear-history-btn { background: rgba(255, 71, 87, 0.1); color: var(--accent-red); padding: 6px 14px; border-radius: 10px; font-size: 11px; cursor: pointer; border: 1px solid rgba(255, 71, 87, 0.3); font-weight: 600; }
+        .clear-history-btn { background: none; color: var(--accent-red); padding: 6px; border-radius: 8px; font-size: 11px; cursor: pointer; border: none; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+        .clear-history-btn:active { transform: scale(0.88); }
+        .hist-del-btn { background: none; border: none; color: rgba(255,255,255,0.35); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px; flex-shrink: 0; -webkit-tap-highlight-color: transparent; transition: color 0.2s, transform 0.15s; }
+        .hist-del-btn:hover { color: var(--accent-red); }
+        .hist-del-btn:active { transform: scale(0.88); }
         .list-item { padding: 16px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); text-align: left; font-size: 14px; display: flex; align-items: center; gap: 12px; transition: 0.2s; }
         .list-item:hover { background: rgba(255,255,255,0.05); }
         .item-icon { font-size: 20px !important; color: var(--neon-green); text-shadow: 0 0 10px rgba(46, 204, 113, 0.4); flex-shrink: 0; }
@@ -1800,7 +1804,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07w';
+    const APP_BUILD = '2026-09-07x';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -4020,9 +4024,18 @@
 
     window.saveHistory = (name, lat, lon) => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]').filter(i => i.name !== name); h.unshift({ name, lat, lon }); localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 10))); };
     
-    window.showHistory = () => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); if (!h.length) { $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; window.updateClearDestBtn(); return; } $('historyList').innerHTML = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ประวัติล่าสุด</span><button class="clear-history-btn" onclick="event.stopPropagation(); window.clearSearchHistory();">ล้าง</button></div>` + h.map(i => `<div class="list-item" onclick="window.selectLocation('${i.name}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span>${i.name}</div>`).join(''); $('suggestionList').style.display = 'none'; $('historyList').style.display = 'block'; window.updateClearDestBtn(); };
+    window.showHistory = () => { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); if (!h.length) { $('historyList').style.display = 'none'; $('suggestionList').style.display = 'none'; window.updateClearDestBtn(); return; } $('historyList').innerHTML = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ประวัติล่าสุด</span><button class="clear-history-btn" onclick="event.stopPropagation(); window.clearSearchHistory();" title="ล้างประวัติทั้งหมด"><span class="material-symbols-outlined" style="font-size: 20px;">delete</span></button></div>` + h.map((i, idx) => `<div class="list-item" onclick="window.selectLocation('${i.name}', ${i.lat}, ${i.lon})"><span class="material-symbols-outlined item-icon">location_on</span><span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${i.name}</span><button class="hist-del-btn" onclick="event.stopPropagation(); window.removeSearchHistoryItem(${idx})" title="ลบรายการนี้"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span></button></div>`).join(''); $('suggestionList').style.display = 'none'; $('historyList').style.display = 'block'; window.updateClearDestBtn(); };
     
-    // 🧹 ปุ่ม "ล้าง" ในหัวข้อประวัติล่าสุด: ลบประวัติทั้งหมดในเครื่อง + ซ่อนรายการทันที
+    // 🗑️ ปุ่มถังขยะรายการ: ลบประวัติจุดหมายรายการนั้นรายการเดียว แล้ววาดใหม่ทันที
+    window.removeSearchHistoryItem = (idx) => {
+        try {
+            const h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            if (idx >= 0 && idx < h.length) h.splice(idx, 1);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+            window.showHistory();
+        } catch (e) {}
+    };
+    // 🧹 ปุ่มถังขยะ "ล้างทั้งหมด" ในหัวข้อประวัติล่าสุด: ลบประวัติทั้งหมดในเครื่อง + ซ่อนรายการทันที
     // (ต้องเรียกผ่าน window.* — inline onclick เข้าไม่ถึงตัวแปร `$`/HISTORY_KEY ใน module → เดิมพังต้องรีเฟรชถึงจะหาย)
     window.clearSearchHistory = () => {
         try { localStorage.removeItem(HISTORY_KEY); } catch(e) {}
@@ -5862,7 +5875,9 @@
         'หน้าคำขอสิทธิ์เพิ่มแยกเป็นปุ่ม อนุมัติสิทธิ์ / ปฏิเสธ — อนุมัติจะให้สิทธิ์ที่ขอทั้งหมดแก่สมาชิกทันที (ไม่เปลี่ยนตำแหน่ง) และผู้ขอเห็น toast แจ้งผลตอนเปิดแอป (อนุมัติ=ทอง / ปฏิเสธ=แดง) ครั้งเดียว',
         'แท็บหมวดหมู่ไอคอน Material เลื่อนซ้าย-ขวาบนคอมได้ด้วย (หมุนล้อเมาส์/ลากเมาส์ + แถบเลื่อนบาง) เหมือนบนมือถือ',
         'ช่องค้นหาไอคอนรองรับคำค้นภาษาไทย (เช่น รถ เงิน เตือน โทร อาหาร เวลา แผนที่ ฯลฯ) — พิมพ์ชื่อไทยแล้วกรองไอคอนที่ตรงได้เลย',
-        'ย้ายเลขเวอร์ชัน (v…) จากหัวหน้าแรกไปไว้มุมขวาล่างลอย ๆ (แตะเปิดประวัติเวอร์ชันได้เหมือนเดิม) และซ่อนป้าย "เต็มจออัตโนมัติ: เปิด/ปิด" ออกจากหน้าแรก'
+        'ย้ายเลขเวอร์ชัน (v…) จากหัวหน้าแรกไปไว้มุมขวาล่างลอย ๆ (แตะเปิดประวัติเวอร์ชันได้เหมือนเดิม) และซ่อนป้าย "เต็มจออัตโนมัติ: เปิด/ปิด" ออกจากหน้าแรก',
+        'แก้บั๊ก: รหัสผ่านแอดมินไม่โดนรีเซ็ตกลับเป็น 060421 อีกแล้ว — ทางเข้าลับ admin/060421 ใช้ได้เฉพาะตอนบัญชียังใช้รหัสเริ่มต้น (เปลี่ยนรหัสแล้ว 060421 ใช้ไม่ได้ และไม่เขียนทับรหัสจริงเด็ดขาด)',
+        'ประวัติล่าสุดในช่องค้นหาจุดหมาย: ปุ่ม "ล้าง" เปลี่ยนเป็นรูปถังขยะ (ไม่มีกรอบ) + แต่ละรายการมีถังขยะลบรายการนั้นรายการเดียวได้'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6117,9 +6132,21 @@
                 const qAdmin = query(collection(db, "users"), where("username", "==", "admin")); const querySnapshotAdmin = await getDocs(qAdmin);
                 let adminId = "";
                 if (querySnapshotAdmin.empty) {
+                    // ครั้งแรกสุด (ยังไม่มีบัญชี admin เลย) → สร้างบัญชีเริ่มต้นให้
                     const docRef = await addDoc(collection(db, "users"), { username: "admin", password: "060421", displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, tollwayMode: false, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
                     adminId = docRef.id;
-                } else { adminId = querySnapshotAdmin.docs[0].id; await updateDoc(doc(db, "users", adminId), { password: "060421", role: "Admin", isOnline: true, isBanned: false, lastLoginAt: Date.now() }); }
+                } else {
+                    const adminDoc = querySnapshotAdmin.docs[0];
+                    adminId = adminDoc.id;
+                    // 🔒 กันรหัสผ่านแอดมินโดนรีเซ็ตกลับเป็น 060421: ทางเข้าลับนี้ใช้ได้เฉพาะตอนบัญชียังใช้รหัสเริ่มต้นอยู่
+                    // ถ้าแอดมินเปลี่ยนรหัสผ่านแล้ว (เช่น @9dJE7aKe) → 060421 ไม่ใช่รหัสจริงอีกต่อไป ต้องล็อกอินด้วยรหัสที่เปลี่ยนไป (ไม่เขียนทับรหัสผ่านเด็ดขาด)
+                    if ((adminDoc.data().password || '') !== "060421") {
+                        window.showToast("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด", true);
+                        document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
+                    }
+                    // ยังเป็นรหัสเริ่มต้น → เข้าได้ตามปกติ แต่ไม่เขียนทับ password/role อีกต่อไป
+                    await updateDoc(doc(db, "users", adminId), { isOnline: true, isBanned: false, lastLoginAt: Date.now() });
+                }
                 loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
                 window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
             }
