@@ -1826,7 +1826,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08i';
+    const APP_BUILD = '2026-09-08j';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -1955,7 +1955,7 @@
     let myExtraPerms = {}; // สิทธิ์พิเศษที่แอดมินอนุมัติให้บัญชีนี้โดยเฉพาะ (extraPerms ใน user doc — ไม่เปลี่ยนตำแหน่ง)
     let isBannedState = false;
     let globalUsersUnsub = null, permsUnsub = null, permConfigUnsub = null, myUserUnsub = null, serviceDataUnsub = null, adminSnapshotUnsub = null, permReqUnsub = null;
-    let userOnlineStates = {}; let isInitialUserLoad = true;
+    let userOnlineStates = {}; let isInitialUserLoad = true; let lastUserToastAt = {}; // ⏱️ กัน toast เข้าสู่ระบบ/ออกจากระบบ รัวๆ (debounce ต่อคน)
     window.myCurrentQrCodeURL = ""; window.myCurrentDisplayName = ""; window.myCurrentPhotoURL = ""; window.myCurrentCompanyName = ""; window.myCurrentPlateNo = ""; window.currentAdminUsers = [];
 
     // รายการสิทธิ์ทั้งหมด — แต่ละข้อผูกกับฟีเจอร์/ปุ่มจริงในแอป (Admin เป็น god เห็นหมดเสมอ; Manager/User ตั้งได้ตามที่ admin ติ๊ก)
@@ -5801,9 +5801,15 @@
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "modified" || change.type === "added") {
                     const data = change.doc.data(); const oldState = userOnlineStates[change.doc.id];
-                    if (change.doc.id !== loggedInUserId && oldState !== undefined) {
-                        if (data.isOnline && !oldState) { window.showToast(`${data.displayName || data.username} เข้าสู่ระบบ`, false, data.photoURL); } 
-                        else if (!data.isOnline && oldState) { window.showToast(`${data.displayName || data.username} ออกจากระบบ`, true, data.photoURL); }
+                    // 🔕 แจ้งเตือน เข้าสู่ระบบ/ออกจากระบบ เฉพาะแอดมิน (ต้องรู้ว่าพนักงานคนไหนออนไลน์อยู่) — ผู้ใช้ทั่วไปไม่ต้องโดนสแปม
+                    // + debounce ต่อคน (10 วิ) กันสถานะดีดไปมารัวๆ (โดนไล่ออก/ล็อกอินใหม่/เปิด-ปิดแอป) แล้วเด้งรัวๆ ทุกเครื่อง
+                    if (change.doc.id !== loggedInUserId && oldState !== undefined && currentUserRole === 'Admin') {
+                        const now = Date.now();
+                        if ((lastUserToastAt[change.doc.id] || 0) + 10000 < now) {
+                            lastUserToastAt[change.doc.id] = now;
+                            if (data.isOnline && !oldState) { window.showToast(`${data.displayName || data.username} เข้าสู่ระบบ`, false, data.photoURL); } 
+                            else if (!data.isOnline && oldState) { window.showToast(`${data.displayName || data.username} ออกจากระบบ`, true, data.photoURL); }
+                        }
                     }
                     userOnlineStates[change.doc.id] = data.isOnline;
                 }
@@ -5905,7 +5911,8 @@
         'ย้ายชิปทางด่วนที่เพิ่ม + ยอดรวม "รวมค่าทางด่วน" จากด้านบนการ์ดเข้าไปอยู่ในการ์ดประเมินราคา ใต้ปุ่ม + ค่าทางด่วน (มุมซ้ายบนในตัวการ์ด)',
         'เพิ่ม SHA-256 แบบ pure-JS เป็นตัวสำรอง — เปิดไฟล์ index.html แบบ file:// ตรง ๆ ก็ล็อกอินบัญชีที่แฮชแล้วได้ (เบราว์เซอร์ปกติปิด crypto.subtle ในหน้าไม่ปลอดภัย)',
         '🔒 อัปเกรดแฮชรหัสผ่านใหม่เป็น PBKDF2-HMAC-SHA256 (100,000 รอบ + salt ต่อบัญชี) — รุ่นเก่า sha256$/plaintext ยังล็อกอินได้ และถูกอัปเกรดเป็น PBKDF2 ให้อัตโนมัติหลังล็อกอินสำเร็จ (มี pure-JS fallback ให้ใช้ได้แม้เปิด file://)',
-        '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้'
+        '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้',
+        '🔕 แก้ toast เข้าสู่ระบบ/ออกจากระบบ เด้งรัวๆ ทั้งวัน — แจ้งเฉพาะบัญชีแอดมินเท่านั้น + กันซ้ำต่อคนภายใน 10 วิ (และเครื่องที่โดนไล่ออกไม่เขียนสถานะออฟไลน์ทับเครื่องใหม่)'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6092,7 +6099,7 @@
                                 const curLocalSid = localStorage.getItem('taxi_session_id');
                                 if (rd.role !== 'Admin' && realSid && curLocalSid !== realSid) {
                                     window.showToast("บัญชีนี้ถูกเข้าสู่ระบบจากเครื่องอื่น — ระบบได้ออกจากระบบให้แล้ว", true);
-                                    window.logoutApp(true);
+                                    window.logoutApp(true, true); // โดนไล่ออก — อย่าเขียน isOnline:false (เครื่องใหม่ยังออนไลน์อยู่ กันสถานะดีดไปมา)
                                 }
                             }
                         }).catch(() => { /* ไม่มีเน็ต — รอ snapshot ถัดไป */ });
@@ -6419,7 +6426,7 @@
         finally { btn.disabled = false; btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกรหัสผ่านใหม่`; }
     };
 
-    window.logoutApp = async (forced = false) => { 
+    window.logoutApp = async (forced = false, skipOnlineWrite = false) => { 
         let isOk = forced ? true : await window.showCustomConfirm("ออกจากระบบ", "คุณต้องการออกจากระบบใช่หรือไม่?", "warning");
         if(isOk) {
             if(loggedInUserId) {
@@ -6427,7 +6434,8 @@
                 if(!forced) {
                     // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน เพราะจะไปไล่เครื่องที่เพิ่งล็อกอินแทน
                     await setDoc(doc(db, "users", loggedInUserId), { isOnline: false, sessionId: window.newSessionToken() }, { merge: true });
-                } else {
+                } else if(!skipOnlineWrite) {
+                    // โดนไล่ออก (skipOnlineWrite=true) → ไม่เขียน isOnline:false เพราะเครื่องใหม่ของบัญชีนี้ยังออนไลน์อยู่ (กันสถานะดีดไปมา)
                     await setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true });
                 }
             }
