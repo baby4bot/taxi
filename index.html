@@ -1491,6 +1491,7 @@
         </div>
         <hr class="side-divider">
         <div class="side-menu-items">
+            <div class="side-menu-item" onclick="window.toggleSideMenu(false); window.openProfileModal();"><span class="material-symbols-outlined">person</span><span>โปรไฟล์</span></div>
             <div class="side-menu-item" onclick="window.toggleSideMenu(false)"><span class="material-symbols-outlined">home</span><span>หน้าหลัก</span></div>
             <div id="adminMenuBtn" class="side-menu-item" onclick="window.toggleSideMenu(false); setTimeout(() => { window.toggleModal('adminMenuModal', true); }, 300);" style="display: none;"><span class="material-symbols-outlined">manage_accounts</span><span>จัดการผู้ใช้งาน</span></div>
             <div id="toastMsgMenuBtn" class="side-menu-item" onclick="window.toggleSideMenu(false); setTimeout(() => { window.openToastMsgModal(); }, 300);" style="display: none;"><span class="material-symbols-outlined">notifications</span><span>จัดการข้อความแจ้งเตือน</span></div>
