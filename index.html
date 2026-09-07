@@ -793,6 +793,18 @@
         }
         #fareTollBtn .material-symbols-outlined { font-size: 16px; }
 
+        /* 💰 ชิปทางด่วน + ยอดรวม — อยู่ในการ์ด ใต้ปุ่ม + ค่าทางด่วน (มุมซ้ายบน) */
+        #fareTollArea {
+            position: absolute; top: 40px; left: 10px; z-index: 45;
+            display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+            max-width: calc(100% - 20px);
+            pointer-events: none; /* กันไม่ให้ชิปบังการแตะเปิดการ์ด */
+        }
+        #fareTollArea > * { pointer-events: auto; } /* แต่ปุ่มลบในชิปยังกดได้ */
+        #fareTollArea .surcharge-list-container { margin: 0; justify-content: flex-start; gap: 5px; max-width: 100%; }
+        #fareTollArea .surcharge-item { font-size: 12px; padding: 4px 10px; }
+        #fareTollArea #totalTollBadge { margin: 0; padding: 4px 14px; font-size: 12px; border-radius: 14px; }
+
         #fareResetBtn {
             position: absolute; top: 9px; right: 10px; z-index: 50;
             display: none; align-items: center; justify-content: center;
@@ -1175,6 +1187,7 @@
             .manual-section { margin: var(--space-section) 0 0 0; } /* แถว กม. อยู่ในกล่องค้นหาแล้ว → ระยะบนจากช่องค้นหา = 8px (จอแคบ) */
             #fareTollBtn { top: 4px; left: 6px; padding: 4px 9px; font-size: 12px; border-radius: 15px; }
             #fareTollBtn .material-symbols-outlined { font-size: 14px; }
+            #fareTollArea { top: 32px; left: 6px; max-width: calc(100% - 12px); }
             .tz-toll-btn { top: 8px; left: 8px; padding: 3px 8px; font-size: 10.5px; border-radius: 12px; }
             .tz-toll-btn .material-symbols-outlined { font-size: 11.5px; }
             .tz-pause-btn { top: 8px; right: 8px; width: 38px; height: 38px; }
@@ -1524,12 +1537,6 @@
                                                        
 
 
-    <div id="surchargeDetails" class="surcharge-list-container" style="display:none;"></div>
-    
-    <div id="totalTollBadge" style="display:none; background: #3498db; color: white; padding: 6px 20px; border-radius: 20px; font-size: 14px; font-weight: 600; margin: 0 auto 20px auto; width: fit-content; box-shadow: 0 4px 10px rgba(52,152,219,0.4);">
-        รวมค่าทางด่วน: 0 ฿
-    </div>
-
     <div id="routeTollInfo" style="display:none; background: rgba(255, 152, 0, 0.12); border: 1px solid rgba(255, 152, 0, 0.5); color: #ffb74d; padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 500; margin: 0 auto 12px auto; width: fit-content; max-width: 100%; text-align: center; box-shadow: 0 4px 10px rgba(255,152,0,0.2);">
     </div>
                                                        
@@ -1537,6 +1544,14 @@
         <button class="surcharge-btn" id="fareTollBtn" onclick="event.stopPropagation(); window.promptToll()" title="เพิ่มค่าทางด่วน (บวกเพิ่มจากมิเตอร์)">
             <span class="material-symbols-outlined">toll</span> + ค่าทางด่วน
         </button>
+
+        <!-- 💰 ชิปทางด่วน + ยอดรวม — อยู่ในการ์ด ใต้ปุ่ม + ค่าทางด่วน -->
+        <div id="fareTollArea">
+            <div id="surchargeDetails" class="surcharge-list-container" style="display:none;"></div>
+            <div id="totalTollBadge" style="display:none; background: #3498db; color: white; padding: 6px 20px; border-radius: 20px; font-size: 14px; font-weight: 600; margin: 0 auto 20px auto; width: fit-content; box-shadow: 0 4px 10px rgba(52,152,219,0.4);">
+                รวมค่าทางด่วน: 0 ฿
+            </div>
+        </div>
 
         <button id="fareResetBtn" onclick="event.stopPropagation(); window.resetAll()" title="ล้างข้อมูลทั้งหมด">
             <span class="material-symbols-outlined">close</span>
@@ -1811,7 +1826,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08e';
+    const APP_BUILD = '2026-09-08f';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5886,7 +5901,8 @@
         'การ์ดในระบบจัดการผู้ใช้งาน: เอาช่องชื่อบริษัท/สหกรณ์ (หัวบิล) ออก เหลือ เข้าใช้ล่าสุด + ทะเบียนรถ และจัดปุ่ม โทร/แบน/ประวัติ/แก้ไข/ลบ ไว้กึ่งกลางแบบใหม่สวยขึ้น',
         'จอมิเตอร์ขยาย: ปุ่ม "+ ทางด่วน" เป็นสีส้มทึบ (ไม่มีเงา) และรายการ "ค่าทางด่วน X฿" ที่เพิ่มไว้เป็นสีฟ้าทึบ — เห็นชัดไม่กลืนกับพื้นหลัง',
         'แก้บั๊กเด้งหลุดล็อกอิน: ตอนรีเฟรช/เปิดแอปใหม่ ระบบจะไม่ไล่ออกจากระบบเพราะ snapshot แรกมาไม่ครบอีกแล้ว (เช็คข้อมูลจริงจากเซิร์ฟเวอร์ก่อน) — session อยู่จนกว่าจะกดออกจากระบบเอง',
-        'ข้อความชิปทางด่วนทั้งจอมิเตอร์ขยายและหน้าแรก เปลี่ยนจาก "ค่าทางด่วน X฿" เป็น "ทางด่วน X บ."'
+        'ข้อความชิปทางด่วนทั้งจอมิเตอร์ขยายและหน้าแรก เปลี่ยนจาก "ค่าทางด่วน X฿" เป็น "ทางด่วน X บ."',
+        'ย้ายชิปทางด่วนที่เพิ่ม + ยอดรวม "รวมค่าทางด่วน" จากด้านบนการ์ดเข้าไปอยู่ในการ์ดประเมินราคา ใต้ปุ่ม + ค่าทางด่วน (มุมซ้ายบนในตัวการ์ด)'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
