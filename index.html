@@ -1036,6 +1036,14 @@
         .myperm-chip.static { cursor: default; opacity: 0.88; }
         .myperm-chip.missing { background: rgba(148,163,184,0.08); border: 1px dashed rgba(148,163,184,0.35); color: #94a3b8; cursor: default; opacity: 0.9; }
         .myperm-chip.missing .material-symbols-outlined { color: #94a3b8; }
+        /* 👥 แผงรายชื่อสมาชิกที่ใช้ตำแหน่ง (กันลบ/เปลี่ยนชื่อตำแหน่งที่ยังมีคนใช้อยู่) */
+        .role-members-panel { display: none; background: rgba(241,196,15,0.06); border: 1px solid rgba(241,196,15,0.4); border-radius: 12px; padding: 10px 12px; margin: 0 0 14px; text-align: left; }
+        .role-members-head { display: flex; align-items: center; gap: 6px; color: #f1c40f; font-size: 13.5px; font-weight: 600; }
+        .role-member-list { max-height: 170px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px 4px 2px 2px; }
+        .role-member-item { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.25); border-radius: 10px; padding: 6px 10px; }
+        .role-member-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0; background: rgba(255,255,255,0.1); }
+        .role-member-name { color: white; font-size: 13.5px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .role-member-user { color: var(--text-dim); font-size: 12px; flex-shrink: 0; }
         /* 🎛️ ปุ่มจัดการตำแหน่ง (Role) ในหน้าตั้งค่าสิทธิ์ */
         .role-manage-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; padding: 10px; font-size: 14px; cursor: pointer; font-family: 'Kanit'; transition: 0.2s; }
         .role-manage-btn:hover { filter: brightness(1.15); }
@@ -1657,7 +1665,9 @@
 
 <div id="activityLogModal" class="modal-overlay" style="z-index: 10010;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="logModalTitle">ประวัติการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('activityLogModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="activityLogList" class="modal-content-scroll" style="text-align: left; background: rgba(0,0,0,0.2);"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลด...</div></div></div></div>
 
-<div id="roleSettingsModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">ตั้งค่าสิทธิ์การใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('roleSettingsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><label style="color: var(--neon-yellow); font-size: 13px;">เลือกตำแหน่ง (Role) ที่ต้องการตั้งค่าสิทธิ์</label><select id="settingRoleSelect" onchange="window.loadRolePermissionsToUI()" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: 10px; outline: none; font-family: 'Kanit';"></select><div style="display: flex; gap: 8px; margin-bottom: 6px;"><button onclick="window.addCustomRole()" id="addRoleBtn" class="role-manage-btn role-btn-add" type="button"><span class="material-symbols-outlined" style="font-size: 18px;">add</span> สร้างตำแหน่งใหม่</button><button onclick="window.renameCustomRole()" id="renameRoleBtn" class="role-manage-btn role-btn-rename" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">edit</span> เปลี่ยนชื่อ</button><button onclick="window.deleteCustomRole()" id="deleteRoleBtn" class="role-manage-btn role-btn-del" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span> ลบ</button></div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: var(--space-field); text-align: left; line-height: 1.5;">ตำแหน่งระบบ (ผู้จัดการ / ผู้ใช้งานทั่วไป) เปลี่ยนชื่อหรือลบไม่ได้ — กด "สร้างตำแหน่งใหม่" เพิ่มตำแหน่งเองได้เรื่อย ๆ ตามหน้าที่จริง แล้วกำหนดสิทธิ์แต่ละแบบด้านล่าง (ติ๊กแล้วกด บันทึกสิทธิ์)</div><div id="permListContainer" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;"></div><button onclick="window.saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: var(--space-field);" id="saveRolePermBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์</button></div></div></div>
+<div id="roleSettingsModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">ตั้งค่าสิทธิ์การใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('roleSettingsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><label style="color: var(--neon-yellow); font-size: 13px;">เลือกตำแหน่ง (Role) ที่ต้องการตั้งค่าสิทธิ์</label><select id="settingRoleSelect" onchange="window.loadRolePermissionsToUI()" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: 10px; outline: none; font-family: 'Kanit';"></select><div style="display: flex; gap: 8px; margin-bottom: 6px;"><button onclick="window.addCustomRole()" id="addRoleBtn" class="role-manage-btn role-btn-add" type="button"><span class="material-symbols-outlined" style="font-size: 18px;">add</span> สร้างตำแหน่งใหม่</button><button onclick="window.renameCustomRole()" id="renameRoleBtn" class="role-manage-btn role-btn-rename" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">edit</span> เปลี่ยนชื่อ</button><button onclick="window.deleteCustomRole()" id="deleteRoleBtn" class="role-manage-btn role-btn-del" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span> ลบ</button></div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: var(--space-field); text-align: left; line-height: 1.5;">ตำแหน่งระบบ (ผู้จัดการ / ผู้ใช้งานทั่วไป) เปลี่ยนชื่อหรือลบไม่ได้ — กด "สร้างตำแหน่งใหม่" เลือก "ลอกแบบจาก" ตำแหน่งที่มีอยู่เพื่อตั้งสิทธิ์ไวขึ้น แล้วปรับสิทธิ์ด้านล่าง (ติ๊กแล้วกด บันทึกสิทธิ์)</div><div id="roleMembersPanel" class="role-members-panel"></div><div id="permListContainer" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;"></div><button onclick="window.saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: var(--space-field);" id="saveRolePermBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์</button></div></div></div>
+
+<div id="createRoleModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">สร้างตำแหน่งใหม่</h3><button class="btn-close-floating" onclick="window.toggleModal('createRoleModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><div style="font-size:12px; color:var(--text-dim); margin-bottom: var(--space-field); line-height:1.6;">ตั้งชื่อตำแหน่งตามหน้าที่จริง เช่น "หัวหน้ากะ" — แล้วเลือกว่าต้องการลอกสิทธิ์จากตำแหน่งไหน เพื่อตั้งสิทธิ์ไวขึ้น (ปรับทีหลังได้ในหน้าตั้งค่าสิทธิ์)</div><label style="color: var(--neon-yellow); font-size: 13px;">ชื่อตำแหน่ง</label><input type="text" id="crRoleName" placeholder="เช่น หัวหน้ากะ / พนักงานขับรถ" style="margin-top: 8px; margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="color: var(--neon-yellow); font-size: 13px;">ลอกแบบจากตำแหน่ง (สิทธิ์เริ่มต้น)</label><select id="crCopyFrom" style="width: 100%; padding: 14px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-top: 8px; margin-bottom: var(--space-field); outline: none; font-family: 'Kanit';"></select><button onclick="window.confirmCreateRole()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">add</span> สร้างตำแหน่ง</button></div></div></div>
 
 <div id="servicePortalModal" class="modal-overlay" style="z-index: 10020;"><div class="modal-box flex-col-box sp-modal-box" onclick="event.stopPropagation()"><div class="sp-header"><div class="sp-neon-line"></div><div class="sp-logo-text"><span style="color: #ef2f2c;">true</span><span style="color: #f7931e;">move</span><span class="h-box">H</span></div><div class="sp-title" id="serviceModalTitle">SERVICE PORTAL</div><button class="btn-close-floating" onclick="window.toggleModal('servicePortalModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="serviceListContainer" class="modal-content-scroll" style="text-align: left; padding: 15px;"><div style="text-align:center; color:gray; padding:20px;">กำลังโหลดข้อมูล...</div></div><div id="adminServiceAddSection" style="display: none; padding: 15px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.6); flex-shrink: 0;"><div style="display: flex; gap: 10px; margin-bottom: 10px;"><input type="text" id="newServiceCategory" list="existingCategories" placeholder="เลือก/พิมพ์ หมวดหมู่" style="font-size: 14px; padding: 12px; flex: 1;"><datalist id="existingCategories"></datalist></div><input type="text" id="newServiceTitle" placeholder="ชื่อรายการ (เช่น เพิ่มวัน 30 วัน)" style="margin-bottom: 10px; font-size: 14px; padding: 12px;"><input type="text" id="newServiceCode" placeholder="รหัส USSD / เบอร์โทร (เช่น *934*30#)" style="margin-bottom: 10px; font-size: 14px; padding: 12px; font-family: monospace;"><div style="display: flex; gap: 10px;"><button id="addServiceBtn" onclick="window.addNewServiceCode()" class="manual-timer-btn" style="background: var(--neon-green); flex: 1; justify-content: center; padding: 12px;"><span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span> เพิ่มรายการเข้าสู่ระบบ</button><button id="cancelEditBtn" onclick="window.cancelEditService()" class="manual-timer-btn" style="background: var(--accent-red); width: 50px; display: none; flex: none; justify-content: center; padding: 12px;"><span class="material-symbols-outlined" style="font-size: 18px;">close</span></button></div></div></div></div>
 
@@ -1768,7 +1778,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07g';
+    const APP_BUILD = '2026-09-07h';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -1977,13 +1987,42 @@
         }
     };
     // เปลี่ยนชื่อ/ลบ จะโชว์เฉพาะเมื่อเลือกตำแหน่งที่กำหนดเอง (ตำแหน่งระบบจัดการไม่ได้)
+    // 🔒 ถ้าตำแหน่งนั้นยังมีสมาชิกใช้งานอยู่ → ปุ่มเปลี่ยนชื่อ/ลบจะถูกล็อก + โชว์รายชื่อสมาชิก (กันลบ/เปลี่ยนชื่อโดยไม่ตั้งใจ)
+    window.__roleMembers = []; // แคชรายชื่อสมาชิกของตำแหน่งที่เลือกอยู่ (อัปเดตโดย renderRoleMembersPanel)
+    const applyRoleManageBtnLock = (custom, inUse) => {
+        const ren = document.getElementById('renameRoleBtn'); if (ren) { ren.style.display = custom ? 'flex' : 'none'; ren.disabled = custom && inUse; ren.style.opacity = (custom && inUse) ? '0.45' : '1'; ren.style.cursor = (custom && inUse) ? 'not-allowed' : 'pointer'; }
+        const del = document.getElementById('deleteRoleBtn'); if (del) { del.style.display = custom ? 'flex' : 'none'; del.disabled = custom && inUse; del.style.opacity = (custom && inUse) ? '0.45' : '1'; del.style.cursor = (custom && inUse) ? 'not-allowed' : 'pointer'; }
+        const add = document.getElementById('addRoleBtn'); if (add) add.style.display = 'flex';
+    };
     window.syncRoleManageBtns = () => {
         const sSel = document.getElementById('settingRoleSelect');
         const role = sSel ? sSel.value : '';
         const custom = !!role && !isSystemRole(role);
-        const ren = document.getElementById('renameRoleBtn'); if (ren) ren.style.display = custom ? 'flex' : 'none';
-        const del = document.getElementById('deleteRoleBtn'); if (del) del.style.display = custom ? 'flex' : 'none';
-        const add = document.getElementById('addRoleBtn'); if (add) add.style.display = 'flex';
+        applyRoleManageBtnLock(custom, (window.__roleMembers || []).length > 0);
+        if (typeof window.renderRoleMembersPanel === 'function') window.renderRoleMembersPanel(); // อัปเดตแผงรายชื่อ + ล็อกตามจริง (async)
+    };
+    // 📋 โชว์รายชื่อสมาชิกที่ใช้ตำแหน่งที่เลือกอยู่ — โชว์เฉพาะตำแหน่งที่กำหนดเองที่มีคนใช้ แล้วล็อกปุ่มเปลี่ยนชื่อ/ลบ
+    window.renderRoleMembersPanel = async () => {
+        const panel = document.getElementById('roleMembersPanel');
+        if (!panel) return;
+        const sSel = document.getElementById('settingRoleSelect');
+        const role = sSel ? sSel.value : '';
+        window.__roleMembers = [];
+        if (!role || isSystemRole(role)) { panel.style.display = 'none'; applyRoleManageBtnLock(false, false); return; }
+        let users = [];
+        try { const us = await getDocs(query(collection(db, 'users'), where('role', '==', role))); users = us.docs.map(d => d.data()); } catch (e) {}
+        window.__roleMembers = users;
+        applyRoleManageBtnLock(true, users.length > 0);
+        if (!users.length) { panel.style.display = 'none'; return; }
+        const rows = users.map(u => '<div class="role-member-item">' +
+            '<img class="role-member-avatar" src="' + escAttr(u.photoURL || window.DEFAULT_AVATAR || '') + '" onerror="this.style.visibility=\'hidden\'">' +
+            '<span class="role-member-name">' + escAttr(u.displayName || u.username || '?') + '</span>' +
+            '<span class="role-member-user">@' + escAttr(u.username || '') + '</span>' +
+            '</div>').join('');
+        panel.style.display = 'block';
+        panel.innerHTML = '<div class="role-members-head"><span class="material-symbols-outlined" style="font-size:18px;">people</span> ตำแหน่งนี้มีสมาชิกใช้งานอยู่ ' + users.length + ' คน</div>' +
+            '<div style="font-size:12px; color:#f1c40f; margin:3px 0 8px; line-height:1.5;">🔒 ยังลบ / เปลี่ยนชื่อไม่ได้ — กรณีย้ายสมาชิกทั้งหมดออกจากตำแหน่งนี้ก่อน (เข้า ☰ → ตั้งค่าการใช้งาน → จัดการผู้ใช้งาน → แก้ไขสมาชิก → เปลี่ยนตำแหน่ง)</div>' +
+            '<div class="role-member-list">' + rows + '</div>';
     };
 
     // เซ็ตค่าตำแหน่งใน select ผู้ใช้ให้ตรงค่าเป้าหมาย (เพิ่ม option ถ้าตำแหน่งนั้นถูกลบไปแล้วแต่ user ยังใช้อยู่)
@@ -1995,29 +2034,57 @@
         aSel.value = val;
     };
 
-    window.addCustomRole = async () => {
+    // 📋 เปิดหน้าต่าง "สร้างตำแหน่งใหม่" (ให้เลือก "ลอกแบบจาก" ตำแหน่งที่มีอยู่เพื่อตั้งสิทธิ์ไวขึ้น)
+    window.addCustomRole = () => {
         if (!window.currentUserPerms().canManageRoles) return window.showToast('คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน', true);
-        const name = (window.prompt('สร้างตำแหน่งใหม่ — ตั้งชื่อตามหน้าที่จริง เช่น หัวหน้ากะ / พนักงานขับรถ ฯลฯ', '') || '').trim();
-        if (!name) return;
-        const err = window.validateRoleKey(name);
-        if (err) return window.showToast(err, true);
+        window.openCreateRoleModal();
+    };
+    window.openCreateRoleModal = () => {
+        const nameIn = document.getElementById('crRoleName'); if (nameIn) nameIn.value = '';
+        const srcSel = document.getElementById('crCopyFrom');
+        if (srcSel) {
+            const opts = ['__none__', 'Manager', 'User'].concat(window.getCustomRoleKeys().sort((a, b) => a.localeCompare(b, 'th')));
+            srcSel.innerHTML = opts.map(k => {
+                let label = 'เริ่มจากว่าง (สิทธิ์ผู้ใช้ทั่วไป)';
+                if (k === 'Manager') label = 'ลอกแบบจาก ผู้จัดการ (Manager)';
+                else if (k === 'User') label = 'ลอกแบบจาก ผู้ใช้งานทั่วไป (User)';
+                else if (k !== '__none__') label = 'ลอกแบบจาก ' + window.roleLabelFull(k);
+                return `<option value="${escAttr(k)}">${label}</option>`;
+            }).join('');
+            srcSel.value = '__none__';
+        }
+        window.toggleModal('createRoleModal', true);
+    };
+    window.confirmCreateRole = async () => {
+        if (!window.currentUserPerms().canManageRoles) return window.showToast('คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน', true);
+        const name = (document.getElementById('crRoleName').value || '').trim();
+        const src = (document.getElementById('crCopyFrom') || {}).value || '__none__';
+        if (!name) return window.showToast('กรุณากรอกชื่อตำแหน่ง', true);
+        const err = window.validateRoleKey(name); if (err) return window.showToast(err, true);
+        // คัดลอกสิทธิ์จริงของตำแหน่งต้นแบบ (ค่าเริ่มต้น + ที่ admin ตั้ง) ให้ตำแหน่งใหม่ได้ชุดสิทธิ์เหมือนกันทันที
+        let newPerms = {};
+        let srcLabel = '';
+        if (src !== '__none__') { newPerms = window.effectiveRolePerms(src); srcLabel = src === 'Manager' ? 'ผู้จัดการ' : (src === 'User' ? 'ผู้ใช้ทั่วไป' : src); }
         try {
-            await setDoc(doc(db, 'settings', 'roles'), { [name]: {} }, { merge: true }); // คีย์ว่าง = ยังไม่ได้ตั้งสิทธิ์ → ใช้ค่าเริ่มต้นของผู้ใช้ทั่วไปก่อน
+            await setDoc(doc(db, 'settings', 'roles'), { [name]: newPerms }, { merge: true });
         } catch (e) { return window.showToast('สร้างตำแหน่งไม่ได้ — ชื่อต้องไม่ยาวเกินไปและห้ามมี . หรือ /', true); }
         if (!window.globalPermissions) window.globalPermissions = {};
-        window.globalPermissions[name] = {}; // อัปเดตในเครื่องทันที (snapshot จะมาแทนที่อีกที)
+        window.globalPermissions[name] = newPerms; // อัปเดตในเครื่องทันที (snapshot จะมาแทนที่อีกที)
         window.fillRoleSelects();
         const sSel = document.getElementById('settingRoleSelect'); if (sSel) sSel.value = name;
         window.syncRoleManageBtns();
         window.renderPermList();
-        window.showToast(`สร้างตำแหน่ง "${name}" แล้ว — ติ๊กสิทธิ์ด้านล่างแล้วกด บันทึกสิทธิ์`);
+        window.toggleModal('createRoleModal', false);
+        window.showToast(`สร้างตำแหน่ง "${name}" แล้ว${srcLabel ? ' — ลอกสิทธิ์จาก ' + srcLabel : ''} (ปรับสิทธิ์ด้านล่างได้)`);
     };
 
     window.renameCustomRole = async () => {
         if (!window.currentUserPerms().canManageRoles) return window.showToast('คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน', true);
         const sSel = document.getElementById('settingRoleSelect'); const old = sSel ? sSel.value : '';
         if (!old || isSystemRole(old)) return window.showToast('ตำแหน่งระบบเปลี่ยนชื่อไม่ได้', true);
-        const name = (window.prompt('เปลี่ยนชื่อตำแหน่ง (สมาชิกที่ใช้ตำแหน่งนี้จะอัปเดตตามด้วยอัตโนมัติ):', old) || '').trim();
+        // 🔒 กันเปลี่ยนชื่อตำแหน่งที่ยังมีสมาชิกใช้อยู่ — ต้องย้ายสมาชิกออกก่อน
+        try { const inUse = await getDocs(query(collection(db, 'users'), where('role', '==', old))); if (!inUse.empty) return window.showToast(`ยังเปลี่ยนชื่อไม่ได้ — ตำแหน่งนี้มีสมาชิก ${inUse.size} คนใช้งานอยู่ (ดูรายชื่อได้ในหน้าตั้งค่าสิทธิ์ แล้วย้ายสมาชิกออกก่อน)`, true); } catch (e) {}
+        const name = (window.prompt('เปลี่ยนชื่อตำแหน่ง (ต้องย้ายสมาชิกออกจากตำแหน่งนี้ก่อน ถึงเปลี่ยนชื่อได้):', old) || '').trim();
         if (!name || name === old) return;
         const err = window.validateRoleKey(name); if (err) return window.showToast(err, true);
         try {
@@ -2037,7 +2104,7 @@
             window.fillRoleSelects();
             if (sSel) sSel.value = name;
             window.syncRoleManageBtns(); window.renderPermList();
-            window.showToast(`เปลี่ยนชื่อตำแหน่งเป็น "${name}" เรียบร้อย (${us.size} คน)`);
+            window.showToast(`เปลี่ยนชื่อตำแหน่งเป็น "${name}" เรียบร้อย`);
         } catch (e) { window.showToast('เปลี่ยนชื่อล้มเหลว — ลองใหม่อีกครั้ง', true); }
     };
 
@@ -2047,9 +2114,9 @@
         if (!role || isSystemRole(role)) return window.showToast('ตำแหน่งระบบลบไม่ได้', true);
         let userCount = 0;
         try { const us = await getDocs(query(collection(db, 'users'), where('role', '==', role))); userCount = us.size; } catch (e) {}
-        const msg = userCount > 0
-            ? `ลบตำแหน่ง "${role}" ใช่หรือไม่?\nสมาชิก ${userCount} คนที่ใช้ตำแหน่งนี้จะถูกเปลี่ยนเป็น "ผู้ใช้งานทั่วไป" (สิทธิ์เดิมของตำแหน่งจะหาย)`
-            : `ลบตำแหน่ง "${role}" ใช่หรือไม่? (สิทธิ์ของตำแหน่งนี้จะหาย)`;
+        // 🔒 กันลบตำแหน่งที่ยังมีสมาชิกใช้อยู่ — ต้องย้ายสมาชิกออกก่อน (โชว์รายชื่อในแผงด้านบน)
+        if (userCount > 0) return window.showToast(`ยังลบไม่ได้ — ตำแหน่งนี้มีสมาชิก ${userCount} คนใช้งานอยู่ (ดูรายชื่อได้ในหน้าตั้งค่าสิทธิ์ แล้วย้ายสมาชิกออกก่อน)`, true);
+        const msg = `ลบตำแหน่ง "${role}" ใช่หรือไม่? (สิทธิ์ของตำแหน่งนี้จะหาย)`;
         const isOk = await window.showCustomConfirm('ลบตำแหน่ง (Role)', msg, 'danger', 'ลบตำแหน่ง');
         if (!isOk) return;
         try {
