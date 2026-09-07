@@ -1410,10 +1410,6 @@
         <div class="header-center">
             <div style="display: flex; flex-direction: column; align-items: center; line-height: 1.15;">
                 <h2>คำนวณค่าแท็กซี่</h2>
-                <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 5px; margin-top: 6px;">
-                    <button id="versionPillBtn" onclick="window.openVersionModal()" title="ดูเวอร์ชัน / อัปเดตล่าสุด" style="display: none; margin: 0;"><span class="material-symbols-outlined">sell</span><span id="versionPillText">v…</span></button>
-                    <div id="autoFsBadge" class="fs-status-badge clickable" style="display: none; margin-top: 0;" onclick="window.openProfileFullscreenSetting()" title="แตะเพื่อเปิดการตั้งค่าเต็มจอในโปรไฟล์"><span class="fs-dot"></span><span id="autoFsBadgeText">เต็มจออัตโนมัติ: เปิด</span></div>
-                </div>
             </div>
         </div>
 
@@ -1597,6 +1593,9 @@
         <div id="buildStamp" style="font-size: 10px; color: rgba(255,255,255,0.22); text-align: center; margin-top: 8px; flex-shrink: 0;">รุ่น ...</div>
     </div>
 </div>
+
+<!-- ปุ่มเลขเวอร์ชัน ลอยมุมขวาล่างของหน้าแรก (แตะเปิดประวัติเวอร์ชัน) -->
+<button id="versionPillBtn" onclick="window.openVersionModal()" title="ดูเวอร์ชัน / อัปเดตล่าสุด" style="position: fixed; right: 14px; bottom: 12px; z-index: 40; display: none; margin: 0; box-shadow: 0 4px 14px rgba(0,0,0,0.5);"><span class="material-symbols-outlined">sell</span><span id="versionPillText">v…</span></button>
 
 <div id="versionModal" class="modal-overlay" style="z-index: 10060;">
     <div class="modal-box flex-col-box" onclick="event.stopPropagation()">
@@ -1801,7 +1800,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-07v';
+    const APP_BUILD = '2026-09-07w';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5862,7 +5861,8 @@
         'หน้าประวัติรวมระบบเพิ่มส่วนเตือนคำขอสิทธิ์ที่ค้างเกิน 7 วัน (กล่องแดงบนหัว) — แอดมินเห็นสมาชิกที่ค้าง+สิทธิ์ที่ขอ+กี่วัน พร้อมปุ่มจัดการคำขอได้ทันที',
         'หน้าคำขอสิทธิ์เพิ่มแยกเป็นปุ่ม อนุมัติสิทธิ์ / ปฏิเสธ — อนุมัติจะให้สิทธิ์ที่ขอทั้งหมดแก่สมาชิกทันที (ไม่เปลี่ยนตำแหน่ง) และผู้ขอเห็น toast แจ้งผลตอนเปิดแอป (อนุมัติ=ทอง / ปฏิเสธ=แดง) ครั้งเดียว',
         'แท็บหมวดหมู่ไอคอน Material เลื่อนซ้าย-ขวาบนคอมได้ด้วย (หมุนล้อเมาส์/ลากเมาส์ + แถบเลื่อนบาง) เหมือนบนมือถือ',
-        'ช่องค้นหาไอคอนรองรับคำค้นภาษาไทย (เช่น รถ เงิน เตือน โทร อาหาร เวลา แผนที่ ฯลฯ) — พิมพ์ชื่อไทยแล้วกรองไอคอนที่ตรงได้เลย'
+        'ช่องค้นหาไอคอนรองรับคำค้นภาษาไทย (เช่น รถ เงิน เตือน โทร อาหาร เวลา แผนที่ ฯลฯ) — พิมพ์ชื่อไทยแล้วกรองไอคอนที่ตรงได้เลย',
+        'ย้ายเลขเวอร์ชัน (v…) จากหัวหน้าแรกไปไว้มุมขวาล่างลอย ๆ (แตะเปิดประวัติเวอร์ชันได้เหมือนเดิม) และซ่อนป้าย "เต็มจออัตโนมัติ: เปิด/ปิด" ออกจากหน้าแรก'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
