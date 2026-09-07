@@ -1844,7 +1844,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, limit, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08r';
+    const APP_BUILD = '2026-09-08s';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -6031,7 +6031,8 @@
         '🔕 แก้ toast เข้าสู่ระบบ/ออกจากระบบ เด้งรัวๆ ทั้งวัน — แจ้งเฉพาะบัญชีแอดมินเท่านั้น + กันซ้ำต่อคนภายใน 10 วิ (และเครื่องที่โดนไล่ออกไม่เขียนสถานะออฟไลน์ทับเครื่องใหม่)',
         '🐛 แก้ toast แดง "ถูกเข้าสู่ระบบจากเครื่องอื่น" เด้งตอนกดออกจากระบบเอง — หมุน session token แล้วไม่ให้ snapshot ตัวเองเด้งเตือนหลอก (เด้งเฉพาะตอนล็อกอินซ้อนจริง ๆ)',
         '👥 การ์ด "ออนไลน์ตอนนี้" เห็นทุก user (รวมแอดมิน): รายชื่อ 1 แถวเลื่อนสไลด์ได้ (เมาส์ลาก/นิ้วปัด) แสดงเฉพาะรูปโปรไฟล์ (ชื่อเป็น tooltip เมื่อเอาเมาส์ชี้) + กรอบรูปสีตามตำแหน่ง (แอดมินทอง/ผู้จัดการฟ้า/ผู้ใช้เขียว) + toast แจ้ง login/logout ให้แอดมินแบบเชื่อถือได้ (อ่านจาก log จริง ไม่ใช่การเดาจาก isOnline — ครบทั้งสองทาง กันซ้ำ 10 วิ ไม่รัว)',
-        '🕐 สถานะออนไลน์เรียลไทม์แม่นยำ: เขียน lastSeen ครั้งละ 30 วิ + กันปิดแอป/คิลแอปโดยไม่ log out (pagehide + lastSeen เก่าเกิน 90 วิ) — ปิดแอปปุ๊บรูปหายจากรายชื่อทันที กลับมาเปิดแอปปั๊บขึ้นรูปทันที ไม่ต้องรีเฟรช'
+        '🕐 สถานะออนไลน์เรียลไทม์แม่นยำ: เขียน lastSeen ครั้งละ 45 วิ + กันปิดแอป/คิลแอปโดยไม่ log out (pagehide + lastSeen เก่าเกิน 90 วิ) — ปิดแอปปุ๊บรูปหายจากรายชื่อทันที กลับมาเปิดแอปปั๊บขึ้นรูปทันที ไม่ต้องรีเฟรช',
+        '🐛 แก้กดออกจากระบบแล้วไม่หลุด: เดิมการล็อกเอาต์ต้องรอเขียน Firestore ให้เสร็จก่อน — ถ้าเน็ตช้า/โควตาการเขียนของโปรเจกต์หมด (Quota exceeded) จะค้างล็อกเอาต์ไม่ออก ตอนนี้ล็อกเอาต์เครื่องตัวเองทันทีเสมอ (เขียน DB ทำเบื้องหลังแบบไม่บล็อก) + ลด heartbeat เหลือ 45 วิ กันกินโควตา'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6316,7 +6317,7 @@
     window.markMeOnline = () => { if(loggedInUserId && document.visibilityState !== 'hidden') { setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastSeen: Date.now() }, { merge: true }).catch(() => {}); } };
     window.addEventListener('focus', () => { window.markMeOnline(); });
     document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') window.markMeOnline(); });
-    setInterval(() => { window.markMeOnline(); }, 30000); // เต้นหัวใจทุก 30 วิ — กันสถานะหลุดตอนแอปค้างทั้งวัน + ใช้เป็นตัวบอก "ยังสดอยู่"
+    setInterval(() => { window.markMeOnline(); }, 45000); // เต้นหัวใจทุก 45 วิ — กันสถานะหลุดตอนแอปค้างทั้งวัน + ใช้เป็นตัวบอก "ยังสดอยู่" (ถี่เกินไปจะกินโควตาเขียน Firestore)
     // 👁️ เกณฑ์ "ออนไลน์จริง" สำหรับฝั่งดู: isOnline=true และ lastSeen ไม่เก่าเกิน 90 วิ (ปิด/คิลแอปโดยไม่ log out → รูปหายจากรายชื่ออัตโนมัติ แม้ไม่มี event ตอนปิด)
     window.isUserOnlineLive = (u) => !!(u && u.isOnline === true && (!u.lastSeen || (Date.now() - u.lastSeen) < 90000));
 
@@ -6556,14 +6557,19 @@
             // หยุดฟัง snapshot ตัวเอง ก่อนเขียนอะไรลง DB — กันการหมุน sessionId ไปเด้ง toast "ถูกเข้าสู่ระบบจากเครื่องอื่น" ให้ตัวเองตอนล็อกเอาต์
             if(myUserUnsub) { myUserUnsub(); myUserUnsub = null; }
             if(logoutUid) {
-                if(!forced) await recordActivityLog(logoutUid, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ");
-                if(!forced) {
-                    // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน เพราะจะไปไล่เครื่องที่เพิ่งล็อกอินแทน
-                    await setDoc(doc(db, "users", logoutUid), { isOnline: false, sessionId: window.newSessionToken() }, { merge: true });
-                } else if(!skipOnlineWrite) {
-                    // โดนไล่ออก (skipOnlineWrite=true) → ไม่เขียน isOnline:false เพราะเครื่องใหม่ของบัญชีนี้ยังออนไลน์อยู่ (กันสถานะดีดไปมา)
-                    await setDoc(doc(db, "users", logoutUid), { isOnline: false }, { merge: true });
-                }
+                // 🔧 เขียน DB แบบ fire-and-forget (ไม่บล็อกการล็อกเอาต์): ถ้าเน็ตช้า/quota หมด/เขียนพลาด → ยังล็อกเอาต์เครื่องนี้ได้ทันที ไม่ค้างกลางทาง
+                (async () => {
+                    try {
+                        if(!forced) await recordActivityLog(logoutUid, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ");
+                        if(!forced) {
+                            // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน เพราะจะไปไล่เครื่องที่เพิ่งล็อกอินแทน
+                            await setDoc(doc(db, "users", logoutUid), { isOnline: false, sessionId: window.newSessionToken() }, { merge: true });
+                        } else if(!skipOnlineWrite) {
+                            // โดนไล่ออก (skipOnlineWrite=true) → ไม่เขียน isOnline:false เพราะเครื่องใหม่ของบัญชีนี้ยังออนไลน์อยู่ (กันสถานะดีดไปมา)
+                            await setDoc(doc(db, "users", logoutUid), { isOnline: false }, { merge: true });
+                        }
+                    } catch(e) { try { console.warn('logout db write failed (ยังล็อกเอาต์เครื่องนี้ต่อ)', e && e.message || e); } catch(_) {} }
+                })();
             }
             stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); loggedInUserId = null; tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
             window.updateAutoFsBadge();
