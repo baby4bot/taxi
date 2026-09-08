@@ -1963,7 +1963,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08aa';
+    const APP_BUILD = '2026-09-08ab';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -2170,11 +2170,11 @@
         const now = Date.now();
         if (!force && now - presenceLastWriteAt < 600000) return; // แตะใช้งาน refresh ทุก 10 นาที
         presenceLastWriteAt = now;
-        try { await setDoc(doc(db, "presence", uid), { on: true, at: now }); } catch (e) { /* โควตาหมด/ออฟไลน์ — ข้าม ไม่เด้ง error */ }
+        try { await window.__fsTimeout(setDoc(doc(db, "presence", uid), { on: true, at: now }), 5000); } catch (e) { /* โควตาหมด/ออฟไลน์ — ข้าม ไม่เด้ง error */ }
     };
     window.markPresenceOffline = async () => {
         const uid = loggedInUserId; if (!uid) return;
-        try { await setDoc(doc(db, "presence", uid), { on: false, at: Date.now() }); } catch (e) {}
+        try { await window.__fsTimeout(setDoc(doc(db, "presence", uid), { on: false, at: Date.now() }), 5000); } catch (e) {}
     };
     // แตะ/ใช้งานแอป → refresh สถานะออนไลน์ (จำกัด 1 ครั้ง/10 นาที ข้างใน markPresenceOnline)
     document.addEventListener('pointerdown', () => { window.markPresenceOnline(false); }, { passive: true });
@@ -6234,6 +6234,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-07'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        'ออกจากระบบไม่ค้างอีกต่อไป: เขียนบันทึก/หมุนโทเคน session มี timeout + fallback REST — กดยืนยันแล้วออกจากระบบได้ทันทีแม้ Firestore ช้า/โควตาหมด',
         'ล็อกอินไม่ค้างอีกต่อไป: ทุกคำขอ Firestore มี timeout 8 วิ + fallback ผ่าน REST API (https ธรรมดา ไม่พึ่งช่องทางเรียลไทม์) — ถ้าช่องทางค้าง ระบบล็อกอินสำเร็จและเข้าระบบได้ทันที กันค้าง "กำลังเข้าสู่ระบบ..." ตลอดกาล (ล็อกอิน/สมัคร/เปิดแอปต่อได้)',
         'ลำดับเมนูที่ลากสลับ (แฮมเบอร์เกอร์ + ตั้งค่าการใช้งาน) ซิงก์ข้ามเครื่องแล้ว — เก็บตามบัญชีใน Firestore (users/menuOrder) ทุกเครื่องเห็นเหมือนกัน localStorage เหลือเป็นสำรองตอนออฟไลน์',
         'เพิ่มระบบเลขเวอร์ชันอัตโนมัติ + ป้าย v1.2.x บนหัวหน้าแรก แตะเปิด "ประวัติเวอร์ชัน" (เก็บใน Firestore — ทุกเครื่องเห็นเหมือนกัน แอดมินแก้ข้อความได้)',
@@ -6800,11 +6801,13 @@
         let isOk = forced ? true : await window.showCustomConfirm("ออกจากระบบ", "คุณต้องการออกจากระบบใช่หรือไม่?", "warning");
         if(isOk) {
             if(loggedInUserId) {
-                window.markPresenceOffline(); // 👤 ล็อกเอาต์ → ปิดออนไลน์ทันที (เขียน 1 ครั้ง)
-                if(!forced) await recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ");
+                window.markPresenceOffline(); // 👤 ล็อกเอาต์ → ปิดออนไลน์ทันที (เขียน 1 ครั้ง — timeout กันค้าง)
+                window.__fsTimeout(recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ"), 5000).catch(()=>{}); // ไม่บล็อกการออกจากระบบ (กันค้างตอน Firestore ช้า/โควตาหมด)
                 if(!forced) {
                     // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน เพราะจะไปไล่เครื่องที่เพิ่งล็อกอินแทน
-                    await setDoc(doc(db, "users", loggedInUserId), { sessionId: window.newSessionToken() }, { merge: true });
+                    // timeout 6 วิ + fallback REST — โทเคนต้องถึง DB เสมอ ไม่งั้นเครื่องอื่นล็อกอินซ้อนได้ (กันค้างถ้าช่องทางเรียลไทม์มีปัญหา)
+                    const newSid = window.newSessionToken();
+                    await window.__fsTimeout(setDoc(doc(db, "users", loggedInUserId), { sessionId: newSid }, { merge: true }), 6000).catch(() => window.__fsRestPatch(loggedInUserId, { sessionId: newSid }).catch(()=>{}));
                 }
             }
             stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
