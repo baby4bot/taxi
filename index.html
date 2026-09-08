@@ -305,8 +305,6 @@
 
         .admin-user-card { background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 15px; padding: 12px; margin-bottom: var(--space-card); display: flex; align-items: center; gap: 8px; text-align: left; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .status-online { background-color: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
-        .status-offline { background-color: #666; }
         .status-banned { background-color: var(--accent-red); box-shadow: 0 0 8px var(--accent-red); }
         
         .log-item { background: rgba(0,0,0,0.3); border-left: 3px solid var(--neon-yellow); padding: 10px 15px; margin-bottom: 8px; border-radius: 0 10px 10px 0; text-align: left; font-size: 13px; }
@@ -1053,9 +1051,7 @@
         .icon-log { color: #ffd24d !important; background: rgba(255,210,77,0.13) !important; }
         .icon-del { color: #ff6b7a !important; background: rgba(255,107,122,0.14) !important; }
         .icon-call { color: #3ce69a !important; background: rgba(60,230,154,0.13) !important; }
-        .status-online { background: #2fd883; box-shadow: 0 0 10px #2fd883; }
         .status-banned { background: #ff4d5f; box-shadow: 0 0 10px #ff4d5f; }
-        .status-offline { background: #5a6478; }
 
         /* Permission rows + log items */
         .perm-item:hover { background: rgba(255,255,255,0.02); }
@@ -1692,7 +1688,7 @@
 </style>
 <div id="settingsHubModal" class="modal-overlay" style="z-index: 10003;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">ตั้งค่าการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('settingsHubModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:6px 12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 0; line-height:1.6;">รวมเมนูจัดการระบบไว้ที่เดียว — แตะหมวดที่ต้องการเพื่อเข้าใช้งาน (แสดงเฉพาะเมนูที่คุณมีสิทธิ์)</p>
 <div class="hub-cat-label">👥 สมาชิก / ผู้ใช้</div>
-<div id="hubAdminItem" class="hub-item" style="display:none;" onclick="window.toggleModal('adminMenuModal', true);"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">manage_accounts</span></div><div class="hub-item-body"><div class="hub-item-title">จัดการผู้ใช้งาน</div><div class="hub-item-desc">เพิ่ม / แก้ไข / ลบสมาชิก ดูสถานะออนไลน์ ทะเบียนรถ และประวัติการใช้งาน</div></div><span id="hubPermReqBadge" class="perm-req-count" style="display:none;"></span><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
+<div id="hubAdminItem" class="hub-item" style="display:none;" onclick="window.toggleModal('adminMenuModal', true);"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">manage_accounts</span></div><div class="hub-item-body"><div class="hub-item-title">จัดการผู้ใช้งาน</div><div class="hub-item-desc">เพิ่ม / แก้ไข / ลบสมาชิก ดูทะเบียนรถ และประวัติการใช้งาน</div></div><span id="hubPermReqBadge" class="perm-req-count" style="display:none;"></span><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 <div class="hub-cat-label">🛡️ สิทธิ์การใช้งาน</div>
 <div id="hubRoleItem" class="hub-item" style="display:none;" onclick="window.openRoleSettingsModal();"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">admin_panel_settings</span></div><div class="hub-item-body"><div class="hub-item-title">ตั้งค่าสิทธิ์การใช้งาน</div><div class="hub-item-desc">กำหนดสิทธิ์ของแต่ละตำแหน่ง (Role) เช่น ผู้จัดการ / ผู้ใช้ทั่วไป</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 <div class="hub-cat-label">🔔 ข้อความแจ้งเตือน</div>
@@ -1868,7 +1864,7 @@
         if (p === 'users' || p.startsWith('users/')) {
             if (p.endsWith('/logs') || p.includes('/logs/')) return 'บันทึกกิจกรรม';
             if (p.endsWith('/trips') || p.includes('/trips/')) return 'บันทึกเที่ยว';
-            return 'ข้อมูลผู้ใช้ / สถานะออนไลน์';
+            return 'ข้อมูลผู้ใช้';
         }
         if (p === 'settings/roles' || p === 'settings/permission_config' || p.startsWith('perm_') || p === 'perm_notices/' + (p.split('/')[1] || '')) return 'สิทธิ์ / คำขอสิทธิ์';
         if (p === 'settings/toast_messages') return 'ข้อความแจ้งเตือน';
@@ -2298,9 +2294,6 @@
             window.showToast(userCount > 0 ? `ลบตำแหน่งแล้ว — ย้าย ${userCount} คนไปเป็นผู้ใช้งานทั่วไป` : 'ลบตำแหน่งเรียบร้อย');
         } catch (e) { window.showToast('ลบตำแหน่งล้มเหลว — ลองใหม่อีกครั้ง', true); }
     };
-
-    const onlineAudio = new Audio('https://actions.google.com/sounds/v1/ui/bell_ping.ogg');
-    const offlineAudio = new Audio('https://actions.google.com/sounds/v1/ui/pop.ogg');
 
     const $ = id => document.getElementById(id);
 
@@ -6013,7 +6006,7 @@
         'ซ่อนการ์ด "สิทธิ์การใช้งานของฉัน" (รายการสิทธิ์ยาว ๆ) ออกจากหน้าตั้งค่าโปรไฟล์ทั้งแอดมินและผู้ใช้ทั่วไป — ยังเหลือการ์ด "สิทธิ์ที่ยังไม่ได้ / ขอสิทธิ์เพิ่ม" (ยุบไว้) ให้ขอสิทธิ์ได้ตามเดิม',
         '🔐 เปลี่ยนระบบเก็บรหัสผ่านจาก plaintext มาเป็น SHA-256 + salt (ต่อบัญชี) ทั้งระบบ — บัญชีเก่าล็อกอินได้เหมือนเดิมและถูกอัปเกรดเป็นแฮชให้อัตโนมัติ แอดมินดูรหัสจริงของคนอื่นไม่ได้แล้ว เหลือแค่ตั้งรหัสใหม่ให้',
         'ย้ายระบบล็อกอิน: ตรวจรหัสผ่านด้วย username + เปรียบเทียบ hash ฝั่งเครื่อง (ไม่ query ตามรหัสผ่านตรง ๆ อีกต่อไป)',
-        'การ์ดในระบบจัดการผู้ใช้งาน: สถานะ ออนไลน์/ออฟไลน์ ตรงจริงและสด (เปิดแอปค้าง/กลับมาที่แอป/เปิดหน้าจัดการ → ปักหมุดออนไลน์ทันที + เต้นหัวใจทุก 45 วิ)',
+
         'การ์ดในระบบจัดการผู้ใช้งาน: เอาช่องชื่อบริษัท/สหกรณ์ (หัวบิล) ออก เหลือ เข้าใช้ล่าสุด + ทะเบียนรถ และจัดปุ่ม โทร/แบน/ประวัติ/แก้ไข/ลบ ไว้กึ่งกลางแบบใหม่สวยขึ้น',
         'จอมิเตอร์ขยาย: ปุ่ม "+ ทางด่วน" เป็นสีส้มทึบ (ไม่มีเงา) และรายการ "ค่าทางด่วน X฿" ที่เพิ่มไว้เป็นสีฟ้าทึบ — เห็นชัดไม่กลืนกับพื้นหลัง',
         'แก้บั๊กเด้งหลุดล็อกอิน: ตอนรีเฟรช/เปิดแอปใหม่ ระบบจะไม่ไล่ออกจากระบบเพราะ snapshot แรกมาไม่ครบอีกแล้ว (เช็คข้อมูลจริงจากเซิร์ฟเวอร์ก่อน) — session อยู่จนกว่าจะกดออกจากระบบเอง',
@@ -6022,8 +6015,8 @@
         'เพิ่ม SHA-256 แบบ pure-JS เป็นตัวสำรอง — เปิดไฟล์ index.html แบบ file:// ตรง ๆ ก็ล็อกอินบัญชีที่แฮชแล้วได้ (เบราว์เซอร์ปกติปิด crypto.subtle ในหน้าไม่ปลอดภัย)',
         '🔒 อัปเกรดแฮชรหัสผ่านใหม่เป็น PBKDF2-HMAC-SHA256 (100,000 รอบ + salt ต่อบัญชี) — รุ่นเก่า sha256$/plaintext ยังล็อกอินได้ และถูกอัปเกรดเป็น PBKDF2 ให้อัตโนมัติหลังล็อกอินสำเร็จ (มี pure-JS fallback ให้ใช้ได้แม้เปิด file://)',
         '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้',
-        '📊 เพิ่มการ์ด "โควตา Firestore" ในหน้าตั้งค่าการใช้งาน (เฉพาะแอดมิน) — นับจำนวน อ่าน/เขียน/ลบ ที่แอปเรียกใช้ Firestore วันนี้แยกตามฟีเจอร์ (ข้อมูลผู้ใช้/สถานะออนไลน์, บันทึกกิจกรรม/เที่ยว, สิทธิ์, ข้อความแจ้งเตือน ฯลฯ) + แถบเปรียบเทียบกับโควตาฟรี 50K/20K/20K ครั้งต่อวัน เพื่อวางแผนลดการใช้ได้ตรงจุด',
-        'แก้สถานะออนไลน์ค้างในหน้าจัดการผู้ใช้: เขียน lastSeen กำกับทุก heartbeat + ปิด/ย่อแอป (pagehide) ออฟไลน์ทันที + เช็คความสด lastSeen (เก่าเกิน 3 นาที = ออฟไลน์) — คนที่ปิดแอปไปแล้วไม่ขึ้น "ออนไลน์" ค้างอีก และลด heartbeat จาก 45 วิ เป็น 90 วิ เพื่อประหยัดโควตา',
+
+
         '📊 อัปเกรดการ์ดโควตา Firestore: ทุกเครื่องส่งยอด อ่าน/เขียน/ลบ ขึ้นเซิร์ฟเวอร์ทุก 10 นาที (แยกรายวัน) — แอดมินเห็น ยอดรวมทุก ID + เหลือเท่าไหร่, แยกตาม ID (ชื่อโปรไฟล์ เช่น นักเลงคีย์บอร์ด / น.ส.ภคพร) เรียงจากมากไปน้อย และฟีเจอร์ที่ใช้ของเครื่องนี้เรียลไทม์',
         '❌ ลบระบบสถานะออนไลน์/ออฟไลน์ออกทั้งหมด (การ์ดออนไลน์, heartbeat เขียน isOnline ทุก 90 วิ, ฟังคอลเลกชัน users แบบเรียลไทม์, toast เข้า/ออกระบบ, จุดเขียวออนไลน์ในหน้าจัดการผู้ใช้) — ตัวนี้เคยกินโควตา Firestore ~99% (อ่าน+เขียนเกินลิมิตฟรี) ลบแล้วโควตาวันละ 50K อ่าน / 20K เขียน กลับมาใช้กับฟีเจอร์หลักได้เต็มที่',
         'จัดการผู้ใช้งาน: ยังเหลือข้อมูลที่จำเป็น (ชื่อ/ตำแหน่ง/ทะเบียน/เข้าใช้ล่าสุด) และปุ่มจัดการตามสิทธิ์ — เอาเฉพาะจุดสถานะออนไลน์ออกเท่านั้น',
@@ -6188,7 +6181,7 @@
                 if(data.isBanned) { window.showToast("บัญชีนี้ถูกระงับการใช้งาน", true); window.logoutApp(true); return; }
                 // กันบัญชีที่ข้อมูลถูกเขียนทับ/เสียหาย (ไม่มี username/role) แสดงผลผิดๆ เป็นผู้ใช้ทั่วไป — บังคับออกจากระบบแล้วเข้าสู่ระบบใหม่
                 if(!data.username || !data.role) {
-                    // 🔁 snapshot แรกอาจมาแค่บางส่วนจาก cache (เช่น เพิ่งเขียน isOnline ตอนเปิดแอป — ยังไม่ทันซิงก์กับเซิร์ฟเวอร์)
+                    // 🔁 snapshot แรกอาจมาแค่บางส่วนจาก cache (ยังไม่ทันซิงก์กับเซิร์ฟเวอร์)
                     // ขอข้อมูลจริงจากเซิร์ฟเวอร์ก่อนตัดสินใจ — กันเด้งหลุดล็อกอินทุกครั้งที่รีเฟรช
                     getDoc(doc(db, "users", loggedInUserId), { source: "server" }).then(realSnap => {
                         if (realSnap.exists()) {
@@ -6440,7 +6433,7 @@
                 let adminId = "";
                 if (querySnapshotAdmin.empty) {
                     // ครั้งแรกสุด (ยังไม่มีบัญชี admin เลย) → สร้างบัญชีเริ่มต้นให้ (เก็บแบบแฮช)
-                    const docRef = await addDoc(collection(db, "users"), { username: "admin", password: await window.pwHash("060421"), displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, tollwayMode: false, isOnline: true, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
+                    const docRef = await addDoc(collection(db, "users"), { username: "admin", password: await window.pwHash("060421"), displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, tollwayMode: false, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
                     adminId = docRef.id;
                 } else {
                     const adminDoc = querySnapshotAdmin.docs[0];
@@ -6453,7 +6446,7 @@
                         document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
                     }
                     // ยังเป็นรหัสเริ่มต้น → เข้าได้ตามปกติ แต่ไม่เขียนทับ password/role อีกต่อไป
-                    await updateDoc(doc(db, "users", adminId), { isOnline: true, isBanned: false, lastLoginAt: Date.now() });
+                    await updateDoc(doc(db, "users", adminId), { isBanned: false, lastLoginAt: Date.now() });
                     await window.pwUpgradeIfLegacy(adminId, adminStoredPw, "060421"); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
                 }
                 loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.removeItem('taxi_session_id'); // แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง
@@ -6470,7 +6463,7 @@
                 const loginRole = userDoc.data().role || 'User';
                 const sid = (loginRole !== 'Admin') ? window.newSessionToken() : null;
                 localStorage.setItem('taxi_session_id', sid || '');
-                await setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastLoginAt: Date.now(), sessionId: sid }, { merge: true }); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"); window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog();
+                await setDoc(doc(db, "users", loggedInUserId), { lastLoginAt: Date.now(), sessionId: sid }, { merge: true }); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"); window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog();
             } else { window.showToast("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด", true); }
         } catch (error) { window.showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ", true); } finally { document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; }
     };
@@ -6484,7 +6477,7 @@
             if (!existCheck.empty) { window.showToast("Username นี้มีคนใช้แล้ว กรุณาเปลี่ยนใหม่", true); return; }
             let finalPhotoURL = ""; if (fileInput.files && fileInput.files.length > 0) { finalPhotoURL = await fileToBase64(fileInput.files[0]); }
             const regSid = window.newSessionToken(); localStorage.setItem('taxi_session_id', regSid);
-            const docRef = await addDoc(collection(db, "users"), { username: inputUsername, password: await window.pwHash(pass), displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, tollwayMode: false, photoURL: finalPhotoURL, isOnline: true, isBanned: false, lastLoginAt: Date.now(), sessionId: regSid, order: Date.now() });
+            const docRef = await addDoc(collection(db, "users"), { username: inputUsername, password: await window.pwHash(pass), displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, tollwayMode: false, photoURL: finalPhotoURL, isBanned: false, lastLoginAt: Date.now(), sessionId: regSid, order: Date.now() });
             loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog();
         } catch (error) { window.showToast("เกิดข้อผิดพลาด: " + error.message, true); } finally { document.getElementById('authBtn').innerText = "สร้างบัญชีใหม่"; }
     };
@@ -6541,9 +6534,7 @@
                 if(!forced) await recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ");
                 if(!forced) {
                     // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน เพราะจะไปไล่เครื่องที่เพิ่งล็อกอินแทน
-                    await setDoc(doc(db, "users", loggedInUserId), { isOnline: false, sessionId: window.newSessionToken() }, { merge: true });
-                } else {
-                    await setDoc(doc(db, "users", loggedInUserId), { isOnline: false }, { merge: true });
+                    await setDoc(doc(db, "users", loggedInUserId), { sessionId: window.newSessionToken() }, { merge: true });
                 }
             }
             stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
@@ -6854,7 +6845,7 @@
                 const q = query(collection(db, "users"), where("username", "==", newUsername)); const existCheck = await getDocs(q); if (!existCheck.empty) { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก`; btn.disabled = false; return window.showToast("Username นี้ถูกใช้งานแล้ว", true); }
                 if (fileInput.files && fileInput.files.length > 0) { photoUpdate = await fileToBase64(fileInput.files[0]); } if (qrInput.files && qrInput.files.length > 0) { qrUpdate = await fileToBase64(qrInput.files[0], true); }
                 const newVibGold = document.getElementById('adminEditVibrateGold'); const newAutoFs = document.getElementById('adminEditAutoFs');
-                await addDoc(collection(db, "users"), { username: newUsername, password: await window.pwHash(newPassword), displayName: newName, companyName: newCompany, phoneNumber: newPhone, role: newRole, photoURL: photoUpdate, qrCodeURL: qrUpdate, taxiType: 35, vibrateGold: newVibGold ? newVibGold.checked : true, autoFullscreen: newAutoFs ? newAutoFs.checked : true, isOnline: false, isBanned: false, lastLoginAt: null, order: Date.now() });
+                await addDoc(collection(db, "users"), { username: newUsername, password: await window.pwHash(newPassword), displayName: newName, companyName: newCompany, phoneNumber: newPhone, role: newRole, photoURL: photoUpdate, qrCodeURL: qrUpdate, taxiType: 35, vibrateGold: newVibGold ? newVibGold.checked : true, autoFullscreen: newAutoFs ? newAutoFs.checked : true, isBanned: false, lastLoginAt: null, order: Date.now() });
                 await recordActivityLog(loggedInUserId, "เพิ่มผู้ใช้งานใหม่", `ชื่อ: ${newName}, สิทธิ์: ${newRole}`); window.showToast("สร้างผู้ใช้งานเรียบร้อย!"); window.toggleModal('adminEditUserModal', false); window.toggleModal('adminMenuModal', true); 
             } else {
                 const u = window.currentAdminUsers.find(x => x.uid === uid) || {}; // ข้อมูลเดิมของผู้ใช้ (เดิม u ถูกใช้แต่ไม่ประกาศ → ReferenceError → บันทึกไม่ได้)
