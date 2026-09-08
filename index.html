@@ -1967,7 +1967,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08ae';
+    const APP_BUILD = '2026-09-08af';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -2140,6 +2140,13 @@
         if (!res.ok) throw new Error("REST add failed " + res.status);
         const j = await res.json();
         return decodeURIComponent(j.name.split("/").pop());
+    };
+    // ดึง doc ผู้ใช้ตาม uid ผ่าน REST (GET ตรง ๆ) — ใช้ตอนเปิดแอปต่อ/รีเฟรช เพื่อ seed ข้อมูลขึ้นจอทันที (ไม่ต้องรอ snapshot)
+    window.__fsRestGet = async (uid) => {
+        const res = await fetch(`${__fsBase}/users/${uid}?key=${__FS_KEY}`);
+        if (!res.ok) throw new Error("REST get failed " + res.status);
+        const j = await res.json();
+        return window.__fsFieldsToObj(j.fields);
     };
     // 🔎 ดึง user ตาม username ให้เร็วที่สุด: เรียก SDK และ REST **พร้อมกัน** เอาตัวที่ตอบสำเร็จก่อน
     //    (เดิมเรียก SDK ก่อนแล้วค่อย REST ต่อ — ถ้าช่องทางเรียลไทม์ค้าง/โควตาหมด จะเสียเวลารอ SDK ครบ timeout ทั้ง 6-8 วิ
@@ -6379,6 +6386,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-07'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        'โหลดข้อมูลผู้ใช้ทันทีหลังล็อกอิน/สมัคร/เปิดแอปต่อ: นำ doc ที่เพิ่งดึงมาแสดงผลเลย (ชื่อ/รูป/สิทธิ์/ตั้งค่า) — ไม่ต้องรอ snapshot เมื่อ Firestore ค้าง/โควตาหมด เลิกเห็น "กำลังโหลดข้อมูลของคุณ" ค้าง',
         'ล็อกอินเร็วขึ้น: ดึงข้อมูลผู้ใช้ด้วย SDK+REST พร้อมกัน (เอาตัวที่ตอบก่อน — เดิมรอ SDK ครบ timeout ก่อนค่อย REST) + ยืนยันรหัสผ่านเสร็จออกจากหน้าเข้าสู่ระบบทันที (โชว์หน้าจอโหลด ไม่รอ snapshot) + watchdog สั้นลง 8→4 วิ กันค้างหน้าล็อกอิน',
         'ออกจากระบบเร็วขึ้น: หมุนโทเคน session แบบไม่บล็อก UI (SDK+REST พร้อมกัน เขียนเบื้องหลัง) — กดยืนยันแล้วกลับมาหน้าเข้าสู่ระบบทันที ไม่ต้องรอเขียนเสร็จ (แอดมินล็อกอินไม่ต้องรอเขียน lastLoginAt ด้วย)',
         'แก้ลากสลับเด้ง/กระโดดขึ้นบนสุด: ชดเชยตำแหน่งที่เปลี่ยนตอนย้าย (รายการติดตามนิ้วตลอดไม่หนีมือ) + หยุด animation ค้างก่อนวัดตำแหน่ง — เลื่อนทีละลำดับได้เนียน ๆ',
@@ -6566,6 +6574,88 @@
         finally { if (btn) btn.disabled = false; }
     };
 
+    // 🎨 นำ doc ผู้ใช้ (data) ไปแสดงผลที่หน้าจอทั้งหมดทันที — ใช้ซ้ำทั้งตอน snapshot ผู้ใช้มา (listenToMyUser)
+    //    และตอนล็อกอิน/สมัคร/เปิดแอปต่อ (seed จาก doc ที่เพิ่งดึงมา — ไม่ต้องรอ snapshot เมื่อช่องทางเรียลไทม์ค้าง/โควตาหมด)
+    window.__applyUserDocUI = (data) => {
+        try {
+            document.getElementById('appLoader').style.display = 'none'; 
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'flex'; 
+            document.getElementById('userMenu').style.display = 'flex'; 
+            document.getElementById('mainUserInfo').style.display = 'flex';
+            
+            currentUserRole = data.role || "User"; myExtraPerms = data.extraPerms || {}; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
+            // 🔁 ลำดับเมนูที่ลากสลับ — ซิงก์ข้ามเครื่อง: ค่าจาก Firestore (users/{uid}.menuOrder) ชนะ, localStorage เป็นสำรองตอนออฟไลน์
+            if (data.menuOrder) { try { let mo = data.menuOrder; if (typeof mo === 'string') mo = JSON.parse(mo); window.__menuOrder = mo; if (Array.isArray(mo.side)) localStorage.setItem('menu_order_side', JSON.stringify(mo.side)); if (Array.isArray(mo.hub)) localStorage.setItem('menu_order_hub', JSON.stringify(mo.hub)); } catch (e) {} }
+            document.getElementById('displayUserName').innerText = displayNameVal; document.getElementById('mainUserName').innerText = displayNameVal;
+            document.getElementById('editPhone').value = data.phoneNumber || "";
+            
+            let displayRoleTH = currentUserRole;
+            if(currentUserRole === "Admin") displayRoleTH = "ผู้ดูแลระบบ"; else if(currentUserRole === "Manager") displayRoleTH = "ผู้จัดการ"; else if(currentUserRole === "User") displayRoleTH = "ผู้ใช้งานทั่วไป"; // ตำแหน่งที่สร้างเอง → โชว์ชื่อตำแหน่งนั้น
+            document.getElementById('displayUserRole').innerText = displayRoleTH; document.getElementById('mainUserRole').innerText = displayRoleTH; document.getElementById('editDisplayName').value = data.displayName || "";
+            window.myCurrentCompanyName = data.companyName || "";
+            const coInp = document.getElementById('editCompanyName'); if(coInp) coInp.value = window.myCurrentCompanyName;
+            window.myCurrentPlateNo = data.plateNo || "";
+            const plateInp = document.getElementById('editPlateNo'); if(plateInp) plateInp.value = window.myCurrentPlateNo;
+            
+            let safeIcon = window.DEFAULT_AVATAR;
+            if (data.photoURL && data.photoURL.length > 10) { safeIcon = data.photoURL; }
+            window.myCurrentPhotoURL = data.photoURL || "";
+            
+            document.getElementById('profilePic').src = safeIcon; document.getElementById('editProfilePic').src = safeIcon; document.getElementById('mainProfilePic').src = safeIcon;
+            
+            let manifestLink = document.getElementById('dynamicManifest');
+            if (manifestLink) {
+                let stringManifest = JSON.stringify({ "name": "Taxi: " + displayNameVal, "short_name": displayNameVal, "start_url": ".", "display": "fullscreen", "orientation": "portrait", "background_color": "#121212", "theme_color": "#121212", "categories": ["utilities", "navigation"], "icons": [ { "src": safeIcon, "sizes": "192x192", "type": "image/jpeg" }, { "src": safeIcon, "sizes": "512x512", "type": "image/jpeg" } ] });
+                manifestLink.href = 'data:application/manifest+json,' + encodeURIComponent(stringManifest); 
+            }
+
+            window.myCurrentQrCodeURL = data.qrCodeURL || ""; 
+            document.getElementById('editQrCodePic').src = window.myCurrentQrCodeURL || window.DEFAULT_QR;
+
+            window.baseFare = data.taxiType ? parseInt(data.taxiType) : 35;
+            window.setProfileTaxiType(window.baseFare, false); 
+            // จำกัดเวลาจอดที่เบิกคืนหลังแอปถูกคิล (นาที) — ค่าเริ่มต้น 15 นาที (0 = ไม่จำกัด)
+            window.userKillCapMin = (data.killIdleCapMin !== undefined && data.killIdleCapMin !== null && !isNaN(parseInt(data.killIdleCapMin))) ? parseInt(data.killIdleCapMin) : 0;
+            const capSel = document.getElementById('editKillCap');
+            if (capSel) capSel.value = String(window.userKillCapMin);
+            // สั่น toast ทอง (ค่าเริ่มต้น true) — ผู้ใช้ปิดได้ในหน้าโปรไฟล์
+            window.userVibrateGold = data.vibrateGold !== false;
+            const vibSel = document.getElementById('editVibrateGold');
+            if (vibSel) vibSel.checked = window.userVibrateGold;
+            // เสียงติ๊ง toast (ค่าเริ่มต้น true) — ผู้ใช้ปิดได้ในหน้าโปรไฟล์ (บันทึกต่อบัญชี)
+            window.userToastSound = data.toastSound !== false;
+            const tsSel = document.getElementById('editToastSound');
+            if (tsSel) tsSel.checked = window.userToastSound;
+            // ขอเต็มจออัตโนมัติตอนเปิดแอป (ค่าเริ่มต้น true) — ผู้ใช้ปิดได้ในหน้าโปรไฟล์ (บันทึกต่อบัญชี)
+            window.userAutoFs = data.autoFullscreen !== false;
+            const autoFsSel = document.getElementById('editAutoFs');
+            if (autoFsSel) autoFsSel.checked = window.userAutoFs;
+            // 🔒 ค่า 'สั่น toast ทอง' และ 'เต็มจออัตโนมัติ' ที่แอดมินตั้งให้พนักงานเป็นค่าบังคับ — เฉพาะแอดมินเท่านั้นที่แก้ได้ (ปิดช่อง + แสดงคำเตือน)
+            const canEditManagedSettings = currentUserRole === 'Admin';
+            [vibSel, autoFsSel].forEach(el => { if (el) { el.disabled = !canEditManagedSettings; } });
+            const lockHint = document.getElementById('settingsLockHint');
+            if (lockHint) lockHint.style.display = canEditManagedSettings ? 'none' : 'block';
+            window.updateAutoFsBadge();
+            
+            if(!window.isManualRunning) {
+                window.renderStartButton();
+                window.manualInputChange();
+            }
+
+            window.applyPermissionsUI(); 
+            if (typeof window.listenPermRequests === 'function') window.listenPermRequests(); // 🔔 ฟังคำขอสิทธิ์เพิ่มสำหรับแอดมิน
+            // โหมดทางด่วนที่บันทึกไว้ต่อบัญชี (Firestore) มีผลเหนือค่าในเครื่อง — นำมาใช้ตอนเข้าสู่ระบบครั้งแรกเท่านั้น
+            if (!tollModeLoadedForUser) {
+                tollModeLoadedForUser = true;
+                if (data.tollwayMode === true || data.tollwayMode === false) { window.setUserTollMode(data.tollwayMode); }
+                else { window.applySavedTollMode(); }
+            }
+            if (typeof window.maybeShowResumeBanner === 'function') window.maybeShowResumeBanner();
+            if (typeof window.checkPermNotice === 'function') window.checkPermNotice(); // 🔔 แจ้งผลคำขอสิทธิ์ (อนุมัติ/ปฏิเสธ) ตอนเปิดแอป
+        } catch (e) { /* render บางส่วนพลาด — snapshot ตัวถัดไปจะ render ซ้ำให้สมบูรณ์ */ }
+    };
+
     const listenToMyUser = () => {
         if(!loggedInUserId) return;
         window.markPresenceOnline(true); // 👤 เปิดแอป/ล็อกอิน/สมัคร/รีเฟรช → ขึ้น "ออนไลน์" ทันที (เขียน 1 ครั้ง ไม่มี heartbeat)
@@ -6621,88 +6711,13 @@
                         }).catch(() => { /* ไม่มีเน็ต — รอ snapshot ถัดไป */ });
                     }
                 }
-                
-                document.getElementById('appLoader').style.display = 'none'; 
-                document.getElementById('loginOverlay').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'flex'; 
-                document.getElementById('userMenu').style.display = 'flex'; 
-                document.getElementById('mainUserInfo').style.display = 'flex';
-                
-                currentUserRole = data.role || "User"; myExtraPerms = data.extraPerms || {}; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
-                // 🔁 ลำดับเมนูที่ลากสลับ — ซิงก์ข้ามเครื่อง: ค่าจาก Firestore (users/{uid}.menuOrder) ชนะ, localStorage เป็นสำรองตอนออฟไลน์
-                if (data.menuOrder) { try { let mo = data.menuOrder; if (typeof mo === 'string') mo = JSON.parse(mo); window.__menuOrder = mo; if (Array.isArray(mo.side)) localStorage.setItem('menu_order_side', JSON.stringify(mo.side)); if (Array.isArray(mo.hub)) localStorage.setItem('menu_order_hub', JSON.stringify(mo.hub)); } catch (e) {} }
-                document.getElementById('displayUserName').innerText = displayNameVal; document.getElementById('mainUserName').innerText = displayNameVal;
-                document.getElementById('editPhone').value = data.phoneNumber || "";
-                
-                let displayRoleTH = currentUserRole;
-                if(currentUserRole === "Admin") displayRoleTH = "ผู้ดูแลระบบ"; else if(currentUserRole === "Manager") displayRoleTH = "ผู้จัดการ"; else if(currentUserRole === "User") displayRoleTH = "ผู้ใช้งานทั่วไป"; // ตำแหน่งที่สร้างเอง → โชว์ชื่อตำแหน่งนั้น
-                document.getElementById('displayUserRole').innerText = displayRoleTH; document.getElementById('mainUserRole').innerText = displayRoleTH; document.getElementById('editDisplayName').value = data.displayName || "";
-                window.myCurrentCompanyName = data.companyName || "";
-                const coInp = document.getElementById('editCompanyName'); if(coInp) coInp.value = window.myCurrentCompanyName;
-                window.myCurrentPlateNo = data.plateNo || "";
-                const plateInp = document.getElementById('editPlateNo'); if(plateInp) plateInp.value = window.myCurrentPlateNo;
-                
-                let safeIcon = window.DEFAULT_AVATAR;
-                if (data.photoURL && data.photoURL.length > 10) { safeIcon = data.photoURL; }
-                window.myCurrentPhotoURL = data.photoURL || "";
-                
-                document.getElementById('profilePic').src = safeIcon; document.getElementById('editProfilePic').src = safeIcon; document.getElementById('mainProfilePic').src = safeIcon;
-                
-                let manifestLink = document.getElementById('dynamicManifest');
-                if (manifestLink) {
-                    let stringManifest = JSON.stringify({ "name": "Taxi: " + displayNameVal, "short_name": displayNameVal, "start_url": ".", "display": "fullscreen", "orientation": "portrait", "background_color": "#121212", "theme_color": "#121212", "categories": ["utilities", "navigation"], "icons": [ { "src": safeIcon, "sizes": "192x192", "type": "image/jpeg" }, { "src": safeIcon, "sizes": "512x512", "type": "image/jpeg" } ] });
-                    manifestLink.href = 'data:application/manifest+json,' + encodeURIComponent(stringManifest); 
-                }
-
-                window.myCurrentQrCodeURL = data.qrCodeURL || ""; 
-                document.getElementById('editQrCodePic').src = window.myCurrentQrCodeURL || window.DEFAULT_QR;
-
-                window.baseFare = data.taxiType ? parseInt(data.taxiType) : 35;
-                window.setProfileTaxiType(window.baseFare, false); 
-                // จำกัดเวลาจอดที่เบิกคืนหลังแอปถูกคิล (นาที) — ค่าเริ่มต้น 15 นาที (0 = ไม่จำกัด)
-                window.userKillCapMin = (data.killIdleCapMin !== undefined && data.killIdleCapMin !== null && !isNaN(parseInt(data.killIdleCapMin))) ? parseInt(data.killIdleCapMin) : 0;
-                const capSel = document.getElementById('editKillCap');
-                if (capSel) capSel.value = String(window.userKillCapMin);
-                // สั่น toast ทอง (ค่าเริ่มต้น true) — ผู้ใช้ปิดได้ในหน้าโปรไฟล์
-                window.userVibrateGold = data.vibrateGold !== false;
-                const vibSel = document.getElementById('editVibrateGold');
-                if (vibSel) vibSel.checked = window.userVibrateGold;
-                // เสียงติ๊ง toast (ค่าเริ่มต้น true) — ผู้ใช้ปิดได้ในหน้าโปรไฟล์ (บันทึกต่อบัญชี)
-                window.userToastSound = data.toastSound !== false;
-                const tsSel = document.getElementById('editToastSound');
-                if (tsSel) tsSel.checked = window.userToastSound;
-                // ขอเต็มจออัตโนมัติตอนเปิดแอป (ค่าเริ่มต้น true) — ผู้ใช้ปิดได้ในหน้าโปรไฟล์ (บันทึกต่อบัญชี)
-                window.userAutoFs = data.autoFullscreen !== false;
-                const autoFsSel = document.getElementById('editAutoFs');
-                if (autoFsSel) autoFsSel.checked = window.userAutoFs;
-                // 🔒 ค่า 'สั่น toast ทอง' และ 'เต็มจออัตโนมัติ' ที่แอดมินตั้งให้พนักงานเป็นค่าบังคับ — เฉพาะแอดมินเท่านั้นที่แก้ได้ (ปิดช่อง + แสดงคำเตือน)
-                const canEditManagedSettings = currentUserRole === 'Admin';
-                [vibSel, autoFsSel].forEach(el => { if (el) { el.disabled = !canEditManagedSettings; } });
-                const lockHint = document.getElementById('settingsLockHint');
-                if (lockHint) lockHint.style.display = canEditManagedSettings ? 'none' : 'block';
-                window.updateAutoFsBadge();
-                
-                if(!window.isManualRunning) {
-                    window.renderStartButton();
-                    window.manualInputChange();
-                }
-
-                window.applyPermissionsUI(); 
-                if (typeof window.listenPermRequests === 'function') window.listenPermRequests(); // 🔔 ฟังคำขอสิทธิ์เพิ่มสำหรับแอดมิน
-                // โหมดทางด่วนที่บันทึกไว้ต่อบัญชี (Firestore) มีผลเหนือค่าในเครื่อง — นำมาใช้ตอนเข้าสู่ระบบครั้งแรกเท่านั้น
-                if (!tollModeLoadedForUser) {
-                    tollModeLoadedForUser = true;
-                    if (data.tollwayMode === true || data.tollwayMode === false) { window.setUserTollMode(data.tollwayMode); }
-                    else { window.applySavedTollMode(); }
-                }
-                if (typeof window.maybeShowResumeBanner === 'function') window.maybeShowResumeBanner();
-                if (typeof window.checkPermNotice === 'function') window.checkPermNotice(); // 🔔 แจ้งผลคำขอสิทธิ์ (อนุมัติ/ปฏิเสธ) ตอนเปิดแอป
+                window.__applyUserDocUI(data);
             } else { window.logoutApp(true); }
         });
     };
 
     // 👤 ระบบ "ใครออนไลน์บ้าง" กลับมาแล้วในเวอร์ชันประหยัดโควตา (presence/{uid} — เขียนเฉพาะเข้า/ออกแอป + แตะใช้งานทุก 10 นาที ไม่มี heartbeat 90 วิ; ฟังสดเฉพาะตอนเปิดหน้าจัดการผู้ใช้)
-    if (loggedInUserId) { listenToMyUser(); window.__watchdogShowApp(); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
+    if (loggedInUserId) { listenToMyUser(); window.__watchdogShowApp(); window.__fsTimeout(window.__fsRestGet(loggedInUserId), 5000).then(d => { if (d && (d.username || d.role)) window.__applyUserDocUI(d); }).catch(()=>{}); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
     // 🔧 โหลดข้อความแจ้งเตือนที่แอดมินแก้ไว้ (Firestore) — ใช้ได้ทุกหน้าแม้ยังไม่ล็อกอิน
     if (typeof window.loadToastMsgOverrides === 'function') window.loadToastMsgOverrides();
     // 🏷️ โหลด/ซิงก์ประวัติเวอร์ชัน (อ่านได้ทุกคน; ถ้าโค้ดปล่อยเวอร์ชันใหม่ ระบบจะรันเวอร์ชันให้อัตโนมัติ)
@@ -6858,7 +6873,7 @@
                     catch (e) { adminId = await window.__fsRestAdd("users", adminDoc); }
                 }
                 loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.removeItem('taxi_session_id'); // แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง
-                window.__showAppLoading(); // ⚡ ออกจากหน้า login ทันที (loader แทน) — ไม่รอ snapshot
+                if (lu) { window.__applyUserDocUI(lu.data); } else { window.__showAppLoading(); } // ⚡ ยืนยันรหัสผ่านแล้ว → แสดงแอปทันทีจาก doc ที่ดึงมา (seed ชื่อ/รูป/สิทธิ์) — ไม่รอ snapshot เมื่อ Firestore ค้าง
                 window.__watchdogShowApp(); // ⏱️ เริ่มนับเลย — snapshot มาไม่ทันใน ~4 วิ จะบังคับเข้าแอป (ไม่รอให้เขียน session เสร็จก่อน)
                 window.__fsTimeout(recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ"), 5000).catch(()=>{});
                 window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); authBtn.innerText = "เข้าสู่ระบบ"; return;
@@ -6870,8 +6885,8 @@
             if (!(await window.pwVerify(pass, ud.password || ''))) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
             if (ud.isBanned) return fail("บัญชีของคุณถูกระงับการใช้งาน");
             loggedInUserId = user.id; localStorage.setItem('taxi_user_id', loggedInUserId);
-            window.__showAppLoading(); // ⚡ ยืนยันรหัสผ่านแล้ว → ออกจากหน้า login ทันที แสดง loader (ตัว snapshot จะพาเข้าแอปเมื่อข้อมูลมา)
-            window.__watchdogShowApp(); // ⏱️ เริ่มนับเลย — ถ้าเข้าแอปไม่ได้ใน ~4 วิ จะบังคับแสดง (รันขนานกับเขียน session ไม่รอซ้อนกัน)
+            window.__applyUserDocUI(ud); // ⚡ ยืนยันรหัสผ่านแล้ว → แสดงแอปทันทีจาก doc ที่เพิ่งดึงมา (seed ชื่อ/รูป/สิทธิ์/ตั้งค่า) — ไม่ต้องรอ snapshot เมื่อ Firestore ค้าง/โควตาหมด
+            window.__watchdogShowApp(); // ⏱️ เผื่อ seed พลาด/snapshot ไม่มา → บังคับเข้าแอปใน ~4 วิ (กันค้าง)
             window.__fsTimeout(window.pwUpgradeIfLegacy(user.id, ud.password || '', pass), 6000).catch(()=>{}); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
             // 🚫 กันล็อกอินซ้อน: สร้างโทเคน session ใหม่ทุกครั้งที่ล็อกอิน → เครื่องเก่าที่ล็อกอินค้างจะโดนไล่ออก (แอดมินยกเว้น)
             const loginRole = ud.role || 'User';
@@ -6905,7 +6920,7 @@
             let docRef;
             try { docRef = await window.__fsTimeout(addDoc(collection(db, "users"), regData), 10000); }
             catch (e) { try { const r = await window.__fsRestQuery(inputUsername); docRef = (r && r.length) ? { id: r[0].id } : { id: await window.__fsRestAdd("users", regData) }; } catch (e2) { return window.showToast("เกิดข้อผิดพลาดในการสร้างบัญชี — ลองอีกครั้ง", true); } }
-            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); window.__fsTimeout(recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"), 5000).catch(()=>{}); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog(); window.__watchdogShowApp();
+            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); window.__fsTimeout(recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"), 5000).catch(()=>{}); window.__applyUserDocUI(regData); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog(); window.__watchdogShowApp();
         } catch (error) { window.showToast("เกิดข้อผิดพลาด: " + error.message, true); } finally { document.getElementById('authBtn').innerText = "สร้างบัญชีใหม่"; }
     };
 
