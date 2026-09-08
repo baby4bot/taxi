@@ -989,6 +989,29 @@
         }
         .side-menu-item.logout-item:hover { background: rgba(255,77,95,0.1); }
 
+        /* ---------- โหมดลากสลับเมนู (กดค้าง → ลากขึ้น/ลง → คลิกว่างเพื่อจบ) ---------- */
+        .reorder-mode { user-select: none; -webkit-user-select: none; }
+        .reorder-mode .side-menu-item, .reorder-mode .hub-item { cursor: grab; border: 1px dashed rgba(255,210,77,0.45); }
+        .reorder-mode .side-menu-item:hover, .reorder-mode .hub-item:hover { transform: none; }
+        .reorder-mode .hub-chevron { display: none; }
+        .reorder-grip {
+            margin-left: auto; flex-shrink: 0;
+            display: grid; grid-template-columns: repeat(2, 4px); gap: 3px;
+            place-content: center;
+            width: 34px; height: 34px;
+            border-radius: 9px;
+            background: rgba(255,210,77,0.16);
+            border: 1px solid rgba(255,210,77,0.45);
+        }
+        .reorder-grip i { width: 4px; height: 4px; border-radius: 1px; background: #ffd24d; display: block; }
+        .reorder-hint {
+            font-size: 12px; color: #ffd24d; text-align: center; line-height: 1.5;
+            background: rgba(255,210,77,0.1); border: 1px dashed rgba(255,210,77,0.45);
+            border-radius: 12px; padding: 8px 12px; margin-bottom: 10px;
+        }
+        .reorder-arming { box-shadow: inset 0 0 0 2px rgba(255,210,77,0.55); background: rgba(255,210,77,0.1); }
+        .reorder-dragging { opacity: 0.7; transform: scale(1.02); position: relative; z-index: 5; }
+
         /* ---------- Admin user cards ---------- */
         .admin-user-card {
             display: flex; align-items: flex-start; gap: 12px; text-align: left;
@@ -1607,10 +1630,10 @@
         </div>
         <hr class="side-divider">
         <div class="side-menu-items">
-            <div class="side-menu-item" onclick="window.toggleSideMenu(false)"><span class="material-symbols-outlined">home</span><span>หน้าแรก</span></div>
-            <div class="side-menu-item" onclick="window.toggleSideMenu(false); window.openProfileModal();"><span class="material-symbols-outlined" style="position: relative;">person<span id="menuProfileBadge" class="perm-badge" style="display: none;"></span></span><span>โปรไฟล์</span></div>
-            <div class="side-menu-item" onclick="window.toggleAppFullscreen()"><span class="material-symbols-outlined">fullscreen</span><span id="fullscreenLabel">เปิดเต็มจอ</span></div>
-            <div id="settingsMenuBtn" class="side-menu-item" onclick="window.toggleSideMenu(false); setTimeout(() => { window.openSettingsHub(); }, 300);" style="display: none;"><span class="material-symbols-outlined">settings</span><span>ตั้งค่าการใช้งาน</span></div>
+            <div class="side-menu-item" data-ord-key="home" onclick="window.toggleSideMenu(false)"><span class="material-symbols-outlined">home</span><span>หน้าแรก</span></div>
+            <div class="side-menu-item" data-ord-key="profile" onclick="window.toggleSideMenu(false); window.openProfileModal();"><span class="material-symbols-outlined" style="position: relative;">person<span id="menuProfileBadge" class="perm-badge" style="display: none;"></span></span><span>โปรไฟล์</span></div>
+            <div class="side-menu-item" data-ord-key="fullscreen" onclick="window.toggleAppFullscreen()"><span class="material-symbols-outlined">fullscreen</span><span id="fullscreenLabel">เปิดเต็มจอ</span></div>
+            <div id="settingsMenuBtn" class="side-menu-item" data-ord-key="settings" onclick="window.toggleSideMenu(false); setTimeout(() => { window.openSettingsHub(); }, 300);" style="display: none;"><span class="material-symbols-outlined">settings</span><span>ตั้งค่าการใช้งาน</span></div>
         </div>
         <hr class="side-divider">
         <div class="side-menu-item logout-item" onclick="window.toggleSideMenu(false); window.logoutApp();"><span class="material-symbols-outlined">logout</span><span>ออกจากระบบ</span></div>
@@ -1940,7 +1963,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08y';
+    const APP_BUILD = '2026-09-08z';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -2871,10 +2894,135 @@
         return null;
     };
 
+    // ── 🔀 โหมดลากสลับเมนู (กดค้าง ~0.9 วิ → ลากขึ้น/ลงสลับกัน → คลิกพื้นที่ว่างเพื่อจบและบันทึก) ──
+    //    ใช้ได้กับเมนูแฮมเบอร์เกอร์ (หน้าแรก/โปรไฟล์/เต็มจอ/ตั้งค่า) และเมนูตั้งค่าการใช้งาน (หมวดจัดการระบบ)
+    //    ลำดับที่ลากบันทึกในเครื่อง (localStorage) — ไม่กินโควตา Firestore
+    window.__reorder = null; // { container, itemsSel, keyOf, saveKey, boxEl }
+    window.exitReorderMode = (save = true) => {
+        const rc = window.__reorder; if (!rc) return;
+        window.__reorder = null;
+        rc.container.classList.remove('reorder-mode');
+        rc.container.querySelectorAll('.reorder-grip').forEach(g => g.remove());
+        rc.container.querySelectorAll('.reorder-arming').forEach(a => a.classList.remove('reorder-arming'));
+        const hint = rc.boxEl.querySelector('.reorder-hint'); if (hint) hint.remove();
+        if (save) {
+            try {
+                const order = Array.from(rc.container.querySelectorAll(rc.itemsSel))
+                    .filter(el => getComputedStyle(el).display !== 'none')
+                    .map(el => rc.keyOf(el));
+                localStorage.setItem(rc.saveKey, JSON.stringify(order));
+            } catch (e) {}
+        }
+    };
+    window.enterReorderMode = (container, itemsSel, keyOf, saveKey, boxEl) => {
+        window.exitReorderMode(false);
+        const visible = Array.from(container.querySelectorAll(itemsSel)).filter(el => getComputedStyle(el).display !== 'none');
+        if (visible.length < 2) return;
+        window.__reorder = { container, itemsSel, keyOf, saveKey, boxEl };
+        container.classList.add('reorder-mode');
+        visible.forEach(it => {
+            const grip = document.createElement('span');
+            grip.className = 'reorder-grip';
+            grip.innerHTML = '<i></i><i></i><i></i><i></i>';
+            grip.title = 'ลากเพื่อสลับตำแหน่ง';
+            it.appendChild(grip);
+        });
+        const hint = document.createElement('div');
+        hint.className = 'reorder-hint';
+        hint.innerHTML = '🔀 <b>ลากสลับ</b> — จับเมนูแล้วลากขึ้น/ลง · คลิกพื้นที่ว่างเพื่อจบและบันทึก';
+        boxEl.insertBefore(hint, boxEl.firstChild);
+    };
+    window.applySavedMenuOrder = (container, itemsSel, saveKey) => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(saveKey) || 'null');
+            if (!Array.isArray(saved) || !saved.length) return;
+            const items = Array.from(container.querySelectorAll(itemsSel));
+            const byKey = {}; items.forEach(it => { byKey[it.dataset.ordKey || it.id] = it; });
+            const used = new Set(); let anchor = null;
+            const place = (it) => { if (anchor) anchor.after(it); else container.prepend(it); anchor = it; };
+            saved.forEach(k => { const it = byKey[k]; if (it && !used.has(k)) { used.add(k); place(it); } });
+            items.forEach(it => { const k = it.dataset.ordKey || it.id; if (!used.has(k)) { used.add(k); place(it); } });
+        } catch (e) {}
+    };
+    window.__wireReorderDrag = (container, itemsSel, boxEl, saveKey) => {
+        let pressT = null, pressStart = null, dragState = null;
+        const cancelPress = () => { if (pressT) { clearTimeout(pressT); pressT = null; } pressStart = null; container.querySelectorAll('.reorder-arming').forEach(a => a.classList.remove('reorder-arming')); };
+        const keyOf = (el) => el.dataset.ordKey || el.id;
+        container.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            const it = e.target.closest(itemsSel);
+            if (!it) return;
+            if (window.__reorder && window.__reorder.container === container) {
+                // โหมดลากเปิดอยู่ → เริ่มลากทันที
+                e.preventDefault();
+                dragState = { item: it };
+                it.classList.add('reorder-dragging');
+                try { it.setPointerCapture(e.pointerId); } catch (err) {}
+                return;
+            }
+            // กดค้าง ~0.9 วิ (0.45+0.45) → เข้าโหมดลาก (เลื่อนนิ้วก่อนครบเวลา = ยกเลิก)
+            pressStart = { x: e.clientX, y: e.clientY };
+            const heldPointerId = e.pointerId;
+            pressT = setTimeout(() => {
+                if (window.__reorder) return;
+                it.classList.add('reorder-arming');
+                pressT = setTimeout(() => {
+                    it.classList.remove('reorder-arming');
+                    window.enterReorderMode(container, itemsSel, keyOf, saveKey, boxEl);
+                    // จับรายการที่กดค้างไว้เป็นตัวลากต่อทันที (ไม่ต้องปล่อยนิ้ว — ลากต่อได้เลย)
+                    dragState = { item: it };
+                    it.classList.add('reorder-dragging');
+                    try { it.setPointerCapture(heldPointerId); } catch (err) {}
+                }, 450);
+            }, 450);
+        });
+        container.addEventListener('pointermove', (e) => {
+            if (dragState) {
+                e.preventDefault();
+                const over = document.elementFromPoint(e.clientX, e.clientY);
+                const overIt = over ? over.closest(itemsSel) : null;
+                if (overIt && overIt !== dragState.item) {
+                    const r = overIt.getBoundingClientRect();
+                    container.insertBefore(dragState.item, e.clientY < r.top + r.height / 2 ? overIt : overIt.nextSibling);
+                }
+                return;
+            }
+            if (pressStart && (Math.abs(e.clientX - pressStart.x) > 10 || Math.abs(e.clientY - pressStart.y) > 10)) cancelPress();
+        });
+        const endDrag = () => { if (dragState) { dragState.item.classList.remove('reorder-dragging'); dragState = null; } cancelPress(); };
+        container.addEventListener('pointerup', endDrag);
+        container.addEventListener('pointercancel', endDrag);
+        // คลิกตอนโหมดลาก: เมนูไม่ทำงาน (กันกดพลาด); คลิกที่ว่าง → จบ + บันทึก; ปุ่มปิด/ออก → จบโหมดแต่ปุ่มยังทำงานต่อ
+        boxEl.addEventListener('click', (e) => {
+            if (!window.__reorder || window.__reorder.boxEl !== boxEl) return;
+            const it = e.target.closest(itemsSel);
+            if (it) { e.stopPropagation(); e.preventDefault(); return; }
+            const btn = e.target.closest('.btn-close-floating, .btn-back-profile, .logout-item, .side-profile-pic, .side-menu-header, .side-user-name, .side-user-role');
+            if (btn) { window.exitReorderMode(true); return; }
+            e.stopPropagation(); e.preventDefault();
+            window.exitReorderMode(true);
+        }, true);
+    };
+    window.initMenuReorder = () => {
+        const sideBox = document.getElementById('sideMenuBox');
+        const sideWrap = sideBox ? sideBox.querySelector('.side-menu-items') : null;
+        if (sideWrap) window.__wireReorderDrag(sideWrap, '.side-menu-item', sideBox, 'menu_order_side');
+        const hubBox = document.getElementById('settingsHubModal');
+        const hubWrap = hubBox ? hubBox.querySelector('.modal-content-scroll') : null;
+        if (hubWrap) window.__wireReorderDrag(hubWrap, '.hub-item', hubBox, 'menu_order_hub');
+    };
+    window.initMenuReorder();
+
     window.toggleSideMenu = (show) => {
         const overlay = $('sideMenuOverlay'); const box = $('sideMenuBox');
-        if (show) { overlay.style.display = 'block'; setTimeout(() => { overlay.style.opacity = '1'; box.style.right = '0'; }, 10); } 
-        else { overlay.style.opacity = '0'; box.style.right = '-320px'; setTimeout(() => { overlay.style.display = 'none'; }, 300); }
+        if (show) {
+            const wrap = box ? box.querySelector('.side-menu-items') : null;
+            if (wrap) window.applySavedMenuOrder(wrap, '.side-menu-item', 'menu_order_side'); // 🔀 เรียงลำดับตามที่ลากไว้
+            overlay.style.display = 'block'; setTimeout(() => { overlay.style.opacity = '1'; box.style.right = '0'; }, 10);
+        } else {
+            if (window.__reorder) window.exitReorderMode(true);
+            overlay.style.opacity = '0'; box.style.right = '-320px'; setTimeout(() => { overlay.style.display = 'none'; }, 300);
+        }
     };
 
     window.openShareModal = () => { window.toggleModal('shareModal', true); };
@@ -6046,6 +6194,7 @@
         '❌ ลบระบบสถานะออนไลน์/ออฟไลน์ออกทั้งหมด (การ์ดออนไลน์, heartbeat เขียน isOnline ทุก 90 วิ, ฟังคอลเลกชัน users แบบเรียลไทม์, toast เข้า/ออกระบบ, จุดเขียวออนไลน์ในหน้าจัดการผู้ใช้) — ตัวนี้เคยกินโควตา Firestore ~99% (อ่าน+เขียนเกินลิมิตฟรี) ลบแล้วโควตาวันละ 50K อ่าน / 20K เขียน กลับมาใช้กับฟีเจอร์หลักได้เต็มที่',
         'จัดการผู้ใช้งาน: ยังเหลือข้อมูลที่จำเป็น (ชื่อ/ตำแหน่ง/ทะเบียน/เข้าใช้ล่าสุด) และปุ่มจัดการตามสิทธิ์ — เอาเฉพาะจุดสถานะออนไลน์ออกเท่านั้น',
         '👤 กลับมาเพิ่ม "ใครออนไลน์บ้าง" แบบประหยัดโควตา: ใช้คอลเลกชันเล็ก presence/{uid} เขียนเฉพาะเหตุการณ์จริง (เข้า/ออกแอป, ล็อกอิน/เอาต์, แตะใช้งานทุก 10 นาที) — ไม่มี heartbeat ทุก 90 วิ และมีเฉพาะคนที่เปิดหน้าจัดการผู้ใช้เท่านั้นที่ฟังสด (แอดมินเห็นจุดเขียวออนไลน์อัปเดตทันที)',
+        '🔀 ลากสลับเมนูได้: กดค้างเมนู ~1 วิ (หน้าแรก/โปรไฟล์/เต็มจอ/ตั้งค่า + หมวดตั้งค่าการใช้งาน) → ขึ้นแถบสีเหลือง "ลากสลับ" จับลากขึ้น/ลงสลับตำแหน่งกันได้ แล้วคลิกพื้นที่ว่างเพื่อจบและบันทึก (จำลำดับในเครื่อง)',
         'โควตา Firestore การ์ด: แยกตาม ID ใช้ชื่อโปรไฟล์จริง + ยอดรวมทุก ID/เหลือ (ทุกเครื่องส่งยอดทุก 10 นาที)'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
@@ -6791,7 +6940,13 @@
         window.renderQuotaMonitor();
         window.toggleModal('quotaMonitorModal', true);
     };
-    window.openSettingsHub = () => { window.applyPermissionsUI(); window.toggleModal('settingsHubModal', true); };
+    window.openSettingsHub = () => {
+        const hubBox = document.getElementById('settingsHubModal');
+        const hubWrap = hubBox ? hubBox.querySelector('.modal-content-scroll') : null;
+        if (hubWrap) window.applySavedMenuOrder(hubWrap, '.hub-item', 'menu_order_hub'); // 🔀 เรียงลำดับตามที่ลากไว้
+        window.applyPermissionsUI();
+        window.toggleModal('settingsHubModal', true);
+    };
     // ปุ่มลูกศรย้อนกลับ ‹ ของหน้าต่างย่อย 4 หมวด → ปิดหน้าต่างนั้นแล้วกลับมาที่ตั้งค่าการใช้งาน (ถ้าเปิดซ้อนบนโปรไฟล์ ให้กลับโปรไฟล์แทน)
     window.backToSettingsSub = (modalId) => {
         window.toggleModal(modalId, false);
