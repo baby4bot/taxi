@@ -1938,7 +1938,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08w';
+    const APP_BUILD = '2026-09-08x';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -2066,8 +2066,8 @@
     let currentUserRole = "User";
     let myExtraPerms = {}; // สิทธิ์พิเศษที่แอดมินอนุมัติให้บัญชีนี้โดยเฉพาะ (extraPerms ใน user doc — ไม่เปลี่ยนตำแหน่ง)
     let isBannedState = false;
-    let globalUsersUnsub = null, permsUnsub = null, permConfigUnsub = null, myUserUnsub = null, serviceDataUnsub = null, adminSnapshotUnsub = null, permReqUnsub = null;
-    let userOnlineStates = {}; let isInitialUserLoad = true;
+    let permsUnsub = null, permConfigUnsub = null, myUserUnsub = null, serviceDataUnsub = null, adminSnapshotUnsub = null, permReqUnsub = null;
+    // (ลบระบบสถานะออนไลน์แล้ว — เคยเป็นตัวกินโควตา Firestore หลัก)
     window.myCurrentQrCodeURL = ""; window.myCurrentDisplayName = ""; window.myCurrentPhotoURL = ""; window.myCurrentCompanyName = ""; window.myCurrentPlateNo = ""; window.currentAdminUsers = [];
 
     // รายการสิทธิ์ทั้งหมด — แต่ละข้อผูกกับฟีเจอร์/ปุ่มจริงในแอป (Admin เป็น god เห็นหมดเสมอ; Manager/User ตั้งได้ตามที่ admin ติ๊ก)
@@ -5927,29 +5927,11 @@
         } catch(e) {}
     };
 
-    function startGlobalUserListener() {
-        if(globalUsersUnsub) return;
-        globalUsersUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
-            if(isInitialUserLoad) { snapshot.forEach(doc => { userOnlineStates[doc.id] = doc.data().isOnline; }); isInitialUserLoad = false; return; }
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === "modified" || change.type === "added") {
-                    const data = change.doc.data(); const oldState = userOnlineStates[change.doc.id];
-                    if (change.doc.id !== loggedInUserId && oldState !== undefined) {
-                        if (data.isOnline && !oldState) { window.showToast(`${data.displayName || data.username} เข้าสู่ระบบ`, false, data.photoURL); } 
-                        else if (!data.isOnline && oldState) { window.showToast(`${data.displayName || data.username} ออกจากระบบ`, true, data.photoURL); }
-                    }
-                    userOnlineStates[change.doc.id] = data.isOnline;
-                }
-            });
-        });
-    }
-
+    // ❌ ลบระบบสถานะออนไลน์ออกแล้ว (onSnapshot ทั้งคอลเลกชัน users + heartbeat ทุก 90 วิ เคยเป็นตัวกินโควตา Firestore 99%)
     function stopGlobalUserListener() {
         if(permReqUnsub) { permReqUnsub(); permReqUnsub = null; } // 🔔 หยุดฟังคำขอสิทธิ์เพิ่ม
-        if(globalUsersUnsub) { globalUsersUnsub(); globalUsersUnsub = null; }
         if(permsUnsub) { permsUnsub(); permsUnsub = null; }
         if(permConfigUnsub) { permConfigUnsub(); permConfigUnsub = null; }
-        isInitialUserLoad = true; userOnlineStates = {};
         if(serviceDataUnsub) { serviceDataUnsub(); serviceDataUnsub = null; } 
     }
 
@@ -6042,7 +6024,10 @@
         '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้',
         '📊 เพิ่มการ์ด "โควตา Firestore" ในหน้าตั้งค่าการใช้งาน (เฉพาะแอดมิน) — นับจำนวน อ่าน/เขียน/ลบ ที่แอปเรียกใช้ Firestore วันนี้แยกตามฟีเจอร์ (ข้อมูลผู้ใช้/สถานะออนไลน์, บันทึกกิจกรรม/เที่ยว, สิทธิ์, ข้อความแจ้งเตือน ฯลฯ) + แถบเปรียบเทียบกับโควตาฟรี 50K/20K/20K ครั้งต่อวัน เพื่อวางแผนลดการใช้ได้ตรงจุด',
         'แก้สถานะออนไลน์ค้างในหน้าจัดการผู้ใช้: เขียน lastSeen กำกับทุก heartbeat + ปิด/ย่อแอป (pagehide) ออฟไลน์ทันที + เช็คความสด lastSeen (เก่าเกิน 3 นาที = ออฟไลน์) — คนที่ปิดแอปไปแล้วไม่ขึ้น "ออนไลน์" ค้างอีก และลด heartbeat จาก 45 วิ เป็น 90 วิ เพื่อประหยัดโควตา',
-        '📊 อัปเกรดการ์ดโควตา Firestore: ทุกเครื่องส่งยอด อ่าน/เขียน/ลบ ขึ้นเซิร์ฟเวอร์ทุก 10 นาที (แยกรายวัน) — แอดมินเห็น ยอดรวมทุก ID + เหลือเท่าไหร่, แยกตาม ID (ชื่อโปรไฟล์ เช่น นักเลงคีย์บอร์ด / น.ส.ภคพร) เรียงจากมากไปน้อย และฟีเจอร์ที่ใช้ของเครื่องนี้เรียลไทม์'
+        '📊 อัปเกรดการ์ดโควตา Firestore: ทุกเครื่องส่งยอด อ่าน/เขียน/ลบ ขึ้นเซิร์ฟเวอร์ทุก 10 นาที (แยกรายวัน) — แอดมินเห็น ยอดรวมทุก ID + เหลือเท่าไหร่, แยกตาม ID (ชื่อโปรไฟล์ เช่น นักเลงคีย์บอร์ด / น.ส.ภคพร) เรียงจากมากไปน้อย และฟีเจอร์ที่ใช้ของเครื่องนี้เรียลไทม์',
+        '❌ ลบระบบสถานะออนไลน์/ออฟไลน์ออกทั้งหมด (การ์ดออนไลน์, heartbeat เขียน isOnline ทุก 90 วิ, ฟังคอลเลกชัน users แบบเรียลไทม์, toast เข้า/ออกระบบ, จุดเขียวออนไลน์ในหน้าจัดการผู้ใช้) — ตัวนี้เคยกินโควตา Firestore ~99% (อ่าน+เขียนเกินลิมิตฟรี) ลบแล้วโควตาวันละ 50K อ่าน / 20K เขียน กลับมาใช้กับฟีเจอร์หลักได้เต็มที่',
+        'จัดการผู้ใช้งาน: ยังเหลือข้อมูลที่จำเป็น (ชื่อ/ตำแหน่ง/ทะเบียน/เข้าใช้ล่าสุด) และปุ่มจัดการตามสิทธิ์ — เอาเฉพาะจุดสถานะออนไลน์ออกเท่านั้น',
+        'โควตา Firestore การ์ด: แยกตาม ID ใช้ชื่อโปรไฟล์จริง + ยอดรวมทุก ID/เหลือ (ทุกเครื่องส่งยอดทุก 10 นาที)'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6299,7 +6284,7 @@
                     window.manualInputChange();
                 }
 
-                window.applyPermissionsUI(); startGlobalUserListener(); 
+                window.applyPermissionsUI(); 
                 if (typeof window.listenPermRequests === 'function') window.listenPermRequests(); // 🔔 ฟังคำขอสิทธิ์เพิ่มสำหรับแอดมิน
                 // โหมดทางด่วนที่บันทึกไว้ต่อบัญชี (Firestore) มีผลเหนือค่าในเครื่อง — นำมาใช้ตอนเข้าสู่ระบบครั้งแรกเท่านั้น
                 if (!tollModeLoadedForUser) {
@@ -6309,33 +6294,16 @@
                 }
                 if (typeof window.maybeShowResumeBanner === 'function') window.maybeShowResumeBanner();
                 if (typeof window.checkPermNotice === 'function') window.checkPermNotice(); // 🔔 แจ้งผลคำขอสิทธิ์ (อนุมัติ/ปฏิเสธ) ตอนเปิดแอป
-                if (window.markMeOnline) window.markMeOnline(); // 💚 โหลดข้อมูลตัวเองครบแล้ว → ปักหมุดออนไลน์ (กันขึ้นออฟไลน์ค้างตอนรีเฟรช)
             } else { window.logoutApp(true); }
         });
     };
 
-    // หมายเหตุ: ไม่เขียน isOnline ก่อนผูก snapshot ตอนเปิดแอป (เขียนแล้ว cache จะมี doc แค่บางฟิลด์ → snapshot แรกมาไม่ครบ → เด้งหลุดล็อกอิน) — สถานะออนไลน์ปักหมุดผ่าน markMeOnline (focus/visibility/heartbeat) แทน
+    // ❌ ลบระบบสถานะออนไลน์แล้ว — ไม่มีการเขียน isOnline/lastSeen หรือฟังคอลเลกชัน users แบบเรียลไทม์อีก (ประหยัดโควตา Firestore มหาศาล)
     if (loggedInUserId) { listenToMyUser(); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
     // 🔧 โหลดข้อความแจ้งเตือนที่แอดมินแก้ไว้ (Firestore) — ใช้ได้ทุกหน้าแม้ยังไม่ล็อกอิน
     if (typeof window.loadToastMsgOverrides === 'function') window.loadToastMsgOverrides();
     // 🏷️ โหลด/ซิงก์ประวัติเวอร์ชัน (อ่านได้ทุกคน; ถ้าโค้ดปล่อยเวอร์ชันใหม่ ระบบจะรันเวอร์ชันให้อัตโนมัติ)
     if (typeof window.ensureChangelog === 'function') window.ensureChangelog();
-    // 💚 สถานะออนไลน์ให้ตรงจริง: เขียน lastSeen ทุกครั้ง + ปิด/ย่อแอป (pagehide/visibility) → ออฟไลน์ทันที + เช็คความสด lastSeen (เก่าเกิน 3 นาที = ออฟไลน์)
-    //    กันปัญหาเดิม: isOnline ค้างเป็น true ตลอดหลังคิลแอป (มือถือไม่ยิง beforeunload) → คนที่ปิดไปแล้วยังขึ้น "ออนไลน์" อยู่
-    const ONLINE_STALE_MS = 180000; // lastSeen เก่าเกิน 3 นาที = ถือว่าออฟไลน์ (heartbeat 90 วิ → พลาด 2 รอบติด = ออฟไลน์)
-    window.isUserOnlineLive = (u) => {
-        if (!u || u.isOnline !== true) return false;
-        const ts = typeof u.lastSeen === 'number' ? u.lastSeen : (u.lastSeen && typeof u.lastSeen.toMillis === 'function' ? u.lastSeen.toMillis() : 0);
-        if (!ts) return false;
-        return (Date.now() - ts) < ONLINE_STALE_MS;
-    };
-    const setOfflineNow = () => { if(loggedInUserId) { setDoc(doc(db, "users", loggedInUserId), { isOnline: false, lastSeen: Date.now() }, { merge: true }).catch(() => {}); } };
-    window.addEventListener('beforeunload', setOfflineNow);
-    window.addEventListener('pagehide', setOfflineNow); // ปิดแท็บ/ปิดแอป/สลับหน้า → ออฟไลน์ทันที (มือถือเชื่อถือได้กว่า beforeunload)
-    window.markMeOnline = () => { if(loggedInUserId && document.visibilityState !== 'hidden') { setDoc(doc(db, "users", loggedInUserId), { isOnline: true, lastSeen: Date.now() }, { merge: true }).catch(() => {}); } };
-    window.addEventListener('focus', () => { window.markMeOnline(); });
-    document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') { setOfflineNow(); } else { window.markMeOnline(); } });
-    setInterval(() => { window.markMeOnline(); }, 90000); // เต้นหัวใจทุก 90 วิ (ลดโควตาการเขียนจาก 45 วิ) กันสถานะหลุดตอนแอปค้างทั้งวัน
 
     // 🔐 ระบบรหัสผ่านแบบแฮช (PBKDF2-HMAC-SHA256 สำหรับรหัสใหม่ + รองรับรุ่นเก่า sha256$/plaintext ตอนตรวจ) — ไม่เก็บ plaintext
     // รูปแบบใหม่:  "pbkdf2$<iterations>$<salt>$<hex>" โดย hex = PBKDF2-HMAC-SHA256(รหัส, salt, iterations, 32 ไบต์)
@@ -6652,7 +6620,6 @@
 
     window.handleAdminModalState = (isOpen) => {
         if(isOpen) {
-            if (window.markMeOnline) window.markMeOnline(); // เปิดหน้าจัดการผู้ใช้ → ปักหมุดตัวเองออนไลน์ทันที (การ์ดจะรีเฟรชเป็น "ออนไลน์")
             
             let isGod = currentUserRole === "Admin"; let myPerms = isGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
             // ปุ่มดูประวัติรวมทั้งระบบ (Global Logs) — เฉพาะแอดมินหรือผู้มีสิทธิ์ canViewGlobalLogs
@@ -6665,7 +6632,7 @@
                 let html = '';
                 window.currentAdminUsers.forEach((u) => {
                     let uid = u.uid; let statusHtml = '';
-                    if(u.isBanned) { statusHtml = '<span class="status-dot status-banned"></span><span style="color:var(--accent-red)">ถูกระงับ (Ban)</span>'; } else if(window.isUserOnlineLive(u)) { statusHtml = '<span class="status-dot status-online"></span><span style="color:var(--neon-green)">ออนไลน์</span>'; } else { statusHtml = '<span class="status-dot status-offline"></span><span style="color:#a0a5b5">ออฟไลน์</span>'; }
+                    if(u.isBanned) { statusHtml = '<span class="status-dot status-banned"></span><span style="color:var(--accent-red)">ถูกระงับ (Ban)</span>'; }
                     const formatDate = (timestamp) => { if(!timestamp) return "-"; const d = new Date(timestamp); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
                     const roleKey = u.role || 'User';
                     const roleBadge = `<span class="admin-role-badge role-${window.roleClassKey(roleKey)}">${window.roleLabelShort(roleKey)}</span>`;
