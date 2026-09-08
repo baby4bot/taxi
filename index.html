@@ -1915,20 +1915,23 @@
             if (delta.read > 0) upd[day + '.read'] = increment(delta.read);
             if (delta.write > 0) upd[day + '.write'] = increment(delta.write);
             if (delta.del > 0) upd[day + '.del'] = increment(delta.del);
-            await updateDoc(ref, upd);
+            // ใช้ setDoc + merge (ไม่ใช่ updateDoc) — doc quota_usage/{uid} อาจยังไม่เคยมีอยู่ครั้งแรก
+            // updateDoc จะล้มเหลวเงียบ ๆ ("No document to update") → ยอดไม่เคยถูกส่งขึ้นเซิร์ฟเวอร์
+            await setDoc(ref, upd, { merge: true });
             try { localStorage.setItem('fs_quota_flushed', JSON.stringify({ date: st.date, read: cur.read, write: cur.write, del: cur.del })); } catch (e) {}
         } catch (e) {}
     };
     window.__quotaUsers = {}; // uid → { name, read, write, del } (ยอดวันนี้จากเซิร์ฟเวอร์)
     window.loadQuotaUsers = async (cb) => {
         try {
-            const snap = await getDocs(collection(db, 'quota_usage'));
+            // บังคับอ่านจากเซิร์ฟเวอร์ (ไม่ใช้ local cache) — กันอ่านเจอแค่ delta ของ write ที่เพิ่งส่ง (pending local write)
+            const snap = await getDocs(collection(db, 'quota_usage'), { source: 'server' });
             window.__quotaUsers = {};
             const day = new Date().toISOString().slice(0, 10);
             snap.forEach(d => {
                 const f = d.data() || {};
-                const dk = f[day] || {};
-                window.__quotaUsers[d.id] = { name: f.byName || d.id, read: dk.read || 0, write: dk.write || 0, del: dk.del || 0 };
+                // ตัวเขียนเก็บแบบ field แบน: "2026-09-08.read" / ".write" / ".del" (dot ในชื่อ field)
+                window.__quotaUsers[d.id] = { name: f.byName || d.id, read: f[day + '.read'] || 0, write: f[day + '.write'] || 0, del: f[day + '.del'] || 0 };
             });
         } catch (e) {}
         if (typeof cb === 'function') cb();
@@ -6780,10 +6783,12 @@
             else { badge.style.display = 'none'; }
         }
     };
-    window.openQuotaMonitor = () => {
+    window.openQuotaMonitor = async () => {
         window.renderQuotaMonitor(); // แสดงเครื่องนี้ทันที
-        window.loadQuotaUsers(() => { window.renderQuotaMonitor(); }); // ดึงยอดรวมทุก ID จากเซิร์ฟเวอร์แล้ววาดใหม่
-        window.flushQuotaToDB(); // ส่งยอดเครื่องนี้ขึ้นเซิร์ฟเวอร์ (ให้รวมกับเครื่องอื่นด้วย)
+        // ส่งยอดเครื่องนี้ขึ้นเซิร์ฟเวอร์ให้เสร็จก่อน แล้วค่อยอ่านยอดรวม (กันอ่านเจอแค่ delta ของ write ที่ยังค้าง)
+        await window.flushQuotaToDB();
+        await new Promise(r => { window.loadQuotaUsers(() => r()); }); // ดึงยอดรวมทุก ID จากเซิร์ฟเวอร์แล้ววาดใหม่
+        window.renderQuotaMonitor();
         window.toggleModal('quotaMonitorModal', true);
     };
     window.openSettingsHub = () => { window.applyPermissionsUI(); window.toggleModal('settingsHubModal', true); };
