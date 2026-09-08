@@ -1702,7 +1702,7 @@
 <div id="hubQuotaItem" class="hub-item" style="display:none;" onclick="window.openQuotaMonitor();"><div class="hub-item-icon" style="background:rgba(239,68,68,0.13); color:#ff8a95;"><span class="material-symbols-outlined" style="font-size:24px;">data_usage</span></div><div class="hub-item-body"><div class="hub-item-title" style="color:#ff8a95;">โควตา Firestore <span id="hubQuotaBadge" class="perm-req-count" style="display:none;"></span></div><div class="hub-item-desc">ดูการใช้ อ่าน/เขียน/ลบ วันนี้แยกตามฟีเจอร์ + ประมาณโควตาที่เหลือ</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 </div></div></div>
 
-<div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควตา Firestore</h3><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">จำนวน อ่าน / เขียน / ลบ ที่แอปเรียกใช้ Firestore วันนี้ แยกตามฟีเจอร์ <b style="color:#fff;">(นับจากเครื่องนี้ที่กำลังเปิดอยู่</b> — ทุกเครื่องที่รันแอปจะกินโควตาแบบเดียวกัน ยอดรวมจริงดูใน Firebase Console) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ทุกเครื่องส่ง heartbeat เขียนทุก 45 วิ + ฟังรายชื่อผู้ใช้ทั้งหมดแบบเรียลไทม์ → เป็นตัวกินโควตาหลัก)</div></div></div></div>
+<div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควตา Firestore</h3><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">จำนวน อ่าน / เขียน / ลบ ที่ทุกบัญชี (ID) ใช้ Firestore วันนี้รวมกันทั้งระบบ <b style="color:#fff;">(ทุกเครื่องส่งยอดขึ้นเซิร์ฟเวอร์ทุก 10 นาที / ตอนปิดแอป</b> — แสดงยอดรวมทุก ID + เหลือเท่าไหร่ และแยกตาม ID ชื่อโปรไฟล์) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ทุกเครื่องส่ง heartbeat เขียนทุก 45 วิ + ฟังรายชื่อผู้ใช้ทั้งหมดแบบเรียลไทม์ → เป็นตัวกินโควตาหลัก)</div></div></div></div>
 
 <div id="adminMenuModal" class="modal-overlay" style="z-index: 10004;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('adminMenuModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>ระบบจัดการผู้ใช้งาน</h3><button id="adminGlobalLogsBtn" class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><button id="permReqBanner" class="perm-req-banner" style="display: none;" onclick="window.openPermRequests()"></button><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
 
@@ -1826,7 +1826,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, getDoc as __getDoc, setDoc as __setDoc, updateDoc as __updateDoc, deleteDoc as __deleteDoc, collection, onSnapshot as __onSnapshot, addDoc as __addDoc, query, orderBy, getDocs as __getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc as __getDoc, setDoc as __setDoc, updateDoc as __updateDoc, deleteDoc as __deleteDoc, collection, onSnapshot as __onSnapshot, addDoc as __addDoc, query, orderBy, getDocs as __getDocs, where, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     // 📊 ตัวนับโควตา Firestore — นับ อ่าน/เขียน/ลบ แยกตามฟีเจอร์ (เก็บในเครื่อง ต่อวัน)
     // โควตาฟรี (Spark): อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน (รีเซ็ตเที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)
@@ -1873,6 +1873,7 @@
         if (p === 'settings/roles' || p === 'settings/permission_config' || p.startsWith('perm_') || p === 'perm_notices/' + (p.split('/')[1] || '')) return 'สิทธิ์ / คำขอสิทธิ์';
         if (p === 'settings/toast_messages') return 'ข้อความแจ้งเตือน';
         if (p === 'settings/changelog') return 'ประวัติเวอร์ชัน';
+        if (p.startsWith('quota_usage')) return 'ระบบโควตา';
         if (p.startsWith('global_logs')) return 'บันทึกกิจกรรม';
         if (p.startsWith('system/service_data')) return 'Portal / บริการ';
         return p.split('/')[0] || 'อื่น ๆ';
@@ -1894,8 +1895,50 @@
         return cb(...args);
     }, ...rest);
     
+    // ── 📤 ส่งยอดใช้โควตาประจำเครื่องขึ้นเซิร์ฟเวอร์ (quota_usage/{uid}) ทุก 10 นาที + ตอนปิดแอป ──
+    //    ให้แอดมินดูยอดรวมทุก ID + เหลือเท่าไหร่ (ใช้ increment — ไม่ต้องอ่านก่อนเขียน ไม่เบิ้ลยอด)
+    const QUOTA_FLUSH_MS = 600000;
+    window.flushQuotaToDB = async () => {
+        try {
+            if (!loggedInUserId) return;
+            const st = dbqToday();
+            const sum = (o) => { let t = 0; for (const k in (o || {})) t += o[k] || 0; return t; };
+            const cur = { read: sum(st.read), write: sum(st.write), del: sum(st.del) };
+            let last = {}; try { last = JSON.parse(localStorage.getItem('fs_quota_flushed') || '{}'); } catch (e) {}
+            if (last.date !== st.date) last = { date: st.date, read: 0, write: 0, del: 0 };
+            const delta = { read: cur.read - (last.read || 0), write: cur.write - (last.write || 0), del: cur.del - (last.del || 0) };
+            if (delta.read <= 0 && delta.write <= 0 && delta.del <= 0) return;
+            const myName = (() => { try { const el = document.getElementById('displayUserName'); return (el && el.innerText) || ''; } catch (e) { return ''; } })() || (window.currentUserInfo && window.currentUserInfo.displayName) || '';
+            const ref = doc(db, 'quota_usage', loggedInUserId);
+            // เก็บแยกรายวัน (เช่น 2026-09-08.read) — กันยอดของเมื่อวานบวกทับวันนี้ (increment ต่อยอดจากค่าเดิม)
+            const day = st.date;
+            const upd = { byName: myName, byUid: loggedInUserId };
+            if (delta.read > 0) upd[day + '.read'] = increment(delta.read);
+            if (delta.write > 0) upd[day + '.write'] = increment(delta.write);
+            if (delta.del > 0) upd[day + '.del'] = increment(delta.del);
+            await updateDoc(ref, upd);
+            try { localStorage.setItem('fs_quota_flushed', JSON.stringify({ date: st.date, read: cur.read, write: cur.write, del: cur.del })); } catch (e) {}
+        } catch (e) {}
+    };
+    window.__quotaUsers = {}; // uid → { name, read, write, del } (ยอดวันนี้จากเซิร์ฟเวอร์)
+    window.loadQuotaUsers = async (cb) => {
+        try {
+            const snap = await getDocs(collection(db, 'quota_usage'));
+            window.__quotaUsers = {};
+            const day = new Date().toISOString().slice(0, 10);
+            snap.forEach(d => {
+                const f = d.data() || {};
+                const dk = f[day] || {};
+                window.__quotaUsers[d.id] = { name: f.byName || d.id, read: dk.read || 0, write: dk.write || 0, del: dk.del || 0 };
+            });
+        } catch (e) {}
+        if (typeof cb === 'function') cb();
+    };
+    setInterval(() => { window.flushQuotaToDB(); }, QUOTA_FLUSH_MS);
+    window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
+
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08v';
+    const APP_BUILD = '2026-09-08w';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -5998,7 +6041,8 @@
         '🔒 อัปเกรดแฮชรหัสผ่านใหม่เป็น PBKDF2-HMAC-SHA256 (100,000 รอบ + salt ต่อบัญชี) — รุ่นเก่า sha256$/plaintext ยังล็อกอินได้ และถูกอัปเกรดเป็น PBKDF2 ให้อัตโนมัติหลังล็อกอินสำเร็จ (มี pure-JS fallback ให้ใช้ได้แม้เปิด file://)',
         '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้',
         '📊 เพิ่มการ์ด "โควตา Firestore" ในหน้าตั้งค่าการใช้งาน (เฉพาะแอดมิน) — นับจำนวน อ่าน/เขียน/ลบ ที่แอปเรียกใช้ Firestore วันนี้แยกตามฟีเจอร์ (ข้อมูลผู้ใช้/สถานะออนไลน์, บันทึกกิจกรรม/เที่ยว, สิทธิ์, ข้อความแจ้งเตือน ฯลฯ) + แถบเปรียบเทียบกับโควตาฟรี 50K/20K/20K ครั้งต่อวัน เพื่อวางแผนลดการใช้ได้ตรงจุด',
-        'แก้สถานะออนไลน์ค้างในหน้าจัดการผู้ใช้: เขียน lastSeen กำกับทุก heartbeat + ปิด/ย่อแอป (pagehide) ออฟไลน์ทันที + เช็คความสด lastSeen (เก่าเกิน 3 นาที = ออฟไลน์) — คนที่ปิดแอปไปแล้วไม่ขึ้น "ออนไลน์" ค้างอีก และลด heartbeat จาก 45 วิ เป็น 90 วิ เพื่อประหยัดโควตา'
+        'แก้สถานะออนไลน์ค้างในหน้าจัดการผู้ใช้: เขียน lastSeen กำกับทุก heartbeat + ปิด/ย่อแอป (pagehide) ออฟไลน์ทันที + เช็คความสด lastSeen (เก่าเกิน 3 นาที = ออฟไลน์) — คนที่ปิดแอปไปแล้วไม่ขึ้น "ออนไลน์" ค้างอีก และลด heartbeat จาก 45 วิ เป็น 90 วิ เพื่อประหยัดโควตา',
+        '📊 อัปเกรดการ์ดโควตา Firestore: ทุกเครื่องส่งยอด อ่าน/เขียน/ลบ ขึ้นเซิร์ฟเวอร์ทุก 10 นาที (แยกรายวัน) — แอดมินเห็น ยอดรวมทุก ID + เหลือเท่าไหร่, แยกตาม ID (ชื่อโปรไฟล์ เช่น นักเลงคีย์บอร์ด / น.ส.ภคพร) เรียงจากมากไปน้อย และฟีเจอร์ที่ใช้ของเครื่องนี้เรียลไทม์'
     ];
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
@@ -6673,28 +6717,48 @@
         } else { if(adminSnapshotUnsub) adminSnapshotUnsub(); }
     };
 
-    // 📊 หน้าต่างดูการใช้โควตา Firestore (เฉพาะแอดมิน) — นับ อ่าน/เขียน/ลบ แยกตามฟีเจอร์จากเครื่องนี้
-    window.openQuotaMonitor = () => {
-        const s = window.dbqSummary ? window.dbqSummary() : { date: '', rows: [], totals: { read: 0, write: 0, del: 0 } };
+    // 📊 หน้าต่างดูการใช้โควตา Firestore (เฉพาะแอดมิน) — ยอดรวมทุก ID จากเซิร์ฟเวอร์ + แยกตาม ID + แยกตามฟีเจอร์ของเครื่องนี้
+    window.renderQuotaMonitor = () => {
         const LIMITS = { read: 50000, write: 20000, del: 20000 };
         const NAMES = { read: 'อ่าน', write: 'เขียน', del: 'ลบ' };
         const COLORS = { read: '#4da3ff', write: '#ffd24d', del: '#ff8a95' };
+        // ยอดรวมทุก ID จากเซิร์ฟเวอร์ (quota_usage/{uid}) — รวม read/write/del ของวันนี้ทั้งระบบ
+        const tot = { read: 0, write: 0, del: 0 };
+        Object.values(window.__quotaUsers || {}).forEach(u => { tot.read += u.read || 0; tot.write += u.write || 0; tot.del += u.del || 0; });
         let html = '';
         Object.keys(NAMES).forEach(k => {
-            const v = s.totals[k] || 0;
+            const v = tot[k];
             const pct = Math.min(100, (v / LIMITS[k]) * 100);
+            const remain = Math.max(0, LIMITS[k] - v);
             const warn = v >= LIMITS[k] * 0.8;
             html += `<div style="margin-bottom:10px; padding:10px 12px; border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);">` +
                 `<div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px;">` +
-                `<b style="color:${COLORS[k]}; font-size:13px;">${NAMES[k]}รวม (เครื่องนี้)</b>` +
-                `<span style="font-size:12px; color:${warn ? '#ff8a95' : '#fff'}; white-space:nowrap;">${v.toLocaleString()} / ${LIMITS[k].toLocaleString()} · ${pct.toFixed(1)}%</span></div>` +
+                `<b style="color:${COLORS[k]}; font-size:13px;">${NAMES[k]}รวมทุก ID (เซิร์ฟเวอร์)</b>` +
+                `<span style="font-size:12px; color:${warn ? '#ff8a95' : '#fff'}; white-space:nowrap;">ใช้ ${v.toLocaleString()} · เหลือ ${remain.toLocaleString()} · ${pct.toFixed(1)}%</span></div>` +
                 `<div style="height:8px; border-radius:99px; background:rgba(255,255,255,0.1); overflow:hidden;"><div style="height:100%; width:${pct}%; border-radius:99px; background:${COLORS[k]}; transition:width .3s;"></div></div>` +
                 (warn ? `<div style="font-size:11px; color:#ff8a95; margin-top:5px;">⚠️ ใกล้เต็มโควตาแล้ว — แอปอาจเริ่มค้าง / ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต</div>` : '') +
                 `</div>`;
         });
-        html += `<div style="font-size:12px; color:var(--text-dim); margin:6px 0 8px;">▼ ฟีเจอร์ที่ใช้โควตา (เครื่องนี้, วันนี้) — เรียงจากมากไปน้อย</div>`;
+        // แยกตาม ID (ชื่อโปรไฟล์)
+        const rows = Object.entries(window.__quotaUsers || {}).map(([uid, u]) => ({ uid, ...u, total: (u.read || 0) + (u.write || 0) + (u.del || 0) })).sort((a, b) => b.total - a.total);
+        html += `<div style="font-size:12px; color:var(--text-dim); margin:6px 0 8px;">▼ การใช้แยกตาม ID (ชื่อโปรไฟล์) — เรียงจากมากไปน้อย</div>`;
+        if (!rows.length) {
+            html += `<div style="font-size:13px; color:var(--text-dim); padding:12px; text-align:center;">ยังไม่มีข้อมูลจากเครื่องอื่น — เครื่องอื่นจะส่งยอดขึ้นทุก 10 นาที (หรือตอนปิดแอป) แล้วเปิดหน้านี้ใหม่เพื่อดู</div>`;
+        } else {
+            rows.forEach(r => {
+                const warn = r.total >= 4000;
+                html += `<div style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,0.03); margin-bottom:6px; border:1px solid rgba(255,255,255,0.05);">` +
+                    `<div style="flex:1; min-width:0;">` +
+                    `<div style="font-size:13px; color:#fff; font-weight:600;">${r.name || r.uid}</div>` +
+                    `<div style="font-size:11px; color:#9aa3b5; margin-top:2px;">อ่าน ${(r.read||0).toLocaleString()} · เขียน ${(r.write||0).toLocaleString()} · ลบ ${(r.del||0).toLocaleString()}</div></div>` +
+                    `<div style="font-size:14px; font-weight:700; white-space:nowrap; color:${warn ? '#ff8a95' : '#ffd24d'};">${r.total.toLocaleString()}</div></div>`;
+            });
+        }
+        // แยกตามฟีเจอร์ของเครื่องนี้ (เรียลไทม์)
+        const s = window.dbqSummary ? window.dbqSummary() : { date: '', rows: [], totals: { read: 0, write: 0, del: 0 } };
+        html += `<div style="font-size:12px; color:var(--text-dim); margin:14px 0 8px;">▼ ฟีเจอร์ที่ใช้โควตา (เครื่องนี้, เรียลไทม์) — เรียงจากมากไปน้อย</div>`;
         if (!s.rows.length) {
-            html += `<div style="font-size:13px; color:var(--text-dim); padding:16px; text-align:center;">ยังไม่มีการใช้ Firestore บนเครื่องนี้วันนี้ (โควตานับใหม่ทุกเที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</div>`;
+            html += `<div style="font-size:13px; color:var(--text-dim); padding:12px; text-align:center;">ยังไม่มีการใช้ Firestore บนเครื่องนี้วันนี้ (โควตานับใหม่ทุกเที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</div>`;
         } else {
             s.rows.forEach(r => {
                 const warn = r.total >= 4000;
@@ -6708,10 +6772,15 @@
         const body = document.getElementById('quotaMonitorBody'); if (body) body.innerHTML = html;
         const badge = document.getElementById('hubQuotaBadge');
         if (badge) {
-            const wpct = ((s.totals.write || 0) / LIMITS.write) * 100;
+            const wpct = ((tot.write || 0) / LIMITS.write) * 100;
             if (wpct >= 50) { badge.style.display = 'inline-flex'; badge.textContent = Math.round(wpct) + '%'; }
             else { badge.style.display = 'none'; }
         }
+    };
+    window.openQuotaMonitor = () => {
+        window.renderQuotaMonitor(); // แสดงเครื่องนี้ทันที
+        window.loadQuotaUsers(() => { window.renderQuotaMonitor(); }); // ดึงยอดรวมทุก ID จากเซิร์ฟเวอร์แล้ววาดใหม่
+        window.flushQuotaToDB(); // ส่งยอดเครื่องนี้ขึ้นเซิร์ฟเวอร์ (ให้รวมกับเครื่องอื่นด้วย)
         window.toggleModal('quotaMonitorModal', true);
     };
     window.openSettingsHub = () => { window.applyPermissionsUI(); window.toggleModal('settingsHubModal', true); };
