@@ -1967,7 +1967,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08ad';
+    const APP_BUILD = '2026-09-08ae';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -2141,7 +2141,39 @@
         const j = await res.json();
         return decodeURIComponent(j.name.split("/").pop());
     };
-    // 🛟 snapshot ผู้ใช้ไม่มาภายใน 8 วิ (ช่องทางเรียลไทม์ค้าง) → บังคับเข้าระบบ ไม่ให้ค้างที่หน้าล็อกอินตลอดกาล
+    // 🔎 ดึง user ตาม username ให้เร็วที่สุด: เรียก SDK และ REST **พร้อมกัน** เอาตัวที่ตอบสำเร็จก่อน
+    //    (เดิมเรียก SDK ก่อนแล้วค่อย REST ต่อ — ถ้าช่องทางเรียลไทม์ค้าง/โควตาหมด จะเสียเวลารอ SDK ครบ timeout ทั้ง 6-8 วิ
+    //    ทั้งที่ REST ผ่าน https ธรรมดาตอบไวอยู่แล้ว → ล็อกอินช้า) — คืน { id, data } หรือ null
+    window.__fsFindUser = (username) => new Promise((resolve) => {
+        let settled = 0, done = false;
+        const win = (v) => { if (!done && v) { done = true; resolve(v); } };
+        const sdkP = window.__fsTimeout(getDocs(query(collection(db, "users"), where("username", "==", username))), 5000)
+            .then(qs => (qs && !qs.empty) ? { id: qs.docs[0].id, data: qs.docs[0].data() } : null).catch(() => null);
+        const restP = window.__fsTimeout(window.__fsRestQuery(username), 5000)
+            .then(r => (r && r.length) ? { id: r[0].id, data: r[0].data } : null).catch(() => null);
+        sdkP.then(v => { win(v); if (++settled === 2 && !done) resolve(null); });
+        restP.then(v => { win(v); if (++settled === 2 && !done) resolve(null); });
+    });
+    // ✍️ เขียน field ผู้ใช้แบบ SDK + REST **พร้อมกัน** เอาตัวที่สำเร็จก่อน (กันรอ SDK ครบ timeout ทั้ง 6 วิ
+    //    เมื่อช่องทางเรียลไทม์ค้าง — REST ผ่าน https ธรรมดาตอบไว) — resolve true ถ้ามีช่องทางใดเขียนถึง DB สำเร็จ
+    window.__fsWriteFields = (uid, obj, ms = 6000) => new Promise((resolve) => {
+        let done = false;
+        const sdkP = window.__fsTimeout(setDoc(doc(db, "users", uid), obj, { merge: true }), ms).then(() => true).catch(() => false);
+        const restP = window.__fsTimeout(window.__fsRestPatch(uid, obj), ms).then(() => true).catch(() => false);
+        sdkP.then(ok => { if (ok && !done) { done = true; resolve(true); } });
+        restP.then(ok => { if (ok && !done) { done = true; resolve(true); } });
+        Promise.all([sdkP, restP]).then(() => { if (!done) { done = true; resolve(false); } }); // ทั้งคู่ไม่สำเร็จ → resolve false
+    });
+    // ⚡ เปลี่ยนจากหน้าเข้าสู่ระบบ → หน้าจอโหลด (loader) ทันที หลังยืนยันรหัสผ่านแล้ว — ไม่รอ snapshot จริง
+    //    (เดิมต้องรอ snapshot ผู้ใช้จาก Firestore มาก่อนถึงจะออกจากหน้า login → ถ้าช่องทางค้างก็ค้างอยู่นาน)
+    window.__showAppLoading = () => {
+        try {
+            document.getElementById('loginOverlay').style.display = 'none';
+            const ld = document.getElementById('appLoader');
+            if (ld) { ld.style.display = 'flex'; }
+        } catch (e) {}
+    };
+    // 🛟 snapshot ผู้ใช้ไม่มา (ช่องทางเรียลไทม์ค้าง) → บังคับเข้าระบบ ไม่ให้ค้างที่หน้าจอโหลด/ล็อกอินตลอดกาล
     window.__forceShowApp = () => {
         try {
             document.getElementById('appLoader').style.display = 'none';
@@ -2151,11 +2183,13 @@
             document.getElementById('mainUserInfo').style.display = 'flex';
         } catch (e) {}
     };
+    // ⏱️ กันค้างหน้าจอโหลด/ล็อกอิน: ถ้าเข้าแอปไม่ได้ภายใน ~4 วิ (ช่องทางเรียลไทม์ค้าง/ช้า) → บังคับแสดงแอป
+    //    (เริ่มนับทันทีหลังยืนยันรหัสผ่าน — ไม่รอให้เขียน session เสร็จก่อน กันรอซ้อนกันหลายชั้น)
     window.__watchdogShowApp = () => {
         window.__fsTimeout(new Promise(res => {
-            const iv = setInterval(() => { if (document.getElementById('mainApp').style.display === 'flex') { clearInterval(iv); res(); } }, 250);
-            setTimeout(() => { clearInterval(iv); res(); }, 8000);
-        }), 9000).then(() => {
+            const iv = setInterval(() => { const m = document.getElementById('mainApp'); if (m && m.style.display === 'flex') { clearInterval(iv); res(); } }, 200);
+            setTimeout(() => { clearInterval(iv); res(); }, 4000);
+        }), 5000).then(() => {
             if (loggedInUserId && document.getElementById('mainApp').style.display !== 'flex') {
                 window.__forceShowApp();
                 try { window.showToast("เชื่อมต่อข้อมูลช้า — กำลังโหลดข้อมูลของคุณ...", true); } catch (e) {}
@@ -6345,6 +6379,8 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-07'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        'ล็อกอินเร็วขึ้น: ดึงข้อมูลผู้ใช้ด้วย SDK+REST พร้อมกัน (เอาตัวที่ตอบก่อน — เดิมรอ SDK ครบ timeout ก่อนค่อย REST) + ยืนยันรหัสผ่านเสร็จออกจากหน้าเข้าสู่ระบบทันที (โชว์หน้าจอโหลด ไม่รอ snapshot) + watchdog สั้นลง 8→4 วิ กันค้างหน้าล็อกอิน',
+        'ออกจากระบบเร็วขึ้น: หมุนโทเคน session แบบไม่บล็อก UI (SDK+REST พร้อมกัน เขียนเบื้องหลัง) — กดยืนยันแล้วกลับมาหน้าเข้าสู่ระบบทันที ไม่ต้องรอเขียนเสร็จ (แอดมินล็อกอินไม่ต้องรอเขียน lastLoginAt ด้วย)',
         'แก้ลากสลับเด้ง/กระโดดขึ้นบนสุด: ชดเชยตำแหน่งที่เปลี่ยนตอนย้าย (รายการติดตามนิ้วตลอดไม่หนีมือ) + หยุด animation ค้างก่อนวัดตำแหน่ง — เลื่อนทีละลำดับได้เนียน ๆ',
         'ลากสลับในตั้งค่าการใช้งานสลับได้เฉพาะภายในหมวดเดียวกัน (สมาชิก/สิทธิ์ · การแจ้งเตือน · บริการ/ระบบ) — หมวดไม่ปนกัน กลับเป็นระเบียบเสมอ แม้ลำดับเดิมจะมั่ว',
         'ลากสลับเมนูลื่นขึ้น: รายการที่ลากติดตามนิ้ว/เมาส์ทันที (transform ต่อเนื่อง + FLIP animation) ตัวอื่นไหลเข้าที่อย่างนุ่มนวล ทั้งเมนูแฮมเบอร์เกอร์และตั้งค่าการใช้งาน',
@@ -6806,44 +6842,50 @@
             if (inputUsername === "admin" && pass === "060421") {
                 // 🛠️ ทางเข้าลับสำหรับตั้งค่าเริ่มต้น — ใช้ได้เฉพาะตอนบัญชี admin ยังใช้รหัสเริ่มต้น (060421) อยู่
                 // ถ้าเปลี่ยนรหัสผ่านแล้ว → ตรวจ hash แล้วปฏิเสธ ไม่เขียนทับรหัสเด็ดขาด
-                let adminId = ""; let adminSnap = null;
-                try { adminSnap = await window.__fsTimeout(getDocs(query(collection(db, "users"), where("username", "==", "admin"))), 8000); } catch (e) {}
-                if (adminSnap && !adminSnap.empty) {
-                    const adminDoc = adminSnap.docs[0]; adminId = adminDoc.id;
-                    if (!(await window.pwVerify("060421", adminDoc.data().password || ''))) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
-                    await window.__fsTimeout(updateDoc(doc(db, "users", adminId), { isBanned: false, lastLoginAt: Date.now() }), 6000).catch(()=>{});
-                    window.__fsTimeout(window.pwUpgradeIfLegacy(adminId, adminDoc.data().password || '', "060421"), 6000).catch(()=>{}); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
+                // หาบัญชี admin ผ่าน SDK+REST พร้อมกัน (เอาตัวที่ตอบก่อน — ไม่รอ SDK ครบ timeout เมื่อช่องทางค้าง)
+                let adminId = "";
+                const lu = await window.__fsFindUser("admin");
+                if (lu) {
+                    adminId = lu.id;
+                    if (!(await window.pwVerify("060421", lu.data.password || ''))) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
+                    // เขียน lastLoginAt แบบไม่บล็อก UI (SDK+REST พร้อมกัน) + อัปเกรดแฮชเก่า (ถ้ามี)
+                    window.__fsWriteFields(adminId, { isBanned: false, lastLoginAt: Date.now() }, 6000);
+                    window.__fsTimeout(window.pwUpgradeIfLegacy(adminId, lu.data.password || '', "060421"), 6000).catch(()=>{});
                 } else {
-                    // SDK ค้าง/ไม่มีบัญชี → ลอง REST ก่อนสร้างใหม่
-                    try { const r = await window.__fsRestQuery("admin"); if (r && r.length) { adminId = r[0].id; if (!(await window.pwVerify("060421", r[0].data.password || ''))) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด"); window.__fsRestPatch(adminId, { lastLoginAt: Date.now() }).catch(()=>{}); } } catch (e) {}
-                    if (!adminId) {
-                        // ครั้งแรกสุด (ยังไม่มีบัญชี admin เลย) → สร้างบัญชีเริ่มต้นให้ (เก็บแบบแฮช)
-                        const docRef = await addDoc(collection(db, "users"), { username: "admin", password: await window.pwHash("060421"), displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, tollwayMode: false, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
-                        adminId = docRef.id;
-                    }
+                    // ยังไม่มีบัญชี admin เลย (ครั้งแรกสุด) → สร้างบัญชีเริ่มต้นให้ (เก็บแบบแฮช) — SDK ค้างก็ใช้ REST สร้างแทน
+                    const adminDoc = { username: "admin", password: await window.pwHash("060421"), displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, tollwayMode: false, isBanned: false, lastLoginAt: Date.now(), order: Date.now() };
+                    try { adminId = (await window.__fsTimeout(addDoc(collection(db, "users"), adminDoc), 8000)).id; }
+                    catch (e) { adminId = await window.__fsRestAdd("users", adminDoc); }
                 }
                 loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.removeItem('taxi_session_id'); // แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง
+                window.__showAppLoading(); // ⚡ ออกจากหน้า login ทันที (loader แทน) — ไม่รอ snapshot
+                window.__watchdogShowApp(); // ⏱️ เริ่มนับเลย — snapshot มาไม่ทันใน ~4 วิ จะบังคับเข้าแอป (ไม่รอให้เขียน session เสร็จก่อน)
                 window.__fsTimeout(recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ"), 5000).catch(()=>{});
-                window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); authBtn.innerText = "เข้าสู่ระบบ"; window.__watchdogShowApp(); return;
+                window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); authBtn.innerText = "เข้าสู่ระบบ"; return;
             }
-            // 🔐 ดึง user ด้วย username แล้วตรวจรหัสผ่านฝั่งเครื่อง (เก็บแบบแฮช) — ถ้า SDK ค้าง/พลาด → fallback REST (https ธรรมดา ไม่พึ่งช่องทางเรียลไทม์)
-            let userDoc = null;
-            try { const qs = await window.__fsTimeout(getDocs(query(collection(db, "users"), where("username", "==", inputUsername))), 8000); userDoc = qs.docs[0] || null; } catch (e) {}
-            if (!userDoc) { try { const r = await window.__fsRestQuery(inputUsername); userDoc = (r && r.length) ? { id: r[0].id, data: () => r[0].data } : null; } catch (e) {} }
-            if (!userDoc) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
-            const ud = userDoc.data();
+            // 🔐 ดึง user ด้วย username (SDK+REST รันพร้อมกัน เอาตัวที่ตอบก่อน — ไม่รอ SDK ครบ timeout) แล้วตรวจรหัสผ่านฝั่งเครื่อง
+            const user = await window.__fsFindUser(inputUsername);
+            if (!user) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
+            const ud = user.data;
             if (!(await window.pwVerify(pass, ud.password || ''))) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
             if (ud.isBanned) return fail("บัญชีของคุณถูกระงับการใช้งาน");
-            loggedInUserId = userDoc.id; localStorage.setItem('taxi_user_id', loggedInUserId);
-            window.__fsTimeout(window.pwUpgradeIfLegacy(userDoc.id, ud.password || '', pass), 6000).catch(()=>{}); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
-            // 🚫 กันล็อกอินซ้อน: สร้างโทเคน session ใหม่ทุกครั้งที่ล็อกอิน → เครื่องเก่าที่ล็อกอินค้างจะโดนไล่ออก (แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง)
+            loggedInUserId = user.id; localStorage.setItem('taxi_user_id', loggedInUserId);
+            window.__showAppLoading(); // ⚡ ยืนยันรหัสผ่านแล้ว → ออกจากหน้า login ทันที แสดง loader (ตัว snapshot จะพาเข้าแอปเมื่อข้อมูลมา)
+            window.__watchdogShowApp(); // ⏱️ เริ่มนับเลย — ถ้าเข้าแอปไม่ได้ใน ~4 วิ จะบังคับแสดง (รันขนานกับเขียน session ไม่รอซ้อนกัน)
+            window.__fsTimeout(window.pwUpgradeIfLegacy(user.id, ud.password || '', pass), 6000).catch(()=>{}); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
+            // 🚫 กันล็อกอินซ้อน: สร้างโทเคน session ใหม่ทุกครั้งที่ล็อกอิน → เครื่องเก่าที่ล็อกอินค้างจะโดนไล่ออก (แอดมินยกเว้น)
             const loginRole = ud.role || 'User';
             const sid = (loginRole !== 'Admin') ? window.newSessionToken() : null;
             localStorage.setItem('taxi_session_id', sid || '');
-            const wr = (loginRole !== 'Admin') ? setDoc(doc(db, "users", loggedInUserId), { lastLoginAt: Date.now(), sessionId: sid }, { merge: true }) : updateDoc(doc(db, "users", loggedInUserId), { lastLoginAt: Date.now() });
-            await window.__fsTimeout(wr, 6000).catch(() => { const patch = { lastLoginAt: Date.now() }; if (sid) patch.sessionId = sid; window.__fsRestPatch(loggedInUserId, patch).catch(()=>{}); });
+            const patch = { lastLoginAt: Date.now() }; if (sid) patch.sessionId = sid;
+            if (sid) {
+                // 🚫 ผู้ใช้ทั่วไป: sessionId ใหม่ต้องเขียนถึง DB ก่อน snapshot ผู้ใช้มา (กัน snapshot เก่าเห็น sid เดิมแล้วไล่ออก) — timeout 6 วิ รอได้ แต่ UI โชว์ loader+watchdog ขนานอยู่แล้ว
+                await window.__fsWriteFields(loggedInUserId, patch, 6000); // SDK+REST พร้อมกัน เอาตัวที่เขียนถึง DB ก่อน — ไม่รอ SDK ครบ 6 วิ
+            } else {
+                window.__fsWriteFields(loggedInUserId, patch, 6000); // แอดมิน: เขียน lastLoginAt แบบ fire-and-forget (ไม่มี session → ไม่ต้องรอ กันล็อกอินช้า)
+            }
             window.__fsTimeout(recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"), 5000).catch(()=>{});
-            window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); authBtn.innerText = "เข้าสู่ระบบ"; window.__watchdogShowApp();
+            window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); authBtn.innerText = "เข้าสู่ระบบ";
         } catch (error) { fail("เกิดข้อผิดพลาด: ตรวจเน็ตแล้วลองอีกครั้ง"); }
     };
 
@@ -6915,14 +6957,16 @@
     window.logoutApp = async (forced = false) => { 
         let isOk = forced ? true : await window.showCustomConfirm("ออกจากระบบ", "คุณต้องการออกจากระบบใช่หรือไม่?", "warning");
         if(isOk) {
-            if(loggedInUserId) {
+            const logoutUid = loggedInUserId;
+            if(logoutUid) {
                 window.markPresenceOffline(); // 👤 ล็อกเอาต์ → ปิดออนไลน์ทันที (เขียน 1 ครั้ง — timeout กันค้าง)
-                window.__fsTimeout(recordActivityLog(loggedInUserId, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ"), 5000).catch(()=>{}); // ไม่บล็อกการออกจากระบบ (กันค้างตอน Firestore ช้า/โควตาหมด)
+                window.__fsTimeout(recordActivityLog(logoutUid, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ"), 5000).catch(()=>{}); // ไม่บล็อกการออกจากระบบ
                 if(!forced) {
-                    // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน เพราะจะไปไล่เครื่องที่เพิ่งล็อกอินแทน
-                    // timeout 6 วิ + fallback REST — โทเคนต้องถึง DB เสมอ ไม่งั้นเครื่องอื่นล็อกอินซ้อนได้ (กันค้างถ้าช่องทางเรียลไทม์มีปัญหา)
+                    // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน
+                    // ✅ ไม่บล็อก UI: เขียนแบบ fire-and-forget (SDK+REST รันพร้อมกัน เอาตัวที่ถึง DB ก่อน) แล้วสลับหน้าจอกลับมาล็อกอินทันที
+                    //    (เดิม await 6 วิ+ → พอช่องทาง Firestore ค้าง/โควตาหมด ก็ค้างอยู่หน้าเดิมนาน กดล็อกเอาต์แล้วไม่ไปไหน)
                     const newSid = window.newSessionToken();
-                    await window.__fsTimeout(setDoc(doc(db, "users", loggedInUserId), { sessionId: newSid }, { merge: true }), 6000).catch(() => window.__fsRestPatch(loggedInUserId, { sessionId: newSid }).catch(()=>{}));
+                    window.__fsWriteFields(logoutUid, { sessionId: newSid }, 6000);
                 }
             }
             stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
