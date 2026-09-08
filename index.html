@@ -1011,7 +1011,10 @@
         }
         .reorder-arming { box-shadow: inset 0 0 0 2px rgba(255,210,77,0.55); background: rgba(255,210,77,0.1); }
         /* รายการที่ลาก: ลอยตามนิ้ว/เมาส์ทันที (transform ตั้งจาก JS) — ตัวอื่นไหลเข้าที่ด้วย FLIP */
-        .reorder-dragging { position: relative; z-index: 60; opacity: 0.92; box-shadow: 0 10px 28px rgba(0,0,0,0.55); background: rgba(255,255,255,0.09); will-change: transform; }
+        /* transition: none สำคัญมาก — CSS .side-menu-item/.hub-item มี transition: 0.2s ถ้าไม่ปิด ตัว item จะไหลตามนิ้วช้า
+           แล้ว getBoundingClientRect() อ่านตำแหน่งค้างกลาง animation → คำนวนสลับเพี้ยน (เด้งขึ้น/ลงบนสุด) */
+        .reorder-dragging { position: relative; z-index: 60; opacity: 0.92; box-shadow: 0 10px 28px rgba(0,0,0,0.55); background: rgba(255,255,255,0.09); will-change: transform; transition: none; }
+        .reorder-dragging .reorder-grip { transition: none; }
         .reorder-shift { transition: transform 0.18s ease; will-change: transform; }
 
         /* ---------- Admin user cards ---------- */
@@ -1715,13 +1718,13 @@
 </style>
 <div id="settingsHubModal" class="modal-overlay" style="z-index: 10003;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">ตั้งค่าการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('settingsHubModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:6px 12px;">
 <div class="hub-cat-label" data-cat="cat-members">👥 สมาชิก / สิทธิ์</div>
-<div id="hubAdminItem" class="hub-item" style="display:none;" onclick="window.toggleModal('adminMenuModal', true);"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">manage_accounts</span></div><div class="hub-item-body"><div class="hub-item-title">จัดการผู้ใช้งาน</div><div class="hub-item-desc">เพิ่ม / แก้ไข / ลบสมาชิก ดูทะเบียนรถ และประวัติการใช้งาน</div></div><span id="hubPermReqBadge" class="perm-req-count" style="display:none;"></span><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
-<div id="hubRoleItem" class="hub-item" style="display:none;" onclick="window.openRoleSettingsModal();"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">admin_panel_settings</span></div><div class="hub-item-body"><div class="hub-item-title">ตั้งค่าสิทธิ์การใช้งาน</div><div class="hub-item-desc">กำหนดสิทธิ์ของแต่ละตำแหน่ง (Role) เช่น ผู้จัดการ / ผู้ใช้ทั่วไป</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
+<div id="hubAdminItem" class="hub-item" data-cat="cat-members" style="display:none;" onclick="window.toggleModal('adminMenuModal', true);"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">manage_accounts</span></div><div class="hub-item-body"><div class="hub-item-title">จัดการผู้ใช้งาน</div><div class="hub-item-desc">เพิ่ม / แก้ไข / ลบสมาชิก ดูทะเบียนรถ และประวัติการใช้งาน</div></div><span id="hubPermReqBadge" class="perm-req-count" style="display:none;"></span><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
+<div id="hubRoleItem" class="hub-item" data-cat="cat-members" style="display:none;" onclick="window.openRoleSettingsModal();"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">admin_panel_settings</span></div><div class="hub-item-body"><div class="hub-item-title">ตั้งค่าสิทธิ์การใช้งาน</div><div class="hub-item-desc">กำหนดสิทธิ์ของแต่ละตำแหน่ง (Role) เช่น ผู้จัดการ / ผู้ใช้ทั่วไป</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 <div class="hub-cat-label" data-cat="cat-notify">🔔 การแจ้งเตือน</div>
-<div id="hubToastItem" class="hub-item" style="display:none;" onclick="window.openToastMsgModal();"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">notifications</span></div><div class="hub-item-body"><div class="hub-item-title">จัดการข้อความแจ้งเตือน</div><div class="hub-item-desc">แก้ไขข้อความ / รูปไอคอน / ระยะเวลาแสดงผลของ toast ทั้งหมดในแอป</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
+<div id="hubToastItem" class="hub-item" data-cat="cat-notify" style="display:none;" onclick="window.openToastMsgModal();"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">notifications</span></div><div class="hub-item-body"><div class="hub-item-title">จัดการข้อความแจ้งเตือน</div><div class="hub-item-desc">แก้ไขข้อความ / รูปไอคอน / ระยะเวลาแสดงผลของ toast ทั้งหมดในแอป</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 <div class="hub-cat-label" data-cat="cat-system">⚙️ บริการ / ระบบ</div>
-<div id="hubServiceItem" class="hub-item" style="display:none;" onclick="window.openServicePortal(true);"><div class="hub-item-icon" style="background:rgba(0,188,212,0.13); color:#00c2cb;"><span class="material-symbols-outlined" style="font-size:24px;">settings_applications</span></div><div class="hub-item-body"><div class="hub-item-title" style="color:#00c2cb;">จัดการ Portal</div><div class="hub-item-desc">เพิ่ม / ลบ / จัดเรียงหมวดหมู่ รหัส USSD และเบอร์บริการต่าง ๆ</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
-<div id="hubQuotaItem" class="hub-item" style="display:none;" onclick="window.openQuotaMonitor();"><div class="hub-item-icon" style="background:rgba(239,68,68,0.13); color:#ff8a95;"><span class="material-symbols-outlined" style="font-size:24px;">data_usage</span></div><div class="hub-item-body"><div class="hub-item-title" style="color:#ff8a95;">โควตา Firestore <span id="hubQuotaBadge" class="perm-req-count" style="display:none;"></span></div><div class="hub-item-desc">ดูการใช้ อ่าน/เขียน/ลบ วันนี้แยกตามฟีเจอร์ + ประมาณโควตาที่เหลือ</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
+<div id="hubServiceItem" class="hub-item" data-cat="cat-system" style="display:none;" onclick="window.openServicePortal(true);"><div class="hub-item-icon" style="background:rgba(0,188,212,0.13); color:#00c2cb;"><span class="material-symbols-outlined" style="font-size:24px;">settings_applications</span></div><div class="hub-item-body"><div class="hub-item-title" style="color:#00c2cb;">จัดการ Portal</div><div class="hub-item-desc">เพิ่ม / ลบ / จัดเรียงหมวดหมู่ รหัส USSD และเบอร์บริการต่าง ๆ</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
+<div id="hubQuotaItem" class="hub-item" data-cat="cat-system" style="display:none;" onclick="window.openQuotaMonitor();"><div class="hub-item-icon" style="background:rgba(239,68,68,0.13); color:#ff8a95;"><span class="material-symbols-outlined" style="font-size:24px;">data_usage</span></div><div class="hub-item-body"><div class="hub-item-title" style="color:#ff8a95;">โควตา Firestore <span id="hubQuotaBadge" class="perm-req-count" style="display:none;"></span></div><div class="hub-item-desc">ดูการใช้ อ่าน/เขียน/ลบ วันนี้แยกตามฟีเจอร์ + ประมาณโควตาที่เหลือ</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 </div></div></div>
 
 <div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควตา Firestore</h3><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">จำนวน อ่าน / เขียน / ลบ ที่ทุกบัญชี (ID) ใช้ Firestore วันนี้รวมกันทั้งระบบ <b style="color:#fff;">(ทุกเครื่องส่งยอดขึ้นเซิร์ฟเวอร์ทุก 10 นาที / ตอนปิดแอป</b> — แสดงยอดรวมทุก ID + เหลือเท่าไหร่ และแยกตาม ID ชื่อโปรไฟล์) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ฟีเจอร์ที่ฟังข้อมูลสดแบบเรียลไทม์จะกินโควตาอ่านตามจำนวนเครื่องที่เปิดดูพร้อมกัน)</div></div></div></div>
@@ -1964,7 +1967,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08ac';
+    const APP_BUILD = '2026-09-08ad';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -3015,11 +3018,19 @@
             const used = new Set(); const ordered = [];
             saved.forEach(k => { const it = byKey[k]; if (it && !used.has(k)) { used.add(k); ordered.push(it); } });
             items.forEach(it => { const k = it.dataset.ordKey || it.id; if (!used.has(k)) { used.add(k); ordered.push(it); } });
-            // วางลำดับใหม่โดยไม่ย้ายหัวข้อหมวด/label — แต่ละ "ช่อง item" เดิมถูกเติมด้วย item ตามลำดับใหม่
+            // เรียงเฉพาะภายในหมวดเดียวกัน: แต่ละ "ช่อง item" ถูกเติมด้วย item ของหมวดนั้นตามลำดับที่บันทึก
+            // (หัวข้อหมวด/label อยู่กับที่เสมอ — หมวดไม่ปนกัน แม้ลำดับเก่าจะมั่วก็กลับเป็นระเบียบเอง)
             const template = Array.from(container.children).filter(el => el.nodeType === 1);
-            const queue = ordered.slice();
-            const newOrder = template.map(el => (el.matches(itemsSel) && getComputedStyle(el).display !== 'none') ? queue.shift() : el).filter(Boolean);
-            while (queue.length) newOrder.push(queue.shift());
+            const catQueues = {};
+            ordered.forEach(el => { const c = el.dataset.cat || ''; (catQueues[c] = catQueues[c] || []).push(el); });
+            const newOrder = template.map(el => {
+                if (el.matches(itemsSel) && getComputedStyle(el).display !== 'none') {
+                    const q = catQueues[el.dataset.cat || ''] || [];
+                    return q.length ? q.shift() : el;
+                }
+                return el;
+            }).filter(Boolean);
+            Object.values(catQueues).forEach(q => { while (q.length) newOrder.push(q.shift()); });
             let prev = null;
             newOrder.forEach(el => { if (prev) prev.after(el); else container.prepend(el); prev = el; });
         } catch (e) {}
@@ -3042,8 +3053,10 @@
 
         // เริ่มลาก: รายการลอยตามนิ้ว/เมาส์ (transform ต่อเนื่อง) — ตัวอื่นไหลเข้าที่ด้วย FLIP
         const startDrag = (it, pointerId, clientY) => {
-            const others = itemsOf().filter(el => el !== it);
-            drag = { item: it, startY: clientY, curIdx: others.indexOf(it) };
+            // curIdx = ตำแหน่งที่ item นี้จะถูกแทรกในรายการ others (เท่ากับ index ในรายการเต็ม)
+            // ใช้ index ใน itemsOf() ไม่ใช่ others.indexOf(it) ซึ่งได้ -1 เสมอ → ไม่เด้ง/กระโดดตอนลากแรก
+            const curIdx = itemsOf().indexOf(it);
+            drag = { item: it, startY: clientY, lastY: clientY, staticShift: 0, cat: it.dataset.cat || '', curIdx };
             it.classList.add('reorder-dragging');
             it.style.zIndex = '60';
             try { it.setPointerCapture(pointerId); } catch (err) {}
@@ -3060,8 +3073,17 @@
             newOrder.forEach(el => { if (prev) prev.after(el); else container.prepend(el); prev = el; });
             return newOrder;
         };
+        // ปิด FLIP animation ค้างทั้งหมด (กันวัดตำแหน่งค้างกลาง animation → ลากเด้ง/กระโดดขึ้นบนสุด)
+        const settleShifts = () => {
+            container.querySelectorAll('.reorder-shift').forEach(s => {
+                s.classList.remove('reorder-shift');
+                s.style.transition = 'none';
+                s.style.transform = '';
+            });
+        };
         const moveTo = (targetIdx) => {
             if (targetIdx === drag.curIdx) return;
+            settleShifts();
             const items = itemsOf();
             const others = items.filter(el => el !== drag.item);
             const ti = Math.min(Math.max(targetIdx, 0), others.length);
@@ -3069,8 +3091,13 @@
             // FLIP: บันทึกตำแหน่งเดิมของทุกตัวก่อน rebuild
             const prev = new Map();
             items.forEach(el => { if (el !== drag.item) prev.set(el, el.getBoundingClientRect().top); });
+            const beforeTop = drag.item.getBoundingClientRect().top;
             rebuildOrder(desired);
             drag.curIdx = ti;
+            // ชดเชยตำแหน่ง static ที่เปลี่ยนหลัง rebuild — กันรายการลอยหนีมือ/เด้งขึ้นบนสุด
+            const afterTop = drag.item.getBoundingClientRect().top;
+            drag.staticShift += afterTop - beforeTop;
+            drag.item.style.transform = `translate3d(0, ${(drag.lastY - drag.startY) - drag.staticShift}px, 0)`;
             requestAnimationFrame(() => {
                 desired.forEach(el => {
                     if (el === drag.item) return;
@@ -3078,10 +3105,11 @@
                     const dy = oldTop - el.getBoundingClientRect().top;
                     if (Math.abs(dy) > 0.5) {
                         el.classList.add('reorder-shift');
+                        el.style.transition = ''; // เคลียร์ inline transition:none ที่ settleShifts ทิ้งไว้ — ให้ FLIP ไหลได้
                         el.style.transform = `translate3d(0, ${dy}px, 0)`;
                         void el.offsetHeight;
                         el.style.transform = 'translate3d(0,0,0)';
-                        el.addEventListener('transitionend', () => { el.classList.remove('reorder-shift'); el.style.transform = ''; }, { once: true });
+                        el.addEventListener('transitionend', () => { el.classList.remove('reorder-shift'); el.style.transition = ''; el.style.transform = ''; }, { once: true });
                     }
                 });
             });
@@ -3095,6 +3123,7 @@
                 it.style.transform = 'translate3d(0,0,0)';
                 setTimeout(() => { it.style.transition = ''; it.style.transform = ''; }, 220);
             }
+            settleShifts();
             cancelPress();
         };
 
@@ -3127,17 +3156,25 @@
             lastXY = { x: e.clientX, y: e.clientY };
             if (drag) {
                 e.preventDefault();
-                const dy = e.clientY - drag.startY;
-                drag.item.style.transform = `translate3d(0, ${dy}px, 0)`; // ติดตามมือตลอดเวลา
+                settleShifts(); // กันวัดตำแหน่งค้างกลาง animation
+                drag.lastY = e.clientY;
+                const effDy = (e.clientY - drag.startY) - drag.staticShift;
+                drag.item.style.transform = `translate3d(0, ${effDy}px, 0)`; // ติดตามมือตลอดเวลา
                 const r = drag.item.getBoundingClientRect();
                 const center = r.top + r.height / 2;
+                // ลากได้เฉพาะภายในหมวดเดียวกัน (กันหมวดปนกัน — ตั้งค่าการใช้งานอยู่เป็นระเบียบ);
+                // เมนูแฮมเบอร์เกอร์ไม่มีหมวด (data-cat ว่าง) = สลับได้ทุกตำแหน่ง
                 const others = itemsOf().filter(el => el !== drag.item);
-                let t = others.length;
-                for (let i = 0; i < others.length; i++) {
-                    const or = others[i].getBoundingClientRect();
-                    if (center < or.top + or.height / 2) { t = i; break; }
+                const sameCat = others.filter(el => (el.dataset.cat || '') === drag.cat);
+                let t = sameCat.length;
+                for (let i = 0; i < sameCat.length; i++) {
+                    const or = sameCat[i].getBoundingClientRect();
+                    if (center < or.top + or.height / 2 - 3) { t = i; break; } // deadband เล็กน้อยกันสั่น
                 }
-                if (t !== drag.curIdx) moveTo(t);
+                let targetPos;
+                if (t < sameCat.length) targetPos = others.indexOf(sameCat[t]);
+                else { const last = sameCat[sameCat.length - 1]; targetPos = last ? others.indexOf(last) + 1 : others.length; }
+                if (targetPos !== drag.curIdx) moveTo(targetPos);
                 return;
             }
             if (pressStart && (Math.abs(e.clientX - pressStart.x) > 10 || Math.abs(e.clientY - pressStart.y) > 10)) cancelPress();
@@ -6308,6 +6345,8 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-07'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        'แก้ลากสลับเด้ง/กระโดดขึ้นบนสุด: ชดเชยตำแหน่งที่เปลี่ยนตอนย้าย (รายการติดตามนิ้วตลอดไม่หนีมือ) + หยุด animation ค้างก่อนวัดตำแหน่ง — เลื่อนทีละลำดับได้เนียน ๆ',
+        'ลากสลับในตั้งค่าการใช้งานสลับได้เฉพาะภายในหมวดเดียวกัน (สมาชิก/สิทธิ์ · การแจ้งเตือน · บริการ/ระบบ) — หมวดไม่ปนกัน กลับเป็นระเบียบเสมอ แม้ลำดับเดิมจะมั่ว',
         'ลากสลับเมนูลื่นขึ้น: รายการที่ลากติดตามนิ้ว/เมาส์ทันที (transform ต่อเนื่อง + FLIP animation) ตัวอื่นไหลเข้าที่อย่างนุ่มนวล ทั้งเมนูแฮมเบอร์เกอร์และตั้งค่าการใช้งาน',
         'หน้าตั้งค่าการใช้งานจัดหมวดหมู่ใหม่ (สมาชิก/สิทธิ์ · การแจ้งเตือน · บริการ/ระบบ) — ลบข้อความ/ป้ายล่างที่ล้นออก และแถบ "ลากสลับ" ย้ายมาอยู่ใต้หัวข้อพอดี ไม่ลอยกลางจอ',
         'ออกจากระบบไม่ค้างอีกต่อไป: เขียนบันทึก/หมุนโทเคน session มี timeout + fallback REST — กดยืนยันแล้วออกจากระบบได้ทันทีแม้ Firestore ช้า/โควตาหมด',
