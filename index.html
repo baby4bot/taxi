@@ -1967,7 +1967,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08ah';
+    const APP_BUILD = '2026-09-08ai';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -6452,6 +6452,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        'กัน user ทั่วไปเด้งหลุดหลังล็อกอินตอนโควตา/เน็ตค้าง: เขียน session ใหม่ไม่ทัน (โควตาหมด) จะไม่ไล่ออกจากระบบอีกต่อไป — ระบบจำค่า session ที่เห็นตอนล็อกอินไว้ แล้วลองเขียนซ้ำเบื้องหลังจนกว่าจะสำเร็จ (ยังไล่เครื่องอื่นที่ล็อกอินซ้อนจริงอยู่เหมือนเดิม)',
         'แก้ล็อกอินบอก "รหัสผู้ใช้หรือรหัสผ่านผิด" ทั้งที่รหัสถูก: ถ้าดึงข้อมูลผู้ใช้ไม่ได้จริง ๆ (Firestore โควตาหมด / เน็ตขัดข้อง) ระบบจะแจ้ง "เชื่อมต่อฐานข้อมูลขัดข้อง (เน็ต/โควตา Firestore) — ลองใหม่อีกครั้ง" แทน — เห็นสาเหตุจริง ไม่เข้าใจผิดว่ารหัสผ่านเสีย (ตรวจสอบแล้วฐานข้อมูลเก็บรหัสแอดมินปัจจุบันถูกต้อง เข้าสู่ระบบได้ปกติ)',
         'ลำดับเมนูซิงก์ทุกคนแบบเรียลไทม์: แอดมินลากสลับเมนู (แฮมเบอร์เกอร์/ตั้งค่าการใช้งาน) แล้วบันทึก → ทุก user เห็นลำดับใหม่ทันที ไม่ต้องปิด-เปิดเมนูใหม่ (เก็บ settings/menuOrder ฟังสด)',
         'โหลดข้อมูลผู้ใช้ทันทีหลังล็อกอิน/สมัคร/เปิดแอปต่อ: นำ doc ที่เพิ่งดึงมาแสดงผลเลย (ชื่อ/รูป/สิทธิ์/ตั้งค่า) — ไม่ต้องรอ snapshot เมื่อ Firestore ค้าง/โควตาหมด เลิกเห็น "กำลังโหลดข้อมูลของคุณ" ค้าง',
@@ -6763,16 +6764,15 @@
                 // 🚫 กันล็อกอินซ้อน (1 บัญชี 1 เครื่อง ยกเว้น Admin): โทเคน session ในเครื่องไม่ตรงกับใน DB → มีคนอื่นล็อกอิน/ล็อกเอาต์ด้วยบัญชีนี้ → ไล่ออกอัตโนมัติ
                 // (ถ้าเครื่องนี้เป็น session เก่าไม่มีโทเคน แต่ใน DB มี sessionId ของคนอื่น → ก็ไล่ออก เพราะมีคนล็อกอินทีหลัง)
                 if (data.role !== 'Admin') {
-                    const localSid = localStorage.getItem('taxi_session_id');
                     const dbSid = data.sessionId || null;
-                    if (dbSid && localSid !== dbSid) {
+                    // ไล่ออกเฉพาะเมื่อ DB มี session ที่ไม่ใช่ของเราและไม่ใช่ค่าเดิมตอนล็อกอิน
+                    // (เขียน sessionId ใหม่ของเราไม่ทันเพราะโควตา/เน็ต → อย่าไล่ตัวเองออก ให้ retry เบื้องหลังแทน)
+                    if (window.__sessionKickNeeded(dbSid)) {
                         // ยืนยันจากเซิร์ฟเวอร์ก่อนไล่ออก (กัน snapshot จาก cache เก่าเด้งหลุดตอนรีเฟรช/เพิ่งล็อกอิน)
                         getDoc(doc(db, "users", loggedInUserId), { source: "server" }).then(realSnap => {
                             if (realSnap.exists()) {
                                 const rd = realSnap.data();
-                                const realSid = rd.sessionId || null;
-                                const curLocalSid = localStorage.getItem('taxi_session_id');
-                                if (rd.role !== 'Admin' && realSid && curLocalSid !== realSid) {
+                                if (rd.role !== 'Admin' && window.__sessionKickNeeded(rd.sessionId || null)) {
                                     window.showToast("บัญชีนี้ถูกเข้าสู่ระบบจากเครื่องอื่น — ระบบได้ออกจากระบบให้แล้ว", true);
                                     window.logoutApp(true);
                                 }
@@ -6917,6 +6917,35 @@
     // 🚫 กันล็อกอินซ้อน (1 บัญชี 1 เครื่อง ยกเว้น Admin): โทเคน session ต่อการล็อกอิน
     // เก็บ sessionId ไว้ในผู้ใช้ (Firestore) + localStorage เครื่องนี้ — ถ้าเครื่องอื่นล็อกอิน/ล็อกเอาต์ด้วยบัญชีเดียวกัน sessionId จะเปลี่ยน → เครื่องนี้โดนไล่ออกอัตโนมัติ
     window.newSessionToken = () => (Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 32);
+    // จดจำ sessionId ที่เห็นใน DB ตอนล็อกอิน/สมัคร (เครื่องนี้)
+    // ถ้าเขียน sessionId ใหม่ของเราไม่ทัน (โควตา/เน็ตค้าง) DB ยังเป็นค่าเก่า → อย่าไล่ตัวเองออก (เดี๋ยวมี retry เขียนซ้ำเบื้องหลัง)
+    // แต่ถ้า DB เปลี่ยนเป็นค่าที่ไม่ใช่ทั้ง session เราและค่าที่เห็นตอนล็อกอิน → มีคนอื่นล็อกอินจริง → ไล่ออก
+    let myDbSidAtLogin = localStorage.getItem('taxi_db_sid_seen') || null;
+    window.__retrySessionWrite = null;
+    window.__markSessionWritten = (sid) => { myDbSidAtLogin = sid; localStorage.setItem('taxi_db_sid_seen', sid || ''); };
+    window.__sessionKickNeeded = (dbSid) => {
+        if (!dbSid) return false;
+        const localSid = localStorage.getItem('taxi_session_id');
+        if (!localSid) return false;
+        if (dbSid === localSid) return false;         // DB ตรงกับ session เครื่องนี้ → ปกติ
+        if (dbSid === myDbSidAtLogin) return false;   // ยังเป็นค่าเดิมตอนล็อกอิน (เขียนของเรายังไม่ถึง DB) → รอ retry ไม่ไล่ออก
+        return true;                                  // DB เป็น session อื่น/ใหม่กว่า → มีคนอื่นล็อกอิน → ไล่ออก
+    };
+    // เขียน sessionId ซ้ำเบื้องหลังจนกว่าจะสำเร็จ (กันโควตาหมด/เน็ตเด้งตอนล็อกอิน → เด้งหลุดทันที)
+    window.__ensureSessionWrite = (uid, sid, maxTries) => {
+        if (window.__retrySessionWrite) return;
+        let tries = 0;
+        const doTry = () => {
+            window.__retrySessionWrite = null;
+            if (!loggedInUserId || loggedInUserId !== uid || localStorage.getItem('taxi_session_id') !== sid) return; // ล็อกเอาต์/สลับ session แล้ว → หยุด
+            tries++;
+            window.__fsWriteFields(uid, { sessionId: sid }, 6000).then(ok => {
+                if (ok) { window.__markSessionWritten(sid); }
+                else if (tries < (maxTries || 10)) { window.__retrySessionWrite = setTimeout(doTry, 5000); }
+            });
+        };
+        window.__retrySessionWrite = setTimeout(doTry, 4000);
+    };
     window.loginApp = async () => {
         let inputUsername = document.getElementById('authUsername').value.trim(); const pass = document.getElementById('authPassword').value;
         if(!inputUsername || !pass) return window.showToast("กรุณาใส่ Username และรหัสผ่าน", true);
@@ -6942,7 +6971,7 @@
                     try { adminId = (await window.__fsTimeout(addDoc(collection(db, "users"), adminDoc), 8000)).id; }
                     catch (e) { adminId = await window.__fsRestAdd("users", adminDoc); }
                 }
-                loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.removeItem('taxi_session_id'); // แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง
+                loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.removeItem('taxi_session_id'); localStorage.removeItem('taxi_db_sid_seen'); myDbSidAtLogin = null; // แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง
                 if (lu) { window.__applyUserDocUI(lu.data); } else { window.__showAppLoading(); } // ⚡ ยืนยันรหัสผ่านแล้ว → แสดงแอปทันทีจาก doc ที่ดึงมา (seed ชื่อ/รูป/สิทธิ์) — ไม่รอ snapshot เมื่อ Firestore ค้าง
                 window.__watchdogShowApp(); // ⏱️ เริ่มนับเลย — snapshot มาไม่ทันใน ~4 วิ จะบังคับเข้าแอป (ไม่รอให้เขียน session เสร็จก่อน)
                 window.__fsTimeout(recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ"), 5000).catch(()=>{});
@@ -6967,8 +6996,12 @@
             localStorage.setItem('taxi_session_id', sid || '');
             const patch = { lastLoginAt: Date.now() }; if (sid) patch.sessionId = sid;
             if (sid) {
-                // 🚫 ผู้ใช้ทั่วไป: sessionId ใหม่ต้องเขียนถึง DB ก่อน snapshot ผู้ใช้มา (กัน snapshot เก่าเห็น sid เดิมแล้วไล่ออก) — timeout 6 วิ รอได้ แต่ UI โชว์ loader+watchdog ขนานอยู่แล้ว
-                await window.__fsWriteFields(loggedInUserId, patch, 6000); // SDK+REST พร้อมกัน เอาตัวที่เขียนถึง DB ก่อน — ไม่รอ SDK ครบ 6 วิ
+                // 🚫 ผู้ใช้ทั่วไป: sessionId ใหม่ต้องเขียนถึง DB ก่อน snapshot ผู้ใช้มา (กัน snapshot เก่าเห็น sid เดิมแล้วไล่ออก)
+                const seenSid = ud.sessionId || null; // ค่าที่เห็นใน DB ตอนล็อกอิน (อาจเป็น session เก่า/ของเครื่องอื่น) — กันไล่ตัวเองตอนเขียนยังไม่ถึง DB
+                myDbSidAtLogin = seenSid; localStorage.setItem('taxi_db_sid_seen', seenSid || '');
+                const writeOk = await window.__fsWriteFields(loggedInUserId, patch, 6000); // SDK+REST พร้อมกัน เอาตัวที่เขียนถึง DB ก่อน
+                if (writeOk) { window.__markSessionWritten(sid); }
+                else { window.__ensureSessionWrite(loggedInUserId, sid, 10); } // เขียนไม่ทัน (โควตา/เน็ต) → retry เบื้องหลัง กันเด้งหลุดทันที
             } else {
                 window.__fsWriteFields(loggedInUserId, patch, 6000); // แอดมิน: เขียน lastLoginAt แบบ fire-and-forget (ไม่มี session → ไม่ต้องรอ กันล็อกอินช้า)
             }
@@ -6993,7 +7026,7 @@
             let docRef;
             try { docRef = await window.__fsTimeout(addDoc(collection(db, "users"), regData), 10000); }
             catch (e) { try { const r = await window.__fsRestQuery(inputUsername); docRef = (r && r.length) ? { id: r[0].id } : { id: await window.__fsRestAdd("users", regData) }; } catch (e2) { return window.showToast("เกิดข้อผิดพลาดในการสร้างบัญชี — ลองอีกครั้ง", true); } }
-            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); window.__fsTimeout(recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"), 5000).catch(()=>{}); window.__applyUserDocUI(regData); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog(); window.__watchdogShowApp();
+            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); window.__markSessionWritten(regSid); window.__fsTimeout(recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"), 5000).catch(()=>{}); window.__applyUserDocUI(regData); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog(); window.__watchdogShowApp();
         } catch (error) { window.showToast("เกิดข้อผิดพลาด: " + error.message, true); } finally { document.getElementById('authBtn').innerText = "สร้างบัญชีใหม่"; }
     };
 
@@ -7057,7 +7090,7 @@
                     window.__fsWriteFields(logoutUid, { sessionId: newSid }, 6000);
                 }
             }
-            stopGlobalUserListener(); window.stopGlobalMenuOrderListen(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
+            stopGlobalUserListener(); window.stopGlobalMenuOrderListen(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); localStorage.removeItem('taxi_db_sid_seen'); myDbSidAtLogin = null; if (window.__retrySessionWrite) { clearTimeout(window.__retrySessionWrite); window.__retrySessionWrite = null; } loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
             window.updateAutoFsBadge();
             if(!forced) window.showToast("ออกจากระบบเรียบร้อย");
             document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; document.getElementById('authDisplayName').style.display = "none"; document.getElementById('authPhone').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none"; document.getElementById('forgotPassLink').style.display = "flex"; document.getElementById('toggleAuthText').innerHTML = 'ยังไม่มีบัญชีใช่ไหม? <span style="color:#38bdf8;font-weight:600;">คลิกเพื่อสร้างบัญชี</span>'; document.getElementById('authBtn').onclick = window.loginApp; document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authPassword').type = 'password'; document.getElementById('authDisplayName').value = ''; document.getElementById('authPhone').value = ''; document.getElementById('regProfilePicPreview').src = window.DEFAULT_AVATAR;
