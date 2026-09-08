@@ -1967,7 +1967,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08ag';
+    const APP_BUILD = '2026-09-08ah';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -2160,14 +2160,17 @@
     //    (เดิมเรียก SDK ก่อนแล้วค่อย REST ต่อ — ถ้าช่องทางเรียลไทม์ค้าง/โควตาหมด จะเสียเวลารอ SDK ครบ timeout ทั้ง 6-8 วิ
     //    ทั้งที่ REST ผ่าน https ธรรมดาตอบไวอยู่แล้ว → ล็อกอินช้า) — คืน { id, data } หรือ null
     window.__fsFindUser = (username) => new Promise((resolve) => {
-        let settled = 0, done = false;
+        let settled = 0, done = false, sawError = false;
         const win = (v) => { if (!done && v) { done = true; resolve(v); } };
         const sdkP = window.__fsTimeout(getDocs(query(collection(db, "users"), where("username", "==", username))), 5000)
-            .then(qs => (qs && !qs.empty) ? { id: qs.docs[0].id, data: qs.docs[0].data() } : null).catch(() => null);
+            .then(qs => (qs && !qs.empty) ? { id: qs.docs[0].id, data: qs.docs[0].data() } : null).catch(() => { sawError = true; return null; });
         const restP = window.__fsTimeout(window.__fsRestQuery(username), 5000)
-            .then(r => (r && r.length) ? { id: r[0].id, data: r[0].data } : null).catch(() => null);
-        sdkP.then(v => { win(v); if (++settled === 2 && !done) resolve(null); });
-        restP.then(v => { win(v); if (++settled === 2 && !done) resolve(null); });
+            .then(r => (r && r.length) ? { id: r[0].id, data: r[0].data } : null).catch(() => { sawError = true; return null; });
+        // ทั้ง 2 ช่องทางตอบแล้ว: เจอ → {id,data} · ทั้งคู่พลาด(เน็ต/โควตา) → {error:true} · ทั้งคู่ค้นแล้วไม่เจอจริง ๆ → null
+        // (เดิมคืน null อย่างเดียว → ล็อกอินโชว์ "รหัสผ่านผิด" ทั้งที่แค่ช่องทางค้าง/โควตาหมด ดูเพี้ยน)
+        const finish = () => { if (done) return; done = true; resolve(sawError ? { error: true } : null); };
+        sdkP.then(v => { win(v); if (++settled === 2) finish(); });
+        restP.then(v => { win(v); if (++settled === 2) finish(); });
     });
     // ✍️ เขียน field ผู้ใช้แบบ SDK + REST **พร้อมกัน** เอาตัวที่สำเร็จก่อน (กันรอ SDK ครบ timeout ทั้ง 6 วิ
     //    เมื่อช่องทางเรียลไทม์ค้าง — REST ผ่าน https ธรรมดาตอบไว) — resolve true ถ้ามีช่องทางใดเขียนถึง DB สำเร็จ
@@ -6447,8 +6450,9 @@
     // ==================== 🏷️ ระบบเลขเวอร์ชัน + ประวัติอัปเดต (Firestore settings/changelog) ====================
     // ข้อมูลจริงอยู่ใน Firestore (admin แก้แล้วทุกเครื่องเห็นเหมือนกัน) — โค้ดนี้เป็น seed/ค่าเริ่มต้น + ตรรกะ "รันเวอร์ชันอัตโนมัติตามวัน"
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
-    const APP_RELEASE_DATE = '2026-09-07'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
+    const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        'แก้ล็อกอินบอก "รหัสผู้ใช้หรือรหัสผ่านผิด" ทั้งที่รหัสถูก: ถ้าดึงข้อมูลผู้ใช้ไม่ได้จริง ๆ (Firestore โควตาหมด / เน็ตขัดข้อง) ระบบจะแจ้ง "เชื่อมต่อฐานข้อมูลขัดข้อง (เน็ต/โควตา Firestore) — ลองใหม่อีกครั้ง" แทน — เห็นสาเหตุจริง ไม่เข้าใจผิดว่ารหัสผ่านเสีย (ตรวจสอบแล้วฐานข้อมูลเก็บรหัสแอดมินปัจจุบันถูกต้อง เข้าสู่ระบบได้ปกติ)',
         'ลำดับเมนูซิงก์ทุกคนแบบเรียลไทม์: แอดมินลากสลับเมนู (แฮมเบอร์เกอร์/ตั้งค่าการใช้งาน) แล้วบันทึก → ทุก user เห็นลำดับใหม่ทันที ไม่ต้องปิด-เปิดเมนูใหม่ (เก็บ settings/menuOrder ฟังสด)',
         'โหลดข้อมูลผู้ใช้ทันทีหลังล็อกอิน/สมัคร/เปิดแอปต่อ: นำ doc ที่เพิ่งดึงมาแสดงผลเลย (ชื่อ/รูป/สิทธิ์/ตั้งค่า) — ไม่ต้องรอ snapshot เมื่อ Firestore ค้าง/โควตาหมด เลิกเห็น "กำลังโหลดข้อมูลของคุณ" ค้าง',
         'ล็อกอินเร็วขึ้น: ดึงข้อมูลผู้ใช้ด้วย SDK+REST พร้อมกัน (เอาตัวที่ตอบก่อน — เดิมรอ SDK ครบ timeout ก่อนค่อย REST) + ยืนยันรหัสผ่านเสร็จออกจากหน้าเข้าสู่ระบบทันที (โชว์หน้าจอโหลด ไม่รอ snapshot) + watchdog สั้นลง 8→4 วิ กันค้างหน้าล็อกอิน',
@@ -6925,6 +6929,7 @@
                 // หาบัญชี admin ผ่าน SDK+REST พร้อมกัน (เอาตัวที่ตอบก่อน — ไม่รอ SDK ครบ timeout เมื่อช่องทางค้าง)
                 let adminId = "";
                 const lu = await window.__fsFindUser("admin");
+                if (lu && lu.error === true) return fail("เชื่อมต่อฐานข้อมูลขัดข้อง (เน็ต/โควตา Firestore) — ลองใหม่อีกครั้ง");
                 if (lu) {
                     adminId = lu.id;
                     if (!(await window.pwVerify("060421", lu.data.password || ''))) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
@@ -6945,6 +6950,9 @@
             }
             // 🔐 ดึง user ด้วย username (SDK+REST รันพร้อมกัน เอาตัวที่ตอบก่อน — ไม่รอ SDK ครบ timeout) แล้วตรวจรหัสผ่านฝั่งเครื่อง
             const user = await window.__fsFindUser(inputUsername);
+            // ⚠️ ทั้ง SDK+REST ค้นไม่สำเร็จ (เน็ตขาด/โควตา Firestore หมด) → บอก "เชื่อมต่อขัดข้อง" ไม่ใช่ "รหัสผิด"
+            //    (เดิมคืน null เหมือน "ไม่พบบัญชี" → ผู้ใช้เห็น "รหัสผู้ใช้หรือรหัสผ่านผิด" ทั้งที่รหัสถูก — งงว่าทำไมเข้าไม่ได้)
+            if (user && user.error === true) return fail("เชื่อมต่อฐานข้อมูลขัดข้อง (เน็ต/โควตา Firestore) — ลองใหม่อีกครั้ง");
             if (!user) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
             const ud = user.data;
             if (!(await window.pwVerify(pass, ud.password || ''))) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
