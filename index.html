@@ -1963,7 +1963,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08z';
+    const APP_BUILD = '2026-09-08aa';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -2092,6 +2092,72 @@
     let myExtraPerms = {}; // สิทธิ์พิเศษที่แอดมินอนุมัติให้บัญชีนี้โดยเฉพาะ (extraPerms ใน user doc — ไม่เปลี่ยนตำแหน่ง)
     let isBannedState = false;
     let permsUnsub = null, permConfigUnsub = null, myUserUnsub = null, serviceDataUnsub = null, adminSnapshotUnsub = null, permReqUnsub = null, presenceUnsub = null;
+
+    // ⏱️ กัน "กำลังเข้าสู่ระบบ..." ค้างตลอดกาล — ทุกคำขอ Firestore มี timeout + fallback ผ่าน REST API
+    //    (https ธรรมดา ไม่พึ่งช่องทางเรียลไทม์ที่อาจค้างจากโควตาหมด/เน็ต) — ล็อกอินได้แม้ SDK ยังไม่ recover
+    window.__fsTimeout = (promise, ms = 8000) => new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error("timeout")), ms);
+        promise.then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
+    });
+    const __FS_PROJECT = "mytalkie-3955a", __FS_KEY = "AIzaSyAhK_yT1kbFVl3A11n_QU4BgTvHrC7YkXI";
+    const __fsBase = `https://firestore.googleapis.com/v1/projects/${__FS_PROJECT}/databases/(default)/documents`;
+    window.__fsVal = (v) => {
+        if ("stringValue" in v) return v.stringValue;
+        if ("integerValue" in v) return Number(v.integerValue);
+        if ("doubleValue" in v) return Number(v.doubleValue);
+        if ("booleanValue" in v) return v.booleanValue;
+        if ("timestampValue" in v) return v.timestampValue;
+        if ("nullValue" in v) return null;
+        if ("referenceValue" in v) return v.referenceValue;
+        if ("arrayValue" in v) return (v.arrayValue.values || []).map(x => window.__fsVal(x));
+        if ("mapValue" in v) return window.__fsFieldsToObj(v.mapValue.fields);
+        return undefined;
+    };
+    window.__fsFieldsToObj = (fields) => { const out = {}; if (fields) for (const k of Object.keys(fields)) out[k] = window.__fsVal(fields[k]); return out; };
+    // ค้น user ตาม username ผ่าน REST (runQuery) → [{ id, data }]
+    window.__fsRestQuery = async (username) => {
+        const res = await fetch(`${__fsBase}:runQuery?key=${__FS_KEY}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "users" }], where: { fieldFilter: { field: { fieldPath: "username" }, op: "EQUAL", value: { stringValue: String(username) } } }, limit: 2 } }) });
+        if (!res.ok) throw new Error("REST query failed " + res.status);
+        const arr = await res.json();
+        return (Array.isArray(arr) ? arr : []).filter(x => x && x.document).map(x => ({ id: decodeURIComponent(x.document.name.split("/").pop()), data: window.__fsFieldsToObj(x.document.fields) }));
+    };
+    // แก้ไข field บางตัวของ user doc ผ่าน REST (PATCH + updateMask)
+    window.__fsRestPatch = async (uid, obj) => {
+        const masks = Object.keys(obj).map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");
+        const fields = {}; for (const k of Object.keys(obj)) { const v = obj[k]; fields[k] = (typeof v === "number") ? { integerValue: String(v) } : (typeof v === "boolean") ? { booleanValue: v } : { stringValue: String(v) }; }
+        const res = await fetch(`${__fsBase}/users/${uid}?${masks}&key=${__FS_KEY}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }) });
+        if (!res.ok) throw new Error("REST patch failed " + res.status);
+        return res.json();
+    };
+    // สร้าง doc ใหม่ผ่าน REST (คืน uid)
+    window.__fsRestAdd = async (collectionId, obj) => {
+        const fields = {}; for (const k of Object.keys(obj)) { const v = obj[k]; fields[k] = (typeof v === "number") ? { integerValue: String(v) } : (typeof v === "boolean") ? { booleanValue: v } : { stringValue: String(v) }; }
+        const res = await fetch(`${__fsBase}?collectionId=${collectionId}&key=${__FS_KEY}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }) });
+        if (!res.ok) throw new Error("REST add failed " + res.status);
+        const j = await res.json();
+        return decodeURIComponent(j.name.split("/").pop());
+    };
+    // 🛟 snapshot ผู้ใช้ไม่มาภายใน 8 วิ (ช่องทางเรียลไทม์ค้าง) → บังคับเข้าระบบ ไม่ให้ค้างที่หน้าล็อกอินตลอดกาล
+    window.__forceShowApp = () => {
+        try {
+            document.getElementById('appLoader').style.display = 'none';
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'flex';
+            document.getElementById('userMenu').style.display = 'flex';
+            document.getElementById('mainUserInfo').style.display = 'flex';
+        } catch (e) {}
+    };
+    window.__watchdogShowApp = () => {
+        window.__fsTimeout(new Promise(res => {
+            const iv = setInterval(() => { if (document.getElementById('mainApp').style.display === 'flex') { clearInterval(iv); res(); } }, 250);
+            setTimeout(() => { clearInterval(iv); res(); }, 8000);
+        }), 9000).then(() => {
+            if (loggedInUserId && document.getElementById('mainApp').style.display !== 'flex') {
+                window.__forceShowApp();
+                try { window.showToast("เชื่อมต่อข้อมูลช้า — กำลังโหลดข้อมูลของคุณ...", true); } catch (e) {}
+            }
+        });
+    };
     // ── 👤 ระบบ "ใครออนไลน์บ้าง" แบบประหยัดโควตา ──
     //    ต่างจากระบบเก่า (heartbeat ทุก 90 วิ + ฟังทั้งคอลเลกชัน users → กินโควตา ~99%):
     //    เขียนเฉพาะเหตุการณ์จริงเท่านั้น (เข้าแอป/ล็อกอิน/สมัคร/กลับมาใช้ = 1 เขียน, ปิดแอป/ล็อกเอาต์ = 1 เขียน)
@@ -2898,6 +2964,7 @@
     //    ใช้ได้กับเมนูแฮมเบอร์เกอร์ (หน้าแรก/โปรไฟล์/เต็มจอ/ตั้งค่า) และเมนูตั้งค่าการใช้งาน (หมวดจัดการระบบ)
     //    ลำดับที่ลากบันทึกในเครื่อง (localStorage) — ไม่กินโควตา Firestore
     window.__reorder = null; // { container, itemsSel, keyOf, saveKey, boxEl }
+    window.__menuOrder = null; // ลำดับเมนูจาก Firestore (users/{uid}.menuOrder) — ซิงก์ข้ามเครื่อง
     window.exitReorderMode = (save = true) => {
         const rc = window.__reorder; if (!rc) return;
         window.__reorder = null;
@@ -2911,6 +2978,7 @@
                     .filter(el => getComputedStyle(el).display !== 'none')
                     .map(el => rc.keyOf(el));
                 localStorage.setItem(rc.saveKey, JSON.stringify(order));
+                window.saveMenuOrderToDB(); // 🔁 ซิงก์ลำดับเมนูขึ้น Firestore ตามบัญชี (ข้ามเครื่อง)
             } catch (e) {}
         }
     };
@@ -2943,6 +3011,16 @@
             saved.forEach(k => { const it = byKey[k]; if (it && !used.has(k)) { used.add(k); place(it); } });
             items.forEach(it => { const k = it.dataset.ordKey || it.id; if (!used.has(k)) { used.add(k); place(it); } });
         } catch (e) {}
+    };
+    // 🔁 บันทึกลำดับเมนูที่ลากสลับขึ้น Firestore (users/{uid}.menuOrder) — ซิงก์ข้ามเครื่อง (localStorage เป็นสำรองตอนออฟไลน์)
+    window.saveMenuOrderToDB = () => {
+        if (!loggedInUserId) return;
+        const order = {};
+        try { order.side = JSON.parse(localStorage.getItem('menu_order_side') || 'null') || []; } catch (e) { order.side = []; }
+        try { order.hub = JSON.parse(localStorage.getItem('menu_order_hub') || 'null') || []; } catch (e) { order.hub = []; }
+        window.__fsTimeout(setDoc(doc(db, "users", loggedInUserId), { menuOrder: order }, { merge: true }), 6000).catch(() => {
+            window.__fsRestPatch(loggedInUserId, { menuOrder: JSON.stringify(order) }).catch(()=>{});
+        });
     };
     window.__wireReorderDrag = (container, itemsSel, boxEl, saveKey) => {
         let pressT = null, pressStart = null, dragState = null;
@@ -6156,6 +6234,8 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-07'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        'ล็อกอินไม่ค้างอีกต่อไป: ทุกคำขอ Firestore มี timeout 8 วิ + fallback ผ่าน REST API (https ธรรมดา ไม่พึ่งช่องทางเรียลไทม์) — ถ้าช่องทางค้าง ระบบล็อกอินสำเร็จและเข้าระบบได้ทันที กันค้าง "กำลังเข้าสู่ระบบ..." ตลอดกาล (ล็อกอิน/สมัคร/เปิดแอปต่อได้)',
+        'ลำดับเมนูที่ลากสลับ (แฮมเบอร์เกอร์ + ตั้งค่าการใช้งาน) ซิงก์ข้ามเครื่องแล้ว — เก็บตามบัญชีใน Firestore (users/menuOrder) ทุกเครื่องเห็นเหมือนกัน localStorage เหลือเป็นสำรองตอนออฟไลน์',
         'เพิ่มระบบเลขเวอร์ชันอัตโนมัติ + ป้าย v1.2.x บนหัวหน้าแรก แตะเปิด "ประวัติเวอร์ชัน" (เก็บใน Firestore — ทุกเครื่องเห็นเหมือนกัน แอดมินแก้ข้อความได้)',
         'ระบบสิทธิ์ครบวงจร: สิทธิ์ 16 รายการต่อตำแหน่ง + ค่าเริ่มต้นแยกตามตำแหน่ง, สร้างตำแหน่งใหม่เองได้จากหน้าตั้งค่าสิทธิ์โดย "ลอกแบบจาก" ตำแหน่งที่มีอยู่ (กันลบ/เปลี่ยนชื่อตำแหน่งที่ยังมีคนใช้)',
         'หน้าโปรไฟล์เพิ่มการ์ด "สิทธิ์ของฉัน" + "สิทธิ์ที่ยังไม่ได้" (ยุบ-ขยายได้) — แตะชิปเขียวเปิดหน้าต่างที่ตรงกับสิทธิ์ทันที (สั่น+เสียงติ๊ง) มีปุ่มกลับทุกหน้าต่างย่อย + ป้ายแดงนับสิทธิ์ที่ขาดบนไอคอนโปรไฟล์',
@@ -6397,6 +6477,8 @@
                 document.getElementById('mainUserInfo').style.display = 'flex';
                 
                 currentUserRole = data.role || "User"; myExtraPerms = data.extraPerms || {}; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
+                // 🔁 ลำดับเมนูที่ลากสลับ — ซิงก์ข้ามเครื่อง: ค่าจาก Firestore (users/{uid}.menuOrder) ชนะ, localStorage เป็นสำรองตอนออฟไลน์
+                if (data.menuOrder) { try { let mo = data.menuOrder; if (typeof mo === 'string') mo = JSON.parse(mo); window.__menuOrder = mo; if (Array.isArray(mo.side)) localStorage.setItem('menu_order_side', JSON.stringify(mo.side)); if (Array.isArray(mo.hub)) localStorage.setItem('menu_order_hub', JSON.stringify(mo.hub)); } catch (e) {} }
                 document.getElementById('displayUserName').innerText = displayNameVal; document.getElementById('mainUserName').innerText = displayNameVal;
                 document.getElementById('editPhone').value = data.phoneNumber || "";
                 
@@ -6468,7 +6550,7 @@
     };
 
     // 👤 ระบบ "ใครออนไลน์บ้าง" กลับมาแล้วในเวอร์ชันประหยัดโควตา (presence/{uid} — เขียนเฉพาะเข้า/ออกแอป + แตะใช้งานทุก 10 นาที ไม่มี heartbeat 90 วิ; ฟังสดเฉพาะตอนเปิดหน้าจัดการผู้ใช้)
-    if (loggedInUserId) { listenToMyUser(); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
+    if (loggedInUserId) { listenToMyUser(); window.__watchdogShowApp(); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
     // 🔧 โหลดข้อความแจ้งเตือนที่แอดมินแก้ไว้ (Firestore) — ใช้ได้ทุกหน้าแม้ยังไม่ล็อกอิน
     if (typeof window.loadToastMsgOverrides === 'function') window.loadToastMsgOverrides();
     // 🏷️ โหลด/ซิงก์ประวัติเวอร์ชัน (อ่านได้ทุกคน; ถ้าโค้ดปล่อยเวอร์ชันใหม่ ระบบจะรันเวอร์ชันให้อัตโนมัติ)
@@ -6602,46 +6684,51 @@
     window.loginApp = async () => {
         let inputUsername = document.getElementById('authUsername').value.trim(); const pass = document.getElementById('authPassword').value;
         if(!inputUsername || !pass) return window.showToast("กรุณาใส่ Username และรหัสผ่าน", true);
-        document.getElementById('authBtn').innerText = "กำลังเข้าสู่ระบบ...";
+        const authBtn = document.getElementById('authBtn'); authBtn.innerText = "กำลังเข้าสู่ระบบ...";
+        const fail = (msg) => { window.showToast(msg || "เข้าสู่ระบบล้มเหลว", true); authBtn.innerText = "เข้าสู่ระบบ"; };
         try {
             if (inputUsername === "admin" && pass === "060421") {
-                const qAdmin = query(collection(db, "users"), where("username", "==", "admin")); const querySnapshotAdmin = await getDocs(qAdmin);
-                let adminId = "";
-                if (querySnapshotAdmin.empty) {
-                    // ครั้งแรกสุด (ยังไม่มีบัญชี admin เลย) → สร้างบัญชีเริ่มต้นให้ (เก็บแบบแฮช)
-                    const docRef = await addDoc(collection(db, "users"), { username: "admin", password: await window.pwHash("060421"), displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, tollwayMode: false, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
-                    adminId = docRef.id;
+                // 🛠️ ทางเข้าลับสำหรับตั้งค่าเริ่มต้น — ใช้ได้เฉพาะตอนบัญชี admin ยังใช้รหัสเริ่มต้น (060421) อยู่
+                // ถ้าเปลี่ยนรหัสผ่านแล้ว → ตรวจ hash แล้วปฏิเสธ ไม่เขียนทับรหัสเด็ดขาด
+                let adminId = ""; let adminSnap = null;
+                try { adminSnap = await window.__fsTimeout(getDocs(query(collection(db, "users"), where("username", "==", "admin"))), 8000); } catch (e) {}
+                if (adminSnap && !adminSnap.empty) {
+                    const adminDoc = adminSnap.docs[0]; adminId = adminDoc.id;
+                    if (!(await window.pwVerify("060421", adminDoc.data().password || ''))) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
+                    await window.__fsTimeout(updateDoc(doc(db, "users", adminId), { isBanned: false, lastLoginAt: Date.now() }), 6000).catch(()=>{});
+                    window.__fsTimeout(window.pwUpgradeIfLegacy(adminId, adminDoc.data().password || '', "060421"), 6000).catch(()=>{}); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
                 } else {
-                    const adminDoc = querySnapshotAdmin.docs[0];
-                    adminId = adminDoc.id;
-                    const adminStoredPw = adminDoc.data().password || '';
-                    // 🔒 กันรหัสผ่านแอดมินโดนรีเซ็ตกลับเป็น 060421: ทางเข้าลับนี้ใช้ได้เฉพาะตอนบัญชียังใช้รหัสเริ่มต้นอยู่
-                    // ถ้าแอดมินเปลี่ยนรหัสผ่านแล้ว (เช่น @9dJE7aKe) → 060421 ไม่ใช่รหัสจริงอีกต่อไป ต้องล็อกอินด้วยรหัสที่เปลี่ยนไป (ไม่เขียนทับรหัสผ่านเด็ดขาด)
-                    if (!(await window.pwVerify("060421", adminStoredPw))) {
-                        window.showToast("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด", true);
-                        document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
+                    // SDK ค้าง/ไม่มีบัญชี → ลอง REST ก่อนสร้างใหม่
+                    try { const r = await window.__fsRestQuery("admin"); if (r && r.length) { adminId = r[0].id; if (!(await window.pwVerify("060421", r[0].data.password || ''))) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด"); window.__fsRestPatch(adminId, { lastLoginAt: Date.now() }).catch(()=>{}); } } catch (e) {}
+                    if (!adminId) {
+                        // ครั้งแรกสุด (ยังไม่มีบัญชี admin เลย) → สร้างบัญชีเริ่มต้นให้ (เก็บแบบแฮช)
+                        const docRef = await addDoc(collection(db, "users"), { username: "admin", password: await window.pwHash("060421"), displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, tollwayMode: false, isBanned: false, lastLoginAt: Date.now(), order: Date.now() });
+                        adminId = docRef.id;
                     }
-                    // ยังเป็นรหัสเริ่มต้น → เข้าได้ตามปกติ แต่ไม่เขียนทับ password/role อีกต่อไป
-                    await updateDoc(doc(db, "users", adminId), { isBanned: false, lastLoginAt: Date.now() });
-                    await window.pwUpgradeIfLegacy(adminId, adminStoredPw, "060421"); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
                 }
                 loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.removeItem('taxi_session_id'); // แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง
-                await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
-                window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return;
+                window.__fsTimeout(recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ"), 5000).catch(()=>{});
+                window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); authBtn.innerText = "เข้าสู่ระบบ"; window.__watchdogShowApp(); return;
             }
-            // 🔐 ดึง user ด้วย username อย่างเดียว แล้วตรวจรหัสผ่านฝั่งเครื่อง (ไม่ query หา password ตรง ๆ เพราะเก็บแบบแฮชแล้ว)
-            const q = query(collection(db, "users"), where("username", "==", inputUsername)); const querySnapshot = await getDocs(q);
-            const userDoc = querySnapshot.docs[0];
-            if (userDoc && (await window.pwVerify(pass, userDoc.data().password || ''))) {
-                if (userDoc.data().isBanned) { window.showToast("บัญชีของคุณถูกระงับการใช้งาน", true); document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; return; }
-                loggedInUserId = userDoc.id; localStorage.setItem('taxi_user_id', loggedInUserId); await window.pwUpgradeIfLegacy(userDoc.id, userDoc.data().password || '', pass); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
-                // 🚫 กันล็อกอินซ้อน: สร้างโทเคน session ใหม่ทุกครั้งที่ล็อกอิน → เครื่องเก่าที่ล็อกอินค้างจะโดนไล่ออก (แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง)
-                const loginRole = userDoc.data().role || 'User';
-                const sid = (loginRole !== 'Admin') ? window.newSessionToken() : null;
-                localStorage.setItem('taxi_session_id', sid || '');
-                await setDoc(doc(db, "users", loggedInUserId), { lastLoginAt: Date.now(), sessionId: sid }, { merge: true }); await recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"); window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog();
-            } else { window.showToast("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด", true); }
-        } catch (error) { window.showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ", true); } finally { document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; }
+            // 🔐 ดึง user ด้วย username แล้วตรวจรหัสผ่านฝั่งเครื่อง (เก็บแบบแฮช) — ถ้า SDK ค้าง/พลาด → fallback REST (https ธรรมดา ไม่พึ่งช่องทางเรียลไทม์)
+            let userDoc = null;
+            try { const qs = await window.__fsTimeout(getDocs(query(collection(db, "users"), where("username", "==", inputUsername))), 8000); userDoc = qs.docs[0] || null; } catch (e) {}
+            if (!userDoc) { try { const r = await window.__fsRestQuery(inputUsername); userDoc = (r && r.length) ? { id: r[0].id, data: () => r[0].data } : null; } catch (e) {} }
+            if (!userDoc) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
+            const ud = userDoc.data();
+            if (!(await window.pwVerify(pass, ud.password || ''))) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
+            if (ud.isBanned) return fail("บัญชีของคุณถูกระงับการใช้งาน");
+            loggedInUserId = userDoc.id; localStorage.setItem('taxi_user_id', loggedInUserId);
+            window.__fsTimeout(window.pwUpgradeIfLegacy(userDoc.id, ud.password || '', pass), 6000).catch(()=>{}); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
+            // 🚫 กันล็อกอินซ้อน: สร้างโทเคน session ใหม่ทุกครั้งที่ล็อกอิน → เครื่องเก่าที่ล็อกอินค้างจะโดนไล่ออก (แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง)
+            const loginRole = ud.role || 'User';
+            const sid = (loginRole !== 'Admin') ? window.newSessionToken() : null;
+            localStorage.setItem('taxi_session_id', sid || '');
+            const wr = (loginRole !== 'Admin') ? setDoc(doc(db, "users", loggedInUserId), { lastLoginAt: Date.now(), sessionId: sid }, { merge: true }) : updateDoc(doc(db, "users", loggedInUserId), { lastLoginAt: Date.now() });
+            await window.__fsTimeout(wr, 6000).catch(() => { const patch = { lastLoginAt: Date.now() }; if (sid) patch.sessionId = sid; window.__fsRestPatch(loggedInUserId, patch).catch(()=>{}); });
+            window.__fsTimeout(recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"), 5000).catch(()=>{});
+            window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); authBtn.innerText = "เข้าสู่ระบบ"; window.__watchdogShowApp();
+        } catch (error) { fail("เกิดข้อผิดพลาด: ตรวจเน็ตแล้วลองอีกครั้ง"); }
     };
 
     window.registerApp = async () => {
@@ -6649,12 +6736,18 @@
         if(!inputUsername || !pass || !dName || !phoneNum) return window.showToast("กรุณากรอกข้อมูลให้ครบถ้วน (รวมเบอร์โทรศัพท์)", true); if(pass.length < 6) return window.showToast("รหัสผ่านต้องมี 6 ตัวอักษรขึ้นไป", true);
         document.getElementById('authBtn').innerText = "กำลังสร้างบัญชี...";
         try {
-            const q = query(collection(db, "users"), where("username", "==", inputUsername)); const existCheck = await getDocs(q);
-            if (!existCheck.empty) { window.showToast("Username นี้มีคนใช้แล้ว กรุณาเปลี่ยนใหม่", true); return; }
+            // เช็ค username ซ้ำ — timeout 8 วิ ถ้า SDK ค้าง/พลาด → fallback REST (กันค้าง "กำลังสร้างบัญชี..." ตลอดกาล)
+            let existEmpty = false;
+            try { const existCheck = await window.__fsTimeout(getDocs(query(collection(db, "users"), where("username", "==", inputUsername))), 8000); existEmpty = existCheck.empty; }
+            catch (e) { try { const r = await window.__fsRestQuery(inputUsername); existEmpty = !(r && r.length); } catch (e2) { return window.showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ — ลองอีกครั้ง", true); } }
+            if (!existEmpty) { window.showToast("Username นี้มีคนใช้แล้ว กรุณาเปลี่ยนใหม่", true); return; }
             let finalPhotoURL = ""; if (fileInput.files && fileInput.files.length > 0) { finalPhotoURL = await fileToBase64(fileInput.files[0]); }
             const regSid = window.newSessionToken(); localStorage.setItem('taxi_session_id', regSid);
-            const docRef = await addDoc(collection(db, "users"), { username: inputUsername, password: await window.pwHash(pass), displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, tollwayMode: false, photoURL: finalPhotoURL, isBanned: false, lastLoginAt: Date.now(), sessionId: regSid, order: Date.now() });
-            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); await recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog();
+            const regData = { username: inputUsername, password: await window.pwHash(pass), displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, tollwayMode: false, photoURL: finalPhotoURL, isBanned: false, lastLoginAt: Date.now(), sessionId: regSid, order: Date.now() };
+            let docRef;
+            try { docRef = await window.__fsTimeout(addDoc(collection(db, "users"), regData), 10000); }
+            catch (e) { try { const r = await window.__fsRestQuery(inputUsername); docRef = (r && r.length) ? { id: r[0].id } : { id: await window.__fsRestAdd("users", regData) }; } catch (e2) { return window.showToast("เกิดข้อผิดพลาดในการสร้างบัญชี — ลองอีกครั้ง", true); } }
+            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); window.__fsTimeout(recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"), 5000).catch(()=>{}); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog(); window.__watchdogShowApp();
         } catch (error) { window.showToast("เกิดข้อผิดพลาด: " + error.message, true); } finally { document.getElementById('authBtn').innerText = "สร้างบัญชีใหม่"; }
     };
 
