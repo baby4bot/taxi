@@ -1967,7 +1967,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08af';
+    const APP_BUILD = '2026-09-08ag';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -2131,6 +2131,14 @@
         const fields = {}; for (const k of Object.keys(obj)) { const v = obj[k]; fields[k] = (typeof v === "number") ? { integerValue: String(v) } : (typeof v === "boolean") ? { booleanValue: v } : { stringValue: String(v) }; }
         const res = await fetch(`${__fsBase}/users/${uid}?${masks}&key=${__FS_KEY}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }) });
         if (!res.ok) throw new Error("REST patch failed " + res.status);
+        return res.json();
+    };
+    // แก้ไข field ของ doc ใดก็ได้ผ่าน REST (เช่น settings/menuOrder) — PATCH + updateMask
+    window.__fsRestPatchDoc = async (docPath, obj) => {
+        const masks = Object.keys(obj).map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");
+        const fields = {}; for (const k of Object.keys(obj)) { const v = obj[k]; fields[k] = (typeof v === "number") ? { integerValue: String(v) } : (typeof v === "boolean") ? { booleanValue: v } : { stringValue: String(v) }; }
+        const res = await fetch(`${__fsBase}/${docPath}?${masks}&key=${__FS_KEY}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }) });
+        if (!res.ok) throw new Error("REST patch doc failed " + res.status);
         return res.json();
     };
     // สร้าง doc ใหม่ผ่าน REST (คืน uid)
@@ -3082,9 +3090,16 @@
         const order = {};
         try { order.side = JSON.parse(localStorage.getItem('menu_order_side') || 'null') || []; } catch (e) { order.side = []; }
         try { order.hub = JSON.parse(localStorage.getItem('menu_order_hub') || 'null') || []; } catch (e) { order.hub = []; }
+        // เก็บตามบัญชีตัวเอง (ซิงก์ข้ามเครื่องของตัวเอง + สำรอง)
         window.__fsTimeout(setDoc(doc(db, "users", loggedInUserId), { menuOrder: order }, { merge: true }), 6000).catch(() => {
             window.__fsRestPatch(loggedInUserId, { menuOrder: JSON.stringify(order) }).catch(()=>{});
         });
+        // 🌍 แอดมินจัดเรียง → อัปเดตลำดับส่วนกลาง settings/menuOrder — ทุก user เห็นแบบเดียวกันแบบเรียลไทม์
+        if (currentUserRole === 'Admin') {
+            window.__fsTimeout(setDoc(doc(db, "settings", "menuOrder"), { side: order.side, hub: order.hub }, { merge: true }), 6000).catch(() => {
+                window.__fsRestPatchDoc("settings/menuOrder", { side: JSON.stringify(order.side), hub: JSON.stringify(order.hub) }).catch(()=>{});
+            });
+        }
     };
     window.__wireReorderDrag = (container, itemsSel, boxEl, saveKey) => {
         let pressT = null, pressStart = null, drag = null, lastXY = null;
@@ -3242,6 +3257,54 @@
         if (hubWrap) window.__wireReorderDrag(hubWrap, '.hub-item', hubBox, 'menu_order_hub');
     };
     window.initMenuReorder();
+
+    // ── 🌍 ลำดับเมนูส่วนกลาง (settings/menuOrder) — แอดมินจัดเรียงยังไง ทุก user เห็นแบบนั้น ──
+    //    ฟังสด doc นี้: แอดมินลากสลับแล้วบันทึก → ทุกเครื่องที่เปิดแอปอยู่ (ทั้งแอดมินและ user ทั่วไป)
+    //    รับลำดับใหม่ **แบบเรียลไทม์** แล้วนำไปใช้กับเมนูที่เปิดอยู่ทันที (ไม่ต้องปิด-เปิดใหม่)
+    window.__globalMenuOrder = null;
+    let globalMenuOrderUnsub = null;
+    window.listenGlobalMenuOrder = () => {
+        if (globalMenuOrderUnsub) return;
+        try {
+            globalMenuOrderUnsub = onSnapshot(doc(db, "settings", "menuOrder"), (docSnap) => {
+                if (docSnap.exists()) {
+                    let g = docSnap.data();
+                    if (typeof g === 'string') { try { g = JSON.parse(g); } catch (e) { g = null; } }
+                    if (g) {
+                        let side = Array.isArray(g.side) ? g.side : [];
+                        let hub = Array.isArray(g.hub) ? g.hub : [];
+                        // เก็บเฉพาะ key ที่ยังมีอยู่จริง (กันลำดับเก่าที่ลบเมนูไปแล้วมากวน)
+                        const sideKeys = ['home', 'profile', 'fullscreen', 'settings'];
+                        const hubKeys = ['hubAdminItem', 'hubRoleItem', 'hubToastItem', 'hubServiceItem', 'hubQuotaItem'];
+                        side = side.filter(k => sideKeys.includes(k)); hub = hub.filter(k => hubKeys.includes(k));
+                        window.__globalMenuOrder = { side, hub };
+                        if (side.length) localStorage.setItem('menu_order_side', JSON.stringify(side));
+                        if (hub.length) localStorage.setItem('menu_order_hub', JSON.stringify(hub));
+                        window.__applyMenuOrderLive(); // 🔁 นำไปใช้กับเมนูที่เปิดอยู่ทันที (เรียลไทม์)
+                    }
+                } else {
+                    window.__globalMenuOrder = null;
+                }
+            });
+        } catch (e) { globalMenuOrderUnsub = null; }
+    };
+    window.stopGlobalMenuOrderListen = () => { if (globalMenuOrderUnsub) { try { globalMenuOrderUnsub(); } catch (e) {} globalMenuOrderUnsub = null; } window.__globalMenuOrder = null; };
+    // 🪄 ใช้ลำดับเมนูที่เพิ่งอัปเดตกับเมนูที่เปิดอยู่ตอนนี้ทันที (side menu / hub) — ไม่ต้องปิดแล้วเปิดใหม่
+    window.__applyMenuOrderLive = () => {
+        try {
+            const sideOverlay = document.getElementById('sideMenuOverlay');
+            const sideBox = document.getElementById('sideMenuBox');
+            if (sideOverlay && sideOverlay.style.display === 'block' && sideBox) {
+                const wrap = sideBox.querySelector('.side-menu-items');
+                if (wrap) window.applySavedMenuOrder(wrap, '.side-menu-item', 'menu_order_side');
+            }
+            const hubBox = document.getElementById('settingsHubModal');
+            if (hubBox && hubBox.style.display === 'flex') {
+                const wrap = hubBox.querySelector('.modal-content-scroll');
+                if (wrap) window.applySavedMenuOrder(wrap, '.hub-item', 'menu_order_hub');
+            }
+        } catch (e) {}
+    };
 
     window.toggleSideMenu = (show) => {
         const overlay = $('sideMenuOverlay'); const box = $('sideMenuBox');
@@ -6386,6 +6449,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-07'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        'ลำดับเมนูซิงก์ทุกคนแบบเรียลไทม์: แอดมินลากสลับเมนู (แฮมเบอร์เกอร์/ตั้งค่าการใช้งาน) แล้วบันทึก → ทุก user เห็นลำดับใหม่ทันที ไม่ต้องปิด-เปิดเมนูใหม่ (เก็บ settings/menuOrder ฟังสด)',
         'โหลดข้อมูลผู้ใช้ทันทีหลังล็อกอิน/สมัคร/เปิดแอปต่อ: นำ doc ที่เพิ่งดึงมาแสดงผลเลย (ชื่อ/รูป/สิทธิ์/ตั้งค่า) — ไม่ต้องรอ snapshot เมื่อ Firestore ค้าง/โควตาหมด เลิกเห็น "กำลังโหลดข้อมูลของคุณ" ค้าง',
         'ล็อกอินเร็วขึ้น: ดึงข้อมูลผู้ใช้ด้วย SDK+REST พร้อมกัน (เอาตัวที่ตอบก่อน — เดิมรอ SDK ครบ timeout ก่อนค่อย REST) + ยืนยันรหัสผ่านเสร็จออกจากหน้าเข้าสู่ระบบทันที (โชว์หน้าจอโหลด ไม่รอ snapshot) + watchdog สั้นลง 8→4 วิ กันค้างหน้าล็อกอิน',
         'ออกจากระบบเร็วขึ้น: หมุนโทเคน session แบบไม่บล็อก UI (SDK+REST พร้อมกัน เขียนเบื้องหลัง) — กดยืนยันแล้วกลับมาหน้าเข้าสู่ระบบทันที ไม่ต้องรอเขียนเสร็จ (แอดมินล็อกอินไม่ต้องรอเขียน lastLoginAt ด้วย)',
@@ -6585,8 +6649,8 @@
             document.getElementById('mainUserInfo').style.display = 'flex';
             
             currentUserRole = data.role || "User"; myExtraPerms = data.extraPerms || {}; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
-            // 🔁 ลำดับเมนูที่ลากสลับ — ซิงก์ข้ามเครื่อง: ค่าจาก Firestore (users/{uid}.menuOrder) ชนะ, localStorage เป็นสำรองตอนออฟไลน์
-            if (data.menuOrder) { try { let mo = data.menuOrder; if (typeof mo === 'string') mo = JSON.parse(mo); window.__menuOrder = mo; if (Array.isArray(mo.side)) localStorage.setItem('menu_order_side', JSON.stringify(mo.side)); if (Array.isArray(mo.hub)) localStorage.setItem('menu_order_hub', JSON.stringify(mo.hub)); } catch (e) {} }
+            // 🔁 ลำดับเมนูที่ลากสลับ — ใช้ลำดับส่วนกลาง (แอดมิน) ก่อน; ถ้ายังไม่มี (settings/menuOrder ว่าง) ค่อยใช้ลำดับส่วนตัวของบัญชีนี้ (users/{uid}.menuOrder) — localStorage เป็นสำรองตอนออฟไลน์
+            if (!window.__globalMenuOrder && data.menuOrder) { try { let mo = data.menuOrder; if (typeof mo === 'string') mo = JSON.parse(mo); window.__menuOrder = mo; if (Array.isArray(mo.side)) localStorage.setItem('menu_order_side', JSON.stringify(mo.side)); if (Array.isArray(mo.hub)) localStorage.setItem('menu_order_hub', JSON.stringify(mo.hub)); } catch (e) {} }
             document.getElementById('displayUserName').innerText = displayNameVal; document.getElementById('mainUserName').innerText = displayNameVal;
             document.getElementById('editPhone').value = data.phoneNumber || "";
             
@@ -6658,6 +6722,7 @@
 
     const listenToMyUser = () => {
         if(!loggedInUserId) return;
+        window.listenGlobalMenuOrder(); // 🌍 ฟังลำดับเมนูส่วนกลาง (แอดมินจัดเรียง → ทุก user เห็นแบบนั้นเรียลไทม์)
         window.markPresenceOnline(true); // 👤 เปิดแอป/ล็อกอิน/สมัคร/รีเฟรช → ขึ้น "ออนไลน์" ทันที (เขียน 1 ครั้ง ไม่มี heartbeat)
         if(!permsUnsub) {            permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { window.globalPermissions = docSnap.exists() ? docSnap.data() : {}; window.fillRoleSelects(); window.applyPermissionsUI(); if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); }); }
         if(!permConfigUnsub) { 
@@ -6984,7 +7049,7 @@
                     window.__fsWriteFields(logoutUid, { sessionId: newSid }, 6000);
                 }
             }
-            stopGlobalUserListener(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
+            stopGlobalUserListener(); window.stopGlobalMenuOrderListen(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
             window.updateAutoFsBadge();
             if(!forced) window.showToast("ออกจากระบบเรียบร้อย");
             document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; document.getElementById('authDisplayName').style.display = "none"; document.getElementById('authPhone').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none"; document.getElementById('forgotPassLink').style.display = "flex"; document.getElementById('toggleAuthText').innerHTML = 'ยังไม่มีบัญชีใช่ไหม? <span style="color:#38bdf8;font-weight:600;">คลิกเพื่อสร้างบัญชี</span>'; document.getElementById('authBtn').onclick = window.loginApp; document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authPassword').type = 'password'; document.getElementById('authDisplayName').value = ''; document.getElementById('authPhone').value = ''; document.getElementById('regProfilePicPreview').src = window.DEFAULT_AVATAR;
