@@ -1826,7 +1826,7 @@
     import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, addDoc, query, orderBy, getDocs, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08i';
+    const APP_BUILD = '2026-09-08t';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -2275,6 +2275,20 @@
         // วิ่งเฉลี่ยจริง (> 6 กม./ชม.) → เผื่อ error เฉพาะช่วงสั้น ๆ (fix เปิดใหม่ยังไม่นิ่ง) ด้วยเกณฑ์ระยะเดิม
         const acc = (accM && accM > 0) ? accM : 30;
         return movedKm < Math.min(0.15, 0.03 + acc * 0.0005 + gapSec * 0.0004);
+    };
+    // 🚦 ตัดสินใจว่า "จอด/คลาน ≤ 6 กม./ชม. ทั้งช่วงที่แอปปิด/ซ่อน" (ใช้ใน catch-up ทั้ง 2 ทาง) — ทน GPS ลอย + ความเร็วเพี้ยนตอนเปิดใหม่
+    // - ขยับรวม < 100 ม. ทั้งช่วง → จอดแน่นอน (ไม่ฟัง speed ที่มือถือให้มา ซึ่งลอยได้ถึง ~20 กม./ชม. ตอนจอดนิ่ง)
+    // - เฉลี่ย ≤ 6 กม./ชม. → จอด/คลานทั้งช่วง (เกณฑ์เดียวกับมิเตอร์จริงคิดเวลาจอด) — GPS ลอยไกลแค่ไหนก็ยังถือว่าจอด
+    // - เฉลี่ย ≤ 12 กม./ชม. + fix เปิดใหม่ไม่แม่น (> 40 ม.) → การขยับส่วนใหญ่คือ GPS ลอย/จอดคืบในรถติด → เบิกเป็นเวลาจอด
+    // - speed สดบอกว่าวิ่งจริง (> 6) + เฉลี่ยสูง (> 12) → ไม่ใช่จอด → ปล่อยให้สาขา "วิ่ง" เบิกกิโลแทน
+    const stoppedWholeGap = (movedKm, accM, gapSec, speedKmh) => {
+        if (!(movedKm >= 0)) return false;
+        if (movedKm < 0.1) return true;
+        const avgKmh = movedKm / (gapSec / 3600);
+        if (avgKmh <= 6) return true;
+        if (avgKmh <= 12 && accM > 40) return true;
+        if (speedKmh !== -1 && speedKmh > 6 && avgKmh > 12) return false;
+        return stoppedGapKm(movedKm, accM, gapSec);
     };
     // 📏 ประมาณระยะที่วิ่งช่วงแอปปิด/ซ่อน (เที่ยวไม่มีปลายทาง): ใช้เส้นทางจริง 2-3 จุดล่าสุดแทนเส้นตรงเส้นเดียว
     // - คำนวณ "ความคดเคี้ยว" ของถนนช่วงท้าย = ความยาวเส้นทางจริง / ระยะเส้นตรงระหว่างจุดแรก-จุดสุดท้าย
@@ -4575,16 +4589,19 @@
             const pos = await getBestFix();
             if (!window.isManualRunning || !pos) return;
             const p = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-            if ((Math.abs(p.lat) < 1 && Math.abs(p.lon) < 1) || pos.coords.accuracy > 60) return;
+            // กันพิกัดหลุด (0,0) เท่านั้น — fix แม่นยำปานกลาง (60-150 ม.) ยังใช้เบิกเวลาจอดได้
+            // (กลางเมือง GPS มักได้แค่ ~70-100 ม. ถ้าตัด >60 ม. ทิ้งจะไม่เบิกอะไรเลย → เวลารถติดหายทั้งช่วง)
+            if ((Math.abs(p.lat) < 1 && Math.abs(p.lon) < 1) || pos.coords.accuracy > 150) return;
             const prevPos = lastPos; // ตำแหน่งก่อนซ่อน (ถ้ายังไม่มี fix ใหม่แทรกมา) — กันการนับระยะซ้ำซ้อน
             lastPos = p;
             lastPosTime = Date.now();
             const preKm = actualDrivenKm, preTraffic = trafficSeconds; // ค่าก่อนเบิก ไว้คำนวณ "เงินที่เพิ่ม" (อิงสูตรมิเตอร์)
 
-            // ตรวจว่าจอดนิ่งตลอดช่วงที่ซ่อนหรือไม่ (ตำแหน่งแทบไม่ขยับ + ความเร็ว <= 6)
+            // ตรวจว่าจอดนิ่งตลอดช่วงที่ซ่อนหรือไม่ (ตำแหน่งแทบไม่ขยับ / ความเร็วเฉลี่ย ≤ 6)
+            // ใช้ stoppedWholeGap ซึ่งทน GPS ลอย + ความเร็วเพี้ยนตอนเปิดใหม่ (speed ที่มือถือให้ตอนจอดนิ่งลอยได้ ~20 กม./ชม.)
             const speedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
             const movedKm = hidePos ? calcGPS(hidePos.lat, hidePos.lon, p.lat, p.lon) : -1;
-            const stoppedWholeTime = hidePos !== null && stoppedGapKm(movedKm, pos.coords.accuracy, gapSec) && (speedKmh === -1 || speedKmh <= 6);
+            const stoppedWholeTime = hidePos !== null && stoppedWholeGap(movedKm, pos.coords.accuracy, gapSec, speedKmh);
 
             if (stoppedWholeTime) {
                 // จอดนิ่งทั้งช่วง → เบิกเวลาจอดให้ครบ (มิเตอร์จริงคิดเวลารอต่อเนื่อง ไม่ใช่แค่หลักฐาน 6 วิ)
@@ -4851,15 +4868,19 @@
             const pos = await getBestFix();
             if (!pos) return; // ไม่มี fix เลย → ข้าม (ยังเริ่มต่อได้ตามปกติ; เที่ยวที่วิ่งอยู่จะเบิกเองเมื่อมี fix ยืนยัน)
             const p = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-            if ((Math.abs(p.lat) < 1 && Math.abs(p.lon) < 1) || pos.coords.accuracy > 60) return; // fix ไม่ดี → ข้าม (ยังเริ่มต่อได้ตามปกติ)
+            // กันพิกัดหลุด (0,0) เท่านั้น — fix แม่นยำปานกลาง (60-150 ม.) ยังใช้เบิกเวลาจอดได้
+            // (กลางเมือง GPS มักได้แค่ ~70-100 ม. ถ้าตัด >60 ม. ทิ้งจะไม่เบิกอะไรเลย → เวลารถติดหายทั้งช่วง)
+            if ((Math.abs(p.lat) < 1 && Math.abs(p.lon) < 1) || pos.coords.accuracy > 150) return; // fix หลุดจริง → ข้าม (ยังเริ่มต่อได้ตามปกติ)
             // ผู้ใช้เริ่มต่อ/ลบทิ้ง/เปิดเที่ยวใหม่ระหว่างรอ fix → ถ้ากำลังวิ่งอยู่จะบวกยอดเข้าเที่ยวปัจจุบันแทน (ไม่ทิ้งช่วงปิด)
             const cur = (() => { try { return JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY) || 'null'); } catch(e) { return null; } })();
             if (!cur || cur.startTime !== data.startTime) return;
 
             const hidePos = (data.lastPos || cur.lastPos) || null; // ตำแหน่ง "ก่อน" ปิดแอป (อ้างอิงเทียบกับ fix ปัจจุบัน)
+            // ตรวจว่าจอดนิ่งตลอดช่วงที่ปิดแอปหรือไม่ (ตำแหน่งแทบไม่ขยับ / ความเร็วเฉลี่ย ≤ 6)
+            // ใช้ stoppedWholeGap ซึ่งทน GPS ลอย + ความเร็วเพี้ยนตอนเปิดใหม่ (speed ที่มือถือให้ตอนจอดนิ่งลอยได้ ~20 กม./ชม.)
             const speedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
             const movedKm = hidePos ? calcGPS(hidePos.lat, hidePos.lon, p.lat, p.lon) : -1;
-            const stoppedWholeTime = hidePos !== null && stoppedGapKm(movedKm, pos.coords.accuracy, gapSec) && (speedKmh === -1 || speedKmh <= 6);
+            const stoppedWholeTime = hidePos !== null && stoppedWholeGap(movedKm, pos.coords.accuracy, gapSec, speedKmh);
 
             let km = cur.km || 0, trafficSec = cur.trafficSec || 0;
             let remainKm = cur.remainKm || 0, remainSec = cur.remainSec || 0;
