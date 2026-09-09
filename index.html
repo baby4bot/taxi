@@ -198,6 +198,13 @@
         .password-wrapper input { width: 100%; margin-bottom: 0 !important; padding-right: 50px !important; }
         .toggle-password { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--text-dim); cursor: pointer; user-select: none; z-index: 10; transition: 0.2s; }
         .toggle-password:active { transform: translateY(-50%) scale(0.9); color: white; }
+        /* สวิตช์เปิด/ปิด (เช่น บันทึก log ล็อกอิน/เอาต์ ในหน้าจัดการผู้ใช้) */
+        .app-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+        .app-switch input { opacity: 0; width: 0; height: 0; }
+        .app-switch .app-slider { position: absolute; cursor: pointer; inset: 0; background: rgba(255,255,255,0.18); border-radius: 99px; transition: 0.2s; }
+        .app-switch .app-slider::before { content: ""; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+        .app-switch input:checked + .app-slider { background: var(--neon-green); }
+        .app-switch input:checked + .app-slider::before { transform: translateX(20px); }
 
         .dropdown-box { position: absolute; background: rgba(30, 32, 45, 0.95); width: 100%; z-index: 1000; border-radius: 20px; max-height: 320px; overflow-y: auto; display: none; margin-top: 10px; border: 1px solid var(--border-glass); box-shadow: 0 15px 40px rgba(0,0,0,0.8); backdrop-filter: blur(15px); -ms-overflow-style: none; scrollbar-width: none; }
         .dropdown-box::-webkit-scrollbar { display: none; }
@@ -1728,7 +1735,7 @@
 
 <div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควตา Firestore</h3><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">จำนวน อ่าน / เขียน / ลบ ที่ทุกบัญชี (ID) ใช้ Firestore วันนี้รวมกันทั้งระบบ <b style="color:#fff;">(ทุกเครื่องส่งยอดขึ้นเซิร์ฟเวอร์ทุก 10 นาที / ตอนปิดแอป</b> — แสดงยอดรวมทุก ID + เหลือเท่าไหร่ และแยกตาม ID ชื่อโปรไฟล์) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ฟีเจอร์ที่ฟังข้อมูลสดแบบเรียลไทม์จะกินโควตาอ่านตามจำนวนเครื่องที่เปิดดูพร้อมกัน)</div></div></div></div>
 
-<div id="adminMenuModal" class="modal-overlay" style="z-index: 10004;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('adminMenuModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>ระบบจัดการผู้ใช้งาน</h3><button id="adminGlobalLogsBtn" class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><button id="permReqBanner" class="perm-req-banner" style="display: none;" onclick="window.openPermRequests()"></button><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
+<div id="adminMenuModal" class="modal-overlay" style="z-index: 10004;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('adminMenuModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>ระบบจัดการผู้ใช้งาน</h3><button id="adminGlobalLogsBtn" class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><button id="permReqBanner" class="perm-req-banner" style="display: none;" onclick="window.openPermRequests()"></button><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div id="loginLogToggleRow" style="display:none; padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><div style="display:flex; align-items:center; justify-content:space-between; gap:12px;"><div style="flex:1; min-width:0;"><div style="font-size:13px; color:#fff; font-weight:600;">บันทึก log ล็อกอิน / ล็อกเอาต์</div><div style="font-size:11px; color:#9aa3b5; margin-top:2px; line-height:1.5;">เปิด = เขียน log 2 จุด (ประวัติผู้ใช้ + global_logs) ทุกล็อกอิน/เอาต์ · ปิด = ประหยัดโควตา (แนะนำ)</div></div><label class="app-switch"><input type="checkbox" id="logLoginLogoutToggle" onchange="window.toggleLoginLogLogging(this.checked)"><span class="app-slider"></span></label></div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
 
 <div id="permRequestsModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.toggleModal('permRequestsModal', false)" title="กลับ"><span class="material-symbols-outlined">arrow_back</span>กลับ</button><h3 style="color: var(--neon-yellow);">คำขอสิทธิ์เพิ่ม</h3><button class="btn-close-floating" onclick="window.toggleModal('permRequestsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">รายชื่อสมาชิกที่ขอสิทธิ์เพิ่ม — กด <b style="color:#4ade80;">อนุมัติสิทธิ์</b> เพื่อให้สิทธิ์ที่ขอกับสมาชิกทันที (ไม่เปลี่ยนตำแหน่ง — ผู้ขอจะเห็นแจ้งเตือนตอนเปิดแอป) หรือกด <b style="color:#ff8a95;">ปฏิเสธ</b> เพื่อไม่ให้สิทธิ์</p><div id="permReqListBody" style="min-height: 150px;"></div></div></div></div>
 
@@ -1965,7 +1972,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08ak';
+    const APP_BUILD = '2026-09-08al';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -3270,6 +3277,37 @@
         } catch (e) { globalMenuOrderUnsub = null; }
     };
     window.stopGlobalMenuOrderListen = () => { if (globalMenuOrderUnsub) { try { globalMenuOrderUnsub(); } catch (e) {} globalMenuOrderUnsub = null; } window.__globalMenuOrder = null; };
+
+    // ── ⚙️ ตั้งค่าระบบ (settings/app_config) — แอดมินเปิด/ปิดบันทึก log ล็อกอิน/เอาต์ ──
+    //    ฟังสด doc นี้: แอดมินสลับสวิตช์ → ทุกเครื่องที่เปิดแอปอยู่อ่านค่าล่าสุด (ค่าเริ่มต้นปิด = ประหยัดโควตา)
+    window.__appConfig = { logLoginLogout: false };
+    let appConfigUnsub = null;
+    window.listenAppConfig = () => {
+        if (appConfigUnsub) return;
+        try {
+            appConfigUnsub = onSnapshot(doc(db, "settings", "app_config"), (docSnap) => {
+                const d = docSnap.exists() ? docSnap.data() : {};
+                window.__appConfig = { logLoginLogout: d.logLoginLogout === true };
+                const t = document.getElementById('logLoginLogoutToggle'); if (t) t.checked = window.__appConfig.logLoginLogout;
+            });
+        } catch (e) { appConfigUnsub = null; }
+    };
+    window.stopAppConfigListen = () => { if (appConfigUnsub) { try { appConfigUnsub(); } catch (e) {} appConfigUnsub = null; } };
+    // 🔘 แอดมินเปิด/ปิดบันทึก log ล็อกอิน/เอาต์ (เขียน settings/app_config — SDK+REST พร้อมกัน เอาตัวที่ถึง DB ก่อน)
+    window.toggleLoginLogLogging = async (enabled) => {
+        const target = !!enabled;
+        window.__appConfig.logLoginLogout = target; // อัปเดตทันที (ไม่รอ snapshot)
+        try {
+            let done = false;
+            const sdkP = window.__fsTimeout(setDoc(doc(db, "settings", "app_config"), { logLoginLogout: target }, { merge: true }), 6000).then(() => true).catch(() => false);
+            const restP = window.__fsTimeout(window.__fsRestPatchDoc("settings/app_config", { logLoginLogout: target }), 6000).then(() => true).catch(() => false);
+            const okMsg = target ? "เปิดบันทึก log ล็อกอิน/เอาต์แล้ว" : "ปิดบันทึก log ล็อกอิน/เอาต์แล้ว (ประหยัดโควตา)";
+            const win = () => { if (!done) { done = true; window.showToast(okMsg); } };
+            sdkP.then(ok => { if (ok) win(); });
+            restP.then(ok => { if (ok) win(); });
+            Promise.all([sdkP, restP]).then(() => { if (!done) { done = true; window.__appConfig.logLoginLogout = !target; window.showToast("บันทึกไม่สำเร็จ — ลองอีกครั้ง", true); const t = document.getElementById('logLoginLogoutToggle'); if (t) t.checked = !target; } });
+        } catch (e) { window.__appConfig.logLoginLogout = !target; window.showToast("บันทึกไม่สำเร็จ — ลองอีกครั้ง", true); }
+    };
     // 🪄 ใช้ลำดับเมนูที่เพิ่งอัปเดตกับเมนูที่เปิดอยู่ตอนนี้ทันที (side menu / hub) — ไม่ต้องปิดแล้วเปิดใหม่
     window.__applyMenuOrderLive = () => {
         try {
@@ -6366,6 +6404,10 @@
             await addDoc(collection(db, "global_logs"), logData); 
         } catch(e) {}
     };
+    // 🔘 บันทึก log ล็อกอิน/ล็อกเอาต์ เฉพาะเมื่อแอดมินเปิดไว้ (settings/app_config.logLoginLogout) — ค่าเริ่มต้นปิด (ประหยัดโควตา)
+    const recordLoginLogoutIfEnabled = (targetUid, actionTitle, detailDesc) => {
+        if (window.__appConfig && window.__appConfig.logLoginLogout) { window.__fsTimeout(recordActivityLog(targetUid, actionTitle, detailDesc), 5000).catch(()=>{}); }
+    };
 
     // ❌ ลบระบบสถานะออนไลน์ออกแล้ว (onSnapshot ทั้งคอลเลกชัน users + heartbeat ทุก 90 วิ เคยเป็นตัวกินโควตา Firestore 99%)
     function stopGlobalUserListener() {
@@ -6430,6 +6472,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        '⚙️ เพิ่มสวิตช์ในหน้าจัดการผู้ใช้งาน: แอดมินเปิด/ปิดการบันทึก log ล็อกอิน/ล็อกเอาต์ได้เอง (ค่าเริ่มต้นปิด = ประหยัดโควตา) — เก็บที่ settings/app_config ฟังสดข้ามเครื่อง เปิดแล้ว user หน้าตั้งค่าทุกคนเขียน log 2 จุด (ประวัติผู้ใช้ + global_logs) ทุกล็อกอิน/เอาต์',
         '✂️ ลดบันทึกกิจกรรมที่เขียนทุกครั้ง: ตัด log ล็อกอิน/ล็อกเอาต์ออก (เดิม 1 เหตุการณ์ = เขียน 2 doc — log ของผู้ใช้ + global_logs) — เหลือเฉพาะเหตุการณ์สำคัญเท่านั้น (สมัครสมาชิก, แก้ไขโปรไฟล์/รหัสผ่าน, แบน/ปลดแบน, เพิ่ม/แก้ไขผู้ใช้, อนุมัติ/ปฏิเสธคำขอสิทธิ์, แก้ไข Portal) — ประหยัด ~4-6 เขียน/คน/วัน',
         '❌ ลบระบบสถานะออนไลน์ (presence) ออกทั้งหมด: ไม่เขียนคอลเลกชัน presence อีกต่อไป (เข้า/ออกแอป, ล็อกอิน/เอาต์, แตะใช้งานทุก 10 นาที, ฟังสดตอนเปิดหน้าจัดการผู้ใช้) — ลดการเขียน Firestore ~8-20 ครั้ง/วัน/เครื่องให้เหลือศูนย์ เพื่อประหยัดโควตาสุด ๆ (ยังเหลือป้าย "ถูกระงับ (Ban)" ในหน้าจัดการผู้ใช้ตามเดิม — ไม่เกี่ยวกับออนไลน์)',
         'กัน user ทั่วไปเด้งหลุดหลังล็อกอินตอนโควตา/เน็ตค้าง: เขียน session ใหม่ไม่ทัน (โควตาหมด) จะไม่ไล่ออกจากระบบอีกต่อไป — ระบบจำค่า session ที่เห็นตอนล็อกอินไว้ แล้วลองเขียนซ้ำเบื้องหลังจนกว่าจะสำเร็จ (ยังไล่เครื่องอื่นที่ล็อกอินซ้อนจริงอยู่เหมือนเดิม)',
@@ -6708,6 +6751,7 @@
     const listenToMyUser = () => {
         if(!loggedInUserId) return;
         window.listenGlobalMenuOrder(); // 🌍 ฟังลำดับเมนูส่วนกลาง (แอดมินจัดเรียง → ทุก user เห็นแบบนั้นเรียลไทม์)
+        window.listenAppConfig(); // ⚙️ ฟังค่าตั้งค่าระบบ (เปิด/ปิดบันทึก log ล็อกอินเอาต์ ฯลฯ)
         if(!permsUnsub) {            permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { window.globalPermissions = docSnap.exists() ? docSnap.data() : {}; window.fillRoleSelects(); window.applyPermissionsUI(); if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); }); }
         if(!permConfigUnsub) { 
             permConfigUnsub = onSnapshot(doc(db, "settings", "permission_config"), (docSnap) => { 
@@ -6764,6 +6808,7 @@
         });
     };
 
+    window.listenAppConfig(); // ⚙️ โหลดค่าตั้งค่าระบบตั้งแต่ยังไม่ล็อกอิน (ล็อกอินครั้งแรกจะใช้ค่าเปิด/ปิด log นี้ทันที)
     if (loggedInUserId) { listenToMyUser(); window.__watchdogShowApp(); window.__fsTimeout(window.__fsRestGet(loggedInUserId), 5000).then(d => { if (d && (d.username || d.role)) window.__applyUserDocUI(d); }).catch(()=>{}); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
     // 🔧 โหลดข้อความแจ้งเตือนที่แอดมินแก้ไว้ (Firestore) — ใช้ได้ทุกหน้าแม้ยังไม่ล็อกอิน
     if (typeof window.loadToastMsgOverrides === 'function') window.loadToastMsgOverrides();
@@ -6952,6 +6997,7 @@
                 loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.removeItem('taxi_session_id'); localStorage.removeItem('taxi_db_sid_seen'); myDbSidAtLogin = null; // แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง
                 if (lu) { window.__applyUserDocUI(lu.data); } else { window.__showAppLoading(); } // ⚡ ยืนยันรหัสผ่านแล้ว → แสดงแอปทันทีจาก doc ที่ดึงมา (seed ชื่อ/รูป/สิทธิ์) — ไม่รอ snapshot เมื่อ Firestore ค้าง
                 window.__watchdogShowApp(); // ⏱️ เริ่มนับเลย — snapshot มาไม่ทันใน ~4 วิ จะบังคับเข้าแอป (ไม่รอให้เขียน session เสร็จก่อน)
+                recordLoginLogoutIfEnabled(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
                 window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); authBtn.innerText = "เข้าสู่ระบบ"; return;
             }
             // 🔐 ดึง user ด้วย username (SDK+REST รันพร้อมกัน เอาตัวที่ตอบก่อน — ไม่รอ SDK ครบ timeout) แล้วตรวจรหัสผ่านฝั่งเครื่อง
@@ -6982,6 +7028,7 @@
             } else {
                 window.__fsWriteFields(loggedInUserId, patch, 6000); // แอดมิน: เขียน lastLoginAt แบบ fire-and-forget (ไม่มี session → ไม่ต้องรอ กันล็อกอินช้า)
             }
+            recordLoginLogoutIfEnabled(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ");
             window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); authBtn.innerText = "เข้าสู่ระบบ";
         } catch (error) { fail("เกิดข้อผิดพลาด: ตรวจเน็ตแล้วลองอีกครั้ง"); }
     };
@@ -7056,6 +7103,7 @@
         if(isOk) {
             const logoutUid = loggedInUserId;
             if(logoutUid) {
+                recordLoginLogoutIfEnabled(logoutUid, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ");
                 if(!forced) {
                     // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน
                     // ✅ ไม่บล็อก UI: เขียนแบบ fire-and-forget (SDK+REST รันพร้อมกัน เอาตัวที่ถึง DB ก่อน) แล้วสลับหน้าจอกลับมาล็อกอินทันที
@@ -7064,7 +7112,7 @@
                     window.__fsWriteFields(logoutUid, { sessionId: newSid }, 6000);
                 }
             }
-            stopGlobalUserListener(); window.stopGlobalMenuOrderListen(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); localStorage.removeItem('taxi_db_sid_seen'); myDbSidAtLogin = null; if (window.__retrySessionWrite) { clearTimeout(window.__retrySessionWrite); window.__retrySessionWrite = null; } loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
+            stopGlobalUserListener(); window.stopGlobalMenuOrderListen(); window.stopAppConfigListen(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); localStorage.removeItem('taxi_db_sid_seen'); myDbSidAtLogin = null; if (window.__retrySessionWrite) { clearTimeout(window.__retrySessionWrite); window.__retrySessionWrite = null; } loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
             window.updateAutoFsBadge();
             if(!forced) window.showToast("ออกจากระบบเรียบร้อย");
             document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; document.getElementById('authDisplayName').style.display = "none"; document.getElementById('authPhone').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none"; document.getElementById('forgotPassLink').style.display = "flex"; document.getElementById('toggleAuthText').innerHTML = 'ยังไม่มีบัญชีใช่ไหม? <span style="color:#38bdf8;font-weight:600;">คลิกเพื่อสร้างบัญชี</span>'; document.getElementById('authBtn').onclick = window.loginApp; document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authPassword').type = 'password'; document.getElementById('authDisplayName').value = ''; document.getElementById('authPhone').value = ''; document.getElementById('regProfilePicPreview').src = window.DEFAULT_AVATAR;
@@ -7142,6 +7190,9 @@
             let isGod = currentUserRole === "Admin"; let myPerms = isGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
             // ปุ่มดูประวัติรวมทั้งระบบ (Global Logs) — เฉพาะแอดมินหรือผู้มีสิทธิ์ canViewGlobalLogs
             const glBtn = document.getElementById('adminGlobalLogsBtn'); if (glBtn) glBtn.style.display = (isGod || myPerms.canViewGlobalLogs) ? 'flex' : 'none';
+            // ⚙️ สวิตช์เปิด/ปิดบันทึก log ล็อกอิน/เอาต์ (โชว์เฉพาะผู้มีสิทธิ์ดู global logs) — ค่าจาก settings/app_config
+            const llRow = document.getElementById('loginLogToggleRow'); if (llRow) llRow.style.display = (isGod || myPerms.canViewGlobalLogs) ? 'flex' : 'none';
+            const llToggle = document.getElementById('logLoginLogoutToggle'); if (llToggle) llToggle.checked = !!(window.__appConfig && window.__appConfig.logLoginLogout);
             if(adminSnapshotUnsub) adminSnapshotUnsub();
             adminSnapshotUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
                 window.currentAdminUsers = [];

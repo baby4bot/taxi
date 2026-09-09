@@ -108,9 +108,16 @@
                     await wait(250);
                     // รอให้โปรไฟล์ผู้ใช้ (Firestore) โหลดเสร็จ — กันสถานการณ์ที่ 6 โดนโปรไฟล์เขียนทับ cap ที่เทสต์ตั้งไว้ (flaky race)
                     // ตอนโปรไฟล์ยังไม่โหลด userKillCapMin จะเป็น undefined; โหลดเสร็จแล้วจะกลายเป็นตัวเลข (ค่าใน Firestore หรือค่าเริ่มต้น 15)
+                    // ⚠️ ที่ boot มี 2 ช่องทางที่เขียนทับค่านี้ (snapshot + REST seed) มาไม่พร้อมกัน — ต้องรอจนค่า "นิ่ง" 500ms
+                    //    ไม่งั้นช่องทางที่มาทีหลังจะเขียนทับ cap ที่เทสต์ตั้งไว้ (เห็นเป็น 10+90=100 แทน 10+60=70)
                     const t1 = Date.now();
+                    let stableAt = 0, lastVal = null;
                     while (Date.now() - t1 < 5000) {
-                        if (typeof cw.userKillCapMin === 'number') break;
+                        const v = cw.userKillCapMin;
+                        if (typeof v === 'number') {
+                            if (v !== lastVal) { lastVal = v; stableAt = Date.now(); }
+                            else if (Date.now() - stableAt >= 500) break; // ค่านิ่ง 500ms → ทั้ง snapshot + REST seed มาครบแล้ว
+                        }
                         await wait(100);
                     }
                     return;
