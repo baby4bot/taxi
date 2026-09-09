@@ -1391,6 +1391,8 @@
 
         <div id="rpDestName" style="font-size: 14.5px; font-weight: 600; color: white; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 10px 12px; margin-bottom: 12px; word-break: break-word; text-align: left;"></div>
 
+        <div id="rpOriginWarn" style="display:none; background: rgba(255,152,0,0.10); border:1px solid rgba(255,152,0,0.4); color:#ffb74d; border-radius:12px; padding:8px 11px; font-size:12px; margin-bottom:12px; text-align:left;">⚠️ ใช้ตำแหน่งโดยประมาณ (GPS ใช้ไม่ได้) — ระยะทาง/เวลา/ราคาอาจคลาดเคลื่อน เปิด GPS เพื่อความแม่นยำ</div>
+
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
             <div style="background: rgba(0,0,0,0.28); border-radius: 13px; padding: 9px 4px; border: 1px solid rgba(255,255,255,0.05);">
                 <div style="font-size:10.5px; color: var(--text-dim); margin-bottom: 2px;">ระยะทาง</div>
@@ -1972,7 +1974,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-09an';
+    const APP_BUILD = '2026-09-09ao';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -4698,9 +4700,8 @@
     window.showHistory = () => {
         let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
         let favs = window.getFavorites();
-        // แถว "ตำแหน่งปัจจุบัน" แสดงเสมอ (แม้ยังไม่มีประวัติ/ที่โปรด) — ผู้ใช้ใหม่ก็ใช้ GPS ได้ทันที
+        // แตะช่องค้นหา → dropdown: ที่โปรด + ประวัติล่าสุด (จุดเริ่มต้นคือตำแหน่งปัจจุบันอยู่แล้ว — ไม่มีแถว "ใช้ตำแหน่งปัจจุบัน")
         let html = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ปลายทาง</span></div>`;
-        html += renderLocRow('my_location', 'ตำแหน่งปัจจุบันของฉัน', 'แตะเพื่อใช้ตำแหน่ง GPS ของคุณ', 'window.useMyLocation()');
         if (!h.length && !favs.length) {
             html += `<div style="padding:14px; text-align:center; color:var(--text-dim); font-size:12.5px;">พิมพ์ชื่อสถานที่เพื่อค้นหา — เช่น "เซ็นทรัล", "รพ.วิภา", "ลาดพร้าว 23"</div>`;
             $('historyList').innerHTML = html;
@@ -4762,14 +4763,16 @@
         // 🧪 test hook — จำลองตำแหน่งผู้ใช้ (ใช้ใน preview ที่ GPS ถูกบล็อก + เทสต์อัตโนมัติ)
         if (window.__testUserPos && typeof window.__testUserPos.lat === 'number') { cachedUserPos = window.__testUserPos; cachedUserPosAt = Date.now(); return Promise.resolve(cachedUserPos); }
         return new Promise((resolve) => {
-            if (!navigator.geolocation) return resolve(null);
+            if (!navigator.geolocation) { const lf = freshLastPos(); resolve(lf || null); return; }
             navigator.geolocation.getCurrentPosition(
                 (pos) => { cachedUserPos = { lat: pos.coords.latitude, lon: pos.coords.longitude, at: Date.now() }; cachedUserPosAt = cachedUserPos.at; resolve(cachedUserPos); },
-                () => resolve(null),
+                () => { const lf = freshLastPos(); resolve(lf || null); },
                 { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
             );
         });
     };
+    // 🕒 fix GPS ล่าสุดจากมิเตอร์/แผนที่ (สด ≤ 3 นาที) — ใช้เป็นตำแหน่งอ้างอิงได้โดยไม่ต้องรอ GPS ใหม่ (กันพลาดตอน GPS สัญญาณอ่อน)
+    const freshLastPos = () => (lastPos && lastPosTime && (Date.now() - lastPosTime) < 180000) ? { lat: lastPos.lat, lon: lastPos.lon, at: Date.now() } : null;
     const distKm = (a, b) => { const R = 6371; const dLat = (b.lat - a.lat) * Math.PI / 180; const dLon = (b.lon - a.lon) * Math.PI / 180; const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2; return 2 * R * Math.asin(Math.sqrt(h)); };
     const fmtDist = (km) => km < 1 ? Math.round(km * 1000) + ' ม.' : km.toFixed(1) + ' กม.';
     // รายการค้นหาแบบผสม (Bolt/Grab UX): [ตำแหน่งปัจจุบัน] → [ที่โปรด/ประวัติที่ตรง] → [ผลสดเรียงใกล้ฉัน] — แตะได้ทันที
@@ -4777,21 +4780,6 @@
         `<div class="list-item" onclick="${onClick}" style="border-bottom:1px solid rgba(255,255,255,0.05);"><span class="material-symbols-outlined item-icon">${icon}</span>` +
         `<div style="flex:1; min-width:0;"><div style="font-weight:600; color:#fff; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</div>` +
         (sub ? `<div style="font-size:11px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sub}</div>` : '') + `</div>${extra || ''}</div>`;
-    // 📍 แถว "ตำแหน่งปัจจุบันของฉัน" — แตะแล้วใช้พิกัด GPS (ขอสิทธิ์ครั้งแรก) + พยายามหาชื่อถนนใกล้เคียง (TomTom reverse geocode)
-    window.useMyLocation = async () => {
-        const pos = await getUserPos();
-        if (!pos) { window.showToast('ไม่สามารถเข้าถึงตำแหน่งได้ — เปิด GPS แล้วลองอีกครั้ง', true); return; }
-        let name = 'ตำแหน่งปัจจุบันของฉัน';
-        try {
-            const res = await fetch(`https://api.tomtom.com/search/2/reverseGeocode/${pos.lat},${pos.lon}.json?key=${TOMTOM_KEY}&language=th-TH&returnSpeedLimit=false&returnRoadUse=false`);
-            const j = await res.json();
-            if (j && j.addresses && j.addresses.length && j.addresses[0].address && j.addresses[0].address.freeformAddress) name = j.addresses[0].address.freeformAddress;
-        } catch(e) {}
-        $('destInput').value = name;
-        $('historyList').style.display = 'none';
-        $('suggestionList').style.display = 'none';
-        window.selectLocation(name, pos.lat, pos.lon);
-    };
 
     // ===== Favorites System =====
     window.getFavorites = () => JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
@@ -4833,9 +4821,9 @@
         if (!(q = q.trim())) return list.style.display = 'none'; 
         if (q.trim().length < 2) return list.style.display = 'none';
         const smartQuery = formatSearchText(q);
-        // ส่วนหัวแบบผสม (ที่โปรด/ประวัติที่ตรง + ตำแหน่งปัจจุบัน) — วาดทันที ไม่ต้องรอ API
+        // ส่วนหัวแบบผสม (ที่โปรด/ประวัติที่ตรงกับคำค้น) — วาดทันที ไม่ต้องรอ API
         const mixed = window.__localMatches(smartQuery);
-        const headHtml = (mixed.length ? mixed.join('') : '') + (q.trim().length >= 3 ? renderLocRow('my_location', '📍 ใช้ตำแหน่งปัจจุบันของฉัน', 'ค้นหาสถานที่ใกล้ตำแหน่ง GPS', 'window.useMyLocation()') : '');
+        const headHtml = mixed.length ? mixed.join('') : '';
         if (lastSearchQuery === q && lastSearchHtml !== null) { list.innerHTML = lastSearchHtml; list.style.display = 'block'; window.updateClearDestBtn(); return; } // คำค้นซ้ำ → แสดงผลเดิมทันที (ไม่ยิง API)
         const seq = ++searchSeq;
         searchTimer = setTimeout(async () => { 
@@ -5077,6 +5065,29 @@
     
     window.currentTollInfo = null;
     
+    // 🧭 หาจุดเริ่มต้นเส้นทางที่แม่นที่สุด: (1) fix สดจากมิเตอร์/แผนที่ (≤3 นาที) (2) แคชตำแหน่งตอนค้นหา (≤2 นาที) (3) ขอ GPS ใหม่
+    //    ถ้าไม่มีเลย (GPS ปิด/ไม่มีสิทธิ์/สัญญาณอ่อน) คืน null → ใช้ตำแหน่งโดยประมาณ (IP) พร้อมเตือนชัดเจนในหน้าสรุป
+    const getRouteStartPos = async () => {
+        // 🧪 test hook — จำลองตำแหน่งผู้ใช้ (ใช้ใน preview ที่ GPS ถูกบล็อก + เทสต์อัตโนมัติ)
+        if (window.__testUserPos && typeof window.__testUserPos.lat === 'number') return window.__testUserPos;
+        const lf = freshLastPos();
+        if (lf) return lf;
+        if (cachedUserPos && (Date.now() - cachedUserPosAt) < 120000) return cachedUserPos;
+        if (navigator.geolocation) {
+            try {
+                const pos = await new Promise((resolve) => {
+                    navigator.geolocation.getCurrentPosition(
+                        (p) => resolve(p),
+                        () => resolve(null),
+                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+                    );
+                });
+                if (pos) return { lat: pos.coords.latitude, lon: pos.coords.longitude, at: Date.now() };
+            } catch (e) {}
+        }
+        return null;
+    };
+    
     window.getRouteData = async (dLat, dLon, name) => {
         const doRoute = async (sLat, sLon, label) => {
             let route = await window.fetchRouteFromTomTom(dLat, dLon, sLat, sLon);
@@ -5103,6 +5114,7 @@
         };
 
         const fallbackChain = async () => {
+            window.__routeOriginEstimated = true; // ทุกเส้นทางใน fallbackChain ใช้ตำแหน่งโดยประมาณ (IP/ศูนย์กลาง กทม.) → ต้องเตือนในหน้าสรุป
             const ipServices = ['https://ipapi.co/json/', 'https://ipwho.is/'];
             for (const url of ipServices) {
                 try {
@@ -5126,14 +5138,21 @@
             $('kmInput').focus();
         };
 
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            if (!(await doRoute(pos.coords.latitude, pos.coords.longitude))) {
+        // 🎯 จุดเริ่มต้น: ใช้ GPS ที่แม่นสุดเท่าที่มี (fix สดจากมิเตอร์ → แคชตอนค้นหา → ขอ GPS ใหม่) — กันใช้ตำแหน่งโดยประมาณ (IP) ที่ผิดหลายกม.
+        //    ถ้าไม่มี GPS จริงเลย ค่อยใช้ตำแหน่งโดยประมาณ + เตือนชัดเจนว่ากม./ราคาอาจคลาดเคลื่อน
+        window.__routeOriginEstimated = false;
+        const startPos = await getRouteStartPos();
+        if (startPos) {
+            // อัปเดตแคชตำแหน่งด้วย (กันขอ GPS ซ้ำตอนค้นหาถัดไป)
+            cachedUserPos = { lat: startPos.lat, lon: startPos.lon, at: Date.now() }; cachedUserPosAt = cachedUserPos.at;
+            if (!(await doRoute(startPos.lat, startPos.lon))) {
                 await fallbackChain();
             }
-        }, () => {
-            window.showToast('📍 พบสถานที่: ' + name + ' - GPS ใช้ไม่ได้ กำลังคำนวณด้วยตำแหน่งโดยประมาณ', false);
-            fallbackChain();
-        }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+        } else {
+            window.__routeOriginEstimated = true;
+            window.showToast('📍 พบสถานที่: ' + name + ' - GPS ใช้ไม่ได้ กำลังคำนวณด้วยตำแหน่งโดยประมาณ (ระยะทาง/ราคาอาจไม่ตรง เปิด GPS เพื่อความแม่นยำ)', false, null, true);
+            await fallbackChain();
+        }
     };
     
     window.processRoute = (km, sec, name) => { 
@@ -5161,6 +5180,7 @@
         const name = p.name || ($('destInput') ? $('destInput').value : '');
         const el = id => document.getElementById(id);
         if (el('rpDestName')) el('rpDestName').innerText = '🚕 ไปที่: ' + name;
+        const warn = el('rpOriginWarn'); if (warn) warn.style.display = window.__routeOriginEstimated ? 'block' : 'none';
         if (el('rpKm')) el('rpKm').innerText = km.toFixed(2);
         if (el('rpTime')) el('rpTime').innerText = sec > 0 ? formatDuration(Math.max(1, Math.ceil(sec / 60))) : '--';
         if (el('rpArrive')) el('rpArrive').innerText = sec > 0 ? new Date(Date.now() + sec * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '--:--';
@@ -6626,7 +6646,8 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
-        '🔍 ค้นหาจุดหมายอัจฉริยะแบบ Bolt/Grab: ผลค้นหาเรียง"ใกล้ฉันก่อน"พร้อมป้ายระยะทาง (เช่น ค้น "เซ็นทรัล" → สาขาที่ใกล้ที่สุดขึ้นก่อน) · แตะช่องค้นหาเห็น "ตำแหน่งปัจจุบัน" + ที่โปรด + ประวัติล่าสุดในรายการเดียว · พิมพ์แล้วเดาได้ทันทีจากที่โปรด/ประวัติ + แถว "ใช้ตำแหน่งปัจจุบันของฉัน" · กันเรียก API ซ้ำ (แคชตำแหน่ง 2 นาที + ข้ามคำค้นซ้ำ)',
+        '🎯 แก้ระยะทางเส้นทางคลาดเคลื่อน (เช่น ไปเซ็นทรัลเวสต์เกตขึ้น 9.6 กม. ทั้งที่จริง ~15 กม.): ตอนคำนวณเส้นทางใช้ GPS ที่แม่นสุดเท่าที่มีก่อน (fix สดจากมิเตอร์/แคชตำแหน่ง → ขอ GPS ใหม่) ไม่ดิ่งไปใช้ตำแหน่งโดยประมาณ (IP) ที่เพี้ยนหลายกม. ทันที — ถ้า GPS ใช้ไม่ได้จริง จะขึ้นคำเตือนสีส้มชัดเจนในหน้าสรุปเส้นทางว่า "ใช้ตำแหน่งโดยประมาณ ระยะทาง/ราคาอาจคลาดเคลื่อน" · ลบแถว "ใช้ตำแหน่งปัจจุบันของฉัน" ในช่องค้นหาจุดหมายออก (จุดเริ่มต้นเป็นตำแหน่งปัจจุบันอยู่แล้ว)',
+        '🔍 ค้นหาจุดหมายอัจฉริยะแบบ Bolt/Grab: ผลค้นหาเรียง"ใกล้ฉันก่อน"พร้อมป้ายระยะทาง (เช่น ค้น "เซ็นทรัล" → สาขาที่ใกล้ที่สุดขึ้นก่อน) · แตะช่องค้นหาเห็น "ตำแหน่งปัจจุบัน" + ที่โปรด + ประวัติล่าสุดในรายการเดียว · พิมพ์แล้วเดาได้ทันทีจากที่โปรด/ประวัติ · กันเรียก API ซ้ำ (แคชตำแหน่ง 2 นาที + ข้ามคำค้นซ้ำ)',
         '⚙️ ตั้งค่าสิทธิ์การใช้งาน → เพิ่มหมวด "บันทึกประวัติ (Log)": แอดมินเปิด/ปิดการบันทึก log ได้ทีละประเภท (ล็อกอิน/เอาต์, สิทธิ์, รหัสผ่าน/แบน, จัดการสมาชิก, แก้ไขโปรไฟล์, พอร์ทัล, สมัครสมาชิก) — ค่าเริ่มต้นเปิดทุกประเภท ยกเว้นล็อกอิน/เอาต์ (ปิด = ประหยัดโควตา) · ฟังสดข้ามเครื่อง มีผลทันทีทุก user · ย้ายสวิตช์ log เดิมจากหน้าจัดการผู้ใช้มาอยู่ที่นี่',
         '✂️ ลดบันทึกกิจกรรมที่เขียนทุกครั้ง: ตัด log ล็อกอิน/ล็อกเอาต์ออก (เดิม 1 เหตุการณ์ = เขียน 2 doc — log ของผู้ใช้ + global_logs) — เหลือเฉพาะเหตุการณ์สำคัญเท่านั้น (สมัครสมาชิก, แก้ไขโปรไฟล์/รหัสผ่าน, แบน/ปลดแบน, เพิ่ม/แก้ไขผู้ใช้, อนุมัติ/ปฏิเสธคำขอสิทธิ์, แก้ไข Portal) — ประหยัด ~4-6 เขียน/คน/วัน',
         '❌ ลบระบบสถานะออนไลน์ (presence) ออกทั้งหมด: ไม่เขียนคอลเลกชัน presence อีกต่อไป (เข้า/ออกแอป, ล็อกอิน/เอาต์, แตะใช้งานทุก 10 นาที, ฟังสดตอนเปิดหน้าจัดการผู้ใช้) — ลดการเขียน Firestore ~8-20 ครั้ง/วัน/เครื่องให้เหลือศูนย์ เพื่อประหยัดโควตาสุด ๆ (ยังเหลือป้าย "ถูกระงับ (Ban)" ในหน้าจัดการผู้ใช้ตามเดิม — ไม่เกี่ยวกับออนไลน์)',
