@@ -1675,6 +1675,11 @@
         <button class="btn-close-floating" style="top: 15px; right: 15px; transform: none;" onclick="window.closeVersionEdit()"><span class="material-symbols-outlined">close</span></button>
         <h3 style="color: white; margin-bottom: var(--space-field);">แก้ไขประวัติเวอร์ชัน</h3>
         <input type="hidden" id="veIdx" value="-1">
+        <div class="ver-fields" style="margin-bottom: 10px;">
+            <label>เลขเวอร์ชัน (เช่น 1.2.8)</label>
+            <input type="text" id="veVersion" value="" placeholder="1.2.x" oninput="window.checkVeVersionDup()" style="width: 100%; box-sizing: border-box; padding: 11px 12px; border-radius: 12px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; font-size: 14px; outline: none; font-family: 'Kanit'; text-align: left;">
+            <div id="veVersionWarn" style="display:none; color:#ffb74d; font-size:11.5px; margin-top:6px;">⚠️ เลขเวอร์ชันนี้ซ้ำกับรายการอื่น — ต้องไม่ซ้ำกัน</div>
+        </div>
         <div class="ver-fields" style="margin-bottom: var(--space-field);">
             <label>ข้อความอัปเดต (1 รายการต่อบรรทัด)</label>
             <textarea id="veNotes" rows="9" placeholder="- เพิ่มอะไรใหม่ / แก้อะไร..." style="width: 100%; box-sizing: border-box; padding: 12px; border-radius: 14px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; font-size: 14px; outline: none; font-family: 'Kanit'; resize: vertical; text-align: left;"></textarea>
@@ -1975,7 +1980,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-09ap';
+    const APP_BUILD = '2026-09-09aq';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -6743,6 +6748,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        '✏️ แอดมินแก้เลขเวอร์ชัน (v) ของแต่ละการ์ดในหน้าประวัติเวอร์ชันได้เอง (ปุ่มแก้ไข → มีช่องเลขเวอร์ชันให้พิมพ์) — กันเลขซ้ำกับรายการอื่นอัตโนมัติ ทั้งตอนพิมพ์และตอนบันทึก',
         '📍 เพิ่ม "ตั้งตำแหน่งของฉัน" สำหรับเครื่องที่ GPS ใช้ไม่ได้ (คอมพิวเตอร์/แอป): แตะช่องค้นหาจุดหมาย → แถวบนสุด "ตั้งตำแหน่งของฉัน" → พิมพ์ที่อยู่/สถานที่ที่คุณอยู่ตอนนี้แล้วแตะผลลัพธ์ — ตั้งปุ๊บ การค้นหาจะเรียง"ใกล้ฉัน"และแสดงระยะทาง + เส้นทางคำนวณจากตำแหน่งนี้ทันที (ไม่เพี้ยนเป็น 9 กม. ทั้งที่จริง ~15 กม. เหมือนใช้ตำแหน่ง IP) · มีชิพสีส้มข้าง "ค้นหาจุดหมาย" โชว์ตำแหน่งที่ตั้งไว้ แตะชิพ = ล้างกลับไปใช้ GPS อัตโนมัติ',
         '🎯 แก้ระยะทางเส้นทางคลาดเคลื่อน (เช่น ไปเซ็นทรัลเวสต์เกตขึ้น 9.6 กม. ทั้งที่จริง ~15 กม.): ตอนคำนวณเส้นทางใช้ GPS ที่แม่นสุดเท่าที่มีก่อน (fix สดจากมิเตอร์/แคชตำแหน่ง → ขอ GPS ใหม่) ไม่ดิ่งไปใช้ตำแหน่งโดยประมาณ (IP) ที่เพี้ยนหลายกม. ทันที — ถ้า GPS ใช้ไม่ได้จริง จะขึ้นคำเตือนสีส้มชัดเจนในหน้าสรุปเส้นทางว่า "ใช้ตำแหน่งโดยประมาณ ระยะทาง/ราคาอาจคลาดเคลื่อน" · ลบแถว "ใช้ตำแหน่งปัจจุบันของฉัน" ในช่องค้นหาจุดหมายออก (จุดเริ่มต้นเป็นตำแหน่งปัจจุบันอยู่แล้ว)',
         '🔍 ค้นหาจุดหมายอัจฉริยะแบบ Bolt/Grab: ผลค้นหาเรียง"ใกล้ฉันก่อน"พร้อมป้ายระยะทาง (เช่น ค้น "เซ็นทรัล" → สาขาที่ใกล้ที่สุดขึ้นก่อน) · แตะช่องค้นหาเห็น "ตำแหน่งปัจจุบัน" + ที่โปรด + ประวัติล่าสุดในรายการเดียว · พิมพ์แล้วเดาได้ทันทีจากที่โปรด/ประวัติ · กันเรียก API ซ้ำ (แคชตำแหน่ง 2 นาที + ข้ามคำค้นซ้ำ)',
@@ -6918,8 +6924,19 @@
         const entries = window.__chgEntries && window.__chgEntries.length ? window.__chgEntries : chgFallback();
         const e = entries[idx]; if (!e) return;
         document.getElementById('veIdx').value = idx;
+        const ve = document.getElementById('veVersion'); if (ve) ve.value = e.v || '';
+        const vw = document.getElementById('veVersionWarn'); if (vw) vw.style.display = 'none';
         document.getElementById('veNotes').value = cleanNotes(e.notes).map(n => '- ' + n).join('\n');
         window.toggleModal('versionEditModal', true);
+    };
+    // ตรวจเลขเวอร์ชันซ้ำแบบเรียลไทม์ (โชว์คำเตือนใต้ช่อง กรณีพิมพ์ซ้ำกับรายการอื่น)
+    window.checkVeVersionDup = () => {
+        const vw = document.getElementById('veVersionWarn'); if (!vw) return;
+        const entries = window.__chgEntries && window.__chgEntries.length ? window.__chgEntries : [];
+        const idx = parseInt(document.getElementById('veIdx').value);
+        const v = (document.getElementById('veVersion').value || '').trim();
+        const dup = /^\d+\.\d+\.\d+$/.test(v) && entries.some((x, i) => i !== idx && x.v === v);
+        vw.style.display = dup ? 'block' : 'none';
     };
     window.closeVersionEdit = () => { window.toggleModal('versionEditModal', false); };
     window.saveVersionEdit = async () => {
@@ -6928,6 +6945,12 @@
             const idx = parseInt(document.getElementById('veIdx').value);
             const entries = (window.__chgEntries && window.__chgEntries.length) ? window.__chgEntries.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) })) : [];
             const e = entries[idx]; if (!e) { window.showToast('ไม่พบเวอร์ชันนี้ในระบบ', true); return; }
+            // ✏️ แก้เลขเวอร์ชันได้เอง — บังคับรูปแบบ 1.2.x และห้ามซ้ำกับเวอร์ชันอื่น
+            const vInp = document.getElementById('veVersion');
+            const newV = (vInp ? vInp.value : '').trim();
+            if (!/^\d+\.\d+\.\d+$/.test(newV)) { window.showToast('เลขเวอร์ชันต้องเป็นรูปแบบ 1.2.8', true); return; }
+            if (entries.some((x, i) => i !== idx && x.v === newV)) { const vw = document.getElementById('veVersionWarn'); if (vw) vw.style.display = 'block'; window.showToast('เลขเวอร์ชันซ้ำกับรายการอื่น — เปลี่ยนเป็นเลขอื่นก่อนบันทึก', true); return; }
+            e.v = newV;
             e.notes = cleanNotes(document.getElementById('veNotes').value.split('\n'));
             if (!e.notes.length) { window.showToast('กรุณากรอกข้อความอย่างน้อย 1 รายการ', true); return; }
             // syncedHash = hash ของโค้ดรอบนี้ → หลัง admin แก้ ระบบจะไม่เอา bullet ตามโค้ดกลับมาใส่ซ้ำ (กันแก้แล้วโดนทับ)
