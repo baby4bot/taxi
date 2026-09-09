@@ -1980,7 +1980,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-09as';
+    const APP_BUILD = '2026-09-09at';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -3332,6 +3332,7 @@
     window.toggleLogFlag = async (flag, enabled) => {
         const target = !!enabled;
         window.__appConfig.logFlags = Object.assign({}, window.__appConfig.logFlags, { [flag]: target }); // อัปเดตทันที
+        const rsm = document.getElementById('roleSettingsModal'); if (rsm && rsm.style.display === 'flex' && typeof window.onRolePermChanged === 'function') window.onRolePermChanged(); // 🔘 ติ๊กในหน้าตั้งค่าสิทธิ์ → เปิดปุ่มบันทึกสิทธิ์
         try {
             let done = false;
             const sdkP = window.__fsTimeout(setDoc(doc(db, "settings", "app_config"), { logFlags: window.__appConfig.logFlags }, { merge: true }), 6000).then(() => true).catch(() => false);
@@ -6799,6 +6800,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        '💾 ปุ่ม "บันทึกสิทธิ์" ฉลาดขึ้น: ถ้ายังไม่มีการเปลี่ยนแปลงอะไร ปุ่มจะเป็นสีเทา กดไม่ได้ — พอติ๊กสิทธิ์หรือสลับ log ปุ๊บ ปุ่มกลับมาเขียวและกดได้ทันที · หลังบันทึกสำเร็จ อยู่หน้าเดิมต่อได้เลย ไม่ปิดหน้าต่าง (กดบันทึกอีกรอบได้ถ้าจะแก้เพิ่ม)',
         '🧹 ตั้งค่าการใช้งานซ่อนหัวข้อหมวดหมู่ที่ว่างแล้ว: ถ้าผู้ใช้ (เช่น ผู้จัดการ) ไม่มีสิทธิ์ในหมวดไหน (การแจ้งเตือน / บริการ/ระบบ) หัวข้อหมวดนั้นจะถูกซ่อนไปด้วย ไม่โผล่เป็นช่องว่าง — พอแอดมินให้สิทธิ์ หัวข้อจะเด้งกลับมาเอง',
         '🎯 ป้ายระยะทางในผลค้นหาจุดหมายตรงกับหน้าสรุปเส้นทางแล้ว: จากเดิมแสดงระยะเส้นตรง (เช่น ไปเซ็นทรัลเวสต์เกต badge 9.8 กม. แต่เส้นทางจริง 15.15 กม.) — ตอนนี้ badge จะคำนวณเป็นระยะทางถนนจริง (TomTom routing เดียวกับหน้าสรุป) แสดง … ระหว่างโหลด แล้วแทนที่ด้วยเลขที่ตรงกัน (แคชตามจุดเริ่ม/ปลาย+โหมดทางด่วน กันยิง API ซ้ำ)',
         '✏️ แอดมินแก้เลขเวอร์ชัน (v) ของแต่ละการ์ดในหน้าประวัติเวอร์ชันได้เอง (ปุ่มแก้ไข → มีช่องเลขเวอร์ชันให้พิมพ์) — กันเลขซ้ำกับรายการอื่นอัตโนมัติ ทั้งตอนพิมพ์และตอนบันทึก',
@@ -7700,14 +7702,14 @@
         if (hub && getComputedStyle(hub).display !== 'none') return;
         window.openSettingsHub();
     };
-    window.openRoleSettingsModal = () => { if(!window.currentUserPerms().canManageRoles) return window.showToast("คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน", true); window.fillRoleSelects(); window.syncRoleManageBtns(); window.toggleModal('roleSettingsModal', true); window.renderPermList(); window.renderLogSettings(); };
-    window.loadRolePermissionsToUI = () => { window.syncRoleManageBtns(); window.renderPermList(); };
+    window.openRoleSettingsModal = () => { if(!window.currentUserPerms().canManageRoles) return window.showToast("คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน", true); window.fillRoleSelects(); window.syncRoleManageBtns(); window.toggleModal('roleSettingsModal', true); window.renderPermList(); window.renderLogSettings(); window.captureRolePermBaseline(); window.updateSavePermBtn(); };
+    window.loadRolePermissionsToUI = () => { window.syncRoleManageBtns(); window.renderPermList(); window.captureRolePermBaseline(); window.updateSavePermBtn(); };
     
     window.renderPermList = () => {
         let html = ''; let perms = window.currentPermConfig; let role = document.getElementById('settingRoleSelect').value; let rolePerms = window.effectiveRolePerms(role);
         perms.forEach(p => {
             let prop = p.id.replace('perm_', ''); let checkedStr = rolePerms[prop] ? 'checked' : '';
-            html += `<div class="perm-item" data-id="${p.id}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;"><div style="display: flex; align-items: center; gap: 10px; flex: 1;"><div class="drag-handle" style="cursor: grab; color: rgba(255,255,255,0.3); display: flex; align-items: center;"><span class="material-symbols-outlined">drag_indicator</span></div><input type="checkbox" id="${p.id}" style="width: 20px; height: 20px;" ${checkedStr}><span style="color: var(--neon-yellow); font-weight: 500; font-size: 14px; flex:1; cursor:pointer;" onclick="document.getElementById('${p.id}').click()">${p.label}</span></div><button onclick="window.editPermLabel('${p.id}')" style="background:none; border:none; color: var(--neon-yellow); cursor:pointer; padding:5px; display:flex; align-items:center; transition:0.2s;" title="แก้ไขชื่อสิทธิ์"><span class="material-symbols-outlined" style="font-size: 20px;">edit</span></button></div>`;
+            html += `<div class="perm-item" data-id="${p.id}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;"><div style="display: flex; align-items: center; gap: 10px; flex: 1;"><div class="drag-handle" style="cursor: grab; color: rgba(255,255,255,0.3); display: flex; align-items: center;"><span class="material-symbols-outlined">drag_indicator</span></div><input type="checkbox" id="${p.id}" style="width: 20px; height: 20px;" ${checkedStr} onchange="window.onRolePermChanged()"><span style="color: var(--neon-yellow); font-weight: 500; font-size: 14px; flex:1; cursor:pointer;" onclick="document.getElementById('${p.id}').click()">${p.label}</span></div><button onclick="window.editPermLabel('${p.id}')" style="background:none; border:none; color: var(--neon-yellow); cursor:pointer; padding:5px; display:flex; align-items:center; transition:0.2s;" title="แก้ไขชื่อสิทธิ์"><span class="material-symbols-outlined" style="font-size: 20px;">edit</span></button></div>`;
         });
         document.getElementById('permListContainer').innerHTML = html;
         if (typeof Sortable !== 'undefined') {
@@ -7728,11 +7730,37 @@
 
     window.savePermConfigToDB = async () => { try { await setDoc(doc(db, "settings", "permission_config"), { config: window.currentPermConfig }); } catch(e) {} };
 
+    let rolePermBaseline = null; // สถานะที่บันทึกล่าสุด (สิทธิ์แต่ละรายการ + log flags) — ใช้เทียบว่ามีอะไรเปลี่ยนยัง (ติ๊กแล้วติ๊กกลับ = เท่าเดิม = ปุ่มเทา)
+    window.captureRolePermBaseline = () => {
+        const base = { perms: {}, logFlags: {} };
+        window.currentPermConfig.forEach(p => { const el = document.getElementById(p.id); if (el) base.perms[p.id] = !!el.checked; });
+        const cfg = window.__appConfig || { logFlags: {} };
+        base.logFlags = Object.assign({}, LOG_FLAG_DEFAULTS, (cfg.logFlags || {}));
+        rolePermBaseline = base;
+    };
+    window.rolePermDirtyNow = () => {
+        if (!rolePermBaseline) return false;
+        for (const p of window.currentPermConfig) { const el = document.getElementById(p.id); if (el && !!el.checked !== !!rolePermBaseline.perms[p.id]) return true; }
+        const cfg = window.__appConfig || { logFlags: {} };
+        const flags = Object.assign({}, LOG_FLAG_DEFAULTS, (cfg.logFlags || {}));
+        for (const k of Object.keys(rolePermBaseline.logFlags)) { if (!!flags[k] !== !!rolePermBaseline.logFlags[k]) return true; }
+        return false;
+    };
+    window.updateSavePermBtn = () => {
+        const btn = document.getElementById('saveRolePermBtn'); if (!btn) return;
+        const on = window.rolePermDirtyNow();
+        btn.disabled = !on;
+        btn.style.background = on ? 'var(--neon-green)' : '#3a3f4b';
+        btn.style.opacity = on ? '1' : '0.55';
+        btn.style.cursor = on ? 'pointer' : 'not-allowed';
+    };
+    window.onRolePermChanged = () => { window.updateSavePermBtn(); };
+
     window.saveRolePermissions = async () => {
         if(!window.currentUserPerms().canManageRoles) return window.showToast("คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน", true);
         let role = document.getElementById('settingRoleSelect').value; let btn = document.getElementById('saveRolePermBtn'); btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
         let newPerms = {}; window.currentPermConfig.forEach(p => { let prop = p.id.replace('perm_', ''); let el = document.getElementById(p.id); if(el) newPerms[prop] = el.checked; });
-        try { await setDoc(doc(db, "settings", "roles"), { [role]: newPerms }, { merge: true }); window.showToast(`บันทึกสิทธิ์สำหรับ ${role} สำเร็จ`); window.toggleModal('roleSettingsModal', false); } catch(e) { window.showToast("บันทึกล้มเหลว", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์`; btn.disabled = false; }
+        try { await setDoc(doc(db, "settings", "roles"), { [role]: newPerms }, { merge: true }); window.captureRolePermBaseline(); window.showToast(`บันทึกสิทธิ์สำหรับ ${role} สำเร็จ — อยู่หน้าเดิมต่อได้เลย`); } catch(e) { window.showToast("บันทึกล้มเหลว", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์`; window.updateSavePermBtn(); }
     };
 
     window.quickBanToggle = async (uid, isBan, userName) => {
