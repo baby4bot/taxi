@@ -30,7 +30,7 @@
         <b>วิธีเปิด:</b> ต้องผ่าน HTTP เท่านั้น เช่น <code>https://baby4bot.github.io/taxi/tests/catchup-regression.html</code>
         (เปิดจาก file:// ตรง ๆ ไม่ได้ เพราะ iframe ถูกบล็อก cross-origin) — เปิดแล้วรันอัตโนมัติ หรือกดปุ่มด้านล่างเพื่อรันใหม่
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (14 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (15 สถานการณ์)</button>
     <div id="summary"></div>
     <ol id="results"></ol>
     <iframe id="appFrame" src="../index.html"></iframe>
@@ -204,8 +204,13 @@
             passCount = 0; failCount = 0; failures.length = 0;
             renderSummary();
 
+            // ดีบัก: เปิด ?only=15 เพื่อรันแค่ข้อ 15 (URL query) — ข้ออื่นข้ามไป
+            const only = parseInt(new URLSearchParams(location.search).get('only') || '0', 10);
+            const skipScenario = (n) => only > 0 && n !== only;
+
             // 1) fix มาไว + จอดนิ่ง — เบิกทางแบนเนอร์ (ยังไม่กดเริ่มต่อ) แล้วเริ่มต่อ
             await runScenario('1. Fix มาไว + จอดนิ่ง (เบิกตอนเปิดแอป ก่อนเริ่มต่อ)', async () => {
+                if (skipScenario(1)) return;
                 w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(makePayload()));
                 w().maybeShowResumeBanner();
                 await wait(400);
@@ -227,6 +232,7 @@
 
             // 2) fix มาช้า + จอดนิ่ง — กดเริ่มต่อไปก่อน fix (race) → เบิกเข้ามิเตอร์ที่วิ่งอยู่ + แถบ + toast ทอง
             await runScenario('2. Fix มาช้า + จอดนิ่ง (กดเริ่มต่อไปก่อน fix → เบิกเข้มมิเตอร์ + แถบ + toast ทอง)', async () => {
+                if (skipScenario(2)) return;
                 w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(makePayload()));
                 w().maybeShowResumeBanner();
                 await wait(300);
@@ -250,6 +256,7 @@
 
             // 3) วิ่งช่วงปิด ไม่มีปลายทาง — ประเมินกิโลจากเส้นทางจริง (คด) แทนเส้นตรง
             await runScenario('3. วิ่งช่วงปิด ไม่มีปลายทาง (ประมาณกิโลจากเส้นทางจริงคด)', async () => {
+                if (skipScenario(3)) return;
                 // ให้ "ขอเส้นทางถนนจริง" ใช้ไม่ได้ (ออฟไลน์/โควตาหมด) → สถานการณ์นี้ต้องตรวจเส้นตรง×คดเคี้ยวเดิม
                 // (เส้นทางถนนจริงทดสอบแยกในสถานการณ์ที่ 11)
                 w().fetchRouteFromTomTom = async () => null;
@@ -276,6 +283,7 @@
 
             // 4) fix ไม่มาสักพัก → ยังไม่เบิกก่อนมีหลักฐาน → fix มาทีหลัง เบิกครบ
             await runScenario('4. Fix ยังไม่มา 4 วิ → ไม่เบิกก่อนหลักฐาน → fix มาแล้วเบิกครบ', async () => {
+                if (skipScenario(4)) return;
                 w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(makePayload()));
                 w().maybeShowResumeBanner();
                 await wait(300);
@@ -295,6 +303,7 @@
 
             // 5) เปิดใหม่ซ้ำอีกรอบ → ไม่เบิกซ้ำ (กัน double-bill)
             await runScenario('5. เปิดใหม่ซ้ำอีกรอบ → ไม่เบิกซ้ำ (double-bill guard)', async () => {
+                if (skipScenario(5)) return;
                 w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(makePayload()));
                 w().maybeShowResumeBanner();
                 await wait(300);
@@ -320,7 +329,10 @@
 
             // 6) cap เบิกจอด 1 นาที — ช่วงปิด 90 วิ เบิกแค่ 60 วิ
             await runScenario('6. ตั้ง cap เบิกจอด 1 นาที (ช่วงปิด 90 วิ → เบิกแค่ 60 วิ)', async () => {
-                frame.contentWindow.userKillCapMin = 1; // ผู้ใช้ตั้ง cap 1 นาที (ค่าเริ่มต้น 15)
+                if (skipScenario(6)) return;
+                // ใช้ test override (ชนะค่าโปรไฟล์) — กัน race ที่โปรไฟล์ Firestore snapshot มาทีหลังเขียนทับ cap 1 นาทีกลับเป็น 15
+                // (เดิมตั้ง userKillCapMin ตรง ๆ แล้ว snapshot ทับเป็น 15 → เบิกเต็ม 90 วิ = 10+90=100 → flaky)
+                frame.contentWindow.__testKillCapMin = 1; // ผู้ใช้ตั้ง cap 1 นาที (ค่าเริ่มต้น 15)
                 w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(makePayload()));
                 w().maybeShowResumeBanner();
                 await wait(300);
@@ -337,6 +349,7 @@
 
             // 8) มีปลายทาง + วิ่งช่วงปิด → เบิกกิโลด้วย polyline เส้นทางจริง (snap จุดก่อนปิด+จุดปัจจุบันลงเส้นทางเดียวกัน)
             await runScenario('8. มีปลายทาง: เบิกกิโลด้วย polyline เส้นทางจริง (snap จุดก่อนปิด+ปัจจุบัน)', async () => {
+                if (skipScenario(8)) return;
                 const DEST = { lat: 13.8000, lon: 100.5500 };
                 const A = { lat: 13.7500, lon: 100.5000 }; // จุดก่อนปิดแอป (ไกลจากปลายทาง)
                 const B = { lat: 13.7650, lon: 100.5150 }; // จุดปัจจุบัน (วิ่งเข้าใกล้ปลายทางแล้ว 30% ของเส้นทาง — อยู่บนเส้น A→D พอดี)
@@ -379,6 +392,7 @@
 
             // 9) มีปลายทาง + ทางลัด (polyline ทางด่วนสั้นกว่าเส้นทางปกติ) → snap ยังแม่น: เบิกตามระยะที่วิ่งบนทางด่วนจริง ไม่บวกตามเส้นทางยาวเดิม
             await runScenario('9. มีปลายทาง + ทางด่วนลัด: snap เบิกกิโลตาม polyline ทางด่วน (สั้นกว่าเส้นทางปกติ)', async () => {
+                if (skipScenario(9)) return;
                 const DEST = { lat: 13.8000, lon: 100.5500 };
                 const A = { lat: 13.7500, lon: 100.5000 }; // จุดก่อนปิดแอป (ต้นทางของทางด่วน)
                 const C = { lat: 13.7720, lon: 100.5220 }; // จุดโค้งของทางด่วน (ลัดกว่าถนนปกติ)
@@ -429,6 +443,7 @@
             // จำลองเคสที่กิโลเพี้ยนแบบ 9.3 vs 9.6: fix จุดชิดกันมาก (< 3 ม. — สัญญาณสะท้อน/จุดชิด) แต่ความเร็วจริง 36 กม./ชม.
             // วิธีเส้นตรง×1.05 แทบนับไม่ได้ → ขาดสะสมทุกโค้ง/จุดชิด; วิธีใหม่เชื่อ speed (Doppler) = 10 ม./วิ ตรงมิเตอร์ล้อหมุน
             await runScenario('10. วิ่งปกติ (มี speed จาก GPS): นับกิโลด้วย ∫speed·dt ตามถนนจริง ไม่ใช่เส้นตรง', async () => {
+                if (skipScenario(10)) return;
                 // เซ็ต caughtUpAt แล้ว → ไม่เบิกคืนช่วงปิดตอนแบนเนอร์ (ไม่รบกวนการนับกิโลปกติ)
                 const p = makePayload({ caughtUpAt: Date.now() - 1000, lastPos: P0, lastPath: [P0] });
                 w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
@@ -464,6 +479,7 @@
             // แทนเส้นตรง×คดเคี้ยว (factor จำกัด 1.6 — ถนนอ้อม 1.45 เท่าเส้นตรงก็ใช้ได้ แต่ถ้า route จริงยาวกว่า 1.6 เท่า
             // วิธีเก่าก็ยังขาดอยู่ดี) — สถานการณ์นี้ route จริง = เส้นตรง×1.45 → ต้องเบิกตาม route ไม่ใช่ factor 1.6
             await runScenario('11. ไม่มีปลายทาง: เบิกกิโลด้วยเส้นทางถนนจริง (TomTom route จุดก่อนปิด→ปัจจุบัน)', async () => {
+                if (skipScenario(11)) return;
                 const straightKm = haversine(P0, P_FAR);
                 const routeKm = straightKm * 1.45; // ถนนจริงอ้อม 1.45 เท่าเส้นตรง (เส้นตรง ~1.55 กม. → ~2.25 กม.)
                 w().fetchRouteFromTomTom = async (dLat, dLon, sLat, sLon) => {
@@ -492,6 +508,7 @@
             // 12) ซ่อนแอป (pagehide) + ticker ยังรันนับเวลาจอดช่วงซ่อน (เบราว์เซอร์ Android บางตัวไม่หยุด interval)
             //     → กลับมา (pageshow) catch-up ต้องเบิกแบบ "exactly-once" (base+gap) ไม่บวกทับเต็มช่วงซ่อน (double-bill)
             await runScenario('12. ซ่อนแอป + ticker ยังรัน → เบิกครั้งเดียวพอดี ไม่เบิกซ้ำ', async () => {
+                if (skipScenario(12)) return;
                 // เริ่มมิเตอร์จริง (hidden path ทำงานเมื่อ isManualRunning)
                 const p = makePayload({ lastPos: P0, lastPath: [P0] });
                 w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
@@ -527,6 +544,7 @@
             //     แล้วเปิดใหม่ GPS ลอยไป 0.5 กม. ความเร็วเฉลี่ย ~3 กม./ชม. ≤ 6) → ต้องเบิกเป็นเวลาจอด ไม่ใช่ระยะทาง
             //     (เดิมดูแค่ระยะขยับรวม ≤ 0.15 กม. → 0.5 กม. ถูกตัดสินว่า "วิ่ง" → เวลาจอด 10 นาทีหาย กลายเป็น +0.5 กม.)
             await runScenario('13. จอดนิ่งทั้งช่วงแต่ GPS ลอยตอนเปิดใหม่ → เบิกเวลาจอด ไม่ใช่ระยะทาง', async () => {
+                if (skipScenario(13)) return;
                 frame.contentWindow.userKillCapMin = 60; // cap 60 นาที (ไม่จำกัดพอสำหรับช่วง 10 นาทีนี้)
                 const DRIFT = { lat: P0.lat + 0.0045, lon: P0.lon }; // fix ใหม่ลอยไปทางเหนือ ~0.5 กม. (GPS ลอยตอนจอด)
                 const GAP = 600; // ปิดแอปไป 10 นาที
@@ -550,6 +568,7 @@
             // 14) วิ่งช่วงปิด + รถติด: เส้นทางคืน noTrafficSec (เวลาวิ่งโล่ง) → เบิกทั้งกิโล + เวลาที่เกิน"โล่ง"เป็นเวลารถติด
             //     (เดิมเบิกแค่กิโล — เวลารถติดช่วงปิดหายไปทั้งช่วง ตรงกับที่คนขับเจอ: กิโลถูก แต่เวลารถติดเพี้ยน)
             await runScenario('14. วิ่งช่วงปิด + รถติด (มี noTraffic ของเส้นทาง) → เบิกเวลารถติดที่เกิน"โล่ง" ไม่ใช่ทั้งช่วง', async () => {
+                if (skipScenario(14)) return;
                 const straightKm = haversine(P0, P_FAR);
                 const routeKm = straightKm * 1.45;
                 const NO_TRAFFIC_SEC = 30; // เส้นทางช่วงนี้ถ้าโล่งวิ่งแค่ ~30 วิ — เวลาที่เกินไป = ติด/จอด
@@ -574,8 +593,42 @@
                 return pp.km.toFixed(2) + ' กม. (คาด ' + (0.5 + routeKm).toFixed(2) + ') · รถติด ' + Math.round(pp.trafficSec) + ' วิ (คาด ~' + (10 + 90 - NO_TRAFFIC_SEC) + ')';
             });
 
+            // 15) GPS หลุดกลางเมือง (accuracy แย่ ~140 ม. — กลางตึก/ตรอกสัญญาณสะท้อน) + จอดนิ่งทั้งช่วงที่ปิดแอป:
+            //     ต้องยังเบิกเวลาจอดเต็มช่วง ไม่ตัดทิ้งเพราะ accuracy แย่ (ถ้าแอปตัด >150 ม. ทิ้งจะเบิก 0) และไม่เข้าใจผิด
+            //     ว่า "วิ่ง" (GPS ลอย ~550 ม. ผ่าน 180 วิ = เฉลี่ย ~11 กม./ชม. ≤ 12 + accuracy > 40 → ยังถือว่าจอด)
+            await runScenario('15. GPS หลุดกลางเมือง (acc ~140 ม. + ลอย 550 ม.) + จอดนิ่ง → เบิกเวลาจอดเต็มช่วง ไม่หาย', async () => {
+                if (skipScenario(15)) return;
+                frame.contentWindow.userKillCapMin = 60; // cap 60 นาที (ไม่จำกัดพอสำหรับ 180 วิ)
+                const ACC = 140; // กลางเมืองสัญญาณสะท้อน — แย่แต่ยัง ≤ 150 (ขอบตัดของแอป)
+                const GAP = 180; // ติดไฟแดง/รถติด 3 นาทีแล้วปิดแอป
+                const DRIFT = { lat: P0.lat + 0.004, lon: P0.lon + 0.001 }; // fix ใหม่ลอย ~460 ม. (GPS ลอยตอนจอด)
+                // ลอย ~460 ม. / 180 วิ ≈ 9.2 กม./ชม. — อยู่ในเงื่อนไข "เฉลี่ย ≤ 12 + acc > 40 → จอด" (มี margin ไม่ชิดขอบ)
+                const p = makePayload({ savedAt: Date.now() - GAP * 1000, startTime: Date.now() - GAP * 1000 - 60000, lastPos: P0, lastPath: [P0] });
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
+                w().fetchRouteFromTomTom = async () => null; // ออฟไลน์ — กันไปขอเส้นทางถนนจริง (ไม่เกี่ยวกับกรณีนี้)
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(1200);
+                // getBestFix พยายาม fix 3 รอบ (acc 140 > 40 ไม่ break) — แต่จังหวะ poll จริงใน iframe ไม่เท่า 900ms เป๊ะ
+                // → ปล่อย fix ต่อเนื่องทุก ~800ms ครอบคลุมทุกรอบ (ถ้าปล่อยเป็นจังหวะเดียว รอบที่ 2/3 เจอคิวว่าง timeout → ไม่เบิก ได้แค่ 10 วิ)
+                let released = 0;
+                for (let k = 0; k < 10; k++) { released += releaseFix(1, DRIFT.lat, DRIFT.lon, ACC, 0); await wait(800); }
+                assert(released >= 5, 'ต้องปล่อย fix ได้ครบ (ได้ ' + released + ')' );
+                await wait(1500); // รอ catch-up เบิกเสร็จ + มิเตอร์เริ่มต่อ
+                const d = readDisplay();
+                // ต้องเบิกเวลาจอดเต็มช่วง (10 + 180 = 190 วิ) — acc แย่ไม่ควรทำให้เบิก 0
+                near(d.traffic, 10 + GAP, 8, 'เวลารถติดบนจอ (เบิกจอดทั้ง 180 วิ แม้ GPS acc แย่ 140 ม.)');
+                near(d.km, 0.5, 0.01, 'กิโลเมตรบนจอ (จอดนิ่ง ไม่บวก GPS ลอย)');
+                checkFareRange(0.5, 10 + GAP - 8, 10 + GAP + 8, 'ค่าโดยสารบนจอ');
+                const pp = JSON.parse(w().localStorage.getItem('taxi_active_trip_v1'));
+                assert(pp.catchUpLog && pp.catchUpLog.length >= 1, 'ต้องบันทึก catchUpLog (เบิกแล้วจริง)');
+                return 'GPS acc ' + ACC + ' ม. ลอย ' + (Math.round(haversine(P0, DRIFT) * 1000)) + ' ม./' + GAP + ' วิ → เบิกจอด ' + d.traffic + ' วิ (คาด ~' + (10 + GAP) + ') · km ' + d.km.toFixed(2) + ' (ไม่บวก GPS ลอย)';
+            });
+
             // 7) ประวัติการเบิกคืน: ลง payload (catchUpLog) + โชว์ในหน้าสรุปหลังจบเที่ยว
             await runScenario('7. ประวัติเบิกคืนลง payload + โชว์ในสรุปหลังจบเที่ยว', async () => {
+                if (skipScenario(7)) return;
                 w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(makePayload()));
                 w().maybeShowResumeBanner();
                 await wait(300);

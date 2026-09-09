@@ -1733,9 +1733,9 @@
 <div id="hubQuotaItem" class="hub-item" data-cat="cat-system" style="display:none;" onclick="window.openQuotaMonitor();"><div class="hub-item-icon" style="background:rgba(239,68,68,0.13); color:#ff8a95;"><span class="material-symbols-outlined" style="font-size:24px;">data_usage</span></div><div class="hub-item-body"><div class="hub-item-title" style="color:#ff8a95;">โควตา Firestore <span id="hubQuotaBadge" class="perm-req-count" style="display:none;"></span></div><div class="hub-item-desc">ดูการใช้ อ่าน/เขียน/ลบ วันนี้แยกตามฟีเจอร์ + ประมาณโควตาที่เหลือ</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 </div></div></div>
 
-<div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควตา Firestore</h3><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">จำนวน อ่าน / เขียน / ลบ ที่ทุกบัญชี (ID) ใช้ Firestore วันนี้รวมกันทั้งระบบ <b style="color:#fff;">(ทุกเครื่องส่งยอดขึ้นเซิร์ฟเวอร์ทุก 10 นาที / ตอนปิดแอป</b> — แสดงยอดรวมทุก ID + เหลือเท่าไหร่ และแยกตาม ID ชื่อโปรไฟล์) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ฟีเจอร์ที่ฟังข้อมูลสดแบบเรียลไทม์จะกินโควตาอ่านตามจำนวนเครื่องที่เปิดดูพร้อมกัน)</div></div></div></div>
+<div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควตา Firestore</h3><div style="display:flex; gap:6px;"><button id="quotaRefreshBtn" onclick="window.refreshQuotaMonitor()" title="ดึงยอดใหม่จากเซิร์ฟเวอร์" style="display:flex; align-items:center; gap:4px; background:rgba(77,163,255,0.15); border:1px solid rgba(77,163,255,0.4); color:#7db8ff; border-radius:99px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s;"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span>รีเฟรช</button><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">จำนวน อ่าน / เขียน / ลบ ที่ทุกบัญชี (ID) ใช้ Firestore วันนี้รวมกันทั้งระบบ <b style="color:#fff;">(ทุกเครื่องส่งยอดขึ้นเซิร์ฟเวอร์ทุก 10 นาที / ตอนปิดแอป</b> — แสดงยอดรวมทุก ID + เหลือเท่าไหร่ และแยกตาม ID ชื่อโปรไฟล์) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ฟีเจอร์ที่ฟังข้อมูลสดแบบเรียลไทม์จะกินโควตาอ่านตามจำนวนเครื่องที่เปิดดูพร้อมกัน)</div></div></div></div>
 
-<div id="adminMenuModal" class="modal-overlay" style="z-index: 10004;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('adminMenuModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>ระบบจัดการผู้ใช้งาน</h3><button id="adminGlobalLogsBtn" class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><button id="permReqBanner" class="perm-req-banner" style="display: none;" onclick="window.openPermRequests()"></button><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div id="loginLogToggleRow" style="display:none; padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><div style="display:flex; align-items:center; justify-content:space-between; gap:12px;"><div style="flex:1; min-width:0;"><div style="font-size:13px; color:#fff; font-weight:600;">บันทึก log ล็อกอิน / ล็อกเอาต์</div><div style="font-size:11px; color:#9aa3b5; margin-top:2px; line-height:1.5;">เปิด = เขียน log 2 จุด (ประวัติผู้ใช้ + global_logs) ทุกล็อกอิน/เอาต์ · ปิด = ประหยัดโควตา (แนะนำ)</div></div><label class="app-switch"><input type="checkbox" id="logLoginLogoutToggle" onchange="window.toggleLoginLogLogging(this.checked)"><span class="app-slider"></span></label></div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
+<div id="adminMenuModal" class="modal-overlay" style="z-index: 10004;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('adminMenuModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>ระบบจัดการผู้ใช้งาน</h3><button id="adminGlobalLogsBtn" class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><button id="permReqBanner" class="perm-req-banner" style="display: none;" onclick="window.openPermRequests()"></button><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div id="loginLogToggleRow" style="display:none; padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><div style="display:flex; align-items:center; justify-content:space-between; gap:12px;"><div style="flex:1; min-width:0;"><div style="font-size:13px; color:#fff; font-weight:600;">บันทึก log ล็อกอิน / ล็อกเอาต์ (ย้ายไปตั้งค่าสิทธิ์ → บันทึกประวัติ)</div><div style="font-size:11px; color:#9aa3b5; margin-top:2px; line-height:1.5;">เปิด = เขียน log 2 จุด (ประวัติผู้ใช้ + global_logs) ทุกล็อกอิน/เอาต์ · ปิด = ประหยัดโควตา (แนะนำ)</div></div><label class="app-switch"><input type="checkbox" id="logLoginLogoutToggle" onchange="window.toggleLoginLogLogging(this.checked)"><span class="app-slider"></span></label></div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
 
 <div id="permRequestsModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.toggleModal('permRequestsModal', false)" title="กลับ"><span class="material-symbols-outlined">arrow_back</span>กลับ</button><h3 style="color: var(--neon-yellow);">คำขอสิทธิ์เพิ่ม</h3><button class="btn-close-floating" onclick="window.toggleModal('permRequestsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">รายชื่อสมาชิกที่ขอสิทธิ์เพิ่ม — กด <b style="color:#4ade80;">อนุมัติสิทธิ์</b> เพื่อให้สิทธิ์ที่ขอกับสมาชิกทันที (ไม่เปลี่ยนตำแหน่ง — ผู้ขอจะเห็นแจ้งเตือนตอนเปิดแอป) หรือกด <b style="color:#ff8a95;">ปฏิเสธ</b> เพื่อไม่ให้สิทธิ์</p><div id="permReqListBody" style="min-height: 150px;"></div></div></div></div>
 
@@ -1747,7 +1747,7 @@
 
 <div id="activityLogModal" class="modal-overlay" style="z-index: 10010;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.toggleModal('activityLogModal', false)" title="กลับหน้าโปรไฟล์"><span class="material-symbols-outlined">arrow_back</span>กลับ</button><h3 id="logModalTitle">ประวัติการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('activityLogModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="activityLogList" class="modal-content-scroll" style="text-align: left; background: rgba(0,0,0,0.2);"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลด...</div></div></div></div>
 
-<div id="roleSettingsModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('roleSettingsModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">ตั้งค่าสิทธิ์การใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('roleSettingsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><label style="color: var(--neon-yellow); font-size: 13px;">เลือกตำแหน่ง (Role) ที่ต้องการตั้งค่าสิทธิ์</label><select id="settingRoleSelect" onchange="window.loadRolePermissionsToUI()" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: 10px; outline: none; font-family: 'Kanit';"></select><div style="display: flex; gap: 8px; margin-bottom: 6px;"><button onclick="window.addCustomRole()" id="addRoleBtn" class="role-manage-btn role-btn-add" type="button"><span class="material-symbols-outlined" style="font-size: 18px;">add</span> สร้างตำแหน่งใหม่</button><button onclick="window.renameCustomRole()" id="renameRoleBtn" class="role-manage-btn role-btn-rename" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">edit</span> เปลี่ยนชื่อ</button><button onclick="window.deleteCustomRole()" id="deleteRoleBtn" class="role-manage-btn role-btn-del" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span> ลบ</button></div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: var(--space-field); text-align: left; line-height: 1.5;">ตำแหน่งระบบ (ผู้จัดการ / ผู้ใช้งานทั่วไป) เปลี่ยนชื่อหรือลบไม่ได้ — กด "สร้างตำแหน่งใหม่" เลือก "ลอกแบบจาก" ตำแหน่งที่มีอยู่เพื่อตั้งสิทธิ์ไวขึ้น แล้วปรับสิทธิ์ด้านล่าง (ติ๊กแล้วกด บันทึกสิทธิ์)</div><div id="roleMembersPanel" class="role-members-panel"></div><div id="permListContainer" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;"></div><button onclick="window.saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: var(--space-field);" id="saveRolePermBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์</button></div></div></div>
+<div id="roleSettingsModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('roleSettingsModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">ตั้งค่าสิทธิ์การใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('roleSettingsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><label style="color: var(--neon-yellow); font-size: 13px;">เลือกตำแหน่ง (Role) ที่ต้องการตั้งค่าสิทธิ์</label><select id="settingRoleSelect" onchange="window.loadRolePermissionsToUI()" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: 10px; outline: none; font-family: 'Kanit';"></select><div style="display: flex; gap: 8px; margin-bottom: 6px;"><button onclick="window.addCustomRole()" id="addRoleBtn" class="role-manage-btn role-btn-add" type="button"><span class="material-symbols-outlined" style="font-size: 18px;">add</span> สร้างตำแหน่งใหม่</button><button onclick="window.renameCustomRole()" id="renameRoleBtn" class="role-manage-btn role-btn-rename" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">edit</span> เปลี่ยนชื่อ</button><button onclick="window.deleteCustomRole()" id="deleteRoleBtn" class="role-manage-btn role-btn-del" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span> ลบ</button></div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: var(--space-field); text-align: left; line-height: 1.5;">ตำแหน่งระบบ (ผู้จัดการ / ผู้ใช้งานทั่วไป) เปลี่ยนชื่อหรือลบไม่ได้ — กด "สร้างตำแหน่งใหม่" เลือก "ลอกแบบจาก" ตำแหน่งที่มีอยู่เพื่อตั้งสิทธิ์ไวขึ้น แล้วปรับสิทธิ์ด้านล่าง (ติ๊กแล้วกด บันทึกสิทธิ์)</div><div id="roleMembersPanel" class="role-members-panel"></div><div id="permListContainer" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;"></div><div style="margin-top: 14px; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);"><div style="font-size: 14px; color: var(--neon-yellow); font-weight: 700; margin-bottom: 2px;">🗂️ บันทึกประวัติ (Log)</div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px; line-height: 1.5;">เปิด/ปิดการบันทึก log แต่ละประเภท (เขียน Firestore ทุกครั้งที่เกิดเหตุการณ์ — ปิดประเภทที่ไม่จำเป็นเพื่อประหยัดโควตา · มีผลทันทีทุกเครื่อง)</div><div id="logSettingsBox"></div></div><button onclick="window.saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: var(--space-field);" id="saveRolePermBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์</button></div></div></div>
 
 <div id="createRoleModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">สร้างตำแหน่งใหม่</h3><button class="btn-close-floating" onclick="window.toggleModal('createRoleModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><div style="font-size:12px; color:var(--text-dim); margin-bottom: var(--space-field); line-height:1.6;">ตั้งชื่อตำแหน่งตามหน้าที่จริง เช่น "หัวหน้ากะ" — แล้วเลือกว่าต้องการลอกสิทธิ์จากตำแหน่งไหน เพื่อตั้งสิทธิ์ไวขึ้น (ปรับทีหลังได้ในหน้าตั้งค่าสิทธิ์)</div><label style="color: var(--neon-yellow); font-size: 13px;">ชื่อตำแหน่ง</label><input type="text" id="crRoleName" placeholder="เช่น หัวหน้ากะ / พนักงานขับรถ" style="margin-top: 8px; margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="color: var(--neon-yellow); font-size: 13px;">ลอกแบบจากตำแหน่ง (สิทธิ์เริ่มต้น)</label><select id="crCopyFrom" style="width: 100%; padding: 14px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-top: 8px; margin-bottom: var(--space-field); outline: none; font-family: 'Kanit';"></select><button onclick="window.confirmCreateRole()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">add</span> สร้างตำแหน่ง</button></div></div></div>
 
@@ -1972,7 +1972,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08al';
+    const APP_BUILD = '2026-09-09am';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -3280,15 +3280,27 @@
 
     // ── ⚙️ ตั้งค่าระบบ (settings/app_config) — แอดมินเปิด/ปิดบันทึก log ล็อกอิน/เอาต์ ──
     //    ฟังสด doc นี้: แอดมินสลับสวิตช์ → ทุกเครื่องที่เปิดแอปอยู่อ่านค่าล่าสุด (ค่าเริ่มต้นปิด = ประหยัดโควตา)
-    window.__appConfig = { logLoginLogout: false };
+    // ── ⚙️ ตั้งค่าระบบ (settings/app_config) — แอดมินเปิด/ปิดบันทึก log แต่ละประเภท (logFlags) ──
+    //    ฟังสด doc นี้: แอดมินสลับสวิตช์ → ทุกเครื่องที่เปิดแอปอยู่อ่านค่าล่าสุด (ค่าเริ่มต้นปิด = ประหยัดโควตา)
+    //    logFlags: loginLogout / perm / security / member / profile / signup / portal (true = บันทึก, false = ข้าม)
+    const LOG_FLAG_DEFAULTS = { loginLogout: false, perm: true, security: true, member: true, profile: true, signup: true, portal: true };
+    window.__appConfig = { logLoginLogout: false, logFlags: Object.assign({}, LOG_FLAG_DEFAULTS) };
     let appConfigUnsub = null;
     window.listenAppConfig = () => {
         if (appConfigUnsub) return;
         try {
             appConfigUnsub = onSnapshot(doc(db, "settings", "app_config"), (docSnap) => {
                 const d = docSnap.exists() ? docSnap.data() : {};
-                window.__appConfig = { logLoginLogout: d.logLoginLogout === true };
+                // merge ทีละ key (ไม่สร้างก้อนใหม่ทั้งชุด) — กันค่า optimistic ที่เขียนยังไม่ทันโดน snapshot เก่าเขียนทับ
+                // (ถ้า rebuild จากเซิร์ฟเวอร์ทั้งก้อน ตอน toggle 2 ครั้งติดกัน ครั้งหลังจะส่งก้อนที่ขาด key ครั้งแรกไปทับ)
+                const next = Object.assign({}, LOG_FLAG_DEFAULTS, (window.__appConfig && window.__appConfig.logFlags) || {});
+                if (d.logFlags && typeof d.logFlags === 'object') { Object.keys(d.logFlags).forEach(k => { next[k] = d.logFlags[k] === true; }); }
+                window.__appConfig = {
+                    logLoginLogout: d.logLoginLogout === true || next.loginLogout === true,
+                    logFlags: next
+                };
                 const t = document.getElementById('logLoginLogoutToggle'); if (t) t.checked = window.__appConfig.logLoginLogout;
+                if (typeof window.renderLogSettings === 'function') window.renderLogSettings();
             });
         } catch (e) { appConfigUnsub = null; }
     };
@@ -3299,14 +3311,52 @@
         window.__appConfig.logLoginLogout = target; // อัปเดตทันที (ไม่รอ snapshot)
         try {
             let done = false;
-            const sdkP = window.__fsTimeout(setDoc(doc(db, "settings", "app_config"), { logLoginLogout: target }, { merge: true }), 6000).then(() => true).catch(() => false);
-            const restP = window.__fsTimeout(window.__fsRestPatchDoc("settings/app_config", { logLoginLogout: target }), 6000).then(() => true).catch(() => false);
+            const sdkP = window.__fsTimeout(setDoc(doc(db, "settings", "app_config"), { logLoginLogout: target, logFlags: Object.assign({}, window.__appConfig.logFlags, { loginLogout: target }) }, { merge: true }), 6000).then(() => true).catch(() => false);
+            const restP = window.__fsTimeout(window.__fsRestPatchDoc("settings/app_config", { logLoginLogout: target, "logFlags.loginLogout": target }), 6000).then(() => true).catch(() => false);
             const okMsg = target ? "เปิดบันทึก log ล็อกอิน/เอาต์แล้ว" : "ปิดบันทึก log ล็อกอิน/เอาต์แล้ว (ประหยัดโควตา)";
-            const win = () => { if (!done) { done = true; window.showToast(okMsg); } };
+            const win = () => { if (!done) { done = true; window.showToast(okMsg); window.__appConfig.logFlags = Object.assign({}, window.__appConfig.logFlags, { loginLogout: target }); if (typeof window.renderLogSettings === 'function') window.renderLogSettings(); } };
             sdkP.then(ok => { if (ok) win(); });
             restP.then(ok => { if (ok) win(); });
-            Promise.all([sdkP, restP]).then(() => { if (!done) { done = true; window.__appConfig.logLoginLogout = !target; window.showToast("บันทึกไม่สำเร็จ — ลองอีกครั้ง", true); const t = document.getElementById('logLoginLogoutToggle'); if (t) t.checked = !target; } });
+            Promise.all([sdkP, restP]).then(() => { if (!done) { done = true; window.__appConfig.logLoginLogout = !target; window.__appConfig.logFlags = Object.assign({}, window.__appConfig.logFlags, { loginLogout: !target }); window.showToast("บันทึกไม่สำเร็จ — ลองอีกครั้ง", true); const t = document.getElementById('logLoginLogoutToggle'); if (t) t.checked = !target; if (typeof window.renderLogSettings === 'function') window.renderLogSettings(); } });
         } catch (e) { window.__appConfig.logLoginLogout = !target; window.showToast("บันทึกไม่สำเร็จ — ลองอีกครั้ง", true); }
+    };
+    // 🗂️ เปิด/ปิดบันทึก log แต่ละประเภทจากหน้าตั้งค่าสิทธิ์ — เขียน settings/app_config.logFlags (SDK+REST พร้อมกัน)
+    window.toggleLogFlag = async (flag, enabled) => {
+        const target = !!enabled;
+        window.__appConfig.logFlags = Object.assign({}, window.__appConfig.logFlags, { [flag]: target }); // อัปเดตทันที
+        try {
+            let done = false;
+            const sdkP = window.__fsTimeout(setDoc(doc(db, "settings", "app_config"), { logFlags: window.__appConfig.logFlags }, { merge: true }), 6000).then(() => true).catch(() => false);
+            const restP = window.__fsTimeout(window.__fsRestPatchDoc("settings/app_config", { ["logFlags." + flag]: target }), 6000).then(() => true).catch(() => false);
+            const win = () => { if (!done) { done = true; window.showToast(target ? 'เปิดบันทึก log แล้ว' : 'ปิดบันทึก log แล้ว (ประหยัดโควตา)'); } };
+            sdkP.then(ok => { if (ok) win(); });
+            restP.then(ok => { if (ok) win(); });
+            Promise.all([sdkP, restP]).then(() => { if (!done) { done = true; window.__appConfig.logFlags[flag] = !target; window.showToast("บันทึกไม่สำเร็จ — ลองอีกครั้ง", true); if (typeof window.renderLogSettings === 'function') window.renderLogSettings(); } });
+        } catch (e) { window.__appConfig.logFlags[flag] = !target; window.showToast("บันทึกไม่สำเร็จ — ลองอีกครั้ง", true); if (typeof window.renderLogSettings === 'function') window.renderLogSettings(); }
+    };
+    // 🎨 วาดสวิตช์เปิด/ปิด log แต่ละประเภท (ในหน้าตั้งค่าสิทธิ์) ตามค่าที่โหลดมา
+    window.renderLogSettings = () => {
+        const box = document.getElementById('logSettingsBox');
+        if (!box) return;
+        const cfg = window.__appConfig || { logFlags: {} };
+        const flags = Object.assign({}, LOG_FLAG_DEFAULTS, (cfg.logFlags || {}));
+        const ITEMS = [
+            ['loginLogout', 'ล็อกอิน / ล็อกเอาต์', 'ทุกครั้งที่ผู้ใช้เข้าหรือออกจากระบบ (เขียนบ่อยที่สุด — แนะนำปิด)'],
+            ['perm', 'สิทธิ์ / คำขอสิทธิ์', 'อนุมัติ-ปฏิเสธคำขอสิทธิ์เพิ่ม, แก้ไขสิทธิ์ตำแหน่ง'],
+            ['security', 'รหัสผ่าน / ความปลอดภัย', 'เปลี่ยนรหัสผ่าน, แบน / ปลดแบน'],
+            ['member', 'จัดการสมาชิก', 'เพิ่มผู้ใช้, แอดมินแก้ไขข้อมูลผู้ใช้'],
+            ['profile', 'แก้ไขโปรไฟล์', 'ผู้ใช้แก้ไขชื่อ / รูป / ข้อมูลส่วนตัว'],
+            ['portal', 'พอร์ทัล (Service Code)', 'เพิ่ม / แก้ไขรหัสบริการในพอร์ทัล'],
+            ['signup', 'สมัครสมาชิก', 'สร้างบัญชีใหม่ (ครั้งเดียวต่อคน)']
+        ];
+        let html = '';
+        ITEMS.forEach(([flag, label, desc]) => {
+            const on = flags[flag] === true;
+            html += `<div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05);">` +
+                `<div style="flex:1; min-width:0;"><div style="font-size:13px; color:#fff; font-weight:600;">${label}</div><div style="font-size:11px; color:#9aa3b5; margin-top:1px; line-height:1.4;">${desc}</div></div>` +
+                `<label class="app-switch" style="flex-shrink:0;"><input type="checkbox" ${on ? 'checked' : ''} onchange="window.toggleLogFlag('${flag}', this.checked)"><span class="app-slider"></span></label></div>`;
+        });
+        box.innerHTML = html;
     };
     // 🪄 ใช้ลำดับเมนูที่เพิ่งอัปเดตกับเมนูที่เปิดอยู่ตอนนี้ทันที (side menu / hub) — ไม่ต้องปิดแล้วเปิดใหม่
     window.__applyMenuOrderLive = () => {
@@ -4432,7 +4482,7 @@
             await setDoc(doc(db, 'perm_notices', uid), { outcome: 'approved', grantedIds: ids, grantedLabels: labels, at: Date.now() });
             await deleteDoc(doc(db, 'perm_requests', uid));
             window.showToast('อนุมัติสิทธิ์แล้ว ✅ (' + (labels.length || 0) + ' สิทธิ์)');
-            if (typeof window.recordActivityLog === 'function') { try { window.recordActivityLog(uid, 'คำขอสิทธิ์ถูกอนุมัติ', 'แอดมินให้สิทธิ์: ' + (labels.join(', ') || '—')); } catch(e){} }
+            if (typeof window.recordActivityLog === 'function') { try { window.recordActivityLog(uid, 'คำขอสิทธิ์ถูกอนุมัติ', 'แอดมินให้สิทธิ์: ' + (labels.join(', ') || '—'), 'perm'); } catch(e){} }
         } catch (e) { window.showToast('อนุมัติไม่สำเร็จ — ลองใหม่', true); }
         window.toggleModal('permRequestsModal', false);
         if (typeof window.refreshPermReqBadges === 'function') window.refreshPermReqBadges();
@@ -4443,7 +4493,7 @@
             await setDoc(doc(db, 'perm_notices', uid), { outcome: 'rejected', grantedIds: [], grantedLabels: [], at: Date.now() });
             await deleteDoc(doc(db, 'perm_requests', uid));
             window.showToast('ปฏิเสธคำขอนี้แล้ว');
-            if (typeof window.recordActivityLog === 'function') { try { window.recordActivityLog(uid, 'คำขอสิทธิ์ถูกปฏิเสธ', 'แอดมินปฏิเสธคำขอสิทธิ์'); } catch(e){} }
+            if (typeof window.recordActivityLog === 'function') { try { window.recordActivityLog(uid, 'คำขอสิทธิ์ถูกปฏิเสธ', 'แอดมินปฏิเสธคำขอสิทธิ์', 'perm'); } catch(e){} }
         } catch (e) { window.showToast('จัดการไม่สำเร็จ — ลองใหม่', true); }
         window.toggleModal('permRequestsModal', false);
         if (typeof window.refreshPermReqBadges === 'function') window.refreshPermReqBadges();
@@ -5438,7 +5488,9 @@
     const getKillIdleCapSec = () => {
         // ผู้ใช้เลือกเองได้ในหน้าโปรไฟล์ (killIdleCapMin; 0 = ไม่จำกัด)
         let min = KILL_IDLE_CAP_DEFAULT_MIN;
-        if (typeof window.userKillCapMin === 'number' && !isNaN(window.userKillCapMin) && window.userKillCapMin >= 0) min = window.userKillCapMin;
+        // 🧪 test override — harness ตั้งได้ ชนะค่าโปรไฟล์ (กัน race: โปรไฟล์ Firestore มาเขียนทับ cap ที่เทสต์ตั้งไว้ตอน boot)
+        if (typeof window.__testKillCapMin === 'number' && !isNaN(window.__testKillCapMin) && window.__testKillCapMin >= 0) min = window.__testKillCapMin;
+        else if (typeof window.userKillCapMin === 'number' && !isNaN(window.userKillCapMin) && window.userKillCapMin >= 0) min = window.userKillCapMin;
         return min <= 0 ? Infinity : min * 60;
     };
     window.autoCatchUpSavedTrip = async (data) => {
@@ -6396,17 +6448,23 @@
         });
     };
 
-    const recordActivityLog = async (targetUid, actionTitle, detailDesc) => {
+    // 📝 เขียน log กิจกรรม (2 จุด: users/{uid}/logs + global_logs) — flag = ประเภท log ที่แอดมินเปิด/ปิดในหน้าตั้งค่าสิทธิ์ (null = ไม่เช็ค)
+    //    ตรวจ flag ที่นี่จุดเดียว: ปิดประเภทไหน = ข้ามเขียนทั้ง 2 จุด (ประหยัดโควตา)
+    const recordActivityLog = async (targetUid, actionTitle, detailDesc, flag) => {
         if(!loggedInUserId) return;
+        if (flag) { const cfg = window.__appConfig; const on = cfg && cfg.logFlags && cfg.logFlags[flag] === true; if (!on) return; }
         try { 
             let logData = { action: actionTitle, detail: detailDesc, timestamp: Date.now(), byUid: loggedInUserId, byName: document.getElementById('displayUserName').innerText, targetUid: targetUid };
             await addDoc(collection(db, "users", targetUid, "logs"), logData); 
             await addDoc(collection(db, "global_logs"), logData); 
         } catch(e) {}
     };
-    // 🔘 บันทึก log ล็อกอิน/ล็อกเอาต์ เฉพาะเมื่อแอดมินเปิดไว้ (settings/app_config.logLoginLogout) — ค่าเริ่มต้นปิด (ประหยัดโควตา)
+    window.recordActivityLog = recordActivityLog; // 🔧 export ให้ window (จุดเรียกที่อยู่ก่อน definition ใช้ window.recordActivityLog)
+    // 🔘 บันทึก log ล็อกอิน/ล็อกเอาต์ เฉพาะเมื่อแอดมินเปิดไว้ (settings/app_config.logFlags.loginLogout) — ค่าเริ่มต้นปิด (ประหยัดโควตา)
     const recordLoginLogoutIfEnabled = (targetUid, actionTitle, detailDesc) => {
-        if (window.__appConfig && window.__appConfig.logLoginLogout) { window.__fsTimeout(recordActivityLog(targetUid, actionTitle, detailDesc), 5000).catch(()=>{}); }
+        const cfg = window.__appConfig;
+        const on = cfg && ((cfg.logFlags && cfg.logFlags.loginLogout === true) || cfg.logLoginLogout === true);
+        if (on) { window.__fsTimeout(recordActivityLog(targetUid, actionTitle, detailDesc), 5000).catch(()=>{}); }
     };
 
     // ❌ ลบระบบสถานะออนไลน์ออกแล้ว (onSnapshot ทั้งคอลเลกชัน users + heartbeat ทุก 90 วิ เคยเป็นตัวกินโควตา Firestore 99%)
@@ -6472,7 +6530,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
-        '⚙️ เพิ่มสวิตช์ในหน้าจัดการผู้ใช้งาน: แอดมินเปิด/ปิดการบันทึก log ล็อกอิน/ล็อกเอาต์ได้เอง (ค่าเริ่มต้นปิด = ประหยัดโควตา) — เก็บที่ settings/app_config ฟังสดข้ามเครื่อง เปิดแล้ว user หน้าตั้งค่าทุกคนเขียน log 2 จุด (ประวัติผู้ใช้ + global_logs) ทุกล็อกอิน/เอาต์',
+        '⚙️ ตั้งค่าสิทธิ์การใช้งาน → เพิ่มหมวด "บันทึกประวัติ (Log)": แอดมินเปิด/ปิดการบันทึก log ได้ทีละประเภท (ล็อกอิน/เอาต์, สิทธิ์, รหัสผ่าน/แบน, จัดการสมาชิก, แก้ไขโปรไฟล์, พอร์ทัล, สมัครสมาชิก) — ค่าเริ่มต้นเปิดทุกประเภท ยกเว้นล็อกอิน/เอาต์ (ปิด = ประหยัดโควตา) · ฟังสดข้ามเครื่อง มีผลทันทีทุก user · ย้ายสวิตช์ log เดิมจากหน้าจัดการผู้ใช้มาอยู่ที่นี่',
         '✂️ ลดบันทึกกิจกรรมที่เขียนทุกครั้ง: ตัด log ล็อกอิน/ล็อกเอาต์ออก (เดิม 1 เหตุการณ์ = เขียน 2 doc — log ของผู้ใช้ + global_logs) — เหลือเฉพาะเหตุการณ์สำคัญเท่านั้น (สมัครสมาชิก, แก้ไขโปรไฟล์/รหัสผ่าน, แบน/ปลดแบน, เพิ่ม/แก้ไขผู้ใช้, อนุมัติ/ปฏิเสธคำขอสิทธิ์, แก้ไข Portal) — ประหยัด ~4-6 เขียน/คน/วัน',
         '❌ ลบระบบสถานะออนไลน์ (presence) ออกทั้งหมด: ไม่เขียนคอลเลกชัน presence อีกต่อไป (เข้า/ออกแอป, ล็อกอิน/เอาต์, แตะใช้งานทุก 10 นาที, ฟังสดตอนเปิดหน้าจัดการผู้ใช้) — ลดการเขียน Firestore ~8-20 ครั้ง/วัน/เครื่องให้เหลือศูนย์ เพื่อประหยัดโควตาสุด ๆ (ยังเหลือป้าย "ถูกระงับ (Ban)" ในหน้าจัดการผู้ใช้ตามเดิม — ไม่เกี่ยวกับออนไลน์)',
         'กัน user ทั่วไปเด้งหลุดหลังล็อกอินตอนโควตา/เน็ตค้าง: เขียน session ใหม่ไม่ทัน (โควตาหมด) จะไม่ไล่ออกจากระบบอีกต่อไป — ระบบจำค่า session ที่เห็นตอนล็อกอินไว้ แล้วลองเขียนซ้ำเบื้องหลังจนกว่าจะสำเร็จ (ยังไล่เครื่องอื่นที่ล็อกอินซ้อนจริงอยู่เหมือนเดิม)',
@@ -7049,7 +7107,7 @@
             let docRef;
             try { docRef = await window.__fsTimeout(addDoc(collection(db, "users"), regData), 10000); }
             catch (e) { try { const r = await window.__fsRestQuery(inputUsername); docRef = (r && r.length) ? { id: r[0].id } : { id: await window.__fsRestAdd("users", regData) }; } catch (e2) { return window.showToast("เกิดข้อผิดพลาดในการสร้างบัญชี — ลองอีกครั้ง", true); } }
-            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); window.__markSessionWritten(regSid); window.__fsTimeout(recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ"), 5000).catch(()=>{}); window.__applyUserDocUI(regData); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog(); window.__watchdogShowApp();
+            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); window.__markSessionWritten(regSid); window.__fsTimeout(recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ", 'signup'), 5000).catch(()=>{}); window.__applyUserDocUI(regData); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog(); window.__watchdogShowApp();
         } catch (error) { window.showToast("เกิดข้อผิดพลาด: " + error.message, true); } finally { document.getElementById('authBtn').innerText = "สร้างบัญชีใหม่"; }
     };
 
@@ -7157,7 +7215,7 @@
             window.updateAutoFsBadge();
 
             if(Object.keys(updatePayload).length > 0) { await updateDoc(doc(db, "users", loggedInUserId), updatePayload); }
-            if(logDetails.length > 0) { await recordActivityLog(loggedInUserId, "แก้ไขโปรไฟล์", logDetails.join(', ')); }
+            if(logDetails.length > 0) { await recordActivityLog(loggedInUserId, "แก้ไขโปรไฟล์", logDetails.join(', '), 'profile'); }
             window.toggleModal('profileModal', false); window.showToast("อัปเดตโปรไฟล์สำเร็จ!");
             // ซิงค์ประเภทรถ + รีเรนเดอร์ปุ่มหน้าหลัก โดยไม่ต้องรอล็อกอินใหม่
             const newTaxiType = parseInt(document.getElementById('editTaxiType').value);
@@ -7172,7 +7230,7 @@
         const saveBtn = document.getElementById('savePasswordBtn'); saveBtn.innerText = "กำลังบันทึก..."; saveBtn.disabled = true;
         try {
             const docSnap = await getDoc(doc(db, "users", loggedInUserId)); if(!(await window.pwVerify(oldPass, docSnap.data().password || ''))) { throw new Error("รหัสผ่านเดิมไม่ถูกต้อง"); }
-            await updateDoc(doc(db, "users", loggedInUserId), { password: await window.pwHash(newPass) }); await recordActivityLog(loggedInUserId, "เปลี่ยนรหัสผ่าน", "ผู้ใช้เปลี่ยนรหัสผ่านสำเร็จ");
+            await updateDoc(doc(db, "users", loggedInUserId), { password: await window.pwHash(newPass) }); await recordActivityLog(loggedInUserId, "เปลี่ยนรหัสผ่าน", "ผู้ใช้เปลี่ยนรหัสผ่านสำเร็จ", 'security');
             window.toggleModal('changePasswordModal', false); window.showToast("เปลี่ยนรหัสผ่านสำเร็จ!");
         } catch (error) { window.showToast("แจ้งเตือน: " + error.message, true); } finally { saveBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกรหัสผ่าน`; saveBtn.disabled = false; }
     };
@@ -7321,6 +7379,19 @@
         window.renderQuotaMonitor();
         window.toggleModal('quotaMonitorModal', true);
     };
+    window.refreshQuotaMonitor = async () => {
+        const btn = document.getElementById('quotaRefreshBtn');
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.querySelector('.material-symbols-outlined').style.transition = 'transform .5s'; btn.querySelector('.material-symbols-outlined').style.transform = 'rotate(360deg)'; }
+        try {
+            await window.flushQuotaToDB(); // ส่งยอดเครื่องนี้ขึ้นเซิร์ฟเวอร์ให้ครบก่อน
+            await new Promise(r => { window.loadQuotaUsers(() => r()); }); // ดึงยอดรวมทุก ID ใหม่จากเซิร์ฟเวอร์
+            window.renderQuotaMonitor();
+            window.showToast('อัปเดตยอดโควตาเรียบร้อย');
+        } catch(e) {
+            window.showToast('ดึงยอดโควตาไม่สำเร็จ (เน็ต/โควตา) — ลองอีกครั้ง', true);
+        }
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.querySelector('.material-symbols-outlined').style.transform = 'rotate(0deg)'; }
+    };
     window.openSettingsHub = () => {
         const hubBox = document.getElementById('settingsHubModal');
         const hubWrap = hubBox ? hubBox.querySelector('.modal-content-scroll') : null;
@@ -7337,7 +7408,7 @@
         if (hub && getComputedStyle(hub).display !== 'none') return;
         window.openSettingsHub();
     };
-    window.openRoleSettingsModal = () => { if(!window.currentUserPerms().canManageRoles) return window.showToast("คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน", true); window.fillRoleSelects(); window.syncRoleManageBtns(); window.toggleModal('roleSettingsModal', true); window.renderPermList(); };
+    window.openRoleSettingsModal = () => { if(!window.currentUserPerms().canManageRoles) return window.showToast("คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน", true); window.fillRoleSelects(); window.syncRoleManageBtns(); window.toggleModal('roleSettingsModal', true); window.renderPermList(); window.renderLogSettings(); };
     window.loadRolePermissionsToUI = () => { window.syncRoleManageBtns(); window.renderPermList(); };
     
     window.renderPermList = () => {
@@ -7377,7 +7448,7 @@
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true);
         const msg = isBan ? "ยืนยันการ 'ระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?\nผู้ใช้จะหลุดจากระบบและเข้าไม่ได้อีก" : "ยืนยันการ 'ปลดระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?";
         let isOk = await window.showCustomConfirm(isBan ? "ระงับการใช้งาน" : "ปลดระงับการใช้งาน", msg, isBan ? "danger" : "warning");
-        if(isOk) { try { await updateDoc(doc(db, "users", uid), { isBanned: isBan }); await recordActivityLog(uid, isBan ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`); window.showToast(isBan ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); window.toggleModal('adminEditUserModal', false); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); } }
+        if(isOk) { try { await updateDoc(doc(db, "users", uid), { isBanned: isBan }); await recordActivityLog(uid, isBan ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`, 'security'); window.showToast(isBan ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); window.toggleModal('adminEditUserModal', false); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); } }
     }
 
     let currentEditUid = "";
@@ -7432,7 +7503,7 @@
                 if (fileInput.files && fileInput.files.length > 0) { photoUpdate = await fileToBase64(fileInput.files[0]); } if (qrInput.files && qrInput.files.length > 0) { qrUpdate = await fileToBase64(qrInput.files[0], true); }
                 const newVibGold = document.getElementById('adminEditVibrateGold'); const newAutoFs = document.getElementById('adminEditAutoFs');
                 await addDoc(collection(db, "users"), { username: newUsername, password: await window.pwHash(newPassword), displayName: newName, companyName: newCompany, phoneNumber: newPhone, role: newRole, photoURL: photoUpdate, qrCodeURL: qrUpdate, taxiType: 35, vibrateGold: newVibGold ? newVibGold.checked : true, autoFullscreen: newAutoFs ? newAutoFs.checked : true, isBanned: false, lastLoginAt: null, order: Date.now() });
-                await recordActivityLog(loggedInUserId, "เพิ่มผู้ใช้งานใหม่", `ชื่อ: ${newName}, สิทธิ์: ${newRole}`); window.showToast("สร้างผู้ใช้งานเรียบร้อย!"); window.toggleModal('adminEditUserModal', false); window.toggleModal('adminMenuModal', true); 
+                await recordActivityLog(loggedInUserId, "เพิ่มผู้ใช้งานใหม่", `ชื่อ: ${newName}, สิทธิ์: ${newRole}`, 'member'); window.showToast("สร้างผู้ใช้งานเรียบร้อย!"); window.toggleModal('adminEditUserModal', false); window.toggleModal('adminMenuModal', true); 
             } else {
                 const u = window.currentAdminUsers.find(x => x.uid === uid) || {}; // ข้อมูลเดิมของผู้ใช้ (เดิม u ถูกใช้แต่ไม่ประกาศ → ReferenceError → บันทึกไม่ได้)
                 let logDetail = `แอดมินแก้ไขข้อมูล (ชื่อ: ${newName})`; let updatePayload = { displayName: newName, phoneNumber: newPhone };
@@ -7452,7 +7523,7 @@
                 if (editVibGoldEl && (editIsGod || editMyPerms.canSetStaffPrefs)) { updatePayload.vibrateGold = editVibGoldEl.checked; logDetail += (editVibGoldEl.checked ? ", เปิดสั่น toast ทอง" : ", ปิดสั่น toast ทอง"); }
                 const editAutoFsEl = document.getElementById('adminEditAutoFs');
                 if (editAutoFsEl && (editIsGod || editMyPerms.canSetStaffPrefs)) { updatePayload.autoFullscreen = editAutoFsEl.checked; logDetail += (editAutoFsEl.checked ? ", เปิดเต็มจออัตโนมัติ" : ", ปิดเต็มจออัตโนมัติ"); }
-                await updateDoc(doc(db, "users", uid), updatePayload); await recordActivityLog(uid, "ผู้ดูแลระบบแก้ไขข้อมูล", logDetail); window.showToast("อัปเดตข้อมูลผู้ใช้เรียบร้อย!"); window.toggleModal('adminEditUserModal', false);
+                await updateDoc(doc(db, "users", uid), updatePayload); await recordActivityLog(uid, "ผู้ดูแลระบบแก้ไขข้อมูล", logDetail, 'member'); window.showToast("อัปเดตข้อมูลผู้ใช้เรียบร้อย!"); window.toggleModal('adminEditUserModal', false);
             }
         } catch(e) { window.showToast("เกิดข้อผิดพลาด", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก`; btn.disabled = false; }
     };
@@ -7605,12 +7676,12 @@
             let newCatIndex = newData.findIndex(c => c.name === catName);
             if(newCatIndex === -1) { newData.push({ id: 'cat_' + Date.now(), name: catName, items: [] }); newCatIndex = newData.length - 1; }
             newData[newCatIndex].items.push({ id: window.editingServiceItemId, title: title, code: code, icon: getSmartIcon(title) });
-            try { await setDoc(doc(db, "system", "service_data"), { categories: newData }); window.showToast("แก้ไขรายการสำเร็จ!"); await recordActivityLog(loggedInUserId, "แก้ไข Service Code", `แก้ไข: ${title}`); window.cancelEditService(); } catch(e) { window.showToast("เกิดข้อผิดพลาด", true); }
+            try { await setDoc(doc(db, "system", "service_data"), { categories: newData }); window.showToast("แก้ไขรายการสำเร็จ!"); await recordActivityLog(loggedInUserId, "แก้ไข Service Code", `แก้ไข: ${title}`, 'portal'); window.cancelEditService(); } catch(e) { window.showToast("เกิดข้อผิดพลาด", true); }
         } else {
             let catIndex = newData.findIndex(c => c.name === catName);
             if(catIndex === -1) { newData.push({ id: 'cat_' + Date.now(), name: catName, items: [] }); catIndex = newData.length - 1; }
             newData[catIndex].items.push({ id: 'item_' + Date.now(), title: title, code: code, icon: getSmartIcon(title) });
-            try { await setDoc(doc(db, "system", "service_data"), { categories: newData }); document.getElementById('newServiceTitle').value = ''; document.getElementById('newServiceCode').value = ''; window.showToast("เพิ่มรายการสำเร็จ!"); await recordActivityLog(loggedInUserId, "เพิ่ม Service Code", `เพิ่ม: ${title}`); } catch(e) { window.showToast("เกิดข้อผิดพลาด", true); }
+            try { await setDoc(doc(db, "system", "service_data"), { categories: newData }); document.getElementById('newServiceTitle').value = ''; document.getElementById('newServiceCode').value = ''; window.showToast("เพิ่มรายการสำเร็จ!"); await recordActivityLog(loggedInUserId, "เพิ่ม Service Code", `เพิ่ม: ${title}`, 'portal'); } catch(e) { window.showToast("เกิดข้อผิดพลาด", true); }
         }
     };
 
