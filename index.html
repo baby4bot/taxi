@@ -1026,13 +1026,14 @@
 
         /* ---------- Admin user cards ---------- */
         .admin-user-card {
-            display: flex; align-items: flex-start; gap: 12px; text-align: left;
+            display: flex; flex-direction: column; gap: 0; text-align: left;
             background: linear-gradient(165deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 18px;
             padding: 14px;
             box-shadow: 0 6px 16px rgba(0,0,0,0.2);
         }
+        .admin-user-top { display: flex; align-items: flex-start; gap: 12px; width: 100%; min-width: 0; }
         .admin-avatar {
             width: 54px; height: 54px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
             box-shadow: 0 0 0 2px rgba(255,255,255,0.14);
@@ -1980,7 +1981,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-09au';
+    const APP_BUILD = '2026-09-09av';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -6800,6 +6801,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        '🧹 ลบปุ่มดินสอ (แก้ไขชื่อสิทธิ์) ที่กดแล้วไม่ทำงานออกจากรายการสิทธิ์ในตั้งค่าสิทธิ์การใช้งาน และจัดปุ่มลัด (โทร/แบน/ประวัติ/แก้ไข/ลบ) ในหน้าจัดการผู้ใช้งานให้อยู่กึ่งกลางการ์ดพอดี ไม่ชิดขวา',
         '🎛️ รายการสิทธิ์ในตั้งค่าสิทธิ์การใช้งานเปลี่ยนจากกล่องติ๊กเป็นสวิตช์เปิด/ปิดแล้ว — แต่ละสิทธิ์มีชื่อ + คำอธิบายเล็ก ๆ ใต้ชื่อ (เหมือนหมวดบันทึกประวัติ) พร้อมปุ่มแก้ไขชื่อและที่จับลากเรียงลำดับตามเดิม',
         '💾 ปุ่ม "บันทึกสิทธิ์" ฉลาดขึ้น: ถ้ายังไม่มีการเปลี่ยนแปลงอะไร ปุ่มจะเป็นสีเทา กดไม่ได้ — พอติ๊กสิทธิ์หรือสลับ log ปุ๊บ ปุ่มกลับมาเขียวและกดได้ทันที · หลังบันทึกสำเร็จ อยู่หน้าเดิมต่อได้เลย ไม่ปิดหน้าต่าง (กดบันทึกอีกรอบได้ถ้าจะแก้เพิ่ม)',
         '🧹 ตั้งค่าการใช้งานซ่อนหัวข้อหมวดหมู่ที่ว่างแล้ว: ถ้าผู้ใช้ (เช่น ผู้จัดการ) ไม่มีสิทธิ์ในหมวดไหน (การแจ้งเตือน / บริการ/ระบบ) หัวข้อหมวดนั้นจะถูกซ่อนไปด้วย ไม่โผล่เป็นช่องว่าง — พอแอดมินให้สิทธิ์ หัวข้อจะเด้งกลับมาเอง',
@@ -7585,7 +7587,7 @@
                     if(canDeleteThisUser) { deleteBtn = `<button onclick="window.quickDeleteUser('${uid}', '${safeName}')" class="action-icon-btn icon-del" title="ลบผู้ใช้"><span class="material-symbols-outlined" style="font-size:26px;">delete</span></button>`; }
 
                     const plateChip = (u.plateNo && u.plateNo.trim()) ? `<span class="admin-meta-chip"><span class="material-symbols-outlined">directions_car</span>ทะเบียน: ${u.plateNo.trim()}</span>` : '';
-                    html += `<div class="admin-user-card">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">@${safeUsername}</span><span class="admin-user-statusline" id="admin-status-${uid}">${statusHtml}</span></div></div><div class="admin-meta-row">${lastLoginChip}${plateChip}</div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div></div>`;
+                    html += `<div class="admin-user-card"><div class="admin-user-top">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">@${safeUsername}</span><span class="admin-user-statusline" id="admin-status-${uid}">${statusHtml}</span></div></div><div class="admin-meta-row">${lastLoginChip}${plateChip}</div></div></div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
                 });
                 document.getElementById('adminUserList').innerHTML = html || '<div style="padding: 20px; color: gray;">ไม่พบข้อมูล</div>';
 
@@ -7732,7 +7734,6 @@
             html += `<div class="perm-item" data-id="${p.id}" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">` +
                 `<div class="drag-handle" style="cursor:grab; color:rgba(255,255,255,0.3); display:flex; align-items:center; flex-shrink:0;"><span class="material-symbols-outlined">drag_indicator</span></div>` +
                 `<div style="flex:1; min-width:0; cursor:pointer;" onclick="document.getElementById('${p.id}').click()"><div style="font-size:13px; color:var(--neon-yellow); font-weight:600; line-height:1.35;">${p.label}</div>${desc ? `<div style="font-size:11px; color:#9aa3b5; margin-top:1px; line-height:1.4;">${desc}</div>` : ''}</div>` +
-                `<button onclick="window.editPermLabel('${p.id}')" style="background:none; border:none; color:var(--neon-yellow); cursor:pointer; padding:5px; display:flex; align-items:center; flex-shrink:0;" title="แก้ไขชื่อสิทธิ์"><span class="material-symbols-outlined" style="font-size:20px;">edit</span></button>` +
                 `<label class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="${p.id}" ${checkedStr} onchange="window.onRolePermChanged()"><span class="app-slider"></span></label></div>`;
         });
         document.getElementById('permListContainer').innerHTML = html;
@@ -7740,11 +7741,6 @@
             if(window.permSortable) window.permSortable.destroy();
             window.permSortable = new Sortable(document.getElementById('permListContainer'), { handle: '.drag-handle', animation: 150, delay: 200, delayOnTouchOnly: true, ghostClass: 'sortable-ghost', onEnd: () => { window.savePermConfigOrder(); } });
         }
-    };
-
-    window.editPermLabel = async (id) => {
-        let item = window.currentPermConfig.find(x => x.id === id); let newLabel = prompt("แก้ไขชื่อสิทธิ์การใช้งาน:", item.label);
-        if (newLabel && newLabel.trim() !== "") { item.label = newLabel.trim(); window.renderPermList(); await window.savePermConfigToDB(); }
     };
 
     window.savePermConfigOrder = async () => {
