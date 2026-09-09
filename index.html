@@ -1509,10 +1509,11 @@
     <div id="searchSectionBox" class="search-section">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 6px 8px 6px;">
             <label style="margin: 0; flex: 1; min-width: 0;">ค้นหาจุดหมาย</label>
+            <span id="userPosChip" onclick="window.clearUserPosManual()" title="ตำแหน่งที่ตั้งเอง — แตะเพื่อล้าง (กลับไปใช้ GPS อัตโนมัติ)" style="display:none; align-items:center; gap:4px; font-size:10.5px; color:#ffb74d; background:rgba(255,152,0,0.12); border:1px solid rgba(255,152,0,0.35); padding:2px 8px; border-radius:99px; max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:12px;">my_location</span><span id="userPosChipName" style="overflow:hidden; text-overflow:ellipsis;"></span><span class="material-symbols-outlined" style="font-size:11px;">close</span></span>
             <button id="btnTollToggleMain" class="small-toll-btn is-hidden active" onclick="window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 18px;">route</span></button>
         </div>
         <div class="input-group">
-            <input oninput="window.smartSearch(this.value); window.checkAppStatus(); window.updateClearDestBtn();" onfocus="window.showFavorites()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />
+            <input oninput="window.smartSearch(this.value); window.checkAppStatus(); window.updateClearDestBtn();" onfocus="window.onDestFocus()" placeholder="ค้นหา: ลาดพร้าว 23, รพ.วิภา..." type="text" id="destInput" autocomplete="off" />
             <button id="btnClearDest" class="clear-dest-btn is-hidden" onclick="window.clearDestination()" title="ล้างจุดหมาย" aria-label="ล้างจุดหมาย"><span class="material-symbols-outlined">close</span></button>
         </div>
 
@@ -1974,7 +1975,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-09ao';
+    const APP_BUILD = '2026-09-09ap';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -4700,8 +4701,10 @@
     window.showHistory = () => {
         let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
         let favs = window.getFavorites();
-        // แตะช่องค้นหา → dropdown: ที่โปรด + ประวัติล่าสุด (จุดเริ่มต้นคือตำแหน่งปัจจุบันอยู่แล้ว — ไม่มีแถว "ใช้ตำแหน่งปัจจุบัน")
+        // แตะช่องค้นหา → dropdown: ตั้งตำแหน่งของฉัน + ที่โปรด + ประวัติล่าสุด
+        const mp = window.getUserPosManual();
         let html = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ปลายทาง</span></div>`;
+        html += renderLocRow('my_location', '📍 ตั้งตำแหน่งของฉัน', mp ? ('ตั้งไว้ที่: ' + mp.name) : 'ใช้เมื่อ GPS ใช้ไม่ได้ (คอม/แอป) — แตะเพื่อตั้ง', 'window.enterSetPosMode()');
         if (!h.length && !favs.length) {
             html += `<div style="padding:14px; text-align:center; color:var(--text-dim); font-size:12.5px;">พิมพ์ชื่อสถานที่เพื่อค้นหา — เช่น "เซ็นทรัล", "รพ.วิภา", "ลาดพร้าว 23"</div>`;
             $('historyList').innerHTML = html;
@@ -4723,7 +4726,11 @@
         $('historyList').style.display = 'block';
         window.updateClearDestBtn();
     };
-    window.showFavorites = () => { window.showHistory(); }; // 🔁 รวมเข้าด้วยกันแล้ว (ประวัติ + ที่โปรด + ตำแหน่งปัจจุบันในรายการเดียว)
+    window.showFavorites = () => { window.showHistory(); }; // 🔁 รวมเข้าด้วยกันแล้ว (ประวัติ + ที่โปรด + ตำแหน่งในรายการเดียว)
+    window.onDestFocus = () => {
+        if (window.__setPosMode) { window.enterSetPosMode(); return; } // ยังอยู่ในโหมดตั้งตำแหน่ง → แสดงหน้าตั้งตำแหน่งต่อ (กัน onfocus ทับ)
+        window.showHistory();
+    };
     
     // 🗑️ ปุ่มถังขยะรายการ: ลบประวัติจุดหมายรายการนั้นรายการเดียว แล้ววาดใหม่ทันที
     window.removeSearchHistoryItem = (idx) => {
@@ -4754,6 +4761,57 @@
         window.updateClearDestBtn(); // ยุบ dropdown → ปุ่ม × หายไปพร้อมกับประวัติล่าสุด
     });
 
+    // ===== 📍 ตั้งตำแหน่งของฉันเอง (ใช้เมื่อ GPS ใช้ไม่ได้ เช่น บนคอมพิวเตอร์/แอป — ตั้งปุ๊บ ค้นหา/ระยะทาง/เส้นทางใช้ตำแหน่งนี้ทันที) =====
+    const USERPOS_KEY = 'taxi_user_pos_v1';
+    window.getUserPosManual = () => { try { return JSON.parse(localStorage.getItem(USERPOS_KEY) || 'null'); } catch (e) { return null; } };
+    window.__setPosMode = false;
+    window.__geoFailedOnce = false; // GPS ล้มเหลวแล้วในเซสชันนี้ (เช่น คอม/แอปไม่มี GPS) → ข้ามรอ GPS ใช้ตำแหน่งที่ตั้งเองทันที
+    window.enterSetPosMode = () => {
+        window.__setPosMode = true;
+        const inp = $('destInput');
+        inp.value = '';
+        inp.placeholder = 'ค้นหาตำแหน่งที่คุณอยู่ตอนนี้ (เช่น บางกรวย, ลาดพร้าว 23...)';
+        lastSearchQuery = ''; lastSearchHtml = null;
+        const list = $('suggestionList');
+        list.innerHTML = renderLocRow('arrow_back', '← กลับไปค้นหาจุดหมาย', 'ยกเลิกการตั้งตำแหน่ง', 'window.exitSetPosMode()') +
+            '<div style="padding:14px; text-align:center; color:var(--text-dim); font-size:12.5px;">พิมพ์ชื่อที่อยู่/สถานที่ที่คุณอยู่ตอนนี้ แล้วแตะผลลัพธ์เพื่อตั้งเป็นตำแหน่งเริ่มต้น<br><span style="font-size:11px; color:var(--neon-yellow);">ระยะทาง / การค้นหา / เส้นทางทั้งหมดจะใช้ตำแหน่งนี้</span></div>';
+        $('historyList').style.display = 'none';
+        list.style.display = 'block';
+        inp.focus();
+        window.updateClearDestBtn();
+    };
+    window.exitSetPosMode = () => {
+        window.__setPosMode = false;
+        $('destInput').placeholder = 'ค้นหา: ลาดพร้าว 23, รพ.วิภา...';
+        window.showHistory();
+    };
+    window.pickCurrentPos = (name, lat, lon) => {
+        try { localStorage.setItem(USERPOS_KEY, JSON.stringify({ name, lat, lon })); } catch (e) {}
+        cachedUserPos = null; cachedUserPosAt = 0; // เคลียร์แคช → ใช้ตำแหน่งที่ตั้งใหม่ทันที
+        window.__setPosMode = false;
+        $('destInput').placeholder = 'ค้นหา: ลาดพร้าว 23, รพ.วิภา...';
+        window.refreshUserPosChip();
+        window.showToast('📍 ตั้งตำแหน่งเริ่มต้นแล้ว: ' + name, false);
+        window.showHistory();
+        window.updateClearDestBtn();
+    };
+    window.clearUserPosManual = () => {
+        try { localStorage.removeItem(USERPOS_KEY); } catch (e) {}
+        cachedUserPos = null; cachedUserPosAt = 0;
+        window.refreshUserPosChip();
+        window.showToast('🗑️ ล้างตำแหน่งที่ตั้งเอง — กลับไปใช้ GPS อัตโนมัติ', false);
+        window.showHistory();
+    };
+    // ชิพเล็ก ๆ ข้างหัวข้อ "ค้นหาจุดหมาย" — โชว์ว่ากำลังใช้ตำแหน่งที่ตั้งเองอยู่ (กันงงว่าระยะทางมาจากไหน) · แตะชิพ = ล้าง
+    window.refreshUserPosChip = () => {
+        const chip = document.getElementById('userPosChip'), nm = document.getElementById('userPosChipName');
+        if (!chip || !nm) return;
+        const mp = window.getUserPosManual();
+        if (mp) { nm.textContent = mp.name; chip.style.display = 'inline-flex'; }
+        else chip.style.display = 'none';
+    };
+    window.refreshUserPosChip();
+
     // ===== 🧭 ค้นหาใกล้ฉัน (Bolt/Grab-style) =====
     // แคชตำแหน่งผู้ใช้ 2 นาที — ขอ GPS ครั้งเดียว ใช้ซ้ำทั้งตอนค้นหา/เรียงผล/คำนวณระยะ (ลดการเรียก API + กันเบราว์เซอร์ขอสิทธิ์บ่อย)
     let cachedUserPos = null;
@@ -4762,11 +4820,13 @@
         if (cachedUserPos && (Date.now() - cachedUserPosAt) < 120000) return Promise.resolve(cachedUserPos);
         // 🧪 test hook — จำลองตำแหน่งผู้ใช้ (ใช้ใน preview ที่ GPS ถูกบล็อก + เทสต์อัตโนมัติ)
         if (window.__testUserPos && typeof window.__testUserPos.lat === 'number') { cachedUserPos = window.__testUserPos; cachedUserPosAt = Date.now(); return Promise.resolve(cachedUserPos); }
+        // GPS เคยล้มเหลวในเซสชันนี้ (เช่น คอม/แอปไม่มี GPS) → ข้ามรอ GPS ตรงไปใช้ตำแหน่งที่ตั้งเอง/ล่าสุดทันที
+        if (window.__geoFailedOnce) { const lf0 = freshLastPos(); return Promise.resolve(lf0 || window.getUserPosManual() || null); }
         return new Promise((resolve) => {
-            if (!navigator.geolocation) { const lf = freshLastPos(); resolve(lf || null); return; }
+            if (!navigator.geolocation) { const lf = freshLastPos(); resolve(lf || window.getUserPosManual() || null); return; }
             navigator.geolocation.getCurrentPosition(
                 (pos) => { cachedUserPos = { lat: pos.coords.latitude, lon: pos.coords.longitude, at: Date.now() }; cachedUserPosAt = cachedUserPos.at; resolve(cachedUserPos); },
-                () => { const lf = freshLastPos(); resolve(lf || null); },
+                () => { window.__geoFailedOnce = true; const lf = freshLastPos(); resolve(lf || window.getUserPosManual() || null); },
                 { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
             );
         });
@@ -4821,6 +4881,42 @@
         if (!(q = q.trim())) return list.style.display = 'none'; 
         if (q.trim().length < 2) return list.style.display = 'none';
         const smartQuery = formatSearchText(q);
+        // 📍 โหมด "ตั้งตำแหน่งของฉัน" — ผลลัพธ์ที่แตะจะตั้งเป็นตำแหน่งเริ่มต้น (ไม่ใช่ปลายทาง)
+        if (window.__setPosMode) {
+            if (lastSearchQuery === q && lastSearchHtml !== null) { list.innerHTML = lastSearchHtml; list.style.display = 'block'; window.updateClearDestBtn(); return; }
+            const seq = ++searchSeq;
+            searchTimer = setTimeout(async () => {
+                try {
+                    list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--text-dim);"><span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">progress_activity</span> กำลังค้นหา...</div>';
+                    list.style.display = 'block';
+                    window.updateClearDestBtn();
+                    let httpRes = await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(smartQuery)}.json?key=${TOMTOM_KEY}&countrySet=TH&limit=10&language=th-TH&typeahead=true&minFuzzyLevel=2&maxFuzzyLevel=4&idxSet=Geo,Addr,PAD,POI`);
+                    countTomTomCall();
+                    let res = await httpRes.json();
+                    if (seq !== searchSeq) return;
+                    if(!res.results || !res.results.length) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติม</span></div>'; list.style.display = 'block'; window.updateClearDestBtn(); return; }
+                    lastSearchHtml = res.results.map((item) => {
+                        let name = (item.poi && item.poi.name) ? item.poi.name : ((item.address && item.address.freeformAddress) ? item.address.freeformAddress.split(',')[0] : 'สถานที่');
+                        let addr = (item.address && item.address.freeformAddress) ? item.address.freeformAddress : '';
+                        let safeName = name.replace(/'/g, "\\'");
+                        let icon = (item.type === 'Street' || item.type === 'Road') ? 'road' : (item.type === 'POI' ? 'location_on' : 'location_city');
+                        return `<div class="list-item" onclick="window.pickCurrentPos('${safeName}', ${item.position.lat}, ${item.position.lon})" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <span class="material-symbols-outlined item-icon">${icon}</span>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-weight: 600; color: white; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
+                                <div style="font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${addr}</div>
+                            </div>
+                            <span style="flex-shrink:0; font-size:10.5px; color:#38bdf8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); padding:2px 7px; border-radius:99px; white-space:nowrap;">ตั้งตำแหน่ง</span>
+                        </div>`;
+                    }).join('');
+                    lastSearchQuery = q;
+                    list.innerHTML = lastSearchHtml;
+                    list.style.display = 'block';
+                    window.updateClearDestBtn();
+                } catch(e) { if (seq === searchSeq) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--accent-red);">เกิดข้อผิดพลาดในการเชื่อมต่อ</div>'; list.style.display = 'block'; window.updateClearDestBtn(); } }
+            }, 300);
+            return;
+        }
         // ส่วนหัวแบบผสม (ที่โปรด/ประวัติที่ตรงกับคำค้น) — วาดทันที ไม่ต้องรอ API
         const mixed = window.__localMatches(smartQuery);
         const headHtml = mixed.length ? mixed.join('') : '';
@@ -5073,19 +5169,20 @@
         const lf = freshLastPos();
         if (lf) return lf;
         if (cachedUserPos && (Date.now() - cachedUserPosAt) < 120000) return cachedUserPos;
-        if (navigator.geolocation) {
+        if (!window.__geoFailedOnce && navigator.geolocation) {
             try {
                 const pos = await new Promise((resolve) => {
                     navigator.geolocation.getCurrentPosition(
                         (p) => resolve(p),
-                        () => resolve(null),
+                        () => { window.__geoFailedOnce = true; resolve(null); },
                         { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
                     );
                 });
                 if (pos) return { lat: pos.coords.latitude, lon: pos.coords.longitude, at: Date.now() };
             } catch (e) {}
         }
-        return null;
+        // 📍 ตำแหน่งที่ผู้ใช้ตั้งเอง (ใช้เมื่อ GPS ใช้ไม่ได้ เช่น บนคอม/แอป) — แม่นกว่าตำแหน่งโดยประมาณ (IP) มาก
+        return window.getUserPosManual() || null;
     };
     
     window.getRouteData = async (dLat, dLon, name) => {
@@ -6646,6 +6743,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        '📍 เพิ่ม "ตั้งตำแหน่งของฉัน" สำหรับเครื่องที่ GPS ใช้ไม่ได้ (คอมพิวเตอร์/แอป): แตะช่องค้นหาจุดหมาย → แถวบนสุด "ตั้งตำแหน่งของฉัน" → พิมพ์ที่อยู่/สถานที่ที่คุณอยู่ตอนนี้แล้วแตะผลลัพธ์ — ตั้งปุ๊บ การค้นหาจะเรียง"ใกล้ฉัน"และแสดงระยะทาง + เส้นทางคำนวณจากตำแหน่งนี้ทันที (ไม่เพี้ยนเป็น 9 กม. ทั้งที่จริง ~15 กม. เหมือนใช้ตำแหน่ง IP) · มีชิพสีส้มข้าง "ค้นหาจุดหมาย" โชว์ตำแหน่งที่ตั้งไว้ แตะชิพ = ล้างกลับไปใช้ GPS อัตโนมัติ',
         '🎯 แก้ระยะทางเส้นทางคลาดเคลื่อน (เช่น ไปเซ็นทรัลเวสต์เกตขึ้น 9.6 กม. ทั้งที่จริง ~15 กม.): ตอนคำนวณเส้นทางใช้ GPS ที่แม่นสุดเท่าที่มีก่อน (fix สดจากมิเตอร์/แคชตำแหน่ง → ขอ GPS ใหม่) ไม่ดิ่งไปใช้ตำแหน่งโดยประมาณ (IP) ที่เพี้ยนหลายกม. ทันที — ถ้า GPS ใช้ไม่ได้จริง จะขึ้นคำเตือนสีส้มชัดเจนในหน้าสรุปเส้นทางว่า "ใช้ตำแหน่งโดยประมาณ ระยะทาง/ราคาอาจคลาดเคลื่อน" · ลบแถว "ใช้ตำแหน่งปัจจุบันของฉัน" ในช่องค้นหาจุดหมายออก (จุดเริ่มต้นเป็นตำแหน่งปัจจุบันอยู่แล้ว)',
         '🔍 ค้นหาจุดหมายอัจฉริยะแบบ Bolt/Grab: ผลค้นหาเรียง"ใกล้ฉันก่อน"พร้อมป้ายระยะทาง (เช่น ค้น "เซ็นทรัล" → สาขาที่ใกล้ที่สุดขึ้นก่อน) · แตะช่องค้นหาเห็น "ตำแหน่งปัจจุบัน" + ที่โปรด + ประวัติล่าสุดในรายการเดียว · พิมพ์แล้วเดาได้ทันทีจากที่โปรด/ประวัติ · กันเรียก API ซ้ำ (แคชตำแหน่ง 2 นาที + ข้ามคำค้นซ้ำ)',
         '⚙️ ตั้งค่าสิทธิ์การใช้งาน → เพิ่มหมวด "บันทึกประวัติ (Log)": แอดมินเปิด/ปิดการบันทึก log ได้ทีละประเภท (ล็อกอิน/เอาต์, สิทธิ์, รหัสผ่าน/แบน, จัดการสมาชิก, แก้ไขโปรไฟล์, พอร์ทัล, สมัครสมาชิก) — ค่าเริ่มต้นเปิดทุกประเภท ยกเว้นล็อกอิน/เอาต์ (ปิด = ประหยัดโควตา) · ฟังสดข้ามเครื่อง มีผลทันทีทุก user · ย้ายสวิตช์ log เดิมจากหน้าจัดการผู้ใช้มาอยู่ที่นี่',
