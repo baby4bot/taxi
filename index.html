@@ -1980,7 +1980,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-09ar';
+    const APP_BUILD = '2026-09-09as';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -6748,6 +6748,7 @@
         const hubRoleItem = document.getElementById('hubRoleItem'); if (hubRoleItem) hubRoleItem.style.display = canRoleMenu ? 'flex' : 'none';
         const hubServiceItem = document.getElementById('hubServiceItem'); if (hubServiceItem) hubServiceItem.style.display = canServiceMenu ? 'flex' : 'none';
         const hubQuotaItem = document.getElementById('hubQuotaItem'); if (hubQuotaItem) hubQuotaItem.style.display = isGod ? 'flex' : 'none';
+        window.refreshHubCatLabels();
         document.getElementById('adminAddUserBtn').style.display = myPerms.canAdd ? 'flex' : 'none';
         if (typeof window.refreshPermReqBadges === 'function') window.refreshPermReqBadges(); // 🔔 อัปเดตป้ายคำขอสิทธิ์ทุกครั้งที่เปิดเมนู
         document.getElementById('adminRoleNotice').style.display = isGod ? 'none' : 'block';
@@ -6766,6 +6767,18 @@
 
         if(document.getElementById('adminMenuModal').style.display === 'flex') { if(window.handleAdminModalState) window.handleAdminModalState(true); }
         if(document.getElementById('servicePortalModal').style.display === 'flex') { window.openServicePortal(window.currentServiceModeManage); }
+    };
+    // 🧹 ซ่อนหัวข้อหมวดหมู่ที่ว่างในหน้าต่างตั้งค่าการใช้งาน — ถ้าหมวดไหนไม่มีรายการที่ผู้ใช้มีสิทธิ์เลย (เช่น manager ที่ไม่มีสิทธิ์การแจ้งเตือน/บริการ) หัวข้อหมวดนั้นจะถูกซ่อนไป ไม่โผล่เป็นช่องว่าง — พอแอดมินให้สิทธิ์ หัวข้อจะเด้งกลับมาเอง
+    window.refreshHubCatLabels = () => {
+        const hubCatDefs = [
+            { cat: 'cat-members', items: ['hubAdminItem', 'hubRoleItem'] },
+            { cat: 'cat-notify', items: ['hubToastItem'] },
+            { cat: 'cat-system', items: ['hubServiceItem', 'hubQuotaItem'] },
+        ];
+        hubCatDefs.forEach(def => {
+            const anyVisible = def.items.some(id => { const el = document.getElementById(id); return el && el.style.display !== 'none'; });
+            document.querySelectorAll('.hub-cat-label[data-cat="' + def.cat + '"]').forEach(lbl => { lbl.style.display = anyVisible ? '' : 'none'; });
+        });
     };
 
     window.toggleAuthMode = () => {
@@ -6786,6 +6799,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        '🧹 ตั้งค่าการใช้งานซ่อนหัวข้อหมวดหมู่ที่ว่างแล้ว: ถ้าผู้ใช้ (เช่น ผู้จัดการ) ไม่มีสิทธิ์ในหมวดไหน (การแจ้งเตือน / บริการ/ระบบ) หัวข้อหมวดนั้นจะถูกซ่อนไปด้วย ไม่โผล่เป็นช่องว่าง — พอแอดมินให้สิทธิ์ หัวข้อจะเด้งกลับมาเอง',
         '🎯 ป้ายระยะทางในผลค้นหาจุดหมายตรงกับหน้าสรุปเส้นทางแล้ว: จากเดิมแสดงระยะเส้นตรง (เช่น ไปเซ็นทรัลเวสต์เกต badge 9.8 กม. แต่เส้นทางจริง 15.15 กม.) — ตอนนี้ badge จะคำนวณเป็นระยะทางถนนจริง (TomTom routing เดียวกับหน้าสรุป) แสดง … ระหว่างโหลด แล้วแทนที่ด้วยเลขที่ตรงกัน (แคชตามจุดเริ่ม/ปลาย+โหมดทางด่วน กันยิง API ซ้ำ)',
         '✏️ แอดมินแก้เลขเวอร์ชัน (v) ของแต่ละการ์ดในหน้าประวัติเวอร์ชันได้เอง (ปุ่มแก้ไข → มีช่องเลขเวอร์ชันให้พิมพ์) — กันเลขซ้ำกับรายการอื่นอัตโนมัติ ทั้งตอนพิมพ์และตอนบันทึก',
         '📍 เพิ่ม "ตั้งตำแหน่งของฉัน" สำหรับเครื่องที่ GPS ใช้ไม่ได้ (คอมพิวเตอร์/แอป): แตะช่องค้นหาจุดหมาย → แถวบนสุด "ตั้งตำแหน่งของฉัน" → พิมพ์ที่อยู่/สถานที่ที่คุณอยู่ตอนนี้แล้วแตะผลลัพธ์ — ตั้งปุ๊บ การค้นหาจะเรียง"ใกล้ฉัน"และแสดงระยะทาง + เส้นทางคำนวณจากตำแหน่งนี้ทันที (ไม่เพี้ยนเป็น 9 กม. ทั้งที่จริง ~15 กม. เหมือนใช้ตำแหน่ง IP) · มีชิพสีส้มข้าง "ค้นหาจุดหมาย" โชว์ตำแหน่งที่ตั้งไว้ แตะชิพ = ล้างกลับไปใช้ GPS อัตโนมัติ',
