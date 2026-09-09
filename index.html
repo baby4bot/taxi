@@ -1980,7 +1980,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-09aq';
+    const APP_BUILD = '2026-09-09ar';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -4840,6 +4840,40 @@
     const freshLastPos = () => (lastPos && lastPosTime && (Date.now() - lastPosTime) < 180000) ? { lat: lastPos.lat, lon: lastPos.lon, at: Date.now() } : null;
     const distKm = (a, b) => { const R = 6371; const dLat = (b.lat - a.lat) * Math.PI / 180; const dLon = (b.lon - a.lon) * Math.PI / 180; const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2; return 2 * R * Math.asin(Math.sqrt(h)); };
     const fmtDist = (km) => km < 1 ? Math.round(km * 1000) + ' ม.' : km.toFixed(1) + ' กม.';
+    // 💾 แคชระยะทางเส้นทางจริง (TomTom routing) — ใช้ป้าย กม. ในช่องค้นหาให้ตรงกับหน้าสรุปเส้นทาง
+    //    (เดิมใช้เส้นตรง = ต่างกันหลายกม. เช่น ไปเซ็นทรัลเวสต์เกต badge 9.8 แต่เส้นทางจริง 15.15)
+    //    key = จุดเริ่ม|ปลาย (ปัด 3 ตำแหน่ง ~100 ม.) + โหมดทางด่วน → ค่าซ้ำไม่ต้องยิง TomTom ซ้ำ (กันเผาโควตา)
+    window.__routeKmCache = {};
+    const routeKmKey = (slat, slon, dlat, dlon) => slat.toFixed(3) + '|' + slon.toFixed(3) + '|' + dlat.toFixed(3) + '|' + dlon.toFixed(3) + '|' + (window.isTollwayMode ? 1 : 0);
+    // ดึงระยะทางเส้นทางจริง (แคชก่อน → ไม่มีค่อยยิง routing) — คืน null ถ้าไม่ได้ (ออฟไลน์/โควตา)
+    window.__getRouteKm = async (dlat, dlon, slat, slon) => {
+        try {
+            const key = routeKmKey(slat, slon, dlat, dlon);
+            if (typeof window.__routeKmCache[key] === 'number') return window.__routeKmCache[key];
+            const route = await window.fetchRouteFromTomTom(dlat, dlon, slat, slon);
+            if (route && typeof route.km === 'number' && route.km > 0) { window.__routeKmCache[key] = route.km; return route.km; }
+        } catch (e) {}
+        return null;
+    };
+    // อัปเดตป้ายระยะทางในรายการผลค้นหาเป็นระยะทางเส้นทางจริง (แสดง … ระหว่างโหลด แล้วแทนที่ด้วยเลขจริง)
+    // คำนวณทีละ 3 รายการพร้อมกัน (กันยิง routing พร้อมกัน 15 ครั้ง = โดนจำกัดอัตรา) — แคชทำให้คำค้นซ้ำไม่ต้องยิงใหม่
+    window.__upgradeDistBadges = async (upos, list) => {
+        if (!upos || !list) return;
+        const rows = Array.from(list.querySelectorAll('.list-item[data-dlat]'));
+        if (!rows.length) return;
+        let cursor = 0; const CONC = 3;
+        const worker = async () => {
+            while (cursor < rows.length) {
+                const row = rows[cursor++];
+                const badge = row.querySelector('.dist-badge');
+                if (!badge) continue;
+                const dlat = parseFloat(row.dataset.dlat), dlon = parseFloat(row.dataset.dlon);
+                const km = await window.__getRouteKm(dlat, dlon, upos.lat, upos.lon);
+                if (km && km > 0) badge.textContent = fmtDist(km);
+            }
+        };
+        await Promise.all([worker(), worker(), worker()]);
+    };
     // รายการค้นหาแบบผสม (Bolt/Grab UX): [ตำแหน่งปัจจุบัน] → [ที่โปรด/ประวัติที่ตรง] → [ผลสดเรียงใกล้ฉัน] — แตะได้ทันที
     const renderLocRow = (icon, title, sub, onClick, extra) =>
         `<div class="list-item" onclick="${onClick}" style="border-bottom:1px solid rgba(255,255,255,0.05);"><span class="material-symbols-outlined item-icon">${icon}</span>` +
@@ -4925,7 +4959,7 @@
         // ส่วนหัวแบบผสม (ที่โปรด/ประวัติที่ตรงกับคำค้น) — วาดทันที ไม่ต้องรอ API
         const mixed = window.__localMatches(smartQuery);
         const headHtml = mixed.length ? mixed.join('') : '';
-        if (lastSearchQuery === q && lastSearchHtml !== null) { list.innerHTML = lastSearchHtml; list.style.display = 'block'; window.updateClearDestBtn(); return; } // คำค้นซ้ำ → แสดงผลเดิมทันที (ไม่ยิง API)
+        if (lastSearchQuery === q && lastSearchHtml !== null) { list.innerHTML = lastSearchHtml; list.style.display = 'block'; window.updateClearDestBtn(); window.__upgradeDistBadges(window.__lastUpos, list); return; } // คำค้นซ้ำ → แสดงผลเดิมทันที (ไม่ยิง API) + อัปเดตป้ายระยะทางถ้ายังค้าง …
         const seq = ++searchSeq;
         searchTimer = setTimeout(async () => { 
             try { 
@@ -4934,6 +4968,7 @@
                 window.updateClearDestBtn(); // เปิดผลค้นหา → ปุ่ม × โผล่พร้อมกัน
                 // ดึงตำแหน่งผู้ใช้ (แคช 2 นาที) → ส่ง near= ให้ TomTom เรียงผลใกล้ฉันก่อน + เรียงซ้ำฝั่งเรา
                 const upos = await getUserPos();
+                window.__lastUpos = upos || null;
                 if (seq !== searchSeq) return; // มีคำค้นใหม่กว่า → ทิ้งผลเก่า (กัน response เก่ามาเขียนทับ)
                 const near = upos ? `&near=${upos.lat},${upos.lon}` : '';
                 let httpRes = await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(smartQuery)}.json?key=${TOMTOM_KEY}&countrySet=TH&limit=15&language=th-TH&typeahead=true&minFuzzyLevel=2&maxFuzzyLevel=4&idxSet=Geo,Addr,PAD,POI${near}`);
@@ -4949,10 +4984,10 @@
                     let isFav = window.isFavorite(name);
                     let distBadge = '';
                     if (upos && item.position && typeof item.position.lat === 'number') {
-                        const d = distKm(upos, { lat: item.position.lat, lon: item.position.lon });
-                        distBadge = `<span style="flex-shrink:0; font-size:10.5px; color:#38bdf8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.25); padding:2px 7px; border-radius:99px; white-space:nowrap;">${fmtDist(d)}</span>`;
+                        // แสดง … ก่อน แล้วอัปเดตเป็นระยะทางเส้นทางจริง (ตรงกับหน้าสรุป) ผ่าน __upgradeDistBadges
+                        distBadge = `<span class="dist-badge" style="flex-shrink:0; font-size:10.5px; color:#38bdf8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.25); padding:2px 7px; border-radius:99px; white-space:nowrap;">…</span>`;
                     }
-                    return `<div class="list-item" onclick="window.selectLocation('${safeName}', ${item.position.lat}, ${item.position.lon})" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    return `<div class="list-item" data-dlat="${item.position.lat}" data-dlon="${item.position.lon}" onclick="window.selectLocation('${safeName}', ${item.position.lat}, ${item.position.lon})" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                         <span class="material-symbols-outlined item-icon">${icon}</span>
                         <div style="flex:1; min-width:0;">
                             <div style="font-weight: 600; color: white; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
@@ -4977,6 +5012,7 @@
                 list.innerHTML = lastSearchHtml; 
                 list.style.display = 'block'; 
                 window.updateClearDestBtn(); // เปิดผลค้นหา → ปุ่ม × โผล่พร้อมกัน
+                window.__upgradeDistBadges(upos, list); // 🔁 อัปเดตป้าย … → ระยะทางเส้นทางจริง (ตรงกับหน้าสรุป)
             } catch(e) { if (seq === searchSeq) { list.innerHTML = headHtml + '<div style="padding:15px; text-align:center; color:var(--accent-red);">เกิดข้อผิดพลาดในการเชื่อมต่อ</div>'; list.style.display = 'block'; window.updateClearDestBtn(); } } 
         }, 300); 
     };
@@ -5194,6 +5230,8 @@
         const doRoute = async (sLat, sLon, label) => {
             let route = await window.fetchRouteFromTomTom(dLat, dLon, sLat, sLon);
             if (route) {
+                // 💾 แคชระยะทางเส้นทางจริงไว้ → ป้าย กม. ในช่องค้นหาจะตรงกับหน้าสรุปทันที (ไม่ต้องรอคำนวณใหม่)
+                try { if (typeof route.km === 'number' && route.km > 0) window.__routeKmCache[routeKmKey(sLat, sLon, dLat, dLon)] = route.km; } catch (e) {}
                 currentTrueRemainKm = route.km;
                 currentTrueRemainSec = route.sec;
                 window.currentTollInfo = route.tolls || null;
@@ -6748,6 +6786,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        '🎯 ป้ายระยะทางในผลค้นหาจุดหมายตรงกับหน้าสรุปเส้นทางแล้ว: จากเดิมแสดงระยะเส้นตรง (เช่น ไปเซ็นทรัลเวสต์เกต badge 9.8 กม. แต่เส้นทางจริง 15.15 กม.) — ตอนนี้ badge จะคำนวณเป็นระยะทางถนนจริง (TomTom routing เดียวกับหน้าสรุป) แสดง … ระหว่างโหลด แล้วแทนที่ด้วยเลขที่ตรงกัน (แคชตามจุดเริ่ม/ปลาย+โหมดทางด่วน กันยิง API ซ้ำ)',
         '✏️ แอดมินแก้เลขเวอร์ชัน (v) ของแต่ละการ์ดในหน้าประวัติเวอร์ชันได้เอง (ปุ่มแก้ไข → มีช่องเลขเวอร์ชันให้พิมพ์) — กันเลขซ้ำกับรายการอื่นอัตโนมัติ ทั้งตอนพิมพ์และตอนบันทึก',
         '📍 เพิ่ม "ตั้งตำแหน่งของฉัน" สำหรับเครื่องที่ GPS ใช้ไม่ได้ (คอมพิวเตอร์/แอป): แตะช่องค้นหาจุดหมาย → แถวบนสุด "ตั้งตำแหน่งของฉัน" → พิมพ์ที่อยู่/สถานที่ที่คุณอยู่ตอนนี้แล้วแตะผลลัพธ์ — ตั้งปุ๊บ การค้นหาจะเรียง"ใกล้ฉัน"และแสดงระยะทาง + เส้นทางคำนวณจากตำแหน่งนี้ทันที (ไม่เพี้ยนเป็น 9 กม. ทั้งที่จริง ~15 กม. เหมือนใช้ตำแหน่ง IP) · มีชิพสีส้มข้าง "ค้นหาจุดหมาย" โชว์ตำแหน่งที่ตั้งไว้ แตะชิพ = ล้างกลับไปใช้ GPS อัตโนมัติ',
         '🎯 แก้ระยะทางเส้นทางคลาดเคลื่อน (เช่น ไปเซ็นทรัลเวสต์เกตขึ้น 9.6 กม. ทั้งที่จริง ~15 กม.): ตอนคำนวณเส้นทางใช้ GPS ที่แม่นสุดเท่าที่มีก่อน (fix สดจากมิเตอร์/แคชตำแหน่ง → ขอ GPS ใหม่) ไม่ดิ่งไปใช้ตำแหน่งโดยประมาณ (IP) ที่เพี้ยนหลายกม. ทันที — ถ้า GPS ใช้ไม่ได้จริง จะขึ้นคำเตือนสีส้มชัดเจนในหน้าสรุปเส้นทางว่า "ใช้ตำแหน่งโดยประมาณ ระยะทาง/ราคาอาจคลาดเคลื่อน" · ลบแถว "ใช้ตำแหน่งปัจจุบันของฉัน" ในช่องค้นหาจุดหมายออก (จุดเริ่มต้นเป็นตำแหน่งปัจจุบันอยู่แล้ว)',
