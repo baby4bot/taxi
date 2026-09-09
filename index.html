@@ -1965,7 +1965,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08aj';
+    const APP_BUILD = '2026-09-08ak';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -6430,6 +6430,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        '✂️ ลดบันทึกกิจกรรมที่เขียนทุกครั้ง: ตัด log ล็อกอิน/ล็อกเอาต์ออก (เดิม 1 เหตุการณ์ = เขียน 2 doc — log ของผู้ใช้ + global_logs) — เหลือเฉพาะเหตุการณ์สำคัญเท่านั้น (สมัครสมาชิก, แก้ไขโปรไฟล์/รหัสผ่าน, แบน/ปลดแบน, เพิ่ม/แก้ไขผู้ใช้, อนุมัติ/ปฏิเสธคำขอสิทธิ์, แก้ไข Portal) — ประหยัด ~4-6 เขียน/คน/วัน',
         '❌ ลบระบบสถานะออนไลน์ (presence) ออกทั้งหมด: ไม่เขียนคอลเลกชัน presence อีกต่อไป (เข้า/ออกแอป, ล็อกอิน/เอาต์, แตะใช้งานทุก 10 นาที, ฟังสดตอนเปิดหน้าจัดการผู้ใช้) — ลดการเขียน Firestore ~8-20 ครั้ง/วัน/เครื่องให้เหลือศูนย์ เพื่อประหยัดโควตาสุด ๆ (ยังเหลือป้าย "ถูกระงับ (Ban)" ในหน้าจัดการผู้ใช้ตามเดิม — ไม่เกี่ยวกับออนไลน์)',
         'กัน user ทั่วไปเด้งหลุดหลังล็อกอินตอนโควตา/เน็ตค้าง: เขียน session ใหม่ไม่ทัน (โควตาหมด) จะไม่ไล่ออกจากระบบอีกต่อไป — ระบบจำค่า session ที่เห็นตอนล็อกอินไว้ แล้วลองเขียนซ้ำเบื้องหลังจนกว่าจะสำเร็จ (ยังไล่เครื่องอื่นที่ล็อกอินซ้อนจริงอยู่เหมือนเดิม)',
         'แก้ล็อกอินบอก "รหัสผู้ใช้หรือรหัสผ่านผิด" ทั้งที่รหัสถูก: ถ้าดึงข้อมูลผู้ใช้ไม่ได้จริง ๆ (Firestore โควตาหมด / เน็ตขัดข้อง) ระบบจะแจ้ง "เชื่อมต่อฐานข้อมูลขัดข้อง (เน็ต/โควตา Firestore) — ลองใหม่อีกครั้ง" แทน — เห็นสาเหตุจริง ไม่เข้าใจผิดว่ารหัสผ่านเสีย (ตรวจสอบแล้วฐานข้อมูลเก็บรหัสแอดมินปัจจุบันถูกต้อง เข้าสู่ระบบได้ปกติ)',
@@ -6951,7 +6952,6 @@
                 loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.removeItem('taxi_session_id'); localStorage.removeItem('taxi_db_sid_seen'); myDbSidAtLogin = null; // แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง
                 if (lu) { window.__applyUserDocUI(lu.data); } else { window.__showAppLoading(); } // ⚡ ยืนยันรหัสผ่านแล้ว → แสดงแอปทันทีจาก doc ที่ดึงมา (seed ชื่อ/รูป/สิทธิ์) — ไม่รอ snapshot เมื่อ Firestore ค้าง
                 window.__watchdogShowApp(); // ⏱️ เริ่มนับเลย — snapshot มาไม่ทันใน ~4 วิ จะบังคับเข้าแอป (ไม่รอให้เขียน session เสร็จก่อน)
-                window.__fsTimeout(recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ"), 5000).catch(()=>{});
                 window.showToast("เข้าสู่ระบบแอดมินสูงสุดสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); authBtn.innerText = "เข้าสู่ระบบ"; return;
             }
             // 🔐 ดึง user ด้วย username (SDK+REST รันพร้อมกัน เอาตัวที่ตอบก่อน — ไม่รอ SDK ครบ timeout) แล้วตรวจรหัสผ่านฝั่งเครื่อง
@@ -6982,7 +6982,6 @@
             } else {
                 window.__fsWriteFields(loggedInUserId, patch, 6000); // แอดมิน: เขียน lastLoginAt แบบ fire-and-forget (ไม่มี session → ไม่ต้องรอ กันล็อกอินช้า)
             }
-            window.__fsTimeout(recordActivityLog(loggedInUserId, "เข้าสู่ระบบ", "ผู้ใช้ล็อกอินสำเร็จ"), 5000).catch(()=>{});
             window.showToast("เข้าสู่ระบบสำเร็จ!"); document.getElementById('authPassword').value = ''; listenToMyUser(); window.ensureChangelog(); authBtn.innerText = "เข้าสู่ระบบ";
         } catch (error) { fail("เกิดข้อผิดพลาด: ตรวจเน็ตแล้วลองอีกครั้ง"); }
     };
@@ -7057,7 +7056,6 @@
         if(isOk) {
             const logoutUid = loggedInUserId;
             if(logoutUid) {
-                window.__fsTimeout(recordActivityLog(logoutUid, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ"), 5000).catch(()=>{}); // ไม่บล็อกการออกจากระบบ
                 if(!forced) {
                     // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน
                     // ✅ ไม่บล็อก UI: เขียนแบบ fire-and-forget (SDK+REST รันพร้อมกัน เอาตัวที่ถึง DB ก่อน) แล้วสลับหน้าจอกลับมาล็อกอินทันที
