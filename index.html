@@ -1080,7 +1080,6 @@
         .icon-del { color: #ff6b7a !important; background: rgba(255,107,122,0.14) !important; }
         .icon-call { color: #3ce69a !important; background: rgba(60,230,154,0.13) !important; }
         .status-banned { background: #ff4d5f; box-shadow: 0 0 10px #ff4d5f; }
-        .status-online { background: #2fd883; box-shadow: 0 0 10px #2fd883; }
         .status-offline { background: #5a6478; }
 
         /* Permission rows + log items */
@@ -1899,7 +1898,6 @@
         if (p === 'settings/toast_messages') return 'ข้อความแจ้งเตือน';
         if (p === 'settings/changelog') return 'ประวัติเวอร์ชัน';
         if (p.startsWith('quota_usage')) return 'ระบบโควตา';
-        if (p.startsWith('presence')) return 'สถานะออนไลน์';
         if (p.startsWith('global_logs')) return 'บันทึกกิจกรรม';
         if (p.startsWith('system/service_data')) return 'Portal / บริการ';
         return p.split('/')[0] || 'อื่น ๆ';
@@ -1967,7 +1965,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-08ai';
+    const APP_BUILD = '2026-09-08aj';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -2095,7 +2093,7 @@
     let currentUserRole = "User";
     let myExtraPerms = {}; // สิทธิ์พิเศษที่แอดมินอนุมัติให้บัญชีนี้โดยเฉพาะ (extraPerms ใน user doc — ไม่เปลี่ยนตำแหน่ง)
     let isBannedState = false;
-    let permsUnsub = null, permConfigUnsub = null, myUserUnsub = null, serviceDataUnsub = null, adminSnapshotUnsub = null, permReqUnsub = null, presenceUnsub = null;
+    let permsUnsub = null, permConfigUnsub = null, myUserUnsub = null, serviceDataUnsub = null, adminSnapshotUnsub = null, permReqUnsub = null;
 
     // ⏱️ กัน "กำลังเข้าสู่ระบบ..." ค้างตลอดกาล — ทุกคำขอ Firestore มี timeout + fallback ผ่าน REST API
     //    (https ธรรมดา ไม่พึ่งช่องทางเรียลไทม์ที่อาจค้างจากโควตาหมด/เน็ต) — ล็อกอินได้แม้ SDK ยังไม่ recover
@@ -2214,26 +2212,6 @@
             }
         });
     };
-    // ── 👤 ระบบ "ใครออนไลน์บ้าง" แบบประหยัดโควตา ──
-    //    ต่างจากระบบเก่า (heartbeat ทุก 90 วิ + ฟังทั้งคอลเลกชัน users → กินโควตา ~99%):
-    //    เขียนเฉพาะเหตุการณ์จริงเท่านั้น (เข้าแอป/ล็อกอิน/สมัคร/กลับมาใช้ = 1 เขียน, ปิดแอป/ล็อกเอาต์ = 1 เขียน)
-    //    + refresh ตอนแตะใช้งานทุก 10 นาที (กันค้าง "ออนไลน์" ถ้าปิดแอปแบบไม่ยิง event) — ไม่มี heartbeat
-    //    และมีเฉพาะคนที่เปิดหน้าจัดการผู้ใช้เท่านั้นที่ฟังสด (คอลเลกชันเล็ก presence/{uid}) — แอดมินเห็นว่าใครกำลังใช้แอปอยู่
-    let presenceLastWriteAt = 0;
-    window.presenceMap = {}; // presence/{uid} → { on, at }
-    window.markPresenceOnline = async (force) => {
-        const uid = loggedInUserId; if (!uid) return;
-        const now = Date.now();
-        if (!force && now - presenceLastWriteAt < 600000) return; // แตะใช้งาน refresh ทุก 10 นาที
-        presenceLastWriteAt = now;
-        try { await window.__fsTimeout(setDoc(doc(db, "presence", uid), { on: true, at: now }), 5000); } catch (e) { /* โควตาหมด/ออฟไลน์ — ข้าม ไม่เด้ง error */ }
-    };
-    window.markPresenceOffline = async () => {
-        const uid = loggedInUserId; if (!uid) return;
-        try { await window.__fsTimeout(setDoc(doc(db, "presence", uid), { on: false, at: Date.now() }), 5000); } catch (e) {}
-    };
-    // แตะ/ใช้งานแอป → refresh สถานะออนไลน์ (จำกัด 1 ครั้ง/10 นาที ข้างใน markPresenceOnline)
-    document.addEventListener('pointerdown', () => { window.markPresenceOnline(false); }, { passive: true });
     window.myCurrentQrCodeURL = ""; window.myCurrentDisplayName = ""; window.myCurrentPhotoURL = ""; window.myCurrentCompanyName = ""; window.myCurrentPlateNo = ""; window.currentAdminUsers = [];
 
     // รายการสิทธิ์ทั้งหมด — แต่ละข้อผูกกับฟีเจอร์/ปุ่มจริงในแอป (Admin เป็น god เห็นหมดเสมอ; Manager/User ตั้งได้ตามที่ admin ติ๊ก)
@@ -2514,11 +2492,11 @@
         if (window.openTripZoom) window.openTripZoom();
     };
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') { captureHiddenGap(); window.markPresenceOffline(); } // 👤 ย่อ/สลับออกจากแอป → ออฟไลน์ทันที
-        else if (document.visibilityState === 'visible') { resumeFromHidden(); window.markPresenceOnline(true); } // 👤 กลับมาใช้แอป → ออนไลน์
+        if (document.visibilityState === 'hidden') { captureHiddenGap(); }
+        else if (document.visibilityState === 'visible') { resumeFromHidden(); }
     });
-    window.addEventListener('pagehide', () => { captureHiddenGap(); window.markPresenceOffline(); }); // 👤 ปิด/คิลแอป → ออฟไลน์
-    window.addEventListener('pageshow', () => { resumeFromHidden(); window.markPresenceOnline(true); });
+    window.addEventListener('pagehide', () => { captureHiddenGap(); });
+    window.addEventListener('pageshow', () => { resumeFromHidden(); });
     
     const calcGPS = (l1, n1, l2, n2) => 6371 * 2 * Math.asin(Math.sqrt(Math.sin((l2-l1)*Math.PI/360)**2 + Math.cos(l1*Math.PI/180)*Math.cos(l2*Math.PI/180)*Math.sin((n2-n1)*Math.PI/360)**2));
     // ขอ fix GPS แบบลองหลายรอบ (ตอนกลับมาเปิดแอปครั้งแรก fix อาจยังไม่นิ่ง/หลุด) → ใช้รอบที่แม่นสุด
@@ -6452,6 +6430,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        '❌ ลบระบบสถานะออนไลน์ (presence) ออกทั้งหมด: ไม่เขียนคอลเลกชัน presence อีกต่อไป (เข้า/ออกแอป, ล็อกอิน/เอาต์, แตะใช้งานทุก 10 นาที, ฟังสดตอนเปิดหน้าจัดการผู้ใช้) — ลดการเขียน Firestore ~8-20 ครั้ง/วัน/เครื่องให้เหลือศูนย์ เพื่อประหยัดโควตาสุด ๆ (ยังเหลือป้าย "ถูกระงับ (Ban)" ในหน้าจัดการผู้ใช้ตามเดิม — ไม่เกี่ยวกับออนไลน์)',
         'กัน user ทั่วไปเด้งหลุดหลังล็อกอินตอนโควตา/เน็ตค้าง: เขียน session ใหม่ไม่ทัน (โควตาหมด) จะไม่ไล่ออกจากระบบอีกต่อไป — ระบบจำค่า session ที่เห็นตอนล็อกอินไว้ แล้วลองเขียนซ้ำเบื้องหลังจนกว่าจะสำเร็จ (ยังไล่เครื่องอื่นที่ล็อกอินซ้อนจริงอยู่เหมือนเดิม)',
         'แก้ล็อกอินบอก "รหัสผู้ใช้หรือรหัสผ่านผิด" ทั้งที่รหัสถูก: ถ้าดึงข้อมูลผู้ใช้ไม่ได้จริง ๆ (Firestore โควตาหมด / เน็ตขัดข้อง) ระบบจะแจ้ง "เชื่อมต่อฐานข้อมูลขัดข้อง (เน็ต/โควตา Firestore) — ลองใหม่อีกครั้ง" แทน — เห็นสาเหตุจริง ไม่เข้าใจผิดว่ารหัสผ่านเสีย (ตรวจสอบแล้วฐานข้อมูลเก็บรหัสแอดมินปัจจุบันถูกต้อง เข้าสู่ระบบได้ปกติ)',
         'ลำดับเมนูซิงก์ทุกคนแบบเรียลไทม์: แอดมินลากสลับเมนู (แฮมเบอร์เกอร์/ตั้งค่าการใช้งาน) แล้วบันทึก → ทุก user เห็นลำดับใหม่ทันที ไม่ต้องปิด-เปิดเมนูใหม่ (เก็บ settings/menuOrder ฟังสด)',
@@ -6728,7 +6707,6 @@
     const listenToMyUser = () => {
         if(!loggedInUserId) return;
         window.listenGlobalMenuOrder(); // 🌍 ฟังลำดับเมนูส่วนกลาง (แอดมินจัดเรียง → ทุก user เห็นแบบนั้นเรียลไทม์)
-        window.markPresenceOnline(true); // 👤 เปิดแอป/ล็อกอิน/สมัคร/รีเฟรช → ขึ้น "ออนไลน์" ทันที (เขียน 1 ครั้ง ไม่มี heartbeat)
         if(!permsUnsub) {            permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { window.globalPermissions = docSnap.exists() ? docSnap.data() : {}; window.fillRoleSelects(); window.applyPermissionsUI(); if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); }); }
         if(!permConfigUnsub) { 
             permConfigUnsub = onSnapshot(doc(db, "settings", "permission_config"), (docSnap) => { 
@@ -6785,7 +6763,6 @@
         });
     };
 
-    // 👤 ระบบ "ใครออนไลน์บ้าง" กลับมาแล้วในเวอร์ชันประหยัดโควตา (presence/{uid} — เขียนเฉพาะเข้า/ออกแอป + แตะใช้งานทุก 10 นาที ไม่มี heartbeat 90 วิ; ฟังสดเฉพาะตอนเปิดหน้าจัดการผู้ใช้)
     if (loggedInUserId) { listenToMyUser(); window.__watchdogShowApp(); window.__fsTimeout(window.__fsRestGet(loggedInUserId), 5000).then(d => { if (d && (d.username || d.role)) window.__applyUserDocUI(d); }).catch(()=>{}); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
     // 🔧 โหลดข้อความแจ้งเตือนที่แอดมินแก้ไว้ (Firestore) — ใช้ได้ทุกหน้าแม้ยังไม่ล็อกอิน
     if (typeof window.loadToastMsgOverrides === 'function') window.loadToastMsgOverrides();
@@ -7080,7 +7057,6 @@
         if(isOk) {
             const logoutUid = loggedInUserId;
             if(logoutUid) {
-                window.markPresenceOffline(); // 👤 ล็อกเอาต์ → ปิดออนไลน์ทันที (เขียน 1 ครั้ง — timeout กันค้าง)
                 window.__fsTimeout(recordActivityLog(logoutUid, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ"), 5000).catch(()=>{}); // ไม่บล็อกการออกจากระบบ
                 if(!forced) {
                     // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน
@@ -7168,17 +7144,6 @@
             let isGod = currentUserRole === "Admin"; let myPerms = isGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
             // ปุ่มดูประวัติรวมทั้งระบบ (Global Logs) — เฉพาะแอดมินหรือผู้มีสิทธิ์ canViewGlobalLogs
             const glBtn = document.getElementById('adminGlobalLogsBtn'); if (glBtn) glBtn.style.display = (isGod || myPerms.canViewGlobalLogs) ? 'flex' : 'none';
-            // 👤 อัปเดตจุด "ออนไลน์" ให้ตรงกับ presence ล่าสุด (ข้อมูลเล็กมาก ไม่กินโควตา)
-            const updatePresenceDots = () => {
-                (window.currentAdminUsers || []).forEach((u) => {
-                    const el = document.getElementById('admin-status-' + u.uid); if (!el) return;
-                    const p = window.presenceMap[u.uid];
-                    const online = p && p.on === true && Date.now() - (p.at || 0) < 30 * 60000;
-                    el.innerHTML = u.isBanned
-                        ? '<span class="status-dot status-banned"></span><span style="color:var(--accent-red)">ถูกระงับ (Ban)</span>'
-                        : (online ? '<span class="status-dot status-online"></span><span style="color:#2fd883">ออนไลน์</span>' : '');
-                });
-            };
             if(adminSnapshotUnsub) adminSnapshotUnsub();
             adminSnapshotUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
                 window.currentAdminUsers = [];
@@ -7188,7 +7153,6 @@
                 window.currentAdminUsers.forEach((u) => {
                     let uid = u.uid; let statusHtml = '';
                     if(u.isBanned) { statusHtml = '<span class="status-dot status-banned"></span><span style="color:var(--accent-red)">ถูกระงับ (Ban)</span>'; }
-                    else { const p = window.presenceMap[uid]; if (p && p.on === true && Date.now() - (p.at || 0) < 30 * 60000) { statusHtml = '<span class="status-dot status-online"></span><span style="color:#2fd883">ออนไลน์</span>'; } }
                     const formatDate = (timestamp) => { if(!timestamp) return "-"; const d = new Date(timestamp); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
                     const roleKey = u.role || 'User';
                     const roleBadge = `<span class="admin-role-badge role-${window.roleClassKey(roleKey)}">${window.roleLabelShort(roleKey)}</span>`;
@@ -7236,16 +7200,8 @@
                         });
                     }
                 }
-                updatePresenceDots(); // หลังรายการเพิ่งเรนเดอร์ → ปรับจุดออนไลน์ให้ตรง presence ล่าสุด
             });
-            // 👤 ฟังสดคอลเลกชันเล็ก presence (เฉพาะตอนเปิดหน้าจัดการผู้ใช้เท่านั้น) — ไม่ heartbeat ไม่ฟังทั้ง users
-            if (presenceUnsub) presenceUnsub();
-            presenceUnsub = onSnapshot(collection(db, "presence"), (snap) => {
-                window.presenceMap = {};
-                snap.forEach((d) => { const dd = d.data(); window.presenceMap[d.id] = dd; });
-                updatePresenceDots();
-            });
-        } else { if(adminSnapshotUnsub) adminSnapshotUnsub(); if(presenceUnsub) presenceUnsub(); presenceUnsub = null; }
+        } else { if(adminSnapshotUnsub) adminSnapshotUnsub(); }
     };
 
     // 📊 หน้าต่างดูการใช้โควตา Firestore (เฉพาะแอดมิน) — ยอดรวมทุก ID จากเซิร์ฟเวอร์ + แยกตาม ID + แยกตามฟีเจอร์ของเครื่องนี้
