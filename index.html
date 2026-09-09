@@ -1980,7 +1980,7 @@
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
     // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-09at';
+    const APP_BUILD = '2026-09-09au';
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -6800,6 +6800,7 @@
     // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
     const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        '🎛️ รายการสิทธิ์ในตั้งค่าสิทธิ์การใช้งานเปลี่ยนจากกล่องติ๊กเป็นสวิตช์เปิด/ปิดแล้ว — แต่ละสิทธิ์มีชื่อ + คำอธิบายเล็ก ๆ ใต้ชื่อ (เหมือนหมวดบันทึกประวัติ) พร้อมปุ่มแก้ไขชื่อและที่จับลากเรียงลำดับตามเดิม',
         '💾 ปุ่ม "บันทึกสิทธิ์" ฉลาดขึ้น: ถ้ายังไม่มีการเปลี่ยนแปลงอะไร ปุ่มจะเป็นสีเทา กดไม่ได้ — พอติ๊กสิทธิ์หรือสลับ log ปุ๊บ ปุ่มกลับมาเขียวและกดได้ทันที · หลังบันทึกสำเร็จ อยู่หน้าเดิมต่อได้เลย ไม่ปิดหน้าต่าง (กดบันทึกอีกรอบได้ถ้าจะแก้เพิ่ม)',
         '🧹 ตั้งค่าการใช้งานซ่อนหัวข้อหมวดหมู่ที่ว่างแล้ว: ถ้าผู้ใช้ (เช่น ผู้จัดการ) ไม่มีสิทธิ์ในหมวดไหน (การแจ้งเตือน / บริการ/ระบบ) หัวข้อหมวดนั้นจะถูกซ่อนไปด้วย ไม่โผล่เป็นช่องว่าง — พอแอดมินให้สิทธิ์ หัวข้อจะเด้งกลับมาเอง',
         '🎯 ป้ายระยะทางในผลค้นหาจุดหมายตรงกับหน้าสรุปเส้นทางแล้ว: จากเดิมแสดงระยะเส้นตรง (เช่น ไปเซ็นทรัลเวสต์เกต badge 9.8 กม. แต่เส้นทางจริง 15.15 กม.) — ตอนนี้ badge จะคำนวณเป็นระยะทางถนนจริง (TomTom routing เดียวกับหน้าสรุป) แสดง … ระหว่างโหลด แล้วแทนที่ด้วยเลขที่ตรงกัน (แคชตามจุดเริ่ม/ปลาย+โหมดทางด่วน กันยิง API ซ้ำ)',
@@ -7705,11 +7706,34 @@
     window.openRoleSettingsModal = () => { if(!window.currentUserPerms().canManageRoles) return window.showToast("คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน", true); window.fillRoleSelects(); window.syncRoleManageBtns(); window.toggleModal('roleSettingsModal', true); window.renderPermList(); window.renderLogSettings(); window.captureRolePermBaseline(); window.updateSavePermBtn(); };
     window.loadRolePermissionsToUI = () => { window.syncRoleManageBtns(); window.renderPermList(); window.captureRolePermBaseline(); window.updateSavePermBtn(); };
     
+    // 📝 คำอธิบายสั้น ๆ ของแต่ละสิทธิ์ (แสดงใต้ชื่อ — เหมือนหมวดบันทึกประวัติ) — คีย์ตาม id สิทธิ์ ถ้าไม่มีคีย์ = ไม่แสดงคำอธิบาย
+    const PERM_DESCS = {
+        'perm_canViewUsers': 'ดูรายชื่อสมาชิกทุกคนและเข้าเมนูจัดการผู้ใช้งาน',
+        'perm_canAdd': 'สร้างบัญชีพนักงานใหม่ได้ (ปุ่มเพิ่มผู้ใช้งานใหม่)',
+        'perm_canEdit': 'แก้ชื่อ / เบอร์โทร / รูป / ทะเบียนรถของพนักงานคนอื่นได้',
+        'perm_canChangeUserRole': 'เลื่อน / ลดตำแหน่งพนักงาน (Manager, User หรือตำแหน่งที่สร้างไว้)',
+        'perm_canViewPassword': 'ดูสถานะรหัสผ่านและตั้งรหัสใหม่ให้พนักงานได้',
+        'perm_canBan': 'ระงับ / ปลดระงับบัญชีพนักงาน (ถูกแบนจะเข้าแอปไม่ได้)',
+        'perm_canDelete': 'ลบพนักงานออกจากระบบถาวร (ทำแล้วย้อนกลับไม่ได้)',
+        'perm_canCallStaff': 'กดโทรหาพนักงานได้จากปุ่มโทรศัพท์ในหน้าจัดการผู้ใช้',
+        'perm_canViewLogs': 'ดูประวัติกิจกรรม / ล็อกอินของพนักงานแต่ละคน',
+        'perm_canViewGlobalLogs': 'ดูประวัติกิจกรรมรวมของทุกคนทั้งระบบ',
+        'perm_canSetStaffPrefs': 'ตั้งค่าให้พนักงานได้ (สั่น toast ทอง / เต็มจออัตโนมัติ)',
+        'perm_canEditOwn': 'แก้ชื่อ / รูปโปรไฟล์ / QR Code ของตัวเองในหน้าโปรไฟล์ได้',
+        'perm_canDeleteMedia': 'ลบรูปโปรไฟล์และ QR Code ของตัวเองได้',
+        'perm_canManageService': 'เพิ่ม / ลบ / จัดเรียงหมวดหมู่ รหัส USSD และเบอร์บริการใน Portal',
+        'perm_canManageToastMsg': 'แก้ไขข้อความ / รูปไอคอน / ระยะเวลาแสดงผลของป๊อปอัปแจ้งเตือนทั้งแอป',
+        'perm_canManageRoles': 'เข้าเมนูนี้เพื่อกำหนดสิทธิ์ให้แต่ละตำแหน่ง (Role)',
+    };
     window.renderPermList = () => {
         let html = ''; let perms = window.currentPermConfig; let role = document.getElementById('settingRoleSelect').value; let rolePerms = window.effectiveRolePerms(role);
         perms.forEach(p => {
-            let prop = p.id.replace('perm_', ''); let checkedStr = rolePerms[prop] ? 'checked' : '';
-            html += `<div class="perm-item" data-id="${p.id}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;"><div style="display: flex; align-items: center; gap: 10px; flex: 1;"><div class="drag-handle" style="cursor: grab; color: rgba(255,255,255,0.3); display: flex; align-items: center;"><span class="material-symbols-outlined">drag_indicator</span></div><input type="checkbox" id="${p.id}" style="width: 20px; height: 20px;" ${checkedStr} onchange="window.onRolePermChanged()"><span style="color: var(--neon-yellow); font-weight: 500; font-size: 14px; flex:1; cursor:pointer;" onclick="document.getElementById('${p.id}').click()">${p.label}</span></div><button onclick="window.editPermLabel('${p.id}')" style="background:none; border:none; color: var(--neon-yellow); cursor:pointer; padding:5px; display:flex; align-items:center; transition:0.2s;" title="แก้ไขชื่อสิทธิ์"><span class="material-symbols-outlined" style="font-size: 20px;">edit</span></button></div>`;
+            let prop = p.id.replace('perm_', ''); let checkedStr = rolePerms[prop] ? 'checked' : ''; let desc = PERM_DESCS[p.id] || '';
+            html += `<div class="perm-item" data-id="${p.id}" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">` +
+                `<div class="drag-handle" style="cursor:grab; color:rgba(255,255,255,0.3); display:flex; align-items:center; flex-shrink:0;"><span class="material-symbols-outlined">drag_indicator</span></div>` +
+                `<div style="flex:1; min-width:0; cursor:pointer;" onclick="document.getElementById('${p.id}').click()"><div style="font-size:13px; color:var(--neon-yellow); font-weight:600; line-height:1.35;">${p.label}</div>${desc ? `<div style="font-size:11px; color:#9aa3b5; margin-top:1px; line-height:1.4;">${desc}</div>` : ''}</div>` +
+                `<button onclick="window.editPermLabel('${p.id}')" style="background:none; border:none; color:var(--neon-yellow); cursor:pointer; padding:5px; display:flex; align-items:center; flex-shrink:0;" title="แก้ไขชื่อสิทธิ์"><span class="material-symbols-outlined" style="font-size:20px;">edit</span></button>` +
+                `<label class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="${p.id}" ${checkedStr} onchange="window.onRolePermChanged()"><span class="app-slider"></span></label></div>`;
         });
         document.getElementById('permListContainer').innerHTML = html;
         if (typeof Sortable !== 'undefined') {
