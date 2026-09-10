@@ -6645,6 +6645,14 @@
             if (data.destName) txt += ` · ไป ${data.destName}`;
             info.innerText = txt;
         }
+        // ⚡ เริ่มต่ออัตโนมัติ: เปิดแอปแล้วเจอเที่ยวที่ยังไม่สิ้นสุด → เดินมิเตอร์ต่อ + เปิดจอมิเตอร์ใหญ่ทันที (ไม่ต้องกด "เริ่มต่อ")
+        // เทียบเท่าการแตะปุ่ม "เริ่มต่อ" ทันที — ระบบเบิกเวลาจอด/ระยะทางช่วงแอปปิด + กันนับซ้ำ (__liveCaughtUpKey) ทำงานเหมือนเดิม
+        if (window.__autoResumeTripKey === undefined || window.__autoResumeTripKey !== data.startTime) {
+            window.__autoResumeTripKey = data.startTime; // กันเริ่มต่อซ้ำรอบเดิมในเซสชันนี้
+            window.resumeSavedTrip();
+            return; // เริ่มต่อแล้ว → ไม่โชว์แบนเนอร์
+        }
+
         const alreadyShown = banner.style.display === 'flex';
         banner.classList.remove('trb-collapsing', 'trb-compact');
         banner.style.display = 'flex';
