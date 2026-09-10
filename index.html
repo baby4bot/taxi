@@ -6982,6 +6982,12 @@
             pauseLog = []; pauseOpenAt = null; window.isMeterPaused = false;
             lastPath = []; // เที่ยวใหม่ เริ่มจดเส้นทางใหม่
             catchUpLog = []; // เที่ยวใหม่ ประวัติการเบิกคืนเริ่มต้นใหม่
+            // 🧹 เที่ยวใหม่แบบไม่มีจุดหมาย: ล้างจุดหมายเก่าให้หมดทุกชั้น (window.destLoc + __* ที่ __getFinalDestSafe ใช้อ่าน)
+            destLoc = null;
+            try { window.destLoc = null; } catch(e) {}
+            try { window.__restoredDestInfo = null; } catch(e) {}
+            try { window.__lastDestInfo = null; } catch(e) {}
+            try { window.__cachedLatestDest = null; } catch(e) {}
         }
         
         nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; window.__tripLiveAt = Date.now(); // รีเซ็ตเตือน "ใกล้ถึงปลายทาง"/ถามจบเที่ยว สำหรับเที่ยวนี้ (เริ่มนับเวลาหลังเริ่ม/เริ่มต่อ)
@@ -7603,6 +7609,11 @@
         window.stopSilentAudio(); 
         window.hideMap(); // Hide map when tracking stops
         $('searchSectionBox').style.display = 'block'; $('manualSectionBox').style.display = 'flex'; window.syncFareTollBtn(); if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex'; $('smallNavBtn').style.display = 'none'; $('liveTracker').style.display = 'none'; $('btnMinus').disabled = false; $('btnPlus').disabled = false; $('kmInput').disabled = false; window.updateKmStepper();        if(watchId) navigator.geolocation.clearWatch(watchId); if(tripTimer) clearInterval(tripTimer); if(routeUpdateTimer) clearInterval(routeUpdateTimer); destLoc = null; 
+        // 🧹 จบเที่ยว: ล้างจุดหมายเก่าทุกชั้นที่ __getFinalDestSafe ใช้อ่าน → เริ่มเที่ยวใหม่จะไม่ค้างสถานที่เก่า/เส้นทาง/รถ
+        try { window.destLoc = null; } catch(e) {}
+        try { window.__restoredDestInfo = null; } catch(e) {}
+        try { window.__lastDestInfo = null; } catch(e) {}
+        try { window.__cachedLatestDest = null; } catch(e) {}
         lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; lastPath = []; catchUpLog = [];
         window.isMeterPaused = false;
         window.updatePauseBtnUI();
