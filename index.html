@@ -1384,6 +1384,58 @@
     </div>
 </div>
 
+<div id="quickChangeModal" class="custom-confirm-overlay" style="display: none;">
+    <div class="custom-confirm-box" style="max-width: 370px; padding: 24px 18px; position: relative;">
+        <button class="btn-close-floating" style="top: 14px; right: 14px; transform: none;" onclick="window.toggleModal('quickChangeModal', false)" title="ปิดหน้าต่างนี้ (กลับไปหน้าสรุปค่าโดยสาร)"><span class="material-symbols-outlined">close</span></button>
+        <h3 class="custom-confirm-title" style="display:flex; align-items:center; justify-content:center; gap:7px; margin-bottom:3px;">
+            <span class="material-symbols-outlined" style="font-size:24px; color: var(--neon-yellow);">payments</span> คำนวณเงินทอน
+        </h3>
+        <div style="font-size:12.5px; color: var(--text-dim); margin-bottom:14px;">แตะแบงค์เพื่อ +1 ใบ (กดซ้ำสะสมได้) · ปุ่มสีแดงมุมล่างขวาลบ 1 ใบ</div>
+
+        <div style="text-align:left; font-size:12.5px; color: var(--text-dim); margin-bottom:6px;">ค่าโดยสาร (บาท)</div>
+        <input type="text" inputmode="numeric" pattern="[0-9]*" id="qcFare" class="qc-input" placeholder="เช่น 325" autocomplete="off" oninput="window.qcCalc()" style="margin-bottom:12px;">
+
+        <div style="text-align:left; font-size:12.5px; color: var(--text-dim); margin-bottom:6px;">รับเงินมา (บาท)</div>
+        <div class="qc-bills" id="qcBills">
+            <div class="qc-bill-wrap">
+                <button type="button" class="qc-bill" data-v="20" data-c="0" onclick="window.qcSetBill(20)">20</button>
+                <span class="qc-bill-count" data-for="20" style="display:none;">0</span>
+                <button type="button" class="qc-bill-minus" data-for="20" onclick="event.stopPropagation(); window.qcSubBill(20)" title="ลบ 1 ใบ">−</button>
+            </div>
+            <div class="qc-bill-wrap">
+                <button type="button" class="qc-bill" data-v="50" data-c="0" onclick="window.qcSetBill(50)">50</button>
+                <span class="qc-bill-count" data-for="50" style="display:none;">0</span>
+                <button type="button" class="qc-bill-minus" data-for="50" onclick="event.stopPropagation(); window.qcSubBill(50)" title="ลบ 1 ใบ">−</button>
+            </div>
+            <div class="qc-bill-wrap">
+                <button type="button" class="qc-bill" data-v="100" data-c="0" onclick="window.qcSetBill(100)">100</button>
+                <span class="qc-bill-count" data-for="100" style="display:none;">0</span>
+                <button type="button" class="qc-bill-minus" data-for="100" onclick="event.stopPropagation(); window.qcSubBill(100)" title="ลบ 1 ใบ">−</button>
+            </div>
+            <div class="qc-bill-wrap">
+                <button type="button" class="qc-bill" data-v="500" data-c="0" onclick="window.qcSetBill(500)">500</button>
+                <span class="qc-bill-count" data-for="500" style="display:none;">0</span>
+                <button type="button" class="qc-bill-minus" data-for="500" onclick="event.stopPropagation(); window.qcSubBill(500)" title="ลบ 1 ใบ">−</button>
+            </div>
+            <div class="qc-bill-wrap">
+                <button type="button" class="qc-bill" data-v="1000" data-c="0" onclick="window.qcSetBill(1000)">1000</button>
+                <span class="qc-bill-count" data-for="1000" style="display:none;">0</span>
+                <button type="button" class="qc-bill-minus" data-for="1000" onclick="event.stopPropagation(); window.qcSubBill(1000)" title="ลบ 1 ใบ">−</button>
+            </div>
+        </div>
+        <input type="text" inputmode="numeric" pattern="[0-9]*" id="qcPaid" class="qc-input" placeholder="หรือพิมพ์ยอดที่รับมา" autocomplete="off" oninput="window.qcCalc()">
+
+        <div id="qcResultBox" style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-glass);">
+            <div style="font-size:12.5px; color: var(--text-dim); padding:8px 0;">กรอกค่าโดยสาร แล้วแตะแบงค์ที่ผู้โดยสารจ่าย</div>
+        </div>
+
+        <div class="custom-confirm-actions">
+            <button onclick="window.qcClear()" class="btn-cc-cancel" title="ล้างค่าแล้วเริ่มใหม่">ล้าง</button>
+            <button onclick="window.qcFinish()" class="btn-cc-ok" id="qcFinishBtn" disabled title="จบการทอนเงินและปิดหน้าสรุปค่าโดยสาร">เสร็จสิ้น</button>
+        </div>
+    </div>
+</div>
+
 <div id="routePreviewModal" class="custom-confirm-overlay" style="display: none;">
     <div class="custom-confirm-box" style="max-width: 390px; padding: 26px 18px; border-radius: 26px; position: relative;">
         <button class="btn-close-floating" style="top: 14px; right: 14px; transform: none;" onclick="window.closeRoutePreview()" title="ปิด (ยังไม่เริ่ม)"><span class="material-symbols-outlined">close</span></button>
@@ -1648,6 +1700,7 @@
             <div class="side-menu-item" data-ord-key="home" onclick="window.toggleSideMenu(false)"><span class="material-symbols-outlined">home</span><span>หน้าแรก</span></div>
             <div class="side-menu-item" data-ord-key="profile" onclick="window.toggleSideMenu(false); window.openProfileModal();"><span class="material-symbols-outlined" style="position: relative;">person<span id="menuProfileBadge" class="perm-badge" style="display: none;"></span></span><span>โปรไฟล์</span></div>
             <div class="side-menu-item" data-ord-key="fullscreen" onclick="window.toggleAppFullscreen()"><span class="material-symbols-outlined">fullscreen</span><span id="fullscreenLabel">เปิดเต็มจอ</span></div>
+            <div class="side-menu-item" data-ord-key="oled" onclick="window.toggleOledMode()"><span class="material-symbols-outlined">dark_mode</span><span id="oledModeLabel">โหมดประหยัดแบต (OLED)</span></div>
             <div id="settingsMenuBtn" class="side-menu-item" data-ord-key="settings" onclick="window.toggleSideMenu(false); setTimeout(() => { window.openSettingsHub(); }, 300);" style="display: none;"><span class="material-symbols-outlined">settings</span><span>ตั้งค่าการใช้งาน</span></div>
         </div>
         <hr class="side-divider">
@@ -1730,6 +1783,113 @@
         .hub-item-title { color: #fff; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
         .hub-item-desc { color: #9aa3b5; font-size: 12px; margin-top: 3px; line-height: 1.45; }
         .hub-chevron { color: rgba(255,255,255,0.35); font-size: 22px; flex-shrink: 0; }
+
+        /* ===== 💰 ระบบคำนวณทอนเงินด่วน (Quick Change Calculator) ===== */
+        .qc-bills { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-bottom: 10px; }
+        .qc-bill-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; }
+        .qc-bill {
+            width: 100%; height: 100%;
+            padding: 0; border-radius: 14px; border: 1px solid rgba(255,255,255,0.14);
+            background: rgba(255,255,255,0.07); color: #fff; cursor: pointer;
+            font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 700;
+            -webkit-tap-highlight-color: transparent; transition: transform 0.15s, background 0.2s, border-color 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .qc-bill:active { transform: scale(0.92); }
+        .qc-bill.selected { background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #fbbf24; box-shadow: 0 4px 14px rgba(245,158,11,0.4); }
+        /* ตัวเลขจำนวนใบที่เลือกไว้ (ซ้ายบน) — วงกลมสมผิว เหมือนปุ่มลบสีแดง */
+        .qc-bill-count {
+            position: absolute; top: -6px; left: -6px;
+            width: 22px; height: 22px; padding: 0; border-radius: 50%;
+            background: #2ecc71; color: #fff;
+            font-size: 12px; font-weight: 800;
+            box-shadow: 0 3px 8px rgba(46,204,113,0.55);
+            border: 1.5px solid #0b0c10;
+            z-index: 5; font-family: 'Kanit', sans-serif;
+            display: inline-flex; align-items: center; justify-content: center;
+            line-height: 1; text-align: center;
+        }
+        /* ปุ่มลบสีแดงกลม (ขวาล่าง) — เฉพาะเมื่อมีจำนวนใบ > 0 ถึงจะกดได้ · ย้ายมาล่างเพื่อไม่ทับซ้อนกับ badge เขียวซ้ายบน */
+        .qc-bill-minus {
+            position: absolute; bottom: -6px; right: -6px;
+            width: 22px; height: 22px; border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b7a, #ef4444);
+            color: #fff; border: 1.5px solid #0b0c10;
+            box-shadow: 0 3px 8px rgba(239,68,68,0.55);
+            font-size: 16px; font-weight: 800; line-height: 1;
+            display: none; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 10;
+            padding: 0; -webkit-tap-highlight-color: transparent;
+            transition: transform 0.1s;
+        }
+        .qc-bill-minus.show { display: flex; }
+        .qc-bill-minus:active { transform: scale(0.88); }
+        .qc-input { width: 100%; padding: 13px; border-radius: 14px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; text-align: center; font-size: 22px; font-weight: 700; box-sizing: border-box; outline: none; font-family: 'Kanit', sans-serif; }
+        .qc-input:focus { border-color: rgba(255,210,77,0.65); box-shadow: 0 0 0 3px rgba(255,210,77,0.14); }
+        #qcResultBox { border-radius: 16px; padding: 10px 8px; margin: 10px 0 14px; text-align: center; min-height: 40px; }
+        #qcFinishBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* ===== 🧮 ปุ่มคำนวณทอนบนจอมิเตอร์ขยาย (zoom) ===== */
+        .tz-change-btn {
+            position: absolute; top: 10px; left: 122px; z-index: 60;
+            display: flex; align-items: center; justify-content: center; gap: 3px;
+            padding: 3px 9px; border-radius: 13px;
+            font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap;
+            background: #8b5cf6; border: 1px solid rgba(255,255,255,0.4); color: #fff;
+            cursor: pointer; -webkit-tap-highlight-color: transparent;
+            transition: transform 0.15s, background 0.2s;
+        }
+        .tz-change-btn:active { transform: scale(0.93); background: #7c3aed; }
+        .tz-change-btn .material-symbols-outlined { font-size: 12px; }
+
+        /* ===== ⬛ ปุ่มสลับโหมดประหยัดแบต (OLED) บนจอมิเตอร์ขยาย ===== */
+        .tz-oled-btn {
+            position: absolute; bottom: 10px; left: 14px; z-index: 60;
+            width: 34px; height: 34px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.35);
+            color: #fff; cursor: pointer; -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: 0.2s;
+        }
+        .tz-oled-btn .material-symbols-outlined { font-size: 19px; }
+        .tz-oled-btn:active { transform: scale(0.92); }
+
+        /* ===== ⬛ โหมดประหยัดแบตเตอรี่ (OLED Pure Black) — พื้นดำสนิท ลดเรืองแสง/เงา =====
+           ใช้ตอนวางมือถือหน้ารถเปิดจอค้างนาน ๆ: จอ OLED ยิ่งมืดยิ่งประหยัดแบต ลดความร้อน */
+        html.oled, html.oled body { background: #000 !important; }
+        html.oled {
+            --bg-dark: #000; --card-glass: #000; --input-bg: #070707; --border-glass: #1e1e1e;
+            --text-dim: #6f7a90;
+            --glow-green: rgba(47,216,131,0.10); --glow-yellow: rgba(255,210,77,0.10);
+            --surface-1: rgba(255,255,255,0.03); --surface-2: rgba(255,255,255,0.06); --ring: rgba(255,255,255,0.07);
+        }
+        html.oled .card::before, html.oled .result-container::after { display: none !important; }
+        html.oled .result-container, html.oled .live-tracker-box, html.oled .search-section,
+        html.oled .dropdown-box, html.oled .side-menu, html.oled .modal-box, html.oled .custom-confirm-box,
+        html.oled .trip-resume-banner, html.oled .catchup-status-bar {
+            background: #000 !important;
+            box-shadow: none !important;
+        }
+        html.oled .modal-overlay { background: rgba(0,0,0,0.95) !important; }
+        html.oled input[type="text"], html.oled input[type="password"], html.oled input[type="tel"],
+        html.oled input[type="number"], html.oled select, html.oled textarea, html.oled .km-input-box,
+        html.oled .qc-input {
+            background: #070707 !important;
+        }
+        html.oled input:focus, html.oled .km-input-box:focus-within {
+            background: #0a0a0a !important;
+            box-shadow: 0 0 0 3px rgba(255,210,77,0.10) !important;
+        }
+        /* ลดความสว่าง/เรืองแสงของปุ่มหลักให้พออ่านได้ (ยังเห็นสีแยกปุ่มชัด) */
+        html.oled .manual-timer-btn, html.oled .small-nav-btn, html.oled .meter-pause-btn,
+        html.oled .tz-fare-card, html.oled .btn-icon-base, html.oled .header-avatar,
+        html.oled .hamburger-btn, html.oled .small-toll-btn { box-shadow: none !important; }
+        html.oled * { text-shadow: none !important; }
+        @media (max-width: 430px) {
+            .tz-change-btn { top: 8px; left: 112px; padding: 3px 8px; font-size: 10.5px; border-radius: 12px; }
+            .tz-change-btn .material-symbols-outlined { font-size: 11.5px; }
+            .tz-oled-btn { bottom: 8px; left: 10px; width: 30px; height: 30px; }
+        }
 </style>
 <div id="settingsHubModal" class="modal-overlay" style="z-index: 10003;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">ตั้งค่าการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('settingsHubModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:6px 12px;">
 <div class="hub-cat-label" data-cat="cat-members">👥 สมาชิก / สิทธิ์</div>
@@ -1813,11 +1973,13 @@
             <button class="tz-toll-btn" onclick="event.stopPropagation(); window.promptToll()" title="เพิ่มค่าทางด่วน (บวกเพิ่มจากมิเตอร์)">
                 <span class="material-symbols-outlined">toll</span> + ทางด่วน
             </button>
+
             <div id="tzTollList" class="tz-toll-list"></div>
             <button onclick="window.toggleMeterPause()" id="zoomPauseBtn" class="tz-pause-btn running" style="display:none;" title="หยุดมิเตอร์ชั่วคราว"><span class="material-symbols-outlined">pause</span></button>
             <div class="tz-fare-title">• ค่าโดยสารเรียลไทม์ •</div>
             <div class="tz-fare-price-box"><span id="tzMeterPrice">35</span><span class="tz-fare-currency">฿</span></div>
             <div id="tzEstFare" class="tz-est-fare">ประเมิน: -- ฿</div>
+            <button id="tzOledBtn" class="tz-oled-btn" onclick="event.stopPropagation(); window.toggleOledMode()" title="โหมดประหยัดแบตเตอรี่ (หน้าดำสนิท)"><span class="material-symbols-outlined">dark_mode</span></button>
         </div>
         <div class="tz-info-box" id="tzInfoBox">
             <div class="tz-info-col"><div class="tz-info-label">เวลาโดยประมาณ</div><div id="tzEtaTime" class="tz-info-val" style="color: var(--neon-yellow);">-- นาที</div></div>
@@ -1980,8 +2142,8 @@
     setInterval(() => { window.flushQuotaToDB(); }, QUOTA_FLUSH_MS);
     window.addEventListener('pagehide', () => { window.flushQuotaToDB(); });
 
-    // รุ่น build — ไว้เช็คว่าเครื่องที่เปิดอยู่เป็นเวอร์ชันใหม่สุดหรือยัง (อัปเดตทุกครั้งที่ push งานใหม่)
-    const APP_BUILD = '2026-09-09aw';
+    // รุ่น build — ใช้วันปัจจุบันของเครื่อง + (a/b/c... ตามจำนวน runtime build ในวันนั้น)
+    let APP_BUILD = '2026-09-10a'; // placeholder default — จะถูก override ทีหลังหลังฟังก์ชัน chgTodayBuildStamp ประกาศเสร็จ (ส่วน changelog ด้านล่าง)
     try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch (e) {}
 
     const firebaseConfig = {
@@ -3096,6 +3258,9 @@
             window.__fsTimeout(setDoc(doc(db, "settings", "menuOrder"), { side: order.side, hub: order.hub }, { merge: true }), 6000).catch(() => {
                 window.__fsRestPatchDoc("settings/menuOrder", { side: JSON.stringify(order.side), hub: JSON.stringify(order.hub) }).catch(()=>{});
             });
+            try { window.addChangelogEntry && window.addChangelogEntry('บันทึกลำดับเมนูส่วนกลาง (แอดมิน) — ซิงก์แบบเรียลไทม์ทุกเครื่องทุกคน'); } catch(e) {}
+        } else {
+            try { window.addChangelogEntry && window.addChangelogEntry('บันทึกลำดับเมนูส่วนตัว (ซิงก์ตามบัญชีข้ามเครื่อง)'); } catch(e) {}
         }
     };
     window.__wireReorderDrag = (container, itemsSel, boxEl, saveKey) => {
@@ -3426,6 +3591,44 @@
     document.addEventListener('fullscreenchange', window.syncFullscreenLabel);
     document.addEventListener('webkitfullscreenchange', window.syncFullscreenLabel);
 
+    /* ===== ⬛ โหมดประหยัดแบตเตอรี่ (OLED Pure Black) =====
+       ใช้ตอนวางมือถือหน้ารถเปิดจอค้างนาน ๆ — พื้นดำสนิท ลดเรืองแสง/เงา
+       ช่วยลดความร้อนของจอ OLED และประหยัดแบตเตอรี่
+       ✅ บันทึกค่าใน Firestore (users/<uid>.oledMode) — ซิงก์ข้ามทุกเครื่องของ user เดียวกัน
+       ✅ ค่า default = เปิด (true) สำหรับทุก user ที่เพิ่งสร้าง
+       ✅ localStorage เป็น fallback ตอนออฟไลน์ */
+    const OLED_KEY = 'taxi_oled_mode';
+    window.isOledMode = false;
+    window.applyOledMode = (on, { syncToDb = true } = {}) => {
+        const newVal = !!on;
+        const changed = newVal !== window.isOledMode;
+        window.isOledMode = newVal;
+        document.documentElement.classList.toggle('oled', window.isOledMode);
+        try { localStorage.setItem(OLED_KEY, window.isOledMode ? '1' : '0'); } catch (e) {}
+        window.syncOledUi();
+        if (syncToDb && changed && loggedInUserId) {
+            try {
+                window.__fsTimeout(setDoc(doc(db, "users", loggedInUserId), { oledMode: window.isOledMode }, { merge: true }), 4000).catch(() => {
+                    window.__fsRestPatch(loggedInUserId, { oledMode: window.isOledMode }).catch(()=>{});
+                });
+            } catch(e) {}
+            try { window.addChangelogEntry && window.addChangelogEntry((window.isOledMode ? 'เปิด' : 'ปิด') + ' โหมดประหยัดแบต (OLED Mode) — ซิงก์ข้ามทุกเครื่องผ่านบัญชีผู้ใช้'); } catch(e) {}
+        }
+    };
+    window.syncOledUi = () => {
+        const lbl = $('oledModeLabel');
+        if (lbl) lbl.innerText = window.isOledMode ? 'โหมดประหยัดแบต: เปิด' : 'โหมดประหยัดแบต: ปิด';
+        const zb = $('tzOledBtn');
+        if (zb) {
+            zb.title = window.isOledMode ? 'ปิดโหมดประหยัดแบต (กลับหน้าจอปกติ)' : 'โหมดประหยัดแบต (หน้าดำสนิท)';
+            const ic = zb.querySelector('.material-symbols-outlined');
+            if (ic) ic.textContent = window.isOledMode ? 'light_mode' : 'dark_mode';
+        }
+    };
+    window.toggleOledMode = () => { window.applyOledMode(!window.isOledMode, { syncToDb: true }); };
+    // เปิดตามค่าที่บันทึกไว้ (ถ้าเคยเปิดค้างไว้)
+    try { window.applyOledMode(localStorage.getItem(OLED_KEY) === '1'); } catch (e) {}
+
     /* ===== 📱 เต็มจออัตโนมัติเมื่อเปิดจากมือถือ (แท็บเบราว์เซอร์) =====
        ข้อจำกัดของเบราว์เซอร์: เว็บขอเต็มจอตอนโหลดหน้าเองไม่ได้ ต้องเกิดจากท่าทางผู้ใช้
        → พอผู้ใช้แตะ/กดครั้งแรก (ตอนกำลังจะใช้งานปุ่มอะไรก็ตาม) ระบบจะขอเต็มจอให้ทันที
@@ -3648,6 +3851,178 @@
     window.handleResultClick = () => {
         if (window.isManualRunning) { window.toggleModal('trackerZoomOverlay', true); } 
         else { window.toggleModal('zoomOverlay', true); }
+    };
+
+    /* ===== 💰 ระบบคำนวณทอนเงินด่วน (Quick Change Calculator) =====
+       ผู้โดยสารยื่นแบงค์ 500/1000 → แตะแบงค์ปุ่มเดียว เห็นเงินทอนทันที (พร้อมแยกธนบัตร/เหรียญ) */
+    // ยอดที่ต้องเก็บจากผู้โดยสาร ณ ตอนนี้ = มิเตอร์/ราคาโดยประมาณ + ค่าทางด่วน/ค่าเพิ่ม
+    window.currentMeterFare = () => {
+        let fare = 0;
+        try {
+            if (window.isManualRunning) {
+                const m = $('tzMeterPrice');
+                if (m) fare = parseFloat(String(m.innerText).replace(/[^0-9.]/g, '')) || 0;
+            } else {
+                const fp = $('farePrice');
+                if (fp) fare = parseFloat(String(fp.innerText).replace(/[^0-9.]/g, '')) || 0;
+            }
+            fare += (window.surchargeList || []).reduce((s, i) => s + (i.amount || 0), 0);
+        } catch (e) {}
+        return Math.round(fare) || 0;
+    };
+    window.openQuickChange = (fare) => {
+        const f = (typeof fare === 'number' && isFinite(fare)) ? Math.max(0, Math.round(fare)) : window.currentMeterFare();
+        const fareInput = $('qcFare');
+        if (fareInput) fareInput.value = f > 0 ? String(f) : '';
+        const paidInput = $('qcPaid');
+        if (paidInput) paidInput.value = '';
+        // รีเซ็ตจำนวนใบแบงค์ทั้งหมดเป็น 0
+        const pb = $('qcBills');
+        if (pb) {
+            pb.querySelectorAll('.qc-bill').forEach(b => { b.setAttribute('data-c', '0'); b.classList.remove('selected'); });
+            pb.querySelectorAll('.qc-bill-count').forEach(s => { s.style.display = 'none'; s.innerText = '0'; });
+            pb.querySelectorAll('.qc-bill-minus').forEach(m => m.classList.remove('show'));
+        }
+        window.qcCalc();
+        window.toggleModal('quickChangeModal', true);
+        if (paidInput) setTimeout(() => { try { paidInput.focus(); } catch (e) {} }, 60);
+    };
+    // อัปเดต UI ของแบงค์ใบหนึ่ง (selected / จำนวนใบ / ปุ่มลบ)
+    window.qcUpdateBillUI = (v) => {
+        const pb = $('qcBills');
+        if (!pb) return;
+        const btn = pb.querySelector(`.qc-bill[data-v="${v}"]`);
+        const badge = pb.querySelector(`.qc-bill-count[data-for="${v}"]`);
+        const minus = pb.querySelector(`.qc-bill-minus[data-for="${v}"]`);
+        const c = parseInt(((btn && btn.getAttribute('data-c')) || '0'), 10) || 0;
+        if (btn) btn.classList.toggle('selected', c > 0);
+        if (badge) {
+            if (c > 0) { badge.style.display = 'inline-flex'; badge.innerText = String(c); }
+            else { badge.style.display = 'none'; badge.innerText = '0'; }
+        }
+        if (minus) minus.classList.toggle('show', c > 0);
+    };
+    // คำนวณยอดรวมรับเงินจากจำนวนใบ × ราคาของแบงค์ → ใส่ช่อง qcPaid
+    window.qcRecalcPaidFromBills = () => {
+        const pb = $('qcBills');
+        if (!pb) return;
+        const sum = [...pb.querySelectorAll('.qc-bill')].reduce((s, b) => {
+            const c = parseInt((b.getAttribute('data-c') || '0'), 10) || 0;
+            const v = parseInt((b.getAttribute('data-v') || '0'), 10) || 0;
+            return s + (c * v);
+        }, 0);
+        const paidInput = $('qcPaid');
+        if (paidInput) paidInput.value = sum > 0 ? String(sum) : '';
+    };
+    // กดแบงค์ = +1 ใบ (สะสมกดอีกครั้งเพิ่มอีก)
+    window.qcSetBill = (v) => {
+        const pb = $('qcBills');
+        if (!pb) return;
+        const btn = pb.querySelector(`.qc-bill[data-v="${v}"]`);
+        if (!btn) return;
+        const cur = parseInt((btn.getAttribute('data-c') || '0'), 10) || 0;
+        btn.setAttribute('data-c', String(cur + 1));
+        window.qcUpdateBillUI(v);
+        window.qcRecalcPaidFromBills();
+        window.qcCalc();
+    };
+    // กดปุ่มลบสีแดง = -1 ใบ (ถ้าเป็น 0 แล้วไม่ทำอะไร)
+    window.qcSubBill = (v) => {
+        const pb = $('qcBills');
+        if (!pb) return;
+        const btn = pb.querySelector(`.qc-bill[data-v="${v}"]`);
+        if (!btn) return;
+        const cur = parseInt((btn.getAttribute('data-c') || '0'), 10) || 0;
+        if (cur <= 0) return;
+        btn.setAttribute('data-c', String(cur - 1));
+        window.qcUpdateBillUI(v);
+        window.qcRecalcPaidFromBills();
+        window.qcCalc();
+    };
+    window.qcClear = () => {
+        const fareInput = $('qcFare'); if (fareInput) fareInput.value = '';
+        const paidInput = $('qcPaid'); if (paidInput) paidInput.value = '';
+        const pb = $('qcBills');
+        if (pb) {
+            pb.querySelectorAll('.qc-bill').forEach(b => { b.setAttribute('data-c', '0'); b.classList.remove('selected'); });
+            pb.querySelectorAll('.qc-bill-count').forEach(s => { s.style.display = 'none'; s.innerText = '0'; });
+            pb.querySelectorAll('.qc-bill-minus').forEach(m => m.classList.remove('show'));
+        }
+        window.qcCalc();
+        if (fareInput) setTimeout(() => { try { fareInput.focus(); } catch (e) {} }, 60);
+    };
+    window.qcSyncFinish = () => {
+        const btn = $('qcFinishBtn');
+        if (!btn) return;
+        const paid = parseFloat(String(($('qcPaid') || {}).value || '').replace(/[^0-9.]/g, '')) || 0;
+        btn.disabled = paid <= 0; // ยังไม่ได้เลือก/พิมพ์ยอดเงินที่รับมา → กดเสร็จสิ้นไม่ได้
+    };
+    window.qcFinish = () => {
+        // สั่น + เสียงติ๊งสั้น ๆ ยืนยันว่าจบการทอนเงินแล้ว (เคารพการตั้งค่าในหน้าโปรไฟล์: สั่น toast ทอง / เสียงติ๊ง)
+        if (navigator.vibrate && window.userVibrateGold !== false) { try { navigator.vibrate([50, 40, 50]); } catch (e) {} }
+        if (window.playToastTing && window.userToastSound !== false) { try { window.playToastTing(); } catch (e) {} }
+        window.toggleModal('quickChangeModal', false);
+        window.toggleModal('tripSummaryOverlay', false); // ปิดหน้าสรุปค่าโดยสารไปด้วยเลย ไม่ต้องกลับมาอีกรอบ
+    };
+    window.qcCalc = () => {
+        const num = (v) => parseFloat(String(v || '').replace(/[^0-9.]/g, '')) || 0;
+        const fare = num(($('qcFare') || {}).value);
+        const paid = num(($('qcPaid') || {}).value);
+        window.qcSyncFinish(); // อัปเดตปุ่มเสร็จสิ้นตามยอดที่รับมา
+        // พิมพ์ยอดเองไม่ตรงกับยอดรวมที่เลือกแบงค์ไว้ (จำนวนใบ × ราคาแบงค์) → รีเซ็ตจำนวนใบแบงค์ทั้งหมดเป็น 0
+        const pb = $('qcBills');
+        if (pb) {
+            const selSum = [...pb.querySelectorAll('.qc-bill')].reduce((s, b) => {
+                const c = parseInt((b.getAttribute('data-c') || '0'), 10) || 0;
+                const v = parseInt((b.getAttribute('data-v') || '0'), 10) || 0;
+                return s + (c * v);
+            }, 0);
+            if (selSum !== paid) {
+                pb.querySelectorAll('.qc-bill').forEach(b => { b.setAttribute('data-c', '0'); b.classList.remove('selected'); });
+                pb.querySelectorAll('.qc-bill-count').forEach(s => { s.style.display = 'none'; s.innerText = '0'; });
+                pb.querySelectorAll('.qc-bill-minus').forEach(m => m.classList.remove('show'));
+            }
+        }
+        const box = $('qcResultBox');
+        if (!box) return;
+        if (fare <= 0 || paid <= 0) {
+            box.innerHTML = `<div style="font-size:12.5px; color:var(--text-dim); padding:8px 0;">กรอกค่าโดยสาร แล้วแตะแบงค์ที่ผู้โดยสารจ่าย — เห็นเงินทอนทันที</div>`;
+            return;
+        }
+        if (paid < fare) {
+            box.innerHTML = `<div style="font-size:14px; font-weight:600; color:#ff6b7a; padding:10px 0;">⚠️ เงินไม่พอ — ขาดอีก <b style="font-size:19px;">${(fare - paid).toLocaleString('th-TH')} ฿</b></div>`;
+            return;
+        }
+        const change = paid - fare;
+        const denoms = [1000, 500, 100, 50, 20, 10, 5, 2, 1];
+        const bankStyles = {
+            1000: { bg: 'linear-gradient(135deg,#9ca3af,#6b7280)', text: '#ffffff', border: 'rgba(107,114,128,0.9)' },
+            500:  { bg: 'linear-gradient(135deg,#a78bfa,#7c3aed)', text: '#ffffff', border: 'rgba(124,58,237,0.9)' },
+            100:  { bg: 'linear-gradient(135deg,#ff7676,#dc2626)', text: '#ffffff', border: 'rgba(220,38,38,0.9)' },
+            50:   { bg: 'linear-gradient(135deg,#7cc7ff,#1e88e5)', text: '#ffffff', border: 'rgba(30,136,229,0.9)' },
+            20:   { bg: 'linear-gradient(135deg,#5ef299,#16a34a)', text: '#ffffff', border: 'rgba(22,163,74,0.9)' }
+        };
+        const coinStyle = { bg: '#ffffff', text: '#0b0c10', border: 'rgba(150,150,165,0.9)' };
+        const parts = [];
+        let rem = change;
+        for (const d of denoms) {
+            const c = Math.floor(rem / d);
+            if (c > 0) {
+                const isBank = d >= 20;
+                const unit = isBank ? 'ใบ' : 'เหรียญ';
+                const prefix = isBank ? 'แบงก์' : 'เหรียญ';
+                const label = `${prefix} ${d.toLocaleString('th-TH')} ${c} ${unit}`;
+                const style = isBank ? (bankStyles[d] || bankStyles[20]) : coinStyle;
+                parts.push({ value: d, count: c, isBank, label, style });
+                rem -= c * d;
+            }
+        }
+        const pillBase = `border-radius:14px; padding:5px 12px; font-size:13px; font-weight:800; box-shadow:0 3px 8px rgba(0,0,0,0.35); border:1.5px solid;`;
+        box.innerHTML = `
+            <div style="font-size:10.5px; letter-spacing:0.7px; color:var(--text-dim); text-transform:uppercase; margin-bottom:2px;">เงินทอน</div>
+            <div style="font-size:50px; font-weight:800; line-height:1.1; color:var(--neon-green); text-shadow:0 0 18px var(--glow-green);">${change.toLocaleString('th-TH')}<span style="font-size:24px;"> ฿</span></div>
+            <div style="font-size:12px; color:var(--text-dim); margin-top:5px;">รับมา ${paid.toLocaleString('th-TH')} ฿ − ค่าโดยสาร ${fare.toLocaleString('th-TH')} ฿</div>
+            ${parts.length ? `<div style="margin-top:10px; display:flex; flex-wrap:wrap; justify-content:center; gap:6px;">${parts.map(p => `<span style="${pillBase} background:${p.style.bg}; color:${p.style.text}; border-color:${p.style.border};" title="${p.count} × ${p.value} บาท">${p.label}</span>`).join('')}</div>` : `<div style="font-size:12px; color:var(--text-dim); margin-top:8px;">(ทอนพอดี ไม่ต้องเทียบ)</div>`}`;
     };
 
     // ── ปุ่มย้อนกลับมือถือ (Android back): ปิดทีละชั้น หมวดย่อย → ตั้งค่าการใช้งาน → หน้าแรก → ออกจากแอป ──
@@ -6408,6 +6783,7 @@
                 <div style="font-size:62px; line-height:1.15; font-weight:700; color:var(--neon-green); text-shadow:0 0 20px rgba(46,204,113,0.35);">${thb(total)}</div>
                 <div style="font-size:12px; color:var(--text-dim); margin-top:2px;">ค่าโดยสารรวม (ตามมิเตอร์)</div>
             </div>
+            <button onclick="window.openQuickChange(${Math.round(total)})" class="manual-timer-btn" style="background: linear-gradient(135deg,#f59e0b,#d97706); width:100%; justify-content:center; color:#fff; margin-bottom:var(--space-card);"><span class="material-symbols-outlined" style="font-size:20px;">payments</span> คำนวณเงินทอนด่วน</button>
             <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-bottom:var(--space-card);">
                 <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:6px 12px; border-radius:12px; font-size:12.5px; color:white;">⏱️ ${dur(wallSec)}</div>
                 <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:6px 12px; border-radius:12px; font-size:12.5px; color:white;">📏 ${s.km.toFixed(2)} กม.</div>
@@ -6798,8 +7174,25 @@
     let tollModeLoadedForUser = false; // ป้องกัน snapshot กลางคันเขียนทับค่าที่ผู้ใช้เพิ่งเลือก
     // ==================== 🏷️ ระบบเลขเวอร์ชัน + ประวัติอัปเดต (Firestore settings/changelog) ====================
     // ข้อมูลจริงอยู่ใน Firestore (admin แก้แล้วทุกเครื่องเห็นเหมือนกัน) — โค้ดนี้เป็น seed/ค่าเริ่มต้น + ตรรกะ "รันเวอร์ชันอัตโนมัติตามวัน"
-    // หลักการ: แต่ละวันที่มีการ push งานใหม่ = 1 เวอร์ชัน (patch +1 จากเวอร์ชันบนสุด) — ถ้า push หลายรอบในวันเดียวกันจะรวมอัปเดตเข้าเวอร์ชันเดิม
-    const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่)
+    // กฎ STRICT 1 วัน = 1 เวอร์ชัน (ตามวันปัจจุบันของเครื่อง — ข้ามเที่ยงคืน 00:00 = เวอร์ชันใหม่):
+    //   • ภายในวันเดียวกัน: ทุกการเปลี่ยนแปลง (runtime via addChangelogEntry หรือ static จากโค้ด) → ต่อ bullet notes เข้าเวอร์ชันวันนั้น (ไม่ bump เลข v)
+    //   • ข้ามวัน: การเปลี่ยนแปลงครั้งแรกของวันใหม่ → bump patch (1.2.x → 1.2.x+1) + สร้างการ์ด changelog วันใหม่
+    // 📅 วันปัจจุบันของเครื่อง (YYYY-MM-DD) — ใช้ตัดสิน "วันใหม่ไหม"
+    const chgTodayStr = () => { const d = new Date(); const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const day = String(d.getDate()).padStart(2,'0'); return y+'-'+m+'-'+day; };
+    // 🔢 ตัวอักษรต่อท้าย buildStamp (a → b → c... ตามจำนวน runtime build ใน localStorage ต่อวัน)
+    const chgBuildSuffix = () => {
+        try {
+            const today = chgTodayStr();
+            const k = 'taxi_chg_buildcount_' + today;
+            Object.keys(localStorage).forEach(x => { if (x.startsWith('taxi_chg_buildcount_') && x !== k) { try { localStorage.removeItem(x); } catch(e){} } });
+            const cnt = parseInt(localStorage.getItem(k) || '0') || 0;
+            return 'abcdefghijklmnopqrstuvwxyz'[Math.min(cnt, 25)] || 'z';
+        } catch (e) { return 'a'; }
+    };
+    const chgTodayBuildStamp = () => chgTodayStr() + chgBuildSuffix();
+    // ✅ อัปเดต APP_BUILD หลังจากฟังก์ชันถูกประกาศเสร็จ (แก้ Temporal Dead Zone — อ้างก่อนประกาศ)
+    try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
+    const APP_RELEASE_DATE = '2026-09-08'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
         '🔄 ย้ายปุ่ม "รีเฟรช" ในหน้าโควตา Firestore ลงมาที่มุมขวาล่างของหน้า (หลังรายการยอดแยกตาม ID) — หัวหน้าต่างโล่งขึ้น ปุ่มยังทำงานเหมือนเดิม',
         '🧹 ลบปุ่มดินสอ (แก้ไขชื่อสิทธิ์) ที่กดแล้วไม่ทำงานออกจากรายการสิทธิ์ในตั้งค่าสิทธิ์การใช้งาน และจัดปุ่มลัด (โทร/แบน/ประวัติ/แก้ไข/ลบ) ในหน้าจัดการผู้ใช้งานให้อยู่กึ่งกลางการ์ดพอดี ไม่ชิดขวา',
@@ -6955,6 +7348,53 @@
         if (document.getElementById('versionModalTitle')) document.getElementById('versionModalTitle').innerHTML = '<span class="material-symbols-outlined">sell</span> เวอร์ชัน ' + topV;
     };
 
+    // ➕ Runtime: เพิ่ม bullet note ลงประวัติเวอร์ชันอัตโนมัติ (เรียกใช้ทุกครั้งที่มีการเปลี่ยนแปลง)
+    // กฎ: 1 วัน = 1 เวอร์ชัน — ภายในวันเดียวกัน → ต่อ notes[] เดิม (ไม่ bump v); ข้ามเที่ยงคืน → bump เวอร์ชันใหม่ + สร้างการ์ดวันใหม่
+    window.addChangelogEntry = async (rawText, opts) => {
+        opts = opts || {};
+        const text = cleanNotes([rawText])[0];
+        if (!text) return false;
+        try {
+            if (!window.__chgEntries || !window.__chgEntries.length) {
+                try { await window.ensureChangelog(); } catch(e) {}
+                if (!window.__chgEntries || !window.__chgEntries.length) { window.__chgEntries = chgFallback(); }
+            }
+            const today = chgTodayStr();
+            let entries = window.__chgEntries.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) }));
+            let dirty = false;
+            const top = entries[0];
+            if (top && top.date === today) {
+                const _nd = (x) => cleanNotes([x])[0] || String(x).trim();
+                if (!top.notes.some(n => _nd(n) === _nd(text))) { top.notes.push(text); dirty = true; }
+            } else {
+                const newV = top && top.v ? bumpVer(top.v) : bumpVer('1.2.0');
+                const colorIdx = entries.length % CHG_PALETTE.length;
+                entries.unshift({ v: newV, date: today, color: colorIdx, notes: [text] });
+                dirty = true;
+                try {
+                    const k = 'taxi_chg_buildcount_' + today;
+                    Object.keys(localStorage).forEach(x => { if (x.startsWith('taxi_chg_buildcount_') && x !== k) { try { localStorage.removeItem(x); } catch(e){} } });
+                    let prev = parseInt(localStorage.getItem(k) || '0') || 0;
+                    localStorage.setItem(k, String(prev + 1));
+                } catch(e) {}
+                try { const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + chgTodayBuildStamp(); } catch(e) {}
+            }
+            if (dirty) {
+                window.__chgEntries = entries;
+                window.renderVersionPill();
+                if (loggedInUserId) {
+                    const ref = doc(db, 'settings', 'changelog');
+                    try { await window.__fsTimeout(setDoc(ref, { entries, syncedHash: CODE_NOTES_HASH }, { merge: true }), 4000).catch(() => {}); }
+                    catch (e) { try { await (window.__fsRestPatch && window.__fsRestPatch(null, { entries, syncedHash: CODE_NOTES_HASH }, 'settings', 'changelog')); } catch(e2) {} }
+                }
+                const vModal = document.getElementById('versionModal');
+                if (vModal && vModal.style.display === 'flex') { window.openVersionModal(); }
+                return true;
+            }
+            return false;
+        } catch (e) { return false; }
+    };
+
     // เปิดหน้าต่างประวัติเวอร์ชัน — สร้างการ์ดจาก Firestore
     window.openVersionModal = async () => {
         if (!window.__chgEntries) await window.ensureChangelog();
@@ -7017,6 +7457,7 @@
             window.__chgEntries = entries;
             window.toggleModal('versionEditModal', false);
             window.renderVersionPill();
+            try { window.addChangelogEntry && window.addChangelogEntry('แก้ไขประวัติเวอร์ชัน v'+newV+' โดยแอดมิน'); } catch(e) {}
             window.showToast('บันทึกประวัติเวอร์ชันเรียบร้อย');
         } catch (e) { window.showToast('บันทึกไม่สำเร็จ — ลองใหม่อีกครั้ง', true); }
         finally { if (btn) btn.disabled = false; }
@@ -7026,12 +7467,43 @@
     //    และตอนล็อกอิน/สมัคร/เปิดแอปต่อ (seed จาก doc ที่เพิ่งดึงมา — ไม่ต้องรอ snapshot เมื่อช่องทางเรียลไทม์ค้าง/โควตาหมด)
     window.__applyUserDocUI = (data) => {
         try {
+            if (data && data.username && data.role) {
+                try {
+                    const cacheKey = 'taxi_user_cache_' + (loggedInUserId || localStorage.getItem('taxi_user_id') || '');
+                    const toCache = {};
+                    ['username','role','displayName','phoneNumber','photoURL','qrCodeURL','taxiType','tollwayMode','companyName','plateNo','killIdleCapMin','vibrateGold','toastSound','autoFullscreen','extraPerms','menuOrder','oledMode'].forEach(k => {
+                        if (data[k] !== undefined) toCache[k] = data[k];
+                    });
+                    toCache.__cachedAt = Date.now();
+                    localStorage.setItem(cacheKey, JSON.stringify(toCache));
+                } catch (e) {}
+            }
             document.getElementById('appLoader').style.display = 'none'; 
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('mainApp').style.display = 'flex'; 
             document.getElementById('userMenu').style.display = 'flex'; 
             document.getElementById('mainUserInfo').style.display = 'flex';
             
+            // ⬛ โหมดประหยัดแบต: Sync จาก Firestore ของ user นี้ (ข้ามทุกเครื่อง)
+            // ✅ ถ้าใน Firestore ยังไม่มี field oledMode (user เก่า) → fallback = เปิด (default) แล้วเขียนลง DB ครั้งแรก
+            if (data) {
+                let wantOled = data.oledMode;
+                let needWriteDb = false;
+                if (wantOled === undefined || wantOled === null) {
+                    wantOled = true;
+                    needWriteDb = !!loggedInUserId;
+                }
+                wantOled = !!wantOled;
+                window.applyOledMode(wantOled, { syncToDb: false });
+                if (needWriteDb) {
+                    try {
+                        window.__fsTimeout(setDoc(doc(db, "users", loggedInUserId), { oledMode: wantOled }, { merge: true }), 4000).catch(() => {
+                            window.__fsRestPatch(loggedInUserId, { oledMode: wantOled }).catch(()=>{});
+                        });
+                    } catch(e) {}
+                }
+            }
+
             currentUserRole = data.role || "User"; myExtraPerms = data.extraPerms || {}; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
             // 🔁 ลำดับเมนูที่ลากสลับ — ใช้ลำดับส่วนกลาง (แอดมิน) ก่อน; ถ้ายังไม่มี (settings/menuOrder ว่าง) ค่อยใช้ลำดับส่วนตัวของบัญชีนี้ (users/{uid}.menuOrder) — localStorage เป็นสำรองตอนออฟไลน์
             if (!window.__globalMenuOrder && data.menuOrder) { try { let mo = data.menuOrder; if (typeof mo === 'string') mo = JSON.parse(mo); window.__menuOrder = mo; if (Array.isArray(mo.side)) localStorage.setItem('menu_order_side', JSON.stringify(mo.side)); if (Array.isArray(mo.hub)) localStorage.setItem('menu_order_hub', JSON.stringify(mo.hub)); } catch (e) {} }
@@ -7122,50 +7594,141 @@
             }); 
         }
 
+        const __inGrace = () => {
+            try {
+                const t = parseInt(localStorage.getItem('taxi_login_at') || '0', 10);
+                return t > 0 && (Date.now() - t) < 60000;
+            } catch (e) { return false; }
+        };
+        const __getCachedUser = () => {
+            try {
+                const uid = loggedInUserId || localStorage.getItem('taxi_user_id') || '';
+                if (!uid) return null;
+                const raw = localStorage.getItem('taxi_user_cache_' + uid);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                if (!parsed || !parsed.username || !parsed.role) return null;
+                const age = Date.now() - (parsed.__cachedAt || 0);
+                if (age < 0 || age > 7 * 24 * 3600 * 1000) return null;
+                return parsed;
+            } catch (e) { return null; }
+        };
+        const __tryCachedFallback = (reasonLabel) => {
+            const cached = __getCachedUser();
+            if (cached && cached.username && cached.role) {
+                window.__applyUserDocUI(cached);
+                return true;
+            }
+            return false;
+        };
+        const __kickCorrupt = (tryNum = 0) => {
+            const maxTries = 3;
+            if (tryNum < maxTries && __inGrace()) {
+                setTimeout(() => __kickCorrupt(tryNum + 1), 2000);
+                return;
+            }
+            if (__tryCachedFallback('corrupt_' + tryNum)) return;
+            getDoc(doc(db, "users", loggedInUserId), { source: "server" }).then(realSnap => {
+                if (realSnap.exists()) {
+                    const rd = realSnap.data();
+                    if (rd.isBanned) { window.showToast("บัญชีนี้ถูกระงับการใช้งาน", true); window.logoutApp(true); return; }
+                    if (!rd.username || !rd.role) {
+                        if (tryNum < maxTries) { setTimeout(() => __kickCorrupt(tryNum + 1), 2000); return; }
+                        if (__tryCachedFallback('corrupt_server_' + tryNum)) return;
+                        window.showToast("ข้อมูลบัญชีเสียหาย — กรุณาเข้าสู่ระบบใหม่อีกครั้ง", true); window.logoutApp(true); return;
+                    }
+                } else {
+                    if (tryNum < maxTries) { setTimeout(() => __kickCorrupt(tryNum + 1), 2000); return; }
+                    if (__tryCachedFallback('missing_server_' + tryNum)) return;
+                    window.logoutApp(true);
+                }
+            }).catch(() => {
+                if (__tryCachedFallback('corrupt_err_' + tryNum)) return;
+                if (tryNum < maxTries) { setTimeout(() => __kickCorrupt(tryNum + 1), 2000); }
+            });
+        };
+        const __handleMissingDoc = (tryNum = 0) => {
+            const maxTries = 3;
+            if (__tryCachedFallback('missing_snap_' + tryNum)) return;
+            if (__inGrace() && tryNum < maxTries) {
+                setTimeout(() => __handleMissingDoc(tryNum + 1), 2000);
+                return;
+            }
+            getDoc(doc(db, "users", loggedInUserId), { source: "server" }).then(realSnap => {
+                if (realSnap.exists()) {
+                    const rd = realSnap.data();
+                    if (rd.isBanned) { window.showToast("บัญชีนี้ถูกระงับการใช้งาน", true); window.logoutApp(true); return; }
+                    if (rd.username && rd.role) { window.__applyUserDocUI(rd); return; }
+                    if (tryNum < maxTries) { setTimeout(() => __handleMissingDoc(tryNum + 1), 2000); return; }
+                    if (__tryCachedFallback('missing_srv_' + tryNum)) return;
+                    __kickCorrupt(tryNum);
+                } else {
+                    if (tryNum < maxTries) { setTimeout(() => __handleMissingDoc(tryNum + 1), 2000); return; }
+                    if (__tryCachedFallback('missing_srv_missing_' + tryNum)) return;
+                    window.logoutApp(true);
+                }
+            }).catch(() => {
+                if (__tryCachedFallback('missing_err_' + tryNum)) return;
+                if (tryNum < maxTries) { setTimeout(() => __handleMissingDoc(tryNum + 1), 2000); }
+            });
+        };
+        const __kickSession = (tryNum = 0) => {
+            const maxTries = 2;
+            if (tryNum < maxTries && __inGrace()) {
+                setTimeout(() => __kickSession(tryNum + 1), 2500);
+                return;
+            }
+            getDoc(doc(db, "users", loggedInUserId), { source: "server" }).then(realSnap => {
+                if (realSnap.exists()) {
+                    const rd = realSnap.data();
+                    if (rd.role === 'Admin') return;
+                    if (window.__sessionKickNeeded(rd.sessionId || null)) {
+                        if (tryNum < maxTries) { setTimeout(() => __kickSession(tryNum + 1), 2500); return; }
+                        window.showToast("บัญชีนี้ถูกเข้าสู่ระบบจากเครื่องอื่น — ระบบได้ออกจากระบบให้แล้ว", true);
+                        window.logoutApp(true);
+                    }
+                }
+            }).catch(() => { /* ไม่มีเน็ต — รอ snapshot ถัดไป */ });
+        };
         myUserUnsub = onSnapshot(doc(db, "users", loggedInUserId), (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 if(data.isBanned) { window.showToast("บัญชีนี้ถูกระงับการใช้งาน", true); window.logoutApp(true); return; }
-                // กันบัญชีที่ข้อมูลถูกเขียนทับ/เสียหาย (ไม่มี username/role) แสดงผลผิดๆ เป็นผู้ใช้ทั่วไป — บังคับออกจากระบบแล้วเข้าสู่ระบบใหม่
                 if(!data.username || !data.role) {
-                    // 🔁 snapshot แรกอาจมาแค่บางส่วนจาก cache (ยังไม่ทันซิงก์กับเซิร์ฟเวอร์)
-                    // ขอข้อมูลจริงจากเซิร์ฟเวอร์ก่อนตัดสินใจ — กันเด้งหลุดล็อกอินทุกครั้งที่รีเฟรช
-                    getDoc(doc(db, "users", loggedInUserId), { source: "server" }).then(realSnap => {
-                        if (realSnap.exists()) {
-                            const rd = realSnap.data();
-                            if (rd.isBanned) { window.showToast("บัญชีนี้ถูกระงับการใช้งาน", true); window.logoutApp(true); return; }
-                            if (!rd.username || !rd.role) { window.showToast("ข้อมูลบัญชีเสียหาย — กรุณาเข้าสู่ระบบใหม่อีกครั้ง", true); window.logoutApp(true); return; }
-                            // ข้อมูลครบจริง → ปล่อยผ่าน (รอ snapshot ตัวถัดไปจากเซิร์ฟเวอร์มาแสดงผลตามปกติ)
-                        } else { window.logoutApp(true); }
-                    }).catch(() => { /* ไม่มีเน็ตชั่วคราว — รอ snapshot ต่อไป ไม่เด้งออก */ });
+                    if (docSnap.metadata && docSnap.metadata.fromCache) { __tryCachedFallback('corrupt_cache_snap'); return; }
+                    __kickCorrupt(0);
                     return;
                 }
-                // 🚫 กันล็อกอินซ้อน (1 บัญชี 1 เครื่อง ยกเว้น Admin): โทเคน session ในเครื่องไม่ตรงกับใน DB → มีคนอื่นล็อกอิน/ล็อกเอาต์ด้วยบัญชีนี้ → ไล่ออกอัตโนมัติ
-                // (ถ้าเครื่องนี้เป็น session เก่าไม่มีโทเคน แต่ใน DB มี sessionId ของคนอื่น → ก็ไล่ออก เพราะมีคนล็อกอินทีหลัง)
                 if (data.role !== 'Admin') {
                     const dbSid = data.sessionId || null;
-                    // ไล่ออกเฉพาะเมื่อ DB มี session ที่ไม่ใช่ของเราและไม่ใช่ค่าเดิมตอนล็อกอิน
-                    // (เขียน sessionId ใหม่ของเราไม่ทันเพราะโควตา/เน็ต → อย่าไล่ตัวเองออก ให้ retry เบื้องหลังแทน)
                     if (window.__sessionKickNeeded(dbSid)) {
-                        // ยืนยันจากเซิร์ฟเวอร์ก่อนไล่ออก (กัน snapshot จาก cache เก่าเด้งหลุดตอนรีเฟรช/เพิ่งล็อกอิน)
-                        getDoc(doc(db, "users", loggedInUserId), { source: "server" }).then(realSnap => {
-                            if (realSnap.exists()) {
-                                const rd = realSnap.data();
-                                if (rd.role !== 'Admin' && window.__sessionKickNeeded(rd.sessionId || null)) {
-                                    window.showToast("บัญชีนี้ถูกเข้าสู่ระบบจากเครื่องอื่น — ระบบได้ออกจากระบบให้แล้ว", true);
-                                    window.logoutApp(true);
-                                }
-                            }
-                        }).catch(() => { /* ไม่มีเน็ต — รอ snapshot ถัดไป */ });
+                        if (docSnap.metadata && docSnap.metadata.fromCache) { return; }
+                        __kickSession(0);
                     }
                 }
                 window.__applyUserDocUI(data);
-            } else { window.logoutApp(true); }
+            } else {
+                if (docSnap.metadata && docSnap.metadata.fromCache) { __tryCachedFallback('missing_cache_snap'); return; }
+                __handleMissingDoc(0);
+            }
         });
     };
 
-    window.listenAppConfig(); // ⚙️ โหลดค่าตั้งค่าระบบตั้งแต่ยังไม่ล็อกอิน (ล็อกอินครั้งแรกจะใช้ค่าเปิด/ปิด log นี้ทันที)
-    if (loggedInUserId) { listenToMyUser(); window.__watchdogShowApp(); window.__fsTimeout(window.__fsRestGet(loggedInUserId), 5000).then(d => { if (d && (d.username || d.role)) window.__applyUserDocUI(d); }).catch(()=>{}); } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
+    window.listenAppConfig();
+    if (loggedInUserId) {
+        try { if (!localStorage.getItem('taxi_login_at')) localStorage.setItem('taxi_login_at', Date.now().toString()); } catch(e) {}
+        try {
+            const raw = localStorage.getItem('taxi_user_cache_' + loggedInUserId);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed.username && parsed.role) {
+                    document.getElementById('appLoader').style.display = 'none';
+                    window.__applyUserDocUI(parsed);
+                }
+            }
+        } catch(e) {}
+        listenToMyUser(); window.__watchdogShowApp(); window.__fsTimeout(window.__fsRestGet(loggedInUserId), 5000).then(d => { if (d && (d.username || d.role)) window.__applyUserDocUI(d); }).catch(()=>{});
+    } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
     // 🔧 โหลดข้อความแจ้งเตือนที่แอดมินแก้ไว้ (Firestore) — ใช้ได้ทุกหน้าแม้ยังไม่ล็อกอิน
     if (typeof window.loadToastMsgOverrides === 'function') window.loadToastMsgOverrides();
     // 🏷️ โหลด/ซิงก์ประวัติเวอร์ชัน (อ่านได้ทุกคน; ถ้าโค้ดปล่อยเวอร์ชันใหม่ ระบบจะรันเวอร์ชันให้อัตโนมัติ)
@@ -7306,9 +7869,13 @@
         if (!dbSid) return false;
         const localSid = localStorage.getItem('taxi_session_id');
         if (!localSid) return false;
-        if (dbSid === localSid) return false;         // DB ตรงกับ session เครื่องนี้ → ปกติ
-        if (dbSid === myDbSidAtLogin) return false;   // ยังเป็นค่าเดิมตอนล็อกอิน (เขียนของเรายังไม่ถึง DB) → รอ retry ไม่ไล่ออก
-        return true;                                  // DB เป็น session อื่น/ใหม่กว่า → มีคนอื่นล็อกอิน → ไล่ออก
+        if (dbSid === localSid) return false;
+        if (dbSid === myDbSidAtLogin) return false;
+        try {
+            const loginAt = parseInt(localStorage.getItem('taxi_login_at') || '0', 10);
+            if (loginAt > 0 && (Date.now() - loginAt) < 90000) return false;
+        } catch (e) {}
+        return true;
     };
     // เขียน sessionId ซ้ำเบื้องหลังจนกว่าจะสำเร็จ (กันโควตาหมด/เน็ตเด้งตอนล็อกอิน → เด้งหลุดทันที)
     window.__ensureSessionWrite = (uid, sid, maxTries) => {
@@ -7346,11 +7913,11 @@
                     window.__fsTimeout(window.pwUpgradeIfLegacy(adminId, lu.data.password || '', "060421"), 6000).catch(()=>{});
                 } else {
                     // ยังไม่มีบัญชี admin เลย (ครั้งแรกสุด) → สร้างบัญชีเริ่มต้นให้ (เก็บแบบแฮช) — SDK ค้างก็ใช้ REST สร้างแทน
-                    const adminDoc = { username: "admin", password: await window.pwHash("060421"), displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, tollwayMode: false, isBanned: false, lastLoginAt: Date.now(), order: Date.now() };
+                    const adminDoc = { username: "admin", password: await window.pwHash("060421"), displayName: "Admin", role: "Admin", phoneNumber: "0800000000", photoURL: "", taxiType: 35, tollwayMode: false, isBanned: false, lastLoginAt: Date.now(), order: Date.now(), oledMode: true };
                     try { adminId = (await window.__fsTimeout(addDoc(collection(db, "users"), adminDoc), 8000)).id; }
                     catch (e) { adminId = await window.__fsRestAdd("users", adminDoc); }
                 }
-                loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.removeItem('taxi_session_id'); localStorage.removeItem('taxi_db_sid_seen'); myDbSidAtLogin = null; // แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง
+                loggedInUserId = adminId; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.setItem('taxi_login_at', Date.now().toString()); localStorage.removeItem('taxi_session_id'); localStorage.removeItem('taxi_db_sid_seen'); myDbSidAtLogin = null; // แอดมินยกเว้น — ล็อกอินพร้อมกันได้หลายเครื่อง
                 if (lu) { window.__applyUserDocUI(lu.data); } else { window.__showAppLoading(); } // ⚡ ยืนยันรหัสผ่านแล้ว → แสดงแอปทันทีจาก doc ที่ดึงมา (seed ชื่อ/รูป/สิทธิ์) — ไม่รอ snapshot เมื่อ Firestore ค้าง
                 window.__watchdogShowApp(); // ⏱️ เริ่มนับเลย — snapshot มาไม่ทันใน ~4 วิ จะบังคับเข้าแอป (ไม่รอให้เขียน session เสร็จก่อน)
                 recordLoginLogoutIfEnabled(loggedInUserId, "เข้าสู่ระบบ", "ผู้ดูแลระบบสูงสุดเข้าสู่ระบบ");
@@ -7365,7 +7932,7 @@
             const ud = user.data;
             if (!(await window.pwVerify(pass, ud.password || ''))) return fail("เข้าสู่ระบบล้มเหลว: Username หรือรหัสผ่านผิด");
             if (ud.isBanned) return fail("บัญชีของคุณถูกระงับการใช้งาน");
-            loggedInUserId = user.id; localStorage.setItem('taxi_user_id', loggedInUserId);
+            loggedInUserId = user.id; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.setItem('taxi_login_at', Date.now().toString());
             window.__applyUserDocUI(ud); // ⚡ ยืนยันรหัสผ่านแล้ว → แสดงแอปทันทีจาก doc ที่เพิ่งดึงมา (seed ชื่อ/รูป/สิทธิ์/ตั้งค่า) — ไม่ต้องรอ snapshot เมื่อ Firestore ค้าง/โควตาหมด
             window.__watchdogShowApp(); // ⏱️ เผื่อ seed พลาด/snapshot ไม่มา → บังคับเข้าแอปใน ~4 วิ (กันค้าง)
             window.__fsTimeout(window.pwUpgradeIfLegacy(user.id, ud.password || '', pass), 6000).catch(()=>{}); // บัญชีเก่า (plaintext/sha256$) → อัปเกรดเป็น PBKDF2
@@ -7401,11 +7968,11 @@
             if (!existEmpty) { window.showToast("Username นี้มีคนใช้แล้ว กรุณาเปลี่ยนใหม่", true); return; }
             let finalPhotoURL = ""; if (fileInput.files && fileInput.files.length > 0) { finalPhotoURL = await fileToBase64(fileInput.files[0]); }
             const regSid = window.newSessionToken(); localStorage.setItem('taxi_session_id', regSid);
-            const regData = { username: inputUsername, password: await window.pwHash(pass), displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, tollwayMode: false, photoURL: finalPhotoURL, isBanned: false, lastLoginAt: Date.now(), sessionId: regSid, order: Date.now() };
+            const regData = { username: inputUsername, password: await window.pwHash(pass), displayName: dName, phoneNumber: phoneNum, role: "User", taxiType: 35, tollwayMode: false, photoURL: finalPhotoURL, isBanned: false, lastLoginAt: Date.now(), sessionId: regSid, order: Date.now(), oledMode: true };
             let docRef;
             try { docRef = await window.__fsTimeout(addDoc(collection(db, "users"), regData), 10000); }
             catch (e) { try { const r = await window.__fsRestQuery(inputUsername); docRef = (r && r.length) ? { id: r[0].id } : { id: await window.__fsRestAdd("users", regData) }; } catch (e2) { return window.showToast("เกิดข้อผิดพลาดในการสร้างบัญชี — ลองอีกครั้ง", true); } }
-            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); window.__markSessionWritten(regSid); window.__fsTimeout(recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ", 'signup'), 5000).catch(()=>{}); window.__applyUserDocUI(regData); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog(); window.__watchdogShowApp();
+            loggedInUserId = docRef.id; localStorage.setItem('taxi_user_id', loggedInUserId); localStorage.setItem('taxi_login_at', Date.now().toString()); window.__markSessionWritten(regSid); window.__fsTimeout(recordActivityLog(loggedInUserId, "สมัครสมาชิก", "สร้างบัญชีสำเร็จ", 'signup'), 5000).catch(()=>{}); window.__applyUserDocUI(regData); window.showToast("สร้างบัญชีสำเร็จ! ยินดีต้อนรับ"); listenToMyUser(); window.ensureChangelog(); window.__watchdogShowApp();
         } catch (error) { window.showToast("เกิดข้อผิดพลาด: " + error.message, true); } finally { document.getElementById('authBtn').innerText = "สร้างบัญชีใหม่"; }
     };
 
@@ -7459,18 +8026,24 @@
         if(isOk) {
             const logoutUid = loggedInUserId;
             if(logoutUid) {
-                recordLoginLogoutIfEnabled(logoutUid, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ");
+                if (forced) recordLoginLogoutIfEnabled(logoutUid, "ออกจากระบบ", "ระบบไล่ออกจากระบบอัตโนมัติ");
+                else recordLoginLogoutIfEnabled(logoutUid, "ออกจากระบบ", "ผู้ใช้กดออกจากระบบ");
                 if(!forced) {
-                    // ล็อกเอาต์เอง → หมุนโทเคน session ใหม่ (กันเครื่องอื่นที่ค้างด้วยบัญชีเดียวกันเข้าต่อ) — โดนไล่ออก (forced) ไม่หมุน
-                    // ✅ ไม่บล็อก UI: เขียนแบบ fire-and-forget (SDK+REST รันพร้อมกัน เอาตัวที่ถึง DB ก่อน) แล้วสลับหน้าจอกลับมาล็อกอินทันที
-                    //    (เดิม await 6 วิ+ → พอช่องทาง Firestore ค้าง/โควตาหมด ก็ค้างอยู่หน้าเดิมนาน กดล็อกเอาต์แล้วไม่ไปไหน)
                     const newSid = window.newSessionToken();
                     window.__fsWriteFields(logoutUid, { sessionId: newSid }, 6000);
                 }
             }
-            stopGlobalUserListener(); window.stopGlobalMenuOrderListen(); window.stopAppConfigListen(); localStorage.removeItem('taxi_user_id'); localStorage.removeItem('taxi_session_id'); localStorage.removeItem('taxi_db_sid_seen'); myDbSidAtLogin = null; if (window.__retrySessionWrite) { clearTimeout(window.__retrySessionWrite); window.__retrySessionWrite = null; } loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
+            stopGlobalUserListener(); window.stopGlobalMenuOrderListen(); window.stopAppConfigListen();
+            if (!forced) {
+                localStorage.removeItem('taxi_user_id');
+                localStorage.removeItem('taxi_login_at');
+            } else {
+                try { if (localStorage.getItem('taxi_user_id')) localStorage.setItem('taxi_login_at', Date.now().toString()); } catch(e) {}
+            }
+            localStorage.removeItem('taxi_session_id'); localStorage.removeItem('taxi_db_sid_seen'); myDbSidAtLogin = null; if (window.__retrySessionWrite) { clearTimeout(window.__retrySessionWrite); window.__retrySessionWrite = null; } loggedInUserId = null; if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
             window.updateAutoFsBadge();
             if(!forced) window.showToast("ออกจากระบบเรียบร้อย");
+            else window.showToast("มีการอัปเดตสถานะจากระบบ — กรุณาเข้าสู่ระบบอีกครั้ง", true);
             document.getElementById('authTitle').innerText = "เข้าสู่ระบบ"; document.getElementById('authBtn').innerText = "เข้าสู่ระบบ"; document.getElementById('authDisplayName').style.display = "none"; document.getElementById('authPhone').style.display = "none"; document.getElementById('registerPhotoDiv').style.display = "none"; document.getElementById('forgotPassLink').style.display = "flex"; document.getElementById('toggleAuthText').innerHTML = 'ยังไม่มีบัญชีใช่ไหม? <span style="color:#38bdf8;font-weight:600;">คลิกเพื่อสร้างบัญชี</span>'; document.getElementById('authBtn').onclick = window.loginApp; document.getElementById('authUsername').value = ''; document.getElementById('authPassword').value = ''; document.getElementById('authPassword').type = 'password'; document.getElementById('authDisplayName').value = ''; document.getElementById('authPhone').value = ''; document.getElementById('regProfilePicPreview').src = window.DEFAULT_AVATAR;
             document.querySelectorAll('#loginOverlay .toggle-password').forEach(icon => icon.innerText = 'visibility_off');
             document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('mainUserInfo').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex';
@@ -7749,7 +8322,7 @@
         window.currentPermConfig = newOrder; await window.savePermConfigToDB();
     };
 
-    window.savePermConfigToDB = async () => { try { await setDoc(doc(db, "settings", "permission_config"), { config: window.currentPermConfig }); } catch(e) {} };
+    window.savePermConfigToDB = async () => { try { await setDoc(doc(db, "settings", "permission_config"), { config: window.currentPermConfig }); try { window.addChangelogEntry && window.addChangelogEntry('บันทึกการตั้งค่าสิทธิ์ + ลำดับรายการสิทธิ์ (ซิงก์ทุกเครื่อง)'); } catch(e2) {} } catch(e) {} };
 
     let rolePermBaseline = null; // สถานะที่บันทึกล่าสุด (สิทธิ์แต่ละรายการ + log flags) — ใช้เทียบว่ามีอะไรเปลี่ยนยัง (ติ๊กแล้วติ๊กกลับ = เท่าเดิม = ปุ่มเทา)
     window.captureRolePermBaseline = () => {
@@ -7843,8 +8416,8 @@
                 const q = query(collection(db, "users"), where("username", "==", newUsername)); const existCheck = await getDocs(q); if (!existCheck.empty) { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก`; btn.disabled = false; return window.showToast("Username นี้ถูกใช้งานแล้ว", true); }
                 if (fileInput.files && fileInput.files.length > 0) { photoUpdate = await fileToBase64(fileInput.files[0]); } if (qrInput.files && qrInput.files.length > 0) { qrUpdate = await fileToBase64(qrInput.files[0], true); }
                 const newVibGold = document.getElementById('adminEditVibrateGold'); const newAutoFs = document.getElementById('adminEditAutoFs');
-                await addDoc(collection(db, "users"), { username: newUsername, password: await window.pwHash(newPassword), displayName: newName, companyName: newCompany, phoneNumber: newPhone, role: newRole, photoURL: photoUpdate, qrCodeURL: qrUpdate, taxiType: 35, vibrateGold: newVibGold ? newVibGold.checked : true, autoFullscreen: newAutoFs ? newAutoFs.checked : true, isBanned: false, lastLoginAt: null, order: Date.now() });
-                await recordActivityLog(loggedInUserId, "เพิ่มผู้ใช้งานใหม่", `ชื่อ: ${newName}, สิทธิ์: ${newRole}`, 'member'); window.showToast("สร้างผู้ใช้งานเรียบร้อย!"); window.toggleModal('adminEditUserModal', false); window.toggleModal('adminMenuModal', true); 
+                await addDoc(collection(db, "users"), { username: newUsername, password: await window.pwHash(newPassword), displayName: newName, companyName: newCompany, phoneNumber: newPhone, role: newRole, photoURL: photoUpdate, qrCodeURL: qrUpdate, taxiType: 35, vibrateGold: newVibGold ? newVibGold.checked : true, autoFullscreen: newAutoFs ? newAutoFs.checked : true, isBanned: false, lastLoginAt: null, order: Date.now(), oledMode: true });
+                await recordActivityLog(loggedInUserId, "เพิ่มผู้ใช้งานใหม่", `ชื่อ: ${newName}, สิทธิ์: ${newRole}`, 'member'); try { window.addChangelogEntry && window.addChangelogEntry('แอดมินสร้างบัญชีผู้ใช้ใหม่: ' + newName + ' (' + newRole + ')'); } catch(e) {} window.showToast("สร้างผู้ใช้งานเรียบร้อย!"); window.toggleModal('adminEditUserModal', false); window.toggleModal('adminMenuModal', true); 
             } else {
                 const u = window.currentAdminUsers.find(x => x.uid === uid) || {}; // ข้อมูลเดิมของผู้ใช้ (เดิม u ถูกใช้แต่ไม่ประกาศ → ReferenceError → บันทึกไม่ได้)
                 let logDetail = `แอดมินแก้ไขข้อมูล (ชื่อ: ${newName})`; let updatePayload = { displayName: newName, phoneNumber: newPhone };
@@ -7864,7 +8437,7 @@
                 if (editVibGoldEl && (editIsGod || editMyPerms.canSetStaffPrefs)) { updatePayload.vibrateGold = editVibGoldEl.checked; logDetail += (editVibGoldEl.checked ? ", เปิดสั่น toast ทอง" : ", ปิดสั่น toast ทอง"); }
                 const editAutoFsEl = document.getElementById('adminEditAutoFs');
                 if (editAutoFsEl && (editIsGod || editMyPerms.canSetStaffPrefs)) { updatePayload.autoFullscreen = editAutoFsEl.checked; logDetail += (editAutoFsEl.checked ? ", เปิดเต็มจออัตโนมัติ" : ", ปิดเต็มจออัตโนมัติ"); }
-                await updateDoc(doc(db, "users", uid), updatePayload); await recordActivityLog(uid, "ผู้ดูแลระบบแก้ไขข้อมูล", logDetail, 'member'); window.showToast("อัปเดตข้อมูลผู้ใช้เรียบร้อย!"); window.toggleModal('adminEditUserModal', false);
+                await updateDoc(doc(db, "users", uid), updatePayload); await recordActivityLog(uid, "ผู้ดูแลระบบแก้ไขข้อมูล", logDetail, 'member'); try { window.addChangelogEntry && window.addChangelogEntry('แอดมินแก้ไขข้อมูลผู้ใช้: ' + newName); } catch(e) {} window.showToast("อัปเดตข้อมูลผู้ใช้เรียบร้อย!"); window.toggleModal('adminEditUserModal', false);
             }
         } catch(e) { window.showToast("เกิดข้อผิดพลาด", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก`; btn.disabled = false; }
     };
