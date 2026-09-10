@@ -6649,7 +6649,11 @@
         // เทียบเท่าการแตะปุ่ม "เริ่มต่อ" ทันที — ระบบเบิกเวลาจอด/ระยะทางช่วงแอปปิด + กันนับซ้ำ (__liveCaughtUpKey) ทำงานเหมือนเดิม
         if (window.userAutoResume !== false && (window.__autoResumeTripKey === undefined || window.__autoResumeTripKey !== data.startTime)) {
             window.__autoResumeTripKey = data.startTime; // กันเริ่มต่อซ้ำรอบเดิมในเซสชันนี้
-            window.resumeSavedTrip();
+            // 🔊+📳 เตือนคนขับชัดเจนว่าแอปเริ่มมิเตอร์ต่อให้อัตโนมัติ (กันพลาดว่าแอปเริ่มมิเตอร์เอง)
+            // เสียง 'resume' 2 จังหวะเหมือนตอนแบนเนอร์โผล่ + สั่น 2 ครั้งแรง ๆ (เคารพสวิตช์ปิดสั่นในหน้าโปรไฟล์)
+            try { window.playSound('resume'); } catch(e) {}
+            if (navigator.vibrate && window.userVibrateGold !== false) { try { navigator.vibrate([200, 100, 200]); } catch(e) {} }
+            window.resumeSavedTrip(true); // true = เริ่มต่อแบบอัตโนมัติ → toast บอกชัดต่างจากการกดเริ่มต่อเอง
             return; // เริ่มต่อแล้ว → ไม่โชว์แบนเนอร์
         }
 
@@ -6852,7 +6856,8 @@
     };
 
     // ▶️ กด "เริ่มต่อ": เดินมิเตอร์ต่อจากจุดที่ค้างไว้ (เวลาเริ่ม/กม./เวลาจอด/ค่าทางด่วน เดิมทั้งหมด)
-    window.resumeSavedTrip = () => {
+    // auto=true = เริ่มต่ออัตโนมัติ (แอปเปิดแล้วเริ่มเอง) → toast บอกชัดต่างจากการกดเอง
+    window.resumeSavedTrip = (auto) => {
         let data = null;
         try { data = JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY) || 'null'); } catch(e) {}
         if (!data || !data.startTime) return;
@@ -6875,7 +6880,7 @@
                 else window.hideCatchUpStatus();
             })();
         }
-        window.showToast('เริ่มต่อจากเที่ยวเดิมแล้ว 🚕');
+        window.showToast(auto ? 'เริ่มต่ออัตโนมัติแล้ว 🚕 (เที่ยวเดิม)' : 'เริ่มต่อจากเที่ยวเดิมแล้ว 🚕');
         // 🚕 เที่ยวค้าง (มีหรือไม่มีจุดหมาย) → หลังเริ่มต่อ/เบิกคืน เด้งเข้าจอมิเตอร์ใหญ่ตรง ๆ (ข้ามหน้าจอกลาง รูปที่ 2)
         if (window.openTripZoom) window.openTripZoom();
     };
