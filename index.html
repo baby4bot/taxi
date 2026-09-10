@@ -133,8 +133,8 @@
         .toll-way-pill .pill-x { background: rgba(255,255,255,0.08); border: none; color: #fca5a5; border-radius: 99px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px !important; flex-shrink: 0; transition: 0.18s; }
         .toll-way-pill .pill-x:hover, .toll-way-pill .pill-x:active { background: rgba(239,68,68,0.35); color: #fff; transform: scale(0.9); }
 
-        .taxi-chip-normal { background: linear-gradient(135deg, #ffca28, #ffa000); color: #1a1200; border: 2px solid #2e7d32; box-shadow: 0 2px 8px rgba(255,160,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35); }
-        .taxi-chip-van { background: linear-gradient(135deg, #ff8a65, #e64a19); color: #fff; border: 2px solid #c62828; box-shadow: 0 2px 8px rgba(230,74,25,0.45), inset 0 1px 0 rgba(255,255,255,0.25); }
+        .taxi-chip-normal { background: linear-gradient(135deg, #ffca28, #ffa000); color: #1a1200; border: 2px solid #ffffff; box-shadow: 0 2px 8px rgba(255,160,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35); }
+        .taxi-chip-van { background: linear-gradient(135deg, #ff8a65, #e64a19); color: #fff; border: 2px solid #ffffff; box-shadow: 0 2px 8px rgba(230,74,25,0.45), inset 0 1px 0 rgba(255,255,255,0.25); }
         #profileTaxiNormal.taxi-type-option { background: linear-gradient(135deg, #ffca28, #ffa000); color: #1a1200; border: 1.5px solid #2e7d32; }
         #profileTaxiVan.taxi-type-option { background: linear-gradient(135deg, #ff8a65, #e64a19); color: #fff; border: 1.5px solid #c62828; }
         #profileTaxiNormal.taxi-type-option.active { box-shadow: 0 0 0 2px rgba(46,125,50,0.35), 0 4px 10px rgba(255,160,0,0.18); color: #1a1200 !important; }
@@ -325,7 +325,7 @@
         .footer-credit { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border-glass); gap: 8px; font-size: 12px; color: var(--text-dim); width: 100%; justify-content: center; flex-shrink: 0;}
         .footer-logo { width: 22px; height: 22px; border-radius: 50%; }
         
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(15px); animation: fadeIn 0.3s; overflow: hidden; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(15px); animation: fadeIn 0.3s; overflow-y: auto; overflow-x: hidden; padding: 12px 0; box-sizing: border-box; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
         .modal-box.flex-col-box { background: #1a1a1a; border: 1px solid #333; border-radius: 20px; width: 95%; max-width: 500px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; padding: 0; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; }
@@ -431,25 +431,68 @@
         .zoom-detail-row { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 15px; margin-bottom: var(--space-zoom); border: 1px solid rgba(255,255,255,0.03); }
 
         /* Live Tracker Zoom Big Size CSS */
-        .tracker-zoom-box { background: #0b0c10; border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; padding: 30px 15px; width: 98%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); font-family: 'Kanit', sans-serif; }
-        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-zoom); padding: 0 10px; }
-        .tz-start-time { color: white; font-weight: 600; font-size: 18px; }
-        .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 18px; }
-        .tz-progress-container { position: relative; margin: 15px 15px var(--space-zoom) 15px; }
+        .tracker-zoom-box {
+            background: #0b0c10;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 30px;
+            padding: 20px 14px;
+            width: 98%;
+            max-width: 500px;
+            max-height: calc(100dvh - 24px); /* ไม่ให้สูงเกินหน้าจอ (หักลบ padding ของ overlay) */
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+            font-family: 'Kanit', sans-serif;
+            overflow-y: auto;   /* ✅ เลื่อนดูด้านล่างได้หากเนื้อหาเยอะเกินจอ */
+            overflow-x: hidden;
+            -ms-overflow-style: none; scrollbar-width: none;
+            box-sizing: border-box;
+        }
+        .tracker-zoom-box::-webkit-scrollbar { display: none; }
+
+        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-zoom); padding: 0 6px; }
+        .tz-start-time { color: white; font-weight: 600; font-size: 17px; }
+        .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 17px; }
+        .tz-progress-container { position: relative; margin: 10px 10px var(--space-zoom) 10px; }
         .tz-progress-line { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; position: relative; }
         .tz-progress-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); border-radius: 3px; transition: width 1s ease-out; box-shadow: 0 0 10px var(--glow-yellow); }
         .tz-point-start { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; background: transparent; display: flex; justify-content: center; align-items: center; }
         .tz-point-start::before { content: ''; width: 8px; height: 8px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -16px; left: -14px; box-shadow: 16px 16px 0 var(--neon-yellow); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotate(45deg); }
         .tz-point-end { position: absolute; right: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--accent-red); background: transparent; }
-        .tz-stats-row { display: flex; justify-content: space-around; margin-bottom: var(--space-zoom); }
-        .tz-stat-col { text-align: center; }
-        .tz-stat-num { font-size: 55px; font-weight: 700; line-height: 1; letter-spacing: -1px; margin-bottom: 5px; }
-        .tz-stat-label { font-size: 18px; color: var(--text-dim); }
-        .tz-fare-card { position: relative; background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 25px; padding: 35px 15px; text-align: center; box-shadow: 0 15px 40px rgba(46, 204, 113, 0.4); margin-bottom: var(--space-zoom); }
-        .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 20px; font-weight: 500; margin-bottom: 5px; }
-        .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 10px; }
-        #tzMeterPrice { font-size: 140px; font-weight: 800; color: white; line-height: 0.8; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .tz-fare-currency { font-size: 60px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .tz-stats-row { display: flex; justify-content: space-between; align-items: stretch; margin-bottom: var(--space-zoom); gap: 10px; padding: 0 10px 0 6px; }
+        .tz-stat-col { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 4px;
+            min-width: 0; 
+            padding: 6px 8px 6px 8px;
+        }
+        .tz-stat-num { 
+            font-size: 40px; 
+            font-weight: 700; 
+            line-height: 1.05; 
+            letter-spacing: -1px; 
+            margin: 0; 
+            vertical-align: baseline;
+            display: flex;
+            align-items: baseline;
+        }
+        .tz-stat-label { 
+            font-size: 13px; 
+            color: var(--text-dim); 
+            line-height: 1.2; 
+            margin: 0; 
+            text-align: center;
+            min-height: 1.5em;
+            display: flex;
+            align-items: flex-start;
+        }
+        .tz-fare-card { position: relative; background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 20px; padding: 20px 10px; text-align: center; box-shadow: 0 12px 28px rgba(46, 204, 113, 0.36); margin-bottom: var(--space-zoom); }
+        .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 15px; font-weight: 500; margin-bottom: 2px; }
+        .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 6px; }
+        #tzMeterPrice { font-size: 96px; font-weight: 800; color: white; line-height: 0.88; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .tz-fare-currency { font-size: 40px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .tz-toll-btn {
             position: absolute; top: 10px; left: 10px; z-index: 60;
             display: flex; align-items: center; justify-content: center; gap: 3px;
@@ -465,14 +508,16 @@
         .tz-toll-btn:active { transform: scale(0.93); background: #ea580c; }
         .tz-toll-btn .material-symbols-outlined { font-size: 12px; }
         .tz-pause-btn {
-            position: absolute; top: 10px; right: 10px; z-index: 60;
-            width: 42px; height: 42px; border-radius: 50%;
+            position: absolute; top: 8px; right: 8px; z-index: 60;
+            width: 34px; height: 34px; border-radius: 50%;
             display: none; align-items: center; justify-content: center;
             border: 1px solid rgba(255,255,255,0.35);
             color: #fff; cursor: pointer; -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: 0.2s;
+            box-shadow: none !important; transition: 0.2s;
+            padding: 0;
+            overflow: visible;
         }
-        .tz-pause-btn .material-symbols-outlined { font-size: 24px; }
+        .tz-pause-btn .material-symbols-outlined { font-size: 18px; }
         .tz-pause-btn.running { background: linear-gradient(135deg, #3b82f6, #2563eb); }
         .tz-pause-btn.paused { background: linear-gradient(135deg, #f97316, #ea580c); animation: tollFadeSlideIn 0.25s ease-out; }
         .tz-pause-btn:active { transform: scale(0.92); }
@@ -491,12 +536,40 @@
             font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.92);
             text-shadow: 0 1px 3px rgba(0,0,0,0.25);
         }
-        .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: var(--space-zoom); }
-        .tz-info-col { flex: 1; text-align: center; }
-        .tz-info-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.08); }
-        .tz-info-label { font-size: 18px; color: var(--text-dim); margin-bottom: 5px; }
-        .tz-info-val { font-size: 32px; font-weight: 700; }
-        .tz-close-text { text-align: center; font-size: 18px; color: rgba(255,255,255,0.4); cursor: pointer; transition: 0.2s; padding: 10px; font-weight: 500; }
+        .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 14px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: var(--space-zoom); }
+        .tz-info-col { flex: 1; text-align: center; min-width: 0; }
+        .tz-info-divider { width: 1px; height: 36px; background: rgba(255,255,255,0.08); }
+        .tz-info-label { font-size: 13px; color: var(--text-dim); margin-bottom: 2px; }
+        .tz-info-val { font-size: 24px; font-weight: 700; }
+
+        /* 🎛️ Override ปุ่มเริ่ม/สิ้นสุดเดินทาง (manual-timer-btn) บนหน้า Zoom Meter ให้กระชับแต่ไม่ตัดข้อความ */
+        .tracker-zoom-box .manual-timer-btn {
+            padding: 7px 12px !important;
+            border-radius: 16px !important;
+            font-size: 16px !important;
+            min-height: 58px;       /* เพียงพอสำหรับ 2 บรรทัดกลาง (สิ้นสุด + เวลา) */
+            height: auto;           /* ให้สูงขึ้นตาม content จริง (สำคัญ!) */
+            max-height: none !important; /* ❌ เอา hard cap ออก — เดิม 54px ตัด content 2 บรรทัด */
+            margin-bottom: 8px !important;
+            overflow: visible !important;
+            box-sizing: border-box;
+            display: flex;          /* child wrapper uses justify-content, needs flex display from base class */
+            align-items: center;
+        }
+        .tracker-zoom-box .manual-timer-btn .tx-type-chip {
+            padding: 3px 8px !important;
+            font-size: 12px !important;
+            margin-right: 10px !important;
+            border-radius: 10px !important;
+        }
+        .tracker-zoom-box .manual-timer-btn .manual-timer-total {
+            font-size: 13px !important;
+        }
+        .tracker-zoom-box .manual-timer-btn .material-symbols-outlined {
+            font-size: 20px !important;
+        }
+
+        .tz-close-text { text-align: center; font-size: 15px; color: rgba(255,255,255,0.4); cursor: pointer; transition: 0.2s; padding: 6px; font-weight: 500; }
         .tz-close-text:active { color: white; transform: scale(0.95); }
 
         /* Custom Confirm Modal CSS */
@@ -541,7 +614,7 @@
             --space-section: calc(var(--space-unit) * 6); /* 12px — ระหว่างส่วนหลักหน้าแรก */
             --space-card: calc(var(--space-unit) * 7);    /* 14px — ระหว่างการ์ดหน้าสรุป */
             --space-field: calc(var(--space-unit) * 9);   /* 18px — ระหว่างช่องฟอร์ม/เมนู */
-            --space-zoom: calc(var(--space-unit) * 10);   /* 20px — ระหว่างบล็อกหน้าจอมิเตอร์ขยาย (zoom) */
+            --space-zoom: calc(var(--space-unit) * 6);    /* 12px — ระหว่างบล็อกหน้าจอมิเตอร์ขยาย (zoom) */
         }
 
         html { background: #070a11; }
@@ -842,17 +915,42 @@
         }
         #fareTollBtn .material-symbols-outlined { font-size: 16px; }
 
-        /* 💰 ชิปทางด่วน + ยอดรวม — อยู่ในการ์ด ใต้ปุ่ม + ค่าทางด่วน (มุมซ้ายบน) */
+        /* 💰 รายการทางด่วนแต่ละอัน — มุมบนซ้าย ใต้ปุ่ม + ค่าทางด่วน (เรียงทีละแถวลงมา, ไม่ต่อกันเป็นแถวยาว) */
         #fareTollArea {
             position: absolute; top: 40px; left: 10px; z-index: 45;
-            display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
-            max-width: calc(100% - 20px);
+            display: flex; flex-direction: column; align-items: stretch; gap: 5px;
+            width: calc(100% - 20px); max-width: calc(100% - 20px);
             pointer-events: none; /* กันไม่ให้ชิปบังการแตะเปิดการ์ด */
         }
         #fareTollArea > * { pointer-events: auto; } /* แต่ปุ่มลบในชิปยังกดได้ */
-        #fareTollArea .surcharge-list-container { margin: 0; justify-content: flex-start; gap: 5px; max-width: 100%; }
-        #fareTollArea .surcharge-item { font-size: 12px; padding: 4px 10px; }
-        #fareTollArea #totalTollBadge { margin: 0; padding: 4px 14px; font-size: 12px; border-radius: 14px; }
+        #fareTollArea .surcharge-list-container {
+            margin: 0;
+            display: flex;
+            flex-direction: column;   /* เรียงแต่ละรายการลงทีละแถว (ไม่ต่อเป็นแถวเดียว) */
+            justify-content: flex-start;
+            align-items: stretch;
+            gap: 5px;
+            width: 100%; max-width: 100%;
+        }
+        #fareTollArea .surcharge-list-container .toll-way-pill {
+            width: 100%; /* แต่ละอันเต็มความกว้างแถว */
+            box-sizing: border-box;
+            justify-content: space-between; /* ชิดซ้ายชื่อ, ชิดขวาปุ่มลบ */
+        }
+        /* 💰 Badge รวมค่าทางด่วน — อยู่ตรงกลางล่างสุดของการ์ด (ใต้ progress bar) */
+        #totalTollBadge {
+            position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+            z-index: 46;
+            display: none;
+            padding: 6px 20px;
+            border-radius: 20px;
+            background: #3498db;
+            color: white;
+            font-size: 14px; font-weight: 600;
+            box-shadow: 0 4px 10px rgba(52,152,219,0.4);
+            white-space: nowrap;
+            pointer-events: none;
+        }
 
         #fareResetBtn {
             position: absolute; top: 9px; right: 10px; z-index: 50;
@@ -867,6 +965,24 @@
         }
         #fareResetBtn .material-symbols-outlined { font-size: 17px; }
         #fareResetBtn:active { transform: scale(0.9); background: #dc2626; }
+        /* ⏸️ ปุ่ม หยุดมิเตอร์ชั่วคราว / เริ่มต่อ — ชิดมุมขวาบนสุดการ์ดประเมินราคา */
+        #farePauseBtn {
+            position: absolute; top: 9px; right: 10px; z-index: 50;
+            display: none; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%; padding: 0;
+            border: none;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: #fff;
+            cursor: pointer; -webkit-tap-highlight-color: transparent;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(59,130,246,0.45);
+        }
+        #farePauseBtn.paused {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            box-shadow: 0 2px 6px rgba(249,115,22,0.5);
+        }
+        #farePauseBtn .material-symbols-outlined { font-size: 17px; }
+        #farePauseBtn:active { transform: scale(0.9); }
         .price {
             font-size: 62px; font-weight: 700;
             letter-spacing: -3px;
@@ -1212,6 +1328,63 @@
         }
         .tracker-zoom-box { border-radius: 32px; }
 
+        /* ---------- จอแคบจริง (<=400px) — ย่อขนาดให้ข้อมูลทุกอย่างแสดงครบ ไม่ตัด ---------------- */
+        @media (max-width: 420px) {
+            .tracker-zoom-box { padding: 12px 8px; border-radius: 22px; }
+            .tz-header { padding: 0 2px; margin-bottom: 8px; }
+            .tz-start-time, .tz-elapsed-time { font-size: 13px; }
+            .tz-progress-container { margin: 4px 4px 8px 4px; }
+            .tz-stats-row { margin-bottom: 8px; gap: 4px; }
+            .tz-stat-num { font-size: 32px; }
+            #tzTrafficTime.tz-stat-num { font-size: 28px; }
+            .tz-stat-label { font-size: 11px; }
+            .tz-fare-card { padding: 16px 6px; border-radius: 16px; margin-bottom: 8px; }
+            .tz-fare-title { font-size: 13px; }
+            #tzMeterPrice { font-size: 74px; }
+            .tz-fare-currency { font-size: 30px; }
+            .tz-info-box { padding: 12px 0; border-radius: 12px; margin-bottom: 8px; }
+            .tz-info-val { font-size: 20px; }
+            .tz-info-label { font-size: 11px; }
+            .tz-info-divider { height: 34px; }
+            .tz-close-text { font-size: 13px; padding: 4px; }
+            .tracker-zoom-box .manual-timer-btn {
+                padding: 6px 8px !important;
+                min-height: 52px;
+                height: auto;
+                max-height: none !important;
+                font-size: 15px !important;
+            }
+            .tracker-zoom-box .manual-timer-btn .tx-type-chip {
+                padding: 3px 6px !important; font-size: 11px !important; margin-right: 8px !important;
+            }
+            .tracker-zoom-box .manual-timer-btn .manual-timer-total { font-size: 12px !important; }
+            .tracker-zoom-box .manual-timer-btn .material-symbols-outlined { font-size: 18px !important; }
+        }
+
+        /* ---------- จอสูงน้อย (<=700px) — ลดขนาดอีกนิด เพื่อไม่ต้องเลื่อนเยอะ ---------- */
+        @media (max-height: 700px) {
+            .tracker-zoom-box { padding: 12px 9px; border-radius: 22px; }
+            .tz-header { margin-bottom: 8px; }
+            .tz-progress-container { margin: 5px 6px 8px 6px; }
+            .tz-stats-row { margin-bottom: 8px; gap: 4px; }
+            .tz-stat-num { font-size: 34px; }
+            #tzTrafficTime.tz-stat-num { font-size: 28px; }
+            .tz-fare-card { padding: 16px 8px; border-radius: 16px; margin-bottom: 8px; }
+            #tzMeterPrice { font-size: 78px; }
+            .tz-fare-currency { font-size: 32px; }
+            .tz-info-box { padding: 12px 0; margin-bottom: 8px; }
+            .tz-info-val { font-size: 20px; }
+            .tz-pause-btn { top: 8px; right: 8px; width: 32px; height: 32px; box-shadow: none !important; }
+            .tz-pause-btn .material-symbols-outlined { font-size: 17px; }
+            .tracker-zoom-box .manual-timer-btn {
+                padding: 6px 10px !important;
+                min-height: 52px;
+                height: auto;
+                max-height: none !important;
+                font-size: 15px !important;
+            }
+        }
+
         /* ---------- Toast + confirm + loader ---------- */
         /* #toastBox ใช้สไตล์กลางจอที่กำหนดไว้ด้านบน (กระดิ่งทอง + ข้อความกลาง + ดับอัตโนมัติ) — กฎซ้ำชุดเก่าที่เคยดันให้อยู่ล่างถูกลบออก */
         .custom-confirm-box {
@@ -1264,14 +1437,18 @@
             .manual-section { margin: var(--space-section) 0 0 0; } /* แถว กม. อยู่ในกล่องค้นหาแล้ว → ระยะบนจากช่องค้นหา = 8px (จอแคบ) */
             #fareTollBtn { top: 4px; left: 6px; padding: 4px 9px; font-size: 12px; border-radius: 15px; }
             #fareTollBtn .material-symbols-outlined { font-size: 14px; }
-            #fareTollArea { top: 32px; left: 6px; max-width: calc(100% - 12px); }
+            #fareTollArea { top: 32px; left: 6px; width: calc(100% - 12px); max-width: calc(100% - 12px); }
+            #totalTollBadge { bottom: 4px; padding: 4px 14px; font-size: 12px; border-radius: 14px; }
             .tz-toll-btn { top: 8px; left: 8px; padding: 3px 8px; font-size: 10.5px; border-radius: 12px; }
             .tz-toll-btn .material-symbols-outlined { font-size: 11.5px; }
-            .tz-pause-btn { top: 8px; right: 8px; width: 38px; height: 38px; }
+            .tz-pause-btn { top: 6px; right: 6px; width: 30px; height: 30px; box-shadow: none !important; }
+            .tz-pause-btn .material-symbols-outlined { font-size: 16px; }
             .tz-toll-list { top: 32px; left: 8px; }
             .tz-est-fare { font-size: 11.5px; right: 10px; bottom: 8px; }
             #fareResetBtn { top: 4px; right: 6px; width: 22px; height: 22px; }
             #fareResetBtn .material-symbols-outlined { font-size: 14px; }
+            #farePauseBtn { top: 4px; right: 6px; width: 22px; height: 22px; }
+            #farePauseBtn .material-symbols-outlined { font-size: 14px; }
             .sub-info { margin-top: 3px; padding: 3px 10px; font-size: 11px; border-radius: 12px; }
 
             /* ระยะห่างระหว่างปุ่มเริ่มมิเตอร์กับแถวไอคอนล่าง = var(--space-section) (เท่ากันกับช่องอื่น) */
@@ -1395,6 +1572,52 @@
     </style>
 </head>
 <body>
+<script>
+// 🛟 NUCLEAR FALLBACK — UNKILLABLE LOADER HIDE TIMEOUT (ISOLATED SCRIPT, BEFORE ANYTHING ELSE)
+//     วางไว้ใน <script> แยกทันทีหลัง <body> — ไม่ว่า script อื่นจะ SyntaxError / Parse Error อะไรก็ตาม
+//     ตัวนี้จะถูกตั้งค่าเสมอ และจะซ่อน Loader ที่ 10 วินาที ไม่ว่าจะสถานะไหนเลย
+(function(){
+    var MAX_WAIT_MS = 10000;
+    setTimeout(function(){
+        try {
+            var ld = document.getElementById('appLoader');
+            if (ld && ld.style.display !== 'none') {
+                // 1) ซ่อน Loader เด็ดขาด
+                ld.style.display = 'none';
+                ld.style.visibility = 'hidden';
+                ld.style.opacity = '0';
+                ld.style.pointerEvents = 'none';
+                // 2) ตัดสินใจว่าแสดง Login หน้า หรือ หน้าแรก (ลองดูจาก localStorage cookie ก่อน — ถ้าไม่มีก็แสดง Login)
+                var uid = null;
+                try { uid = localStorage.getItem('taxi_user_id'); } catch(e) {}
+                try { if (!uid) { var m = /taxi_user_id=([^;]+)/.exec(document.cookie || ''); if (m) uid = m[1]; } } catch(e) {}
+                var mApp = document.getElementById('mainApp');
+                var lOverlay = document.getElementById('loginOverlay');
+                var uMenu = document.getElementById('userMenu');
+                if (uid) {
+                    // มี user_id → แสดงหน้าแรก (ไม่รอ sync)
+                    if (mApp) { mApp.style.display = 'flex'; }
+                    if (uMenu) { uMenu.style.display = 'flex'; }
+                    if (lOverlay) { lOverlay.style.display = 'none'; }
+                    // แจ้งเตือนด้วยวิธีง่ายสุด (ไม่พึ่ง showToast)
+                    try {
+                        var msg = document.createElement('div');
+                        msg.textContent = 'ระบบช้าผิดปกติ — เปิดใช้งานโหมดออฟไลน์';
+                        msg.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#ff9800;color:#000;padding:10px 20px;border-radius:10px;z-index:9999999;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.5);font-family:Kanit,sans-serif;max-width:90%;';
+                        document.body.appendChild(msg);
+                        setTimeout(function(){ if (msg.parentNode) msg.parentNode.removeChild(msg); }, 5000);
+                    } catch(e) {}
+                } else {
+                    // ไม่มี user_id → แสดงหน้า Login
+                    if (mApp) { mApp.style.display = 'none'; }
+                    if (uMenu) { uMenu.style.display = 'none'; }
+                    if (lOverlay) { lOverlay.style.display = 'flex'; }
+                }
+            }
+        } catch(e) {}
+    }, MAX_WAIT_MS);
+})();
+</script>
 <audio id="silentAudioLoop" loop playsinline>
     <source src="data:audio/mp3;base64,//MkxAAAD/8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MkxAAAD/8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MkxAAAD/8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" type="audio/mpeg">
 </audio>
@@ -1679,14 +1902,19 @@
             <span class="material-symbols-outlined">toll</span> + ค่าทางด่วน
         </button>
 
-        <!-- 💰 ชิปทางด่วน + ยอดรวม — อยู่ในการ์ด ใต้ปุ่ม + ค่าทางด่วน -->
+        <!-- 💰 รายการทางด่วนแต่ละอัน — เรียงลงทีละแถว (แนวตั้ง) ใต้ปุ่ม + ค่าทางด่วน มุมบนซ้าย -->
         <div id="fareTollArea">
             <div id="surchargeDetails" class="surcharge-list-container" style="display:none;"></div>
-            <div id="totalTollBadge" style="display:none; background: #3498db; color: white; padding: 6px 20px; border-radius: 20px; font-size: 14px; font-weight: 600; margin: 0 auto 20px auto; width: fit-content; box-shadow: 0 4px 10px rgba(52,152,219,0.4);">
-                รวมค่าทางด่วน: 0 ฿
-            </div>
         </div>
 
+        <!-- 💰 Badge รวมค่าทางด่วนทั้งหมด — อยู่ตรงกลางใต้ progress bar ล่างสุดของการ์ด -->
+        <div id="totalTollBadge" style="display:none;">
+            รวมค่าทางด่วน: 0 ฿
+        </div>
+
+        <button id="farePauseBtn" onclick="event.stopPropagation(); window.toggleMeterPause()" title="หยุดมิเตอร์ชั่วคราว">
+            <span class="material-symbols-outlined">pause</span>
+        </button>
         <button id="fareResetBtn" onclick="event.stopPropagation(); window.resetAll()" title="ล้างข้อมูลทั้งหมด">
             <span class="material-symbols-outlined">close</span>
         </button>
@@ -2028,7 +2256,7 @@
         </div>
         <div class="tz-stats-row">
             <div class="tz-stat-col"><div id="tzDrivenKm" class="tz-stat-num" style="color: var(--neon-green);">0.00</div><div class="tz-stat-label">วิ่งแล้ว (กม.)</div></div>
-            <div class="tz-stat-col"><div id="tzTrafficTime" class="tz-stat-num" style="color: var(--accent-orange); font-size: 40px; padding: 10px 0 5px;">0:00</div><div class="tz-stat-label">รถติด (นาที:วิ)</div></div>
+            <div class="tz-stat-col"><div id="tzTrafficTime" class="tz-stat-num" style="color: var(--accent-orange);">0:00</div><div class="tz-stat-label">รถติด (นาที:วิ)</div></div>
             <div class="tz-stat-col" id="tzRemainKmCol"><div id="tzRemainKm" class="tz-stat-num" style="color: var(--neon-yellow);">0.00</div><div class="tz-stat-label">เหลือ (กม.)</div></div>
         </div>
         <div class="tz-fare-card">
@@ -2050,7 +2278,8 @@
         </div>
         
         <button onclick="window.modalStopTripClick();" class="manual-timer-btn" id="modalStopBtn" style="background: var(--accent-red); width: 100%; justify-content: space-between; margin-bottom: var(--space-zoom); font-size: 18px; padding: 12px 20px;">
-            </button>
+            <div style="text-align:center; width:100%; display:flex; align-items:center; gap:5px; justify-content:center;"><span class="material-symbols-outlined" style="font-size:22px;">stop_circle</span> <span style="font-weight:600;">สิ้นสุดเดินทาง</span></div>
+        </button>
         
         
     </div>
@@ -2347,6 +2576,32 @@
         const t = setTimeout(() => reject(new Error("timeout")), ms);
         promise.then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
     });
+
+    // 🛟 GLOBAL UNCONDITIONAL FALLBACK TIMEOUT (MAX 8 วินาที) — กันค้างหน้าโหลดตลอดไป ไม่ว่าจะ Error / Promise reject / Firebase ตาย
+    //     ตั้งค่าเร็วที่สุดเท่าที่จะตั้งได้ (หลังประกาศ global variable ทุกอย่าง) — ไม่สามารถข้ามได้ด้วยโค้ดใดๆ ข้างล่าง
+    setTimeout(() => {
+        try {
+            const ld = document.getElementById('appLoader');
+            const mApp = document.getElementById('mainApp');
+            const lOverlay = document.getElementById('loginOverlay');
+            const uMenu = document.getElementById('userMenu');
+            if (ld && ld.style.display !== 'none') {
+                // ยังแสดง Loader อยู่ที่ 8 วินาที → บังคับซ่อน ไม่ว่าจะสถานะไหน
+                ld.style.display = 'none';
+                if (loggedInUserId) {
+                    // มี user id → แสดงหน้าแรก (ไว้ใช้งาน offline หรือ ระบบ sync ยังไม่มา)
+                    try { window.__forceShowApp(); } catch(e) {}
+                    try { window.showToast("ระบบช้าผิดปกติ — เปิดใช้งานโหมดออฟไลน์", true); } catch(e) {}
+                } else {
+                    // ไม่มี user id → แสดงหน้า Login
+                    if (mApp) mApp.style.display = 'none';
+                    if (uMenu) uMenu.style.display = 'none';
+                    if (lOverlay) lOverlay.style.display = 'flex';
+                    try { window.renderStartButton(); } catch(e) {}
+                }
+            }
+        } catch (e) {}
+    }, 8000);
     const __FS_PROJECT = "mytalkie-3955a", __FS_KEY = "AIzaSyAhK_yT1kbFVl3A11n_QU4BgTvHrC7YkXI";
     const __fsBase = `https://firestore.googleapis.com/v1/projects/${__FS_PROJECT}/databases/(default)/documents`;
     window.__fsVal = (v) => {
@@ -2455,6 +2710,12 @@
             if (loggedInUserId && document.getElementById('mainApp').style.display !== 'flex') {
                 window.__forceShowApp();
                 try { window.showToast("เชื่อมต่อข้อมูลช้า — กำลังโหลดข้อมูลของคุณ...", true); } catch (e) {}
+            }
+        }).catch(() => {
+            // 🔧 Promise reject (timeout / any error) → still force show, cannot skip loader hide
+            if (loggedInUserId && document.getElementById('mainApp').style.display !== 'flex') {
+                try { window.__forceShowApp(); } catch(e2) {}
+                try { window.showToast("ระบบขัดข้อง — เปิดใช้งานโหมดออฟไลน์", true); } catch(e2) {}
             }
         });
     };
@@ -3012,8 +3273,18 @@
 
     window.setTollMode = async (isToll) => {
         if (window.isTollwayMode === isToll) return;
+
+        // ✅ Pre-check (ลิงก์กับหน้าสรุปเส้นทางทันที): ต้องการสลับเป็น "ขึ้นทางด่วน" แต่
+        // ถ้ามีจุดหมาย (ค้นหาเส้นทางมาแล้ว) แล้วเส้นทางนั้นไม่มีทางด่วนจริง (ไม่ว่า currentTollInfo จะ null หรือ hasTolls=false)
+        // → ไม่ต้องสลับโหมด ไม่ต้อง fetch ซ้ำ แจ้งเตือนทันที เหมือนหน้าสรุป
+        const hasDestLoc = destLoc || (typeof window !== 'undefined' && window.destLoc);
+        if (isToll && hasDestLoc && typeof window.routeHasToll === 'function' && !window.routeHasToll()) {
+            window.showNoTollToast();
+            return;
+        }
+
         applyTollModeState(isToll, true); // บันทึกทั้ง localStorage และ Firestore (ต่อบัญชี)
-        
+
         // Show toast
         window.showToast(isToll ? '🛣️ ขึ้นทางด่วน' : '🚗 เลี่ยงทางด่วน');
         
@@ -3967,16 +4238,25 @@
     // 🚕 เริ่ม/เริ่มต่อเที่ยว (มีหรือไม่มีจุดหมาย) → เปิดจอมิเตอร์ใหญ่ (trackerZoomOverlay) ทันที ไม่มีดีเลย์
     // (เดิมหน่วง 260ms → บนมือถือช้าอาจเห็นหน้าจอกลางแวบขึ้นมาก่อน; เปิด sync เลย ไม่มีคั่นกลางให้เห็น)
     window.openTripZoom = () => {
-        if (window.isManualRunning) window.toggleModal('trackerZoomOverlay', true);
+        if (window.isManualRunning) {
+            window.toggleModal('trackerZoomOverlay', true);
+            if (typeof window.updateLiveMeterDisplay === 'function') {
+                try { window.updateLiveMeterDisplay(); } catch(e) {}
+            }
+        }
     };
-    // ขณะเที่ยวกำลังวิ่ง แตะพื้นหลัง/ปุ่มย่อ = ไม่ให้ปิด (ออกได้ที่ปุ่ม "สิ้นสุดเดินทาง") — หน้าจอกลางถูกตัดออกแล้ว
     window.tryCloseTrackerZoom = () => {
         if (window.isManualRunning) return;
         window.toggleModal('trackerZoomOverlay', false);
     };
 
     window.handleResultClick = () => {
-        if (window.isManualRunning) { window.toggleModal('trackerZoomOverlay', true); } 
+        if (window.isManualRunning) {
+            window.toggleModal('trackerZoomOverlay', true);
+            if (typeof window.updateLiveMeterDisplay === 'function') {
+                try { window.updateLiveMeterDisplay(); } catch(e) {}
+            }
+        }
         else { window.toggleModal('zoomOverlay', true); }
     };
 
@@ -5132,7 +5412,7 @@
         if (fare >= 35) {
             lower = 35;
             if (fare <= 100) {
-                let step = Math.floor((fare - 35) / 5;
+                let step = Math.floor((fare - 35) / 5);
                 lower = 35 + Math.floor(step) * 5;
                 upper = lower + 5;
             } else {
@@ -5227,7 +5507,11 @@
     window.addSurcharge = (amount, name) => { window.surchargeList.push({ name: name, amount: amount, id: Date.now() }); window.updateSurchargeUI(); };
 
     window.promptToll = () => {
-        // ช่องกรอกเริ่มว่างเสมอ (ไม่เติมเลขค้าง) — กดปุ่มแล้วพิมพ์ได้ทันที แป้นตัวเลขขึ้นมาเลย
+        const hasDestLocPrompt = destLoc || (typeof window !== 'undefined' && window.destLoc);
+        if (hasDestLocPrompt && typeof window.routeHasToll === 'function' && !window.routeHasToll()) {
+            window.showToast('เส้นทางนี้ไม่มีทางด่วน ไม่ต้องเพิ่มค่าใช้จ่ายทางด่วน', false);
+            return;
+        }
         const inp = document.getElementById('tollInput');
         inp.value = '';
         window.toggleModal('tollModal', true);
@@ -5273,10 +5557,13 @@
     
     window.confirmToll = () => {
         let amt = parseInt(document.getElementById('tollInput').value);
-        if(amt > 0) {
-            window.addSurcharge(amt, 'ค่าทางด่วน');
-            try { localStorage.setItem(LAST_TOLL_KEY, String(amt)); } catch(e) {}
-            window.toggleModal('tollModal', false);
+        if (amt > 0) {
+            try {
+                window.addSurcharge(amt, 'ค่าทางด่วน');
+                try { localStorage.setItem(LAST_TOLL_KEY, String(amt)); } catch(e) {}
+            } finally {
+                window.toggleModal('tollModal', false);
+            }
         } else {
             window.showToast('กรุณาระบุจำนวนเงินที่ถูกต้อง', true);
         }
@@ -5783,7 +6070,12 @@
         $('destInput').classList.add('loading-state'); 
         $('historyList').style.display = 'none'; 
         $('suggestionList').style.display = 'none'; 
-        destLoc = { lat, lon }; 
+        destLoc = { lat, lon, name: name || $('destInput').value || 'จุดหมาย' }; 
+        try {
+            window.destLoc = destLoc;
+            window.__cachedLatestDest = destLoc;
+            window.__lastDestInfo = destLoc;
+        } catch(e) {}
         window.syncTollToggleVisibility(true);
         window.saveHistory(name, lat, lon); 
         window.getRouteData(lat, lon, name); 
@@ -6585,15 +6877,17 @@
     window.updatePauseBtnUI = () => {
         const running = !!window.isManualRunning;
         const paused = !!window.isMeterPaused;
-        const b = document.getElementById('meterPauseBtn');
-        if (b) {
-            b.style.display = running ? 'flex' : 'none';
-            b.className = 'meter-pause-btn ' + (paused ? 'paused' : 'idle');
-            b.title = paused ? 'เริ่มต่อมิเตอร์' : 'หยุดมิเตอร์ชั่วคราว';
-            b.innerHTML = paused
-                ? '<span class="material-symbols-outlined" style="font-size:24px;">play_arrow</span><span style="font-size:10px; font-weight:600; line-height:1.1;">เริ่มต่อ</span>'
-                : '<span class="material-symbols-outlined" style="font-size:24px;">pause</span><span style="font-size:10px; font-weight:600; line-height:1.1;">หยุด</span>';
+        // (1) ปุ่มใหม่ในมุมขวาบนการ์ดราคา — ไอคอนอย่างเดียว ไม่มีข้อความ
+        const fb = document.getElementById('farePauseBtn');
+        if (fb) {
+            fb.style.display = running ? 'flex' : 'none';
+            fb.className = paused ? 'paused' : '';
+            fb.title = paused ? 'เริ่มต่อมิเตอร์' : 'หยุดมิเตอร์ชั่วคราว';
+            fb.innerHTML = '<span class="material-symbols-outlined">' + (paused ? 'play_arrow' : 'pause') + '</span>';
         }
+        // (2) ปุ่มเดิมที่แถบล่าง — ซ่อนไปเลยตอนนี้ (ย้ายไปไว้การ์ดราคาแล้ว)
+        const b = document.getElementById('meterPauseBtn');
+        if (b) { b.style.display = 'none'; }
         const zb = document.getElementById('zoomPauseBtn');
         if (zb) {
             zb.style.display = running ? 'flex' : 'none';
@@ -6654,7 +6948,15 @@
             lastPosTime = Date.now(); lastCalcTime = Date.now(); // ไม่คิดค่าเวลาช่วงที่แอปปิด (ตามกฎหลักฐานจอดจริง)
             lastPath = (seed.lastPath || []).slice(); // คืนค่าเส้นทางล่าสุด (ไว้ประมาณระยะช่วงปิด/ซ่อน)
             catchUpLog = (seed.catchUpLog || []).slice(); // คืนค่าประวัติการเบิกคืนเดิมของเที่ยวนี้ (ต่อยอดถ้ามีรอบใหม่)
-            if (seed.dest) destLoc = { lat: seed.dest.lat, lon: seed.dest.lon };
+            if (seed.dest) {
+                destLoc = { lat: seed.dest.lat, lon: seed.dest.lon, name: seed.destName || seed.dest.name || 'จุดหมาย' };
+                try {
+                    window.destLoc = destLoc;
+                    window.__cachedLatestDest = destLoc;
+                    window.__restoredDestInfo = destLoc;
+                    window.__lastDestInfo = destLoc;
+                } catch(e) {}
+            }
             if (seed.destName) $('destInput').value = seed.destName;
             if (seed.baseFare) window.baseFare = seed.baseFare;
             window.surchargeList = (seed.surcharges && seed.surcharges.length) ? seed.surcharges : [];
@@ -7219,22 +7521,52 @@
 
         let modalBtn = $('modalStopBtn');
         if (modalBtn) {
-            // ขวาสุด: มีจุดหมาย → ปุ่มไอคอน Google Maps เปิดนำทาง; ไม่มีจุดหมาย → ว่างไว้ (ค่าโดยสารดูได้จากใบเขียวข้างบน ไม่ต้องซ้ำ)
-            let navRight = destLoc
-                ? `<div onclick="event.stopPropagation(); window.startNavigation();" style="z-index:2; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:#fff; border-radius:50%; width:38px; height:38px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.35);" title="เปิดนำทาง Google Maps"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" style="width:24px; height:24px; object-fit:contain;" /></div>`
-                : `<div style="width:38px; flex-shrink:0;"></div>`;
-            modalBtn.innerHTML = `
-                <div style="display:flex; align-items:center; justify-content:space-between; width:100%; position:relative; gap:8px;">
-                    <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB();" style="display:flex; align-items:center; gap:4px; background:${bgColor}; padding:6px 12px; border-radius:12px; font-size:14px; font-weight:500; border: 1px solid ${borderColor}; z-index:2; flex-shrink:0; cursor:pointer;">
-                        <span class="material-symbols-outlined" style="font-size:20px;">${icon}</span> <span>${txt}</span>
+            try {
+                // DEFENSE LAYER 0: sync module scope destLoc ถ้า helper 5 ชั้นเจอค่า แต่ module destLoc ยัง null (null/undefined)
+                // — ป้องกัน scope mismatch (restore state set window.destLoc อย่างเดียว) + property lon/lng mismatch
+                const normalized = (typeof window.__getFinalDestSafe === 'function') ? window.__getFinalDestSafe(destLoc) : null;
+                if (!destLoc && normalized && typeof normalized.lat === 'number') {
+                    // sync กลับเข้า module scope destLoc ด้วย property lon (canonical ใน codebase — see L7574 destLoc.lon)
+                    destLoc = { lat: normalized.lat, lon: normalized.lon, name: normalized.name };
+                    // sync กลับเข้า window.destLoc ด้วย เพื่อส่วนอื่นๆ ที่ยังอ่าน global อย่างเดียว
+                    try {
+                        window.destLoc = destLoc;
+                    } catch(e) {}
+                }
+                // finalDest ใช้ normalized (ได้จาก 5 ชั้นแน่นอน)
+                const finalDest = normalized;
+                let isVan2 = (typeof window.baseFare === 'number') ? (window.baseFare === 40) : false;
+                let bgColor   = isVan2 ? 'linear-gradient(135deg, #ff8a65, #e64a19)' : 'linear-gradient(135deg, #ffca28, #ffa000)';
+                let borderColor = '#ffffff';
+                let textColor = isVan2 ? '#ffffff' : '#1a1200';
+                let icon = isVan2 ? 'airport_shuttle' : 'local_taxi';
+                let txt  = isVan2 ? 'แวน' : 'ปกติ';
+                let eNum = (typeof elapsed === 'number' && !isNaN(elapsed)) ? elapsed : 0;
+
+                // ปุ่ม Google Maps ทางขวา: ถ้ามี finalDest (มี lat/lon จริง) → แสดงปุ่ม Maps วงกลม; ถ้าไม่มี → div ว่าง placeholder
+                let navRight;
+                if (finalDest && typeof finalDest.lat === 'number' && (typeof finalDest.lon === 'number' || typeof finalDest.lng === 'number')) {
+                    const destNameForTitle = finalDest.name || 'จุดหมาย';
+                    navRight = `<div onclick="event.stopPropagation(); (typeof window.__openMapsToDest === 'function' ? window.__openMapsToDest() : (typeof window.startNavigation === 'function' ? window.startNavigation() : null));" style="z-index:2; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:#fff; border-radius:50%; width:38px; height:38px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.35);" title="เปิดนำทาง Google Maps ไป ${destNameForTitle}"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Google_Maps_icon_%282026%29.svg/1280px-Google_Maps_icon_%282026%29.svg.png" style="width:24px; height:24px; object-fit:contain;" /></div>`;
+                } else {
+                    navRight = `<div style="width:38px; flex-shrink:0;"></div>`;
+                }
+                modalBtn.innerHTML = `
+                    <div style="display:flex; align-items:center; justify-content:space-between; width:100%; position:relative; gap:8px;">
+                        <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB && window.toggleTaxiTypeDB();" style="display:flex; align-items:center; gap:4px; background:${bgColor}; color:${textColor}; padding:6px 12px; border-radius:12px; font-size:14px; font-weight:500; border: 1px solid ${borderColor}; z-index:2; flex-shrink:0; cursor:pointer;">
+                            <span class="material-symbols-outlined" style="font-size:20px;">${icon}</span> <span>${txt}</span>
+                        </div>
+                        <div style="position:absolute; left:0; right:0; display:flex; flex-direction:column; align-items:center; pointer-events:none;">
+                            <div style="display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div>
+                            <div style="font-size:12px; font-weight:400; color:rgba(255,255,255,0.8);">${window.isMeterPaused ? '⏸️ หยุดชั่วคราว' : Math.floor(eNum/60) + ' นาที ' + eNum%60 + ' วิ'}</div>
+                        </div>
+                        ${navRight}
                     </div>
-                    <div style="position:absolute; left:0; right:0; display:flex; flex-direction:column; align-items:center; pointer-events:none;">
-                        <div style="display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div>
-                        <div style="font-size:12px; font-weight:400; color:rgba(255,255,255,0.8);">${window.isMeterPaused ? '⏸️ หยุดชั่วคราว' : Math.floor(elapsed/60) + ' นาที ' + elapsed%60 + ' วิ'}</div>
-                    </div>
-                    ${navRight}
-                </div>
-            `;
+                `;
+            } catch(e) {
+                modalBtn.innerHTML = '<div style="text-align:center; width:100%;"><div style="display:flex; align-items:center; gap:5px; justify-content:center;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div><div style="font-size:12px; color:rgba(255,255,255,0.8); margin-top:2px;">สิ้นสุดเที่ยวนี้</div></div>';
+                console.warn('[modalStopBtn] fallback rendered due to:', e.message);
+            }
         }
     };
 
@@ -7287,19 +7619,101 @@
         window.stopTracking(); window.updateFareEstimation(0); window.checkAppStatus(); 
     };
 
+    window.__getFinalDestSafe = function(preferredDest) {
+        const layers = [];
+        if (preferredDest && typeof preferredDest === 'object') layers.push(preferredDest);
+        if (typeof window !== 'undefined') {
+            try {
+                if (window.destLoc && typeof window.destLoc === 'object') layers.push(window.destLoc);
+            } catch(e) {}
+            try {
+                if (window.__restoredDestInfo && typeof window.__restoredDestInfo === 'object') layers.push(window.__restoredDestInfo);
+            } catch(e) {}
+            try {
+                if (window.__lastDestInfo && typeof window.__lastDestInfo === 'object') layers.push(window.__lastDestInfo);
+            } catch(e) {}
+            try {
+                if (window.__cachedLatestDest && typeof window.__cachedLatestDest === 'object') layers.push(window.__cachedLatestDest);
+            } catch(e) {}
+            try {
+                if (typeof window.__getTripDest === 'function') {
+                    const d4 = window.__getTripDest();
+                    if (d4 && typeof d4 === 'object') layers.push(d4);
+                }
+            } catch(e) {}
+        }
+        for (let i = 0; i < layers.length; i++) {
+            const c = layers[i];
+            if (!c || typeof c !== 'object') continue;
+            const lat = (typeof c.lat === 'number' && !isNaN(c.lat)) ? c.lat : null;
+            const lon = (typeof c.lon === 'number' && !isNaN(c.lon))
+                ? c.lon
+                : ((typeof c.lng === 'number' && !isNaN(c.lng)) ? c.lng : null);
+            if (lat === null || lon === null) continue;
+            let nm = 'จุดหมาย';
+            try {
+                if (typeof c.name === 'string' && c.name.trim().length > 0) nm = c.name.trim();
+                else if (typeof c.address === 'string' && c.address.trim().length > 0) nm = c.address.trim();
+                else if (typeof c.place === 'string' && c.place.trim().length > 0) nm = c.place.trim();
+            } catch(ee) {}
+            return { lat, lon, lng: lon, name: nm };
+        }
+        return null;
+    };
+
     window.startNavigation = () => {
-        if(destLoc) {
-            window.location.href = `google.navigation:q=${destLoc.lat},${destLoc.lon}&mode=d`;
-        } else {
+        const d = (typeof window.__getFinalDestSafe === 'function') ? window.__getFinalDestSafe(destLoc) : (destLoc || (typeof window !== 'undefined' ? window.destLoc : null));
+        if (!d || typeof d.lat !== 'number' || (typeof d.lon !== 'number' && typeof d.lng !== 'number')) {
             window.showToast("กรุณาค้นหาจุดหมายก่อนกดนำทางครับ", true);
+            return;
+        }
+        try {
+            const lat = d.lat;
+            const lng = (typeof d.lon === 'number') ? d.lon : d.lng;
+            const originLat = (lastPos ? lastPos.lat : (navLastPosition ? navLastPosition.lat : null));
+            const originLng = (lastPos ? lastPos.lon : (navLastPosition ? navLastPosition.lng : null));
+            let link;
+            if (typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent || '')) {
+                link = `google.navigation:q=${lat},${lng}&mode=d`;
+            } else {
+                const originStr = (originLat && originLng) ? `${originLat},${originLng}` : '';
+                link = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originStr)}&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
+            }
+            window.location.href = link;
+        } catch(e) {
+            window.showToast("เปิด Google Maps ไม่สำเร็จ — กรุณาลองใหม่", true);
+        }
+    };
+    
+    window.__openMapsToDest = function() {
+        const d = (typeof window.__getFinalDestSafe === 'function') ? window.__getFinalDestSafe(destLoc) : (destLoc || (typeof window !== 'undefined' ? window.destLoc : null));
+        if (!d || typeof d.lat !== 'number' || (typeof d.lon !== 'number' && typeof d.lng !== 'number')) {
+            try { window.showToast("ไม่พบข้อมูลจุดหมาย — กรุณาค้นหาเส้นทางก่อน", true); } catch(e) {}
+            return;
+        }
+        const lat = d.lat;
+        const lng = (typeof d.lon === 'number') ? d.lon : d.lng;
+        const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod/i.test(navigator.userAgent || '');
+        try {
+            if (isMobile && typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent || '')) {
+                window.location.href = `google.navigation:q=${lat},${lng}&mode=d`;
+            } else {
+                const originLat = (lastPos ? lastPos.lat : (navLastPosition ? navLastPosition.lat : null));
+                const originLng = (lastPos ? lastPos.lon : (navLastPosition ? navLastPosition.lng : null));
+                const originStr = (originLat && originLng) ? `${originLat},${originLng}` : '';
+                window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originStr)}&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`, '_blank', 'noopener');
+            }
+        } catch(e) {
+            try { window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank', 'noopener'); } catch(e2) {}
         }
     };
     
     window.shareToPlatform = (p) => { 
-        let isSearchMode = destLoc !== null && $('destInput').value.trim() !== ""; let km = parseFloat($('kmInput').value) || 0; let price = $('farePrice').innerText.replace(/<[^>]*>?/gm, '').trim(); let txt = "";
+        const sharedDest = (typeof window.__getFinalDestSafe === 'function') ? window.__getFinalDestSafe(destLoc) : destLoc;
+        let isSearchMode = (sharedDest !== null && sharedDest !== undefined) && $('destInput').value.trim() !== ""; let km = parseFloat($('kmInput').value) || 0; let price = $('farePrice').innerText.replace(/<[^>]*>?/gm, '').trim(); let txt = "";
         if (isSearchMode) {
             let destName = $('destInput').value.trim(); let remainMins = currentTrueRemainSec > 0 ? Math.ceil(currentTrueRemainSec / 60) : 0; let timeStr = remainMins > 0 ? formatDuration(remainMins) : "ไม่ทราบเวลา";
-            let originStr = lastPos ? `${lastPos.lat},${lastPos.lon}` : ""; let mapLink = `https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${destLoc.lat},${destLoc.lon}&travelmode=driving`;
+            let originStr = lastPos ? `${lastPos.lat},${lastPos.lon}` : ""; let sharedLat = sharedDest.lat; let sharedLon = (typeof sharedDest.lon === 'number') ? sharedDest.lon : sharedDest.lng; let mapLink = `https://www.google.com/maps/dir/?api=1&origin=${originStr}&destination=${sharedLat},${sharedLon}&travelmode=driving`;
             txt = `🚕 แผนการเดินทาง (ประเมิน)\n📍 ปลายทาง: ${destName}\n📏 ระยะทาง: ${km.toFixed(2)} กม.\n⏱️ เวลาเดินทาง: ${timeStr}\n💰 ค่าโดยสารประมาณ: ${price}\n\n🗺️ ดูเส้นทางบนแผนที่คลิก:\n${mapLink}`;
         } else {
             txt = `🚕 สรุปค่าแท็กซี่ (ประเมิน)\n📏 ระยะทาง: ${km.toFixed(2)} กม.\n💰 ค่าโดยสารประมาณ: ${price}\n\n(คำนวณโดยระบบ Taxi Fare 2026)`;
@@ -8012,21 +8426,37 @@
         });
     };
 
-    window.listenAppConfig();
-    if (loggedInUserId) {
-        try { if (!localStorage.getItem('taxi_login_at')) localStorage.setItem('taxi_login_at', Date.now().toString()); } catch(e) {}
-        try {
-            const raw = localStorage.getItem('taxi_user_cache_' + loggedInUserId);
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                if (parsed && parsed.username && parsed.role) {
-                    document.getElementById('appLoader').style.display = 'none';
-                    window.__applyUserDocUI(parsed);
+    try {
+        window.listenAppConfig();
+        if (loggedInUserId) {
+            try { if (!localStorage.getItem('taxi_login_at')) localStorage.setItem('taxi_login_at', Date.now().toString()); } catch(e) {}
+            try {
+                const raw = localStorage.getItem('taxi_user_cache_' + loggedInUserId);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && parsed.username && parsed.role) {
+                        document.getElementById('appLoader').style.display = 'none';
+                        window.__applyUserDocUI(parsed);
+                    }
                 }
+            } catch(e) {}
+            listenToMyUser(); window.__watchdogShowApp(); window.__fsTimeout(window.__fsRestGet(loggedInUserId), 5000).then(d => { if (d && (d.username || d.role)) window.__applyUserDocUI(d); }).catch(()=>{});
+        } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
+    } catch (bootErr) {
+        // 🔧 SYNC ERROR during boot (e.g., listenAppConfig threw on file:// protocol) → cannot reach hide-loader lines → force show no matter what
+        try {
+            document.getElementById('appLoader').style.display = 'none';
+            if (loggedInUserId) {
+                try { window.__forceShowApp(); } catch(e3) {}
+                try { window.showToast("ข้อผิดพลาดตอนเริ่มระบบ — เปิดโหมดออฟไลน์: " + (bootErr && bootErr.message ? bootErr.message : bootErr), true); } catch(e3) {}
+            } else {
+                document.getElementById('mainApp').style.display = 'none';
+                document.getElementById('userMenu').style.display = 'none';
+                document.getElementById('loginOverlay').style.display = 'flex';
+                try { window.renderStartButton(); } catch(e3) {}
             }
-        } catch(e) {}
-        listenToMyUser(); window.__watchdogShowApp(); window.__fsTimeout(window.__fsRestGet(loggedInUserId), 5000).then(d => { if (d && (d.username || d.role)) window.__applyUserDocUI(d); }).catch(()=>{});
-    } else { document.getElementById('appLoader').style.display = 'none'; document.getElementById('mainApp').style.display = 'none'; document.getElementById('userMenu').style.display = 'none'; document.getElementById('loginOverlay').style.display = 'flex'; window.renderStartButton(); }
+        } catch (e2) {}
+    }
     // 🔧 โหลดข้อความแจ้งเตือนที่แอดมินแก้ไว้ (Firestore) — ใช้ได้ทุกหน้าแม้ยังไม่ล็อกอิน
     if (typeof window.loadToastMsgOverrides === 'function') window.loadToastMsgOverrides();
     // 🏷️ โหลด/ซิงก์ประวัติเวอร์ชัน (อ่านได้ทุกคน; ถ้าโค้ดปล่อยเวอร์ชันใหม่ ระบบจะรันเวอร์ชันให้อัตโนมัติ)
