@@ -123,8 +123,48 @@
         .header-avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--neon-green); background: rgba(0,0,0,0.3); box-shadow: 0 2px 10px rgba(0,0,0,0.5); flex-shrink: 0; }
         #userMenu .hamburger-btn { width: 44px; height: 44px; }
         #userMenu .hamburger-btn .material-symbols-outlined { font-size: 30px !important; }
+
+        @keyframes pulseIdleBtn { 0%,100% { box-shadow: 0 0 0 0 rgba(76,175,80,0.65), 0 4px 14px rgba(0,0,0,0.45); transform: scale(1); } 50% { box-shadow: 0 0 0 10px rgba(76,175,80,0), 0 6px 22px rgba(0,0,0,0.5); transform: scale(1.01); } }
+        .manual-timer-btn.idle-pulse { animation: pulseIdleBtn 2.1s ease-in-out infinite; }
+
+        .gradient-title-text { background: linear-gradient(135deg, #ffd54f 0%, #ffb300 45%, #ff9800 100%); -webkit-background-clip: text; background-clip: text; color: transparent !important; text-shadow: 0 2px 12px rgba(255,183,77,0.22); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); font-weight: 800; }
+
+        .toll-way-pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px 5px 12px; border-radius: 99px; background: rgba(52,152,219,0.18); color: #93c5fd; border: 1px solid rgba(52,152,219,0.55); font-size: 12.5px; font-weight: 600; box-shadow: 0 2px 7px rgba(52,152,219,0.18); cursor: default; }
+        .toll-way-pill .pill-x { background: rgba(255,255,255,0.08); border: none; color: #fca5a5; border-radius: 99px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px !important; flex-shrink: 0; transition: 0.18s; }
+        .toll-way-pill .pill-x:hover, .toll-way-pill .pill-x:active { background: rgba(239,68,68,0.35); color: #fff; transform: scale(0.9); }
+
+        .taxi-chip-normal { background: linear-gradient(135deg, #ffca28, #ffa000); color: #1a1200; border: 2px solid #2e7d32; box-shadow: 0 2px 8px rgba(255,160,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35); }
+        .taxi-chip-van { background: linear-gradient(135deg, #ff8a65, #e64a19); color: #fff; border: 2px solid #c62828; box-shadow: 0 2px 8px rgba(230,74,25,0.45), inset 0 1px 0 rgba(255,255,255,0.25); }
+
+        .fare-progress { width: 55%; max-width: 280px; height: 5px; background: rgba(255,255,255,0.08); border-radius: 999px; margin: 10px auto 0 auto; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.06); }
+        .fare-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #4caf50, #8bc34a, #ffd600, #ff9800); border-radius: 999px; transition: width 0.35s ease-out; box-shadow: 0 0 8px rgba(255,193,7,0.55); }
+
+        .fab-expand { position: fixed; left: 14px; bottom: 12px; z-index: 42; display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 10px; }
+        .fab-main { width: 48px; height: 48px; border-radius: 999px; background: linear-gradient(135deg, #1e293b, #334155); color: #ffd600; border: 1.5px solid rgba(255,214,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,0.65), 0 0 0 0 rgba(255,214,0,0.0); transition: 0.25s cubic-bezier(.2,.9,.3,1.25); -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
+        .fab-main:active { transform: scale(0.92); }
+        .fab-expand.open .fab-main { box-shadow: 0 6px 24px rgba(0,0,0,0.65), 0 0 0 4px rgba(255,214,0,0.18); transform: rotate(45deg); }
+        .fab-items { display: none; flex-direction: column; gap: 8px; }
+        .fab-expand.open .fab-items { display: flex; animation: fabRise 0.3s cubic-bezier(.2,.9,.3,1.25) both; }
+        @keyframes fabRise { from { opacity: 0; transform: translateY(15px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .fab-item { width: 44px; height: 44px; border-radius: 999px; background: var(--input-bg); border: 1px solid var(--border-glass); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
+        .fab-item:active { transform: scale(0.9); background: rgba(255,255,255,0.12); }
+        .fab-item svg, .fab-item img { width: 22px !important; height: 22px !important; }
+
+        .avatar-wrap-ring { position: relative; display: inline-block; line-height: 0; }
+        .avatar-wrap-ring::before { content: ""; position: absolute; inset: -3px; border-radius: 999px; padding: 3px; background: var(--neon-green); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+        .avatar-wrap-ring.role-admin::before, .avatar-wrap-ring.role-manager::before { background: conic-gradient(from 0deg, #ffd700, #ffb300, #ff7043, #ffb300, #ffd700); }
+        @keyframes ringSpinSlow { to { transform: rotate(360deg); } }
+        .avatar-wrap-ring.spin::before { animation: ringSpinSlow 8s linear infinite; }
+
+        .star-toggle-btn { background: none; border: none; color: #ffd600; cursor: pointer; padding: 4px 6px; border-radius: 8px; flex-shrink: 0; transition: 0.15s; }
+        .star-toggle-btn:active { transform: scale(0.85); background: rgba(255,214,0,0.1); }
+        .star-toggle-btn.off { color: rgba(255,255,255,0.35); }
+        .fav-manage-btn { background: linear-gradient(135deg, rgba(255,214,0,0.18), rgba(255,152,0,0.14)); color: #ffd54f; border: 1px solid rgba(255,214,0,0.35); padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+        .fav-manage-btn:active { transform: scale(0.95); }
         .header-icon { width: 40px; height: 40px; border-radius: 12px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); object-fit: cover; flex-shrink: 0; }
         h2 { font-size: 24px; font-weight: 500; margin: 0; background: linear-gradient(90deg, #fff, #a0a5b5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        html.oled .idle-pulse, html.oled .avatar-wrap-ring.spin { animation-play-state: paused !important; }
         
         .taxi-type-selector { display: inline-flex; background: var(--input-bg); border-radius: 30px; padding: 5px; border: 1px solid var(--border-glass); box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
         .taxi-type-option { padding: 8px 20px; border-radius: 25px; color: var(--text-dim); font-size: 14px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; font-weight: 500; -webkit-tap-highlight-color: transparent; user-select: none; }
@@ -1509,7 +1549,9 @@
     <div class="app-header">
         <div id="mainUserInfo" class="header-left" style="display: none;">
             <div style="position: relative;">
-                <img id="mainProfilePic" src="" class="header-avatar" alt="profile" onclick="window.openProfileModal()" />
+                <div id="mainAvatarRing" class="avatar-wrap-ring">
+                    <img id="mainProfilePic" src="" class="header-avatar" alt="profile" onclick="window.openProfileModal()" />
+                </div>
                 <span id="mainProfileBadge" class="perm-badge" style="display: none;"></span>
             </div>
             <div style="text-align: left; display: none;">
@@ -1520,7 +1562,7 @@
 
         <div class="header-center">
             <div style="display: flex; flex-direction: column; align-items: center; line-height: 1.15;">
-                <h2>คำนวณค่าแท็กซี่</h2>
+                <h2 class="gradient-title-text">คำนวณค่าแท็กซี่</h2>
             </div>
         </div>
 
@@ -1649,6 +1691,7 @@
             <div id="fareDisplay">
                 <div id="farePrice" class="price">0<span style="font-size: 32px; font-weight:400;"> ฿</span></div>
                 <div id="infoText" class="sub-info">ประเมินระยะทาง 0 กม.</div>
+                <div class="fare-progress" aria-hidden="true"><div id="fareProgressFill" class="fare-progress-fill" style="width:0%;"></div></div>
             </div>
         </div>
     </div>
@@ -1665,31 +1708,40 @@
         </button>
     </div>
                          
-    <div style="gap:15px; margin-bottom: 20px; flex-shrink: 0;" class="flex-center">
-        <button onclick="window.shareToPlatform('messenger')" class="btn-icon-base flex-center">
-            <svg viewbox="0 0 24 24" fill="#0084FF" style="width:28px; height:28px;"><path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.908 1.463 5.483 3.75 7.182V22l3.414-1.874A10.322 10.322 0 0012 20.516c5.523 0 10-4.145 10-9.258S17.523 2 12 2zm1.09 12.83l-2.774-2.954-5.414 2.954 5.952-6.32 2.844 2.954 5.344-2.954-5.952 6.32z"></path></svg>                        
-        </button>
-        <button onclick="window.shareToPlatform('line')" class="btn-icon-base flex-center">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" style="width:28px; height:28px;" />                        
-        </button>
-        <button onclick="window.openMainQrCode()" class="btn-icon-base flex-center">
-            <svg viewbox="0 0 24 24" fill="#f1c40f" style="width:28px; height:28px;"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z"></path></svg>                        
-        </button>
-        <button onclick="window.openServicePortal(false)" class="btn-icon-base flex-center">
-            <img src="https://i.ibb.co/210jq8dS/unnamed.png" style="width:28px; height:28px; object-fit:contain;" />                        
-        </button>
-    </div>
-                                                       
     <div class="footer-credit flex-center">
         <img src="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" class="footer-logo" /><span>Design by นักเลงคีย์บอร์ด</span>                          
     </div>
+</div>
+
+<!-- 🧭 ปุ่มแชร์แบบ Floating Action Expandable (ลอยมุมล่างซ้าย) -->
+<div id="fabSocial" class="fab-expand">
+    <div class="fab-items">
+        <button class="fab-item" onclick="window.shareToPlatform('messenger')" title="Messenger">
+            <svg viewbox="0 0 24 24" fill="#0084FF" style="width:22px; height:22px;"><path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.908 1.463 5.483 3.75 7.182V22l3.414-1.874A10.322 10.322 0 0012 20.516c5.523 0 10-4.145 10-9.258S17.523 2 12 2zm1.09 12.83l-2.774-2.954-5.414 2.954 5.952-6.32 2.844 2.954 5.344-2.954-5.952 6.32z"></path></svg>
+        </button>
+        <button class="fab-item" onclick="window.shareToPlatform('line')" title="LINE">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" style="width:22px; height:22px;" />
+        </button>
+        <button class="fab-item" onclick="window.openMainQrCode()" title="QR Code">
+            <svg viewbox="0 0 24 24" fill="#f1c40f" style="width:22px; height:22px;"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z"></path></svg>
+        </button>
+        <button class="fab-item" onclick="window.openServicePortal(false)" title="TrueMoney">
+            <img src="https://i.ibb.co/210jq8dS/unnamed.png" style="width:22px; height:22px; object-fit:contain;" />
+        </button>
+        <button class="fab-item" onclick="window.copyAppShareLink()" title="คัดลอกลิงก์" style="font-weight:700; font-size:13px;">
+            <span class="material-symbols-outlined" style="font-size:20px;">content_copy</span>
+        </button>
+    </div>
+    <button class="fab-main" onclick="document.getElementById('fabSocial').classList.toggle('open')" aria-label="แชร์"><span class="material-symbols-outlined">share</span></button>
 </div>
 
 <div id="sideMenuOverlay" class="side-menu-overlay" onclick="window.toggleSideMenu(false)">
     <div id="sideMenuBox" class="side-menu" onclick="event.stopPropagation()">
         <div class="side-menu-header">
             <div style="position: relative;">
-                <img id="profilePic" src="" class="side-profile-pic" onclick="window.openProfileModal(); window.toggleSideMenu(false);">
+                <div id="sideAvatarRing" class="avatar-wrap-ring">
+                    <img id="profilePic" src="" class="side-profile-pic" onclick="window.openProfileModal(); window.toggleSideMenu(false);">
+                </div>
                 <span id="sideProfileBadge" class="perm-badge" style="display: none;"></span>
             </div>
             <div id="displayUserName" class="side-user-name">กำลังโหลด...</div>
@@ -5030,13 +5082,15 @@
         let isVan = window.baseFare === 40;
         let icon = isVan ? 'airport_shuttle' : 'local_taxi';
         let txt = isVan ? 'แวน' : 'ปกติ';
-        let bgColor = isVan ? 'rgba(155, 89, 182, 0.9)' : 'rgba(52, 152, 219, 0.9)'; 
-        let borderColor = isVan ? '#9b59b6' : '#3498db';
+        let chipClass = isVan ? 'taxi-chip-van' : 'taxi-chip-normal';
+
+        btn.classList.remove('idle-pulse');
 
         if (!window.isManualRunning) {
+            btn.classList.add('idle-pulse');
             btn.innerHTML = `
                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%; position:relative;">
-                    <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB();" style="display:flex; align-items:center; gap:4px; background:${bgColor}; padding:6px 10px; border-radius:12px; font-size:12px; font-weight:500; border: 1px solid ${borderColor}; z-index:2; cursor:pointer;" title="จิ้มเพื่อสลับประเภทรถ">
+                    <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB();" class="${chipClass}" style="display:flex; align-items:center; gap:4px; padding:6px 10px; border-radius:12px; font-size:12px; font-weight:500; border-width:1px; border-style:solid; z-index:2; cursor:pointer;" title="จิ้มเพื่อสลับประเภทรถ">
                         <span class="material-symbols-outlined" style="font-size:16px;">${icon}</span> <span>${txt}</span>
                     </div>
                     <div style="position:absolute; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:5px; pointer-events:none;">
@@ -5045,6 +5099,111 @@
                 </div>
             `;
         }
+    };
+
+    window.DEFAULT_ADMIN_FAVORITES = [
+        { name: 'ท่าอากาศยานสุวรรณภูมิ', lat: 13.6900, lon: 100.7501 },
+        { name: 'ท่าอากาศยานดอนเมือง', lat: 13.9054, lon: 100.6063 }
+    ];
+
+    window.setFareProgressPct = (fareAmt) => {
+        const fill = document.getElementById('fareProgressFill');
+        if (!fill) return;
+        const fare = Math.max(0, Math.round(parseFloat(fareAmt) || 0));
+        let lower = 0, upper = 35;
+        if (fare >= 35) {
+            lower = 35;
+            if (fare <= 100) {
+                let step = Math.floor((fare - 35) / 5;
+                lower = 35 + Math.floor(step) * 5;
+                upper = lower + 5;
+            } else {
+                let step = Math.floor((fare - 100) / 10);
+                lower = 100 + Math.floor(step) * 10;
+                upper = lower + 10;
+            }
+        }
+        let pct = 0;
+        if (fare > lower && upper > lower) {
+            pct = Math.min(100, Math.max(0, ((fare - lower) / (upper - lower)) * 100));
+        } else if (fare >= upper && upper > 0) {
+            pct = 100;
+        }
+        fill.style.width = pct.toFixed(1) + '%';
+    };
+
+    window.openFavoritesManageModal = () => {
+        let favs = window.getFavorites();
+        const header = `<h3 class="modal-header flex-center" style="margin:0; padding:18px 14px; font-size:18px; font-weight:700; gap:6px;"><span class="material-symbols-outlined" style="color:#ffd600;">star</span> จัดการจุดโปรด</h3>
+        <button class="btn-close-floating" onclick="event.stopPropagation(); window.toggleModal('favoritesManageModal', false);"><span class="material-symbols-outlined">close</span></button>`;
+        let body;
+        if (!favs.length) {
+            body = `<div style="padding:20px; text-align:center; color:var(--text-dim);">ยังไม่มีจุดโปรด — แตะดาว ⭐ บนประวัติหรือผลการค้นหาเพื่อบันทึก</div>`;
+        } else {
+            body = `<div style="padding:0 4px 10px 4px; max-height:60vh; overflow:auto;">` +
+                favs.map((it, idx) => `
+                    <div style="display:flex; align-items:center; gap:8px; padding:10px 8px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                        <span class="material-symbols-outlined" style="color:#ffd600; font-size:20px; flex-shrink:0;">star</span>
+                        <div style="flex:1; min-width:0; text-align:left;">
+                            <div style="font-weight:600; font-size:14px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.name}</div>
+                            <div style="font-size:11px; color:var(--text-dim);">⭐ แตะเพื่อไป → ${it.lat.toFixed(3)}, ${it.lon.toFixed(3)}</div>
+                        </div>
+                        <button onclick="event.stopPropagation(); window.toggleFavorite('${it.name.replace(/'/g, "\\'")}', ${it.lat}, ${it.lon}); window.openFavoritesManageModal();" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:5px 10px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer; flex-shrink:0;">ลบ</button>
+                    </div>
+                `).join('') + `</div>`;
+        }
+        const adminBtn = (currentUserRole === 'Admin' || currentUserRole === 'Manager')
+            ? `<button onclick="event.stopPropagation(); window.saveDefaultFavoritesAsAdmin();" style="background: linear-gradient(135deg,#f1c40f,#f39c12); color:#3d2b00; border:none; padding:11px 16px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 4px 10px rgba(241,196,15,0.3);">💾 เซฟเป็นค่าเริ่มต้น (ทุกคน)</button>`
+            : '';
+        const footer = `<div style="padding:14px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+            <button onclick="event.stopPropagation(); window.injectDefaultFavoritesToMe();" style="background:rgba(46,204,113,0.15); color:#2ecc71; border:1px solid rgba(46,204,113,0.4); padding:11px 16px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer;">✈️ นำเข้าสนามบิน 2 แห่ง</button>
+            ${adminBtn}
+            <button onclick="event.stopPropagation(); window.toggleModal('favoritesManageModal', false);" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:11px 20px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer;">ปิด</button>
+        </div>`;
+        let modal = document.getElementById('favoritesManageModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'favoritesManageModal';
+            modal.className = 'modal-overlay';
+            modal.style.zIndex = '10050';
+            modal.onclick = (e) => { if (e.target === modal) window.toggleModal('favoritesManageModal', false); };
+            document.body.appendChild(modal);
+        }
+        modal.innerHTML = `<div class="modal-box standard-box" onclick="event.stopPropagation();">${header}${body}${footer}</div>`;
+        window.toggleModal('favoritesManageModal', true);
+    };
+
+    window.injectDefaultFavoritesToMe = () => {
+        let favs = window.getFavorites();
+        const defaults = window.DEFAULT_ADMIN_FAVORITES || [];
+        let added = 0;
+        defaults.forEach(d => {
+            if (!favs.some(f => f.name === d.name)) { favs.unshift({ name: d.name, lat: d.lat, lon: d.lon }); added++; }
+        });
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs.slice(0, 15)));
+        if (added > 0) { window.showToast('✅ นำเข้าจุดโปรด ' + added + ' รายการสำเร็จ'); } else { window.showToast('มีอยู่แล้วในรายการโปรด'); }
+        window.openFavoritesManageModal();
+        try { if (typeof window.showHistory === 'function') window.showHistory(); } catch (e) {}
+    };
+
+    window.saveDefaultFavoritesAsAdmin = async () => {
+        if (currentUserRole !== 'Admin' && currentUserRole !== 'Manager') { window.showToast('คุณไม่มีสิทธิ์', true); return; }
+        const btn = event && event.target ? event.target : null;
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+        try {
+            const favs = window.getFavorites();
+            await setDoc(doc(db, 'settings', 'appConfig'), { defaultFavorites: favs }, { merge: true });
+            window.showToast('💾 บันทึก Default Favorites เป็นค่าเริ่มต้นระบบ (ทุก User) สำเร็จ');
+            if (typeof window.addChangelogEntry === 'function') { try { window.addChangelogEntry('แอดมินอัปเดต Default Favorites (' + favs.length + ' รายการ)'); } catch (e) {} }
+        } catch (e) {
+            try {
+                const favs = window.getFavorites();
+                await window.__fsRestPatchGlobal('settings/appConfig', { defaultFavorites: favs });
+                window.showToast('💾 บันทึก Default Favorites สำเร็จ (REST)');
+            } catch (e2) {
+                window.showToast('บันทึกไม่สำเร็จ — Firestore ขัดข้อง', true);
+            }
+        } finally { if (btn) { btn.disabled = false; btn.style.opacity = ''; } }
     };
 
     window.addSurcharge = (amount, name) => { window.surchargeList.push({ name: name, amount: amount, id: Date.now() }); window.updateSurchargeUI(); };
@@ -5066,19 +5225,22 @@
         inp.focus();
     };
 
-    // กดค้างปุ่ม − / + → เพิ่ม/ลดเร็ว ๆ (repeat ทุก ~110ms หลังกดค้าง 420ms) + สั่นเบา ๆ ทุกครั้งที่กด
+    // กดค้างปุ่ม − / + → เพิ่ม/ลดเร็ว ๆ (repeat ทุก ~100-110ms หลังกดค้าง 420ms) + สั่นเบา ๆ ทุกครั้งที่กด
     // ใช้ร่วมกันทั้งปุ่มค่าทางด่วน (tollStep) และปุ่มปรับกิโลเมตรหน้าหลัก (adjustKm)
-    let __holdTimer = null, __holdInt = null;
-    const holdStep = (stepFn, onRepeatStart) => {
+    //   - Toll hold: ทุกขั้น = integer ± 5 บาท (stepFn เดิม ใช้ได้เลย)
+    //   - KM hold: ครั้งแรก = ± 1 กม. (หยาบ) → รอบ repeat = ± 0.1 กม. ทุก 100ms (ละเอียด)
+    let __holdTimer = null, __holdInt = null, __holdMode = null;
+    const holdStep = (stepFn, onRepeatStart, kmRepeatDelta) => {
         stepFn(); // กดครั้งแรกทันที (1 ขั้น)
         if (navigator.vibrate) { try { navigator.vibrate(8); } catch(e) {} }
         holdEnd();
         __holdTimer = setTimeout(() => {
             if (onRepeatStart) onRepeatStart();
-            __holdInt = setInterval(() => {
-                stepFn();
-                if (navigator.vibrate) { try { navigator.vibrate(8); } catch(e) {} }
-            }, 110);
+            const intervalMs = (typeof kmRepeatDelta === 'number') ? 100 : 110;
+            const useRepeatFn = (typeof kmRepeatDelta === 'number')
+                ? () => { window.adjustKm(kmRepeatDelta); if (navigator.vibrate) { try { navigator.vibrate(8); } catch(e) {} } }
+                : () => { stepFn(); if (navigator.vibrate) { try { navigator.vibrate(8); } catch(e) {} } };
+            __holdInt = setInterval(useRepeatFn, intervalMs);
         }, 420);
     };
     const holdEnd = () => {
@@ -5087,8 +5249,8 @@
     };
     window.tollHoldStart = (delta) => holdStep(() => window.tollStep(delta));
     window.tollHoldEnd = holdEnd;
-    // กดค้างปุ่ม + / − กิโลเมตร: ครั้งแรกมีเสียงเหมือนเดิม รอบ repeat เงียบ (มีแต่สั่น) กันเสียงดังรัว
-    window.kmHoldStart = (delta) => holdStep(() => window.adjustKm(delta), () => { window.__kmHoldSilent = true; });
+    // กดค้างปุ่ม + / − กิโลเมตร: ครั้งแรกมีเสียงเหมือนเดิม ± 1 กม. → รอบ repeat เงียบ (มีแต่สั่น) 0.1 กม. / 100ms
+    window.kmHoldStart = (delta) => holdStep(() => window.adjustKm(delta), () => { window.__kmHoldSilent = true; }, (delta > 0 ? 0.1 : -0.1));
     window.kmHoldEnd = () => { window.__kmHoldSilent = false; holdEnd(); };
     
     window.confirmToll = () => {
@@ -5111,7 +5273,7 @@
         if(window.surchargeList.length > 0) {
             let html = '';
             window.surchargeList.forEach(item => { 
-                html += `<div class="surcharge-item"><span>${item.name === 'ค่าทางด่วน' ? 'ทางด่วน' : item.name} +${item.amount} บ.</span><span class="material-symbols-outlined del-btn" onclick="window.removeSurcharge(${item.id})">cancel</span></div>`; 
+                html += `<div class="toll-way-pill"><span>🛣️ ${item.name === 'ค่าทางด่วน' ? 'ทางด่วน' : item.name} ${item.amount} ฿</span><button class="pill-x" onclick="window.removeSurcharge(${item.id})" aria-label="ลบ">×</button></div>`; 
                 if(item.name === 'ค่าทางด่วน') totalToll += item.amount;
             });
             container.innerHTML = html; container.style.display = 'flex';
@@ -5137,7 +5299,7 @@
         if (!box) return;
         if (window.surchargeList.length > 0) {
             box.innerHTML = window.surchargeList.map(item =>
-                `<div class="tz-toll-item"><span>${item.name === 'ค่าทางด่วน' ? 'ทางด่วน' : item.name} ${item.amount} บ.</span><span class="material-symbols-outlined tz-toll-del" onclick="window.removeSurcharge(${item.id})">close</span></div>`
+                `<div class="toll-way-pill" style="margin:3px 0;"><span>🛣️ ${item.name === 'ค่าทางด่วน' ? 'ทางด่วน' : item.name} ${item.amount} ฿</span><button class="pill-x" onclick="window.removeSurcharge(${item.id})" aria-label="ลบ">×</button></div>`
             ).join('');
             box.style.display = 'flex';
         } else {
@@ -5151,7 +5313,6 @@
     window.showHistory = () => {
         let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
         let favs = window.getFavorites();
-        // แตะช่องค้นหา → dropdown: ตั้งตำแหน่งของฉัน + ที่โปรด + ประวัติล่าสุด
         const mp = window.getUserPosManual();
         let html = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ปลายทาง</span></div>`;
         html += renderLocRow('my_location', '📍 ตั้งตำแหน่งของฉัน', mp ? ('ตั้งไว้ที่: ' + mp.name) : 'ใช้เมื่อ GPS ใช้ไม่ได้ (คอม/แอป) — แตะเพื่อตั้ง', 'window.enterSetPosMode()');
@@ -5164,12 +5325,12 @@
             return;
         }
         if (favs.length) {
-            html += `<div class="history-header" style="color:#ffd600;"><span><span class="material-symbols-outlined" style="color:#ffd600;">star</span> ที่โปรด</span></div>`;
-            html += favs.map((i) => renderLocRow('star', i.name, 'ที่โปรด · แตะเพื่อไปต่อ', `window.selectLocation('${i.name.replace(/'/g, "\\'")}', ${i.lat}, ${i.lon})`, `<button onclick="event.stopPropagation(); window.toggleFavorite('${i.name.replace(/'/g, "\\'")}', ${i.lat}, ${i.lon}); window.showHistory();" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:5px; flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:18px;">delete</span></button>`)).join('');
+            html += `<div class="history-header" style="color:#ffd600;"><span><span class="material-symbols-outlined" style="color:#ffd600;">star</span> ที่โปรด</span><button class="fav-manage-btn" onclick="event.stopPropagation(); window.openFavoritesManageModal();" title="จัดการจุดโปรด">จัดการ</button></div>`;
+            html += favs.map((i) => renderLocRow('star', i.name, 'ที่โปรด · แตะเพื่อไปต่อ', `window.selectLocation('${i.name.replace(/'/g, "\\'")}', ${i.lat}, ${i.lon})`, `<button class="star-toggle-btn" onclick="event.stopPropagation(); window.toggleFavorite('${i.name.replace(/'/g, "\\'")}', ${i.lat}, ${i.lon}); window.showHistory();" title="ลบออกจากโปรด" style="color:#ffd600;">★</button>`)).join('');
         }
         if (h.length) {
             html += `<div class="history-header" style="color:var(--neon-green);"><span><span class="material-symbols-outlined">history</span> ประวัติล่าสุด</span></div>`;
-            html += h.map((i, idx) => renderLocRow('location_on', i.name, 'แตะเพื่อไปต่อ', `window.selectLocation('${i.name.replace(/'/g, "\\'")}', ${i.lat}, ${i.lon})`, `<button class="hist-del-btn" onclick="event.stopPropagation(); window.removeSearchHistoryItem(${idx})" title="ลบรายการนี้"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span></button>`)).join('');
+            html += h.map((i, idx) => renderLocRow('location_on', i.name, 'แตะเพื่อไปต่อ', `window.selectLocation('${i.name.replace(/'/g, "\\'")}', ${i.lat}, ${i.lon})`, `<div style="display:flex; align-items:center; gap:4px; flex-shrink:0;"><button class="star-toggle-btn ${window.isFavorite(i.name)? '' : 'off'}" onclick="event.stopPropagation(); window.toggleFavorite('${i.name.replace(/'/g, "\\'")}', ${i.lat}, ${i.lon}); window.showHistory();" title="${window.isFavorite(i.name)? 'ลบออกจากโปรด' : 'บันทึกเป็นโปรด'}">★</button><button class="hist-del-btn" onclick="event.stopPropagation(); window.removeSearchHistoryItem(${idx})" title="ลบรายการนี้"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span></button></div>`)).join('');
         }
         $('historyList').innerHTML = html;
         $('suggestionList').style.display = 'none';
@@ -6452,6 +6613,10 @@
 
         window.isManualRunning = true; requestWakeLock();
         $('manualTimerBtn').disabled = false; $('manualTimerBtn').classList.add('active');
+        $('manualTimerBtn').classList.remove('idle-pulse');
+        const mainRing = document.getElementById('mainAvatarRing');
+        const sideRing = document.getElementById('sideAvatarRing');
+        if (mainRing) mainRing.classList.add('spin'); if (sideRing) sideRing.classList.add('spin');
         $('searchSectionBox').style.display = 'none'; $('manualSectionBox').style.display = 'none';
         window.syncFareResetBtn();
         window.syncFareTollBtn();
@@ -6699,7 +6864,7 @@
         const km = parseFloat(document.getElementById('kmInput').value) || 0;
         m.disabled = km <= 0;
     };
-    window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; window.updateKmStepper(); window.updateFareEstimation(km); window.checkAppStatus(); };
+    window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; window.updateKmStepper(); window.updateFareEstimation(km); window.checkAppStatus(); const est = parseFloat(window.estimateFareAmt || 0); window.setFareProgressPct(est > 0 ? est : (km > 0 ? (window.calcThaiMeterFare(km) + window.baseFare) : 0)); };
 
     // 📒 เซฟเที่ยว (รวมประวัติการเบิกคืนทุกรอบ) ลง Firestore: users/{uid}/trips — ให้คนขับเปิดดูย้อนหลังกับผู้โดยสารได้
     window.saveTripToFirestore = (s) => {
@@ -6746,6 +6911,11 @@
         window.saveTripToFirestore(snap); // เซฟเที่ยว + ประวัติการเบิกคืนลง Firestore (คนขับตรวจสอบย้อนหลังกับผู้โดยสารได้)
         window.resetAll();
         window.toggleModal('trackerZoomOverlay', false);
+        const mainRing2 = document.getElementById('mainAvatarRing');
+        const sideRing2 = document.getElementById('sideAvatarRing');
+        if (mainRing2) mainRing2.classList.remove('spin'); if (sideRing2) sideRing2.classList.remove('spin');
+        window.renderStartButton();
+        window.setFareProgressPct(0);
         window.__lastTripSummary = snap; // เก็บไว้สร้าง QR ใบเสร็จให้ผู้โดยสารสแกนได้จากหน้าสรุป
         window.renderTripSummary(snap);
         window.toggleModal('tripSummaryOverlay', true);
@@ -6943,14 +7113,13 @@
         let isVan = window.baseFare === 40;
         let icon = isVan ? 'airport_shuttle' : 'local_taxi';
         let txt = isVan ? 'แวน' : 'ปกติ';
-        let bgColor = isVan ? 'rgba(155, 89, 182, 0.9)' : 'rgba(52, 152, 219, 0.9)';
-        let borderColor = isVan ? '#9b59b6' : '#3498db';
+        let chipClass = isVan ? 'taxi-chip-van' : 'taxi-chip-normal';
 
         let btn = $('manualTimerBtn'); 
         if(btn && btn.classList.contains('active')) { 
             btn.innerHTML = `
                 <div style="display:flex; align-items:center; justify-content:space-between; width:100%; position:relative;">
-                    <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB();" style="display:flex; align-items:center; gap:4px; background:${bgColor}; padding:6px 10px; border-radius:12px; font-size:12px; font-weight:500; border: 1px solid ${borderColor}; z-index:2; flex-shrink:0; cursor:pointer;" title="จิ้มเพื่อสลับประเภทรถ">
+                    <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB();" class="${chipClass}" style="display:flex; align-items:center; gap:4px; padding:6px 10px; border-radius:12px; font-size:12px; font-weight:500; border-width:1px; border-style:solid; z-index:2; flex-shrink:0; cursor:pointer;" title="จิ้มเพื่อสลับประเภทรถ">
                         <span class="material-symbols-outlined" style="font-size:16px;">${icon}</span> <span>${txt}</span>
                     </div>
                     <div style="position:absolute; left:0; right:0; display:flex; flex-direction:column; align-items:center; pointer-events:none;">
@@ -7027,6 +7196,7 @@
         if (window.isManualRunning) {
             $('farePrice').innerHTML = displayFare.toLocaleString('th-TH') + '<span style="font-size: 32px; font-weight:400;"> ฿</span>';
             if (!destLoc && kmInputVal === 0) $('infoText').innerText = "มิเตอร์กำลังเดิน... ⏱️";
+            window.setFareProgressPct(displayFare);
         }
 
         let modalBtn = $('modalStopBtn');
@@ -7574,6 +7744,47 @@
             }
 
             currentUserRole = data.role || "User"; myExtraPerms = data.extraPerms || {}; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
+            try {
+                const mRing = document.getElementById('mainAvatarRing');
+                const sRing = document.getElementById('sideAvatarRing');
+                if (mRing) {
+                    mRing.classList.remove('role-admin');
+                    if (currentUserRole === 'Admin' || currentUserRole === 'Manager') mRing.classList.add('role-admin');
+                }
+                if (sRing) {
+                    sRing.classList.remove('role-admin');
+                    if (currentUserRole === 'Admin' || currentUserRole === 'Manager') sRing.classList.add('role-admin');
+                }
+            } catch (e) {}
+            // ⭐ Default Favorites: ถ้ายังไม่มีใน localStorage → นำเข้าจาก Admin global (settings/appConfig.defaultFavorites) หรือ DEFAULT_ADMIN_FAVORITES ถ้า DB ยังไม่มี
+            try {
+                const seedKey = 'taxi_fav_seeded_' + (loggedInUserId || '');
+                if (!localStorage.getItem(seedKey)) {
+                    let favs = window.getFavorites();
+                    if (!favs.length) {
+                        let defaults = window.DEFAULT_ADMIN_FAVORITES || [];
+                        const applyDefaults = () => {
+                            if (defaults.length) localStorage.setItem(FAVORITES_KEY, JSON.stringify(defaults.slice(0, 15)));
+                        };
+                        try {
+                            if (db && typeof getDoc === 'function') {
+                                getDoc(doc(db, 'settings', 'appConfig')).then(ds => {
+                                    if (ds.exists()) {
+                                        const d = ds.data() || {};
+                                        if (d.defaultFavorites && Array.isArray(d.defaultFavorites) && d.defaultFavorites.length) {
+                                            defaults = d.defaultFavorites;
+                                        }
+                                    }
+                                    applyDefaults();
+                                }).catch(() => { applyDefaults(); });
+                            } else {
+                                applyDefaults();
+                            }
+                        } catch (e) { applyDefaults(); }
+                    }
+                    try { localStorage.setItem(seedKey, '1'); } catch(e) {}
+                }
+            } catch (e) {}
             // 🔁 ลำดับเมนูที่ลากสลับ — ใช้ลำดับส่วนกลาง (แอดมิน) ก่อน; ถ้ายังไม่มี (settings/menuOrder ว่าง) ค่อยใช้ลำดับส่วนตัวของบัญชีนี้ (users/{uid}.menuOrder) — localStorage เป็นสำรองตอนออฟไลน์
             if (!window.__globalMenuOrder && data.menuOrder) { try { let mo = data.menuOrder; if (typeof mo === 'string') mo = JSON.parse(mo); window.__menuOrder = mo; if (Array.isArray(mo.side)) localStorage.setItem('menu_order_side', JSON.stringify(mo.side)); if (Array.isArray(mo.hub)) localStorage.setItem('menu_order_hub', JSON.stringify(mo.hub)); } catch (e) {} }
             document.getElementById('displayUserName').innerText = displayNameVal; document.getElementById('mainUserName').innerText = displayNameVal;
