@@ -2290,6 +2290,10 @@
             <div style="text-align:center; width:100%; display:flex; align-items:center; gap:5px; justify-content:center;"><span class="material-symbols-outlined" style="font-size:22px;">stop_circle</span> <span style="font-weight:600;">สิ้นสุดเดินทาง</span></div>
         </button>
         
+        <!-- 🗑️ ปุ่ม "ทิ้งเที่ยวค้าง" — โชว์เฉพาะเที่ยวที่เริ่มต่ออัตโนมัติ (auto-resume) คนขับอยากเริ่มเที่ยวใหม่แทนการต่อ: หยุดมิเตอร์ + ลบข้อมูลทันที ไม่บันทึกสรุป -->
+        <button onclick="event.stopPropagation(); window.discardRunningTrip();" id="tzDiscardBtn" class="manual-timer-btn" style="display:none; width:100%; justify-content:center; margin-bottom: var(--space-zoom); font-size:15px; padding:10px 16px; background: rgba(239,68,68,0.16); color:#fca5a5; border:1px solid rgba(239,68,68,0.45);">
+            <span class="material-symbols-outlined" style="font-size:20px;">delete_forever</span> ทิ้งเที่ยวค้าง (เริ่มเที่ยวใหม่)
+        </button>
         
     </div>
 </div>
@@ -4249,6 +4253,9 @@
     window.openTripZoom = () => {
         if (window.isManualRunning) {
             window.toggleModal('trackerZoomOverlay', true);
+            // 🗑️ ปุ่ม "ทิ้งเที่ยวค้าง" โชว์เฉพาะเที่ยวที่เริ่มต่ออัตโนมัติ (คนขับอยากเริ่มเที่ยวใหม่แทนการต่อ)
+            const discBtn = document.getElementById('tzDiscardBtn');
+            if (discBtn) discBtn.style.display = (window.__autoResumedTrip === true) ? 'flex' : 'none';
             if (typeof window.updateLiveMeterDisplay === 'function') {
                 try { window.updateLiveMeterDisplay(); } catch(e) {}
             }
@@ -6649,6 +6656,7 @@
         // เทียบเท่าการแตะปุ่ม "เริ่มต่อ" ทันที — ระบบเบิกเวลาจอด/ระยะทางช่วงแอปปิด + กันนับซ้ำ (__liveCaughtUpKey) ทำงานเหมือนเดิม
         if (window.userAutoResume !== false && (window.__autoResumeTripKey === undefined || window.__autoResumeTripKey !== data.startTime)) {
             window.__autoResumeTripKey = data.startTime; // กันเริ่มต่อซ้ำรอบเดิมในเซสชันนี้
+            window.__autoResumedTrip = true; // 🗑️ ธงบอกว่ามิเตอร์รอบนี้เริ่มจาก auto-resume → โชว์ปุ่ม "ทิ้งเที่ยวค้าง" บนจอมิเตอร์
             // 🔊+📳 เตือนคนขับชัดเจนว่าแอปเริ่มมิเตอร์ต่อให้อัตโนมัติ (กันพลาดว่าแอปเริ่มมิเตอร์เอง)
             // เสียง 'resume' 2 จังหวะเหมือนตอนแบนเนอร์โผล่ + สั่น 2 ครั้งแรง ๆ (เคารพสวิตช์ปิดสั่นในหน้าโปรไฟล์)
             try { window.playSound('resume'); } catch(e) {}
@@ -6891,6 +6899,16 @@
         window.hideCatchUpStatus();
         hideResumeBanner();
         window.showToast('ลบข้อมูลเที่ยวค้างแล้ว');
+    };
+    // 🗑️ ทิ้งเที่ยวค้างจากจอมิเตอร์ (auto-resume แล้วอยากเริ่มเที่ยวใหม่): หยุดมิเตอร์ + ลบข้อมูลทันที ไม่บันทึกสรุปค่าโดยสาร/ไม่เซฟ Firestore
+    window.discardRunningTrip = async () => {
+        const ok = await window.showCustomConfirm('ทิ้งเที่ยวค้างและเริ่มเที่ยวใหม่?', 'ระบบจะหยุดมิเตอร์และลบข้อมูลเที่ยวนี้ทันที (ระยะทาง/เวลา/ค่าทางด่วนจะไม่ถูกบันทึกเป็นสรุป) — เริ่มจับเวลามิเตอร์ใหม่ได้เลย', 'danger', 'ทิ้งเที่ยวค้าง');
+        if (!ok) return;
+        window.__autoResumedTrip = false; // ปิดธง → ปุ่มทิ้งเที่ยวค้างจะไม่โชว์ในเที่ยวถัดไป
+        window.hideCatchUpStatus();
+        window.resetAll(); // หยุดมิเตอร์ + ล้างทุกอย่าง + clearActiveTrip + stopTracking (ไม่สร้างสรุป/ไม่เซฟ Firestore)
+        window.toggleModal('trackerZoomOverlay', false);
+        window.showToast('ทิ้งเที่ยวค้างแล้ว — เริ่มเที่ยวใหม่ได้เลย');
     };
     window.addEventListener('pagehide', () => { if (window.isManualRunning) window.saveActiveTrip(true); });
 
@@ -7241,6 +7259,7 @@
     // 🧾 จบเที่ยว (จากปุ่มหลัก หรือหน้าจอขยาย): ถ่ายข้อมูลสรุป → รีเซ็ตระบบ → เปิดหน้าสรุปค่าโดยสาร
     // หน้าสรุปโชว์ช่วง "หยุด/เริ่มต่อ" ระหว่างเที่ยว (แอปปิด/สลับหน้าจอ) ให้ผู้โดยสารเห็นอย่างโปร่งใส
     window.finishTripWithSummary = () => {
+        window.__autoResumedTrip = false; // จบเที่ยวแล้ว → ปุ่ม "ทิ้งเที่ยวค้าง" ไม่โชว์ในเที่ยวถัดไป
         window.hideCatchUpStatus(); // จบเที่ยวแล้ว ไม่ต้องตรวจสอบ GPS ต่อ
         window.playSound('stop');
         if (typeof window.advanceMeterTime === 'function') window.advanceMeterTime(Date.now()); // ให้วินาทีสุดท้ายครบก่อนสรุป
