@@ -435,7 +435,7 @@
             background: #0b0c10;
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 30px;
-            padding: 20px 14px;
+            padding: 30px 15px;
             width: 98%;
             max-width: 500px;
             max-height: calc(100dvh - 24px); /* ไม่ให้สูงเกินหน้าจอ (หักลบ padding ของ overlay) */
@@ -448,51 +448,60 @@
         }
         .tracker-zoom-box::-webkit-scrollbar { display: none; }
 
-        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-zoom); padding: 0 6px; }
-        .tz-start-time { color: white; font-weight: 600; font-size: 17px; }
-        .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 17px; }
-        .tz-progress-container { position: relative; margin: 10px 10px var(--space-zoom) 10px; }
+        .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-zoom); padding: 0 10px; }
+        .tz-start-time { color: white; font-weight: 600; font-size: 18px; }
+        .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 18px; }
+        .tz-progress-container { position: relative; margin: 34px 15px var(--space-zoom) 15px; /* margin-top 34px ให้มีที่ว่างรถ taxi ลอยเหนือเส้น ไม่ทับ header */ }
         .tz-progress-line { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; position: relative; }
         .tz-progress-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); border-radius: 3px; transition: width 1s ease-out; box-shadow: 0 0 10px var(--glow-yellow); }
         .tz-point-start { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; background: transparent; display: flex; justify-content: center; align-items: center; }
         .tz-point-start::before { content: ''; width: 8px; height: 8px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -16px; left: -14px; box-shadow: 16px 16px 0 var(--neon-yellow); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotate(45deg); }
         .tz-point-end { position: absolute; right: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--accent-red); background: transparent; }
         .tz-stats-row { display: flex; justify-content: space-between; align-items: stretch; margin-bottom: var(--space-zoom); gap: 10px; padding: 0 10px 0 6px; }
+        /* รถ taxi บนเส้น progress — ให้ลอยชัดเจน ไม่ถูกตัด/ทับ */
+        .tracker-zoom-box #tzCarIcon { top: -24px; z-index: 5; }
+        .tracker-zoom-box #tzCarIcon img { width: 52px; height: auto; }
         .tz-stat-col { 
             flex: 1; 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
             justify-content: center; 
-            gap: 4px;
+            gap: 6px;
             min-width: 0; 
-            padding: 6px 8px 6px 8px;
+            padding: 6px 4px 6px 4px;
+            overflow: hidden;
         }
         .tz-stat-num { 
-            font-size: 40px; 
+            font-size: 55px; 
             font-weight: 700; 
-            line-height: 1.05; 
+            line-height: 1; 
             letter-spacing: -1px; 
             margin: 0; 
-            vertical-align: baseline;
+            height: 1em; /* สูงเท่ากันทุกคอลัมน์ → ตัวเลขอยู่ baseline/กลางเดียวกัน */
             display: flex;
-            align-items: baseline;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
         }
         .tz-stat-label { 
-            font-size: 13px; 
+            font-size: 17px; 
             color: var(--text-dim); 
             line-height: 1.2; 
             margin: 0; 
             text-align: center;
-            min-height: 1.5em;
+            min-height: 1.4em;
+            height: 1.4em; /* สูงเท่ากันทุกคอลัมน์ → label อยู่บรรทัดเดียวกัน */
+            white-space: nowrap;
             display: flex;
-            align-items: flex-start;
+            align-items: center;
+            justify-content: center;
         }
-        .tz-fare-card { position: relative; background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 20px; padding: 20px 10px; text-align: center; box-shadow: 0 12px 28px rgba(46, 204, 113, 0.36); margin-bottom: var(--space-zoom); }
-        .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 15px; font-weight: 500; margin-bottom: 2px; }
-        .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 6px; }
-        #tzMeterPrice { font-size: 96px; font-weight: 800; color: white; line-height: 0.88; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .tz-fare-currency { font-size: 40px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .tz-fare-card { position: relative; background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 25px; padding: 35px 15px; text-align: center; box-shadow: 0 12px 28px rgba(46, 204, 113, 0.36); margin-bottom: var(--space-zoom); }
+        .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 20px; font-weight: 500; margin-bottom: 5px; }
+        .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 10px; }
+        #tzMeterPrice { font-size: 140px; font-weight: 800; color: white; line-height: 0.88; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .tz-fare-currency { font-size: 60px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .tz-toll-btn {
             position: absolute; top: 10px; left: 10px; z-index: 60;
             display: flex; align-items: center; justify-content: center; gap: 3px;
@@ -509,7 +518,7 @@
         .tz-toll-btn .material-symbols-outlined { font-size: 12px; }
         .tz-pause-btn {
             position: absolute; top: 8px; right: 8px; z-index: 60;
-            width: 34px; height: 34px; border-radius: 50%;
+            width: 38px; height: 38px; border-radius: 50%;
             display: none; align-items: center; justify-content: center;
             border: 1px solid rgba(255,255,255,0.35);
             color: #fff; cursor: pointer; -webkit-tap-highlight-color: transparent;
@@ -536,18 +545,18 @@
             font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.92);
             text-shadow: 0 1px 3px rgba(0,0,0,0.25);
         }
-        .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 14px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: var(--space-zoom); }
+        .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: var(--space-zoom); }
         .tz-info-col { flex: 1; text-align: center; min-width: 0; }
-        .tz-info-divider { width: 1px; height: 36px; background: rgba(255,255,255,0.08); }
-        .tz-info-label { font-size: 13px; color: var(--text-dim); margin-bottom: 2px; }
-        .tz-info-val { font-size: 24px; font-weight: 700; }
+        .tz-info-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.08); }
+        .tz-info-label { font-size: 18px; color: var(--text-dim); margin-bottom: 5px; }
+        .tz-info-val { font-size: 32px; font-weight: 700; }
 
         /* 🎛️ Override ปุ่มเริ่ม/สิ้นสุดเดินทาง (manual-timer-btn) บนหน้า Zoom Meter ให้กระชับแต่ไม่ตัดข้อความ */
         .tracker-zoom-box .manual-timer-btn {
-            padding: 7px 12px !important;
-            border-radius: 16px !important;
-            font-size: 16px !important;
-            min-height: 58px;       /* เพียงพอสำหรับ 2 บรรทัดกลาง (สิ้นสุด + เวลา) */
+            padding: 9px 14px !important;
+            border-radius: 18px !important;
+            font-size: 18px !important;
+            min-height: 64px;       /* เพียงพอสำหรับ 2 บรรทัดกลาง (สิ้นสุด + เวลา) */
             height: auto;           /* ให้สูงขึ้นตาม content จริง (สำคัญ!) */
             max-height: none !important; /* ❌ เอา hard cap ออก — เดิม 54px ตัด content 2 บรรทัด */
             margin-bottom: 8px !important;
@@ -557,19 +566,19 @@
             align-items: center;
         }
         .tracker-zoom-box .manual-timer-btn .tx-type-chip {
-            padding: 3px 8px !important;
-            font-size: 12px !important;
+            padding: 5px 10px !important;
+            font-size: 13px !important;
             margin-right: 10px !important;
             border-radius: 10px !important;
         }
         .tracker-zoom-box .manual-timer-btn .manual-timer-total {
-            font-size: 13px !important;
+            font-size: 15px !important;
         }
         .tracker-zoom-box .manual-timer-btn .material-symbols-outlined {
-            font-size: 20px !important;
+            font-size: 22px !important;
         }
 
-        .tz-close-text { text-align: center; font-size: 15px; color: rgba(255,255,255,0.4); cursor: pointer; transition: 0.2s; padding: 6px; font-weight: 500; }
+        .tz-close-text { text-align: center; font-size: 18px; color: rgba(255,255,255,0.4); cursor: pointer; transition: 0.2s; padding: 10px; font-weight: 500; }
         .tz-close-text:active { color: white; transform: scale(0.95); }
 
         /* Custom Confirm Modal CSS */
@@ -614,7 +623,7 @@
             --space-section: calc(var(--space-unit) * 6); /* 12px — ระหว่างส่วนหลักหน้าแรก */
             --space-card: calc(var(--space-unit) * 7);    /* 14px — ระหว่างการ์ดหน้าสรุป */
             --space-field: calc(var(--space-unit) * 9);   /* 18px — ระหว่างช่องฟอร์ม/เมนู */
-            --space-zoom: calc(var(--space-unit) * 6);    /* 12px — ระหว่างบล็อกหน้าจอมิเตอร์ขยาย (zoom) */
+            --space-zoom: calc(var(--space-unit) * 10);   /* 20px — ระหว่างบล็อกหน้าจอมิเตอร์ขยาย (zoom) */
         }
 
         html { background: #070a11; }
@@ -1330,58 +1339,58 @@
 
         /* ---------- จอแคบจริง (<=400px) — ย่อขนาดให้ข้อมูลทุกอย่างแสดงครบ ไม่ตัด ---------------- */
         @media (max-width: 420px) {
-            .tracker-zoom-box { padding: 12px 8px; border-radius: 22px; }
-            .tz-header { padding: 0 2px; margin-bottom: 8px; }
-            .tz-start-time, .tz-elapsed-time { font-size: 13px; }
-            .tz-progress-container { margin: 4px 4px 8px 4px; }
-            .tz-stats-row { margin-bottom: 8px; gap: 4px; }
-            .tz-stat-num { font-size: 32px; }
-            #tzTrafficTime.tz-stat-num { font-size: 28px; }
-            .tz-stat-label { font-size: 11px; }
-            .tz-fare-card { padding: 16px 6px; border-radius: 16px; margin-bottom: 8px; }
-            .tz-fare-title { font-size: 13px; }
-            #tzMeterPrice { font-size: 74px; }
-            .tz-fare-currency { font-size: 30px; }
-            .tz-info-box { padding: 12px 0; border-radius: 12px; margin-bottom: 8px; }
-            .tz-info-val { font-size: 20px; }
-            .tz-info-label { font-size: 11px; }
-            .tz-info-divider { height: 34px; }
-            .tz-close-text { font-size: 13px; padding: 4px; }
+            .tracker-zoom-box { padding: 16px 10px; border-radius: 24px; }
+            .tz-header { padding: 0 4px; margin-bottom: 10px; }
+            .tz-start-time, .tz-elapsed-time { font-size: 16px; }
+            .tz-progress-container { margin: 30px 6px 10px 6px; /* เหลือที่ว่างรถ taxi บนจอเล็กด้วย */ }
+            .tz-stats-row { margin-bottom: 10px; gap: 6px; }
+            .tz-stat-num { font-size: 44px; height: 1em; }
+            #tzTrafficTime.tz-stat-num { font-size: 38px; height: 44px; /* สูงเท่ากับเพื่อนร่วมแถว → ตัวเลข/label อยู่บรรทัดเดียวกัน */ }
+            .tz-stat-label { font-size: 15px; height: 1.4em; }
+            .tz-fare-card { padding: 22px 10px; border-radius: 18px; margin-bottom: 10px; }
+            .tz-fare-title { font-size: 17px; }
+            #tzMeterPrice { font-size: 100px; }
+            .tz-fare-currency { font-size: 42px; }
+            .tz-info-box { padding: 16px 0; border-radius: 14px; margin-bottom: 10px; }
+            .tz-info-val { font-size: 28px; }
+            .tz-info-label { font-size: 15px; }
+            .tz-info-divider { height: 46px; }
+            .tz-close-text { font-size: 16px; padding: 6px; }
             .tracker-zoom-box .manual-timer-btn {
-                padding: 6px 8px !important;
-                min-height: 52px;
+                padding: 8px 10px !important;
+                min-height: 58px;
                 height: auto;
                 max-height: none !important;
-                font-size: 15px !important;
+                font-size: 17px !important;
             }
             .tracker-zoom-box .manual-timer-btn .tx-type-chip {
-                padding: 3px 6px !important; font-size: 11px !important; margin-right: 8px !important;
+                padding: 4px 8px !important; font-size: 13px !important; margin-right: 8px !important;
             }
-            .tracker-zoom-box .manual-timer-btn .manual-timer-total { font-size: 12px !important; }
-            .tracker-zoom-box .manual-timer-btn .material-symbols-outlined { font-size: 18px !important; }
+            .tracker-zoom-box .manual-timer-btn .manual-timer-total { font-size: 14px !important; }
+            .tracker-zoom-box .manual-timer-btn .material-symbols-outlined { font-size: 20px !important; }
         }
 
         /* ---------- จอสูงน้อย (<=700px) — ลดขนาดอีกนิด เพื่อไม่ต้องเลื่อนเยอะ ---------- */
         @media (max-height: 700px) {
-            .tracker-zoom-box { padding: 12px 9px; border-radius: 22px; }
-            .tz-header { margin-bottom: 8px; }
-            .tz-progress-container { margin: 5px 6px 8px 6px; }
-            .tz-stats-row { margin-bottom: 8px; gap: 4px; }
-            .tz-stat-num { font-size: 34px; }
-            #tzTrafficTime.tz-stat-num { font-size: 28px; }
-            .tz-fare-card { padding: 16px 8px; border-radius: 16px; margin-bottom: 8px; }
-            #tzMeterPrice { font-size: 78px; }
-            .tz-fare-currency { font-size: 32px; }
-            .tz-info-box { padding: 12px 0; margin-bottom: 8px; }
-            .tz-info-val { font-size: 20px; }
-            .tz-pause-btn { top: 8px; right: 8px; width: 32px; height: 32px; box-shadow: none !important; }
-            .tz-pause-btn .material-symbols-outlined { font-size: 17px; }
+            .tracker-zoom-box { padding: 16px 12px; border-radius: 24px; }
+            .tz-header { margin-bottom: 10px; }
+            .tz-progress-container { margin: 30px 8px 10px 8px; /* เหลือที่ว่างรถ taxi บนจอเตี้ยด้วย */ }
+            .tz-stats-row { margin-bottom: 10px; gap: 6px; }
+            .tz-stat-num { font-size: 46px; height: 1em; }
+            #tzTrafficTime.tz-stat-num { font-size: 38px; height: 46px; /* สูงเท่ากับเพื่อนร่วมแถว → ตัวเลข/label อยู่บรรทัดเดียวกัน */ }
+            .tz-fare-card { padding: 22px 12px; border-radius: 18px; margin-bottom: 10px; }
+            #tzMeterPrice { font-size: 106px; }
+            .tz-fare-currency { font-size: 44px; }
+            .tz-info-box { padding: 16px 0; margin-bottom: 10px; }
+            .tz-info-val { font-size: 28px; }
+            .tz-pause-btn { top: 8px; right: 8px; width: 36px; height: 36px; box-shadow: none !important; }
+            .tz-pause-btn .material-symbols-outlined { font-size: 19px; }
             .tracker-zoom-box .manual-timer-btn {
-                padding: 6px 10px !important;
-                min-height: 52px;
+                padding: 8px 12px !important;
+                min-height: 58px;
                 height: auto;
                 max-height: none !important;
-                font-size: 15px !important;
+                font-size: 17px !important;
             }
         }
 
@@ -1439,12 +1448,12 @@
             #fareTollBtn .material-symbols-outlined { font-size: 14px; }
             #fareTollArea { top: 32px; left: 6px; width: calc(100% - 12px); max-width: calc(100% - 12px); }
             #totalTollBadge { bottom: 4px; padding: 4px 14px; font-size: 12px; border-radius: 14px; }
-            .tz-toll-btn { top: 8px; left: 8px; padding: 3px 8px; font-size: 10.5px; border-radius: 12px; }
-            .tz-toll-btn .material-symbols-outlined { font-size: 11.5px; }
-            .tz-pause-btn { top: 6px; right: 6px; width: 30px; height: 30px; box-shadow: none !important; }
-            .tz-pause-btn .material-symbols-outlined { font-size: 16px; }
-            .tz-toll-list { top: 32px; left: 8px; }
-            .tz-est-fare { font-size: 11.5px; right: 10px; bottom: 8px; }
+            .tz-toll-btn { top: 10px; left: 10px; padding: 4px 10px; font-size: 12px; border-radius: 13px; }
+            .tz-toll-btn .material-symbols-outlined { font-size: 13px; }
+            .tz-pause-btn { top: 8px; right: 8px; width: 34px; height: 34px; box-shadow: none !important; }
+            .tz-pause-btn .material-symbols-outlined { font-size: 18px; }
+            .tz-toll-list { top: 36px; left: 10px; }
+            .tz-est-fare { font-size: 13px; right: 12px; bottom: 10px; }
             #fareResetBtn { top: 4px; right: 6px; width: 22px; height: 22px; }
             #fareResetBtn .material-symbols-outlined { font-size: 14px; }
             #farePauseBtn { top: 4px; right: 6px; width: 22px; height: 22px; }
@@ -2176,9 +2185,9 @@
         html.oled .hamburger-btn, html.oled .small-toll-btn { box-shadow: none !important; }
         html.oled * { text-shadow: none !important; }
         @media (max-width: 430px) {
-            .tz-change-btn { top: 8px; left: 112px; padding: 3px 8px; font-size: 10.5px; border-radius: 12px; }
-            .tz-change-btn .material-symbols-outlined { font-size: 11.5px; }
-            .tz-oled-btn { bottom: 8px; left: 10px; width: 30px; height: 30px; }
+            .tz-change-btn { top: 10px; left: 122px; padding: 4px 10px; font-size: 12px; border-radius: 13px; }
+            .tz-change-btn .material-symbols-outlined { font-size: 13px; }
+            .tz-oled-btn { bottom: 10px; left: 12px; width: 34px; height: 34px; }
         }
 </style>
 <div id="settingsHubModal" class="modal-overlay" style="z-index: 10003;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">ตั้งค่าการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('settingsHubModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:6px 12px;">
@@ -2250,7 +2259,7 @@
         <div class="tz-progress-container" id="tzProgressContainer">
             <div class="tz-progress-line">
                 <div class="tz-point-start"></div><div id="tzProgressFill" class="tz-progress-fill"></div>
-                <div id="tzCarIcon" class="car-icon" style="top: -20px;"><img src="taxi-car.png" alt="" style="width: 48px; height: auto; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));" draggable="false"></div>
+                <div id="tzCarIcon" class="car-icon" style="top: -26px;"><img src="taxi-car.png" alt="🚕" onerror="this.outerHTML='<span style=&quot;font-size:34px; line-height:1;&quot;>🚕</span>'" style="width: 52px; height: auto; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));" draggable="false"></div>
                 <div class="tz-point-end"></div>
             </div>
         </div>
