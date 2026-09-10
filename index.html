@@ -135,6 +135,10 @@
 
         .taxi-chip-normal { background: linear-gradient(135deg, #ffca28, #ffa000); color: #1a1200; border: 2px solid #2e7d32; box-shadow: 0 2px 8px rgba(255,160,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35); }
         .taxi-chip-van { background: linear-gradient(135deg, #ff8a65, #e64a19); color: #fff; border: 2px solid #c62828; box-shadow: 0 2px 8px rgba(230,74,25,0.45), inset 0 1px 0 rgba(255,255,255,0.25); }
+        #profileTaxiNormal.taxi-type-option { background: linear-gradient(135deg, #ffca28, #ffa000); color: #1a1200; border: 1.5px solid #2e7d32; }
+        #profileTaxiVan.taxi-type-option { background: linear-gradient(135deg, #ff8a65, #e64a19); color: #fff; border: 1.5px solid #c62828; }
+        #profileTaxiNormal.taxi-type-option.active { box-shadow: 0 0 0 2px rgba(46,125,50,0.35), 0 4px 10px rgba(255,160,0,0.18); color: #1a1200 !important; }
+        #profileTaxiVan.taxi-type-option.active { box-shadow: 0 0 0 2px rgba(198,40,40,0.35), 0 4px 10px rgba(255,138,101,0.22); color: #fff !important; }
 
         .fare-progress { width: 55%; max-width: 280px; height: 5px; background: rgba(255,255,255,0.08); border-radius: 999px; margin: 10px auto 0 auto; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.06); }
         .fare-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #4caf50, #8bc34a, #ffd600, #ff9800); border-radius: 999px; transition: width 0.35s ease-out; box-shadow: 0 0 8px rgba(255,193,7,0.55); }
@@ -1697,8 +1701,16 @@
     </div>
                  
     <div class="action-row">
-        <button onclick="window.toggleManualTimer()" class="manual-timer-btn" id="manualTimerBtn">
-            </button>
+        <button onclick="window.toggleManualTimer()" class="manual-timer-btn idle-pulse" id="manualTimerBtn">
+            <div style="display:flex; align-items:center; justify-content:space-between; width:100%; position:relative;">
+                <div onclick="event.stopPropagation(); window.toggleTaxiTypeDB();" class="taxi-chip-normal" style="display:flex; align-items:center; gap:4px; padding:6px 10px; border-radius:12px; font-size:12px; font-weight:500; border-width:1px; border-style:solid; z-index:2; cursor:pointer;" title="จิ้มเพื่อสลับประเภทรถ">
+                    <span class="material-symbols-outlined" style="font-size:16px;">local_taxi</span> <span>ปกติ</span>
+                </div>
+                <div style="position:absolute; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:5px; pointer-events:none;">
+                    <span class="material-symbols-outlined">play_circle</span> เริ่มจับเวลามิเตอร์
+                </div>
+            </div>
+        </button>
         <button onclick="window.toggleMeterPause()" class="meter-pause-btn idle" id="meterPauseBtn" title="หยุดมิเตอร์ชั่วคราว">
             <span class="material-symbols-outlined" style="font-size:24px;">pause</span>
             <span style="font-size:10px; font-weight:600; line-height:1.1;">หยุด</span>
@@ -2315,6 +2327,12 @@
     const closePauseManual = (t) => { if (pauseOpenAt !== null) { if (t - pauseOpenAt >= 2000) pauseLog.push({ s: pauseOpenAt, r: t }); pauseOpenAt = null; } }; // กด "หยุดมิเตอร์ชั่วคราว" เอง → ลงรายการแม้สั้นแค่ 2 วิ (แตะพลาด < 2 วิ ไม่รก)
     window.isManualRunning = false;
     window.isMeterPaused = false; // ⏸️ คนขับกด "หยุดมิเตอร์ชั่วคราว" เองกลางเที่ยว (เหมือนลงธง: ไม้นับเวลา/กิโลเพิ่ม)
+    // 🔧 BOOT: หลัง script stack ทั้งหมดรันจนปิดแท็ก script → ทำการ render ปุ่มเริ่ม (renderStartButton) + Progress 0% ทันที
+    //     (ไม่ต้องรอ onAuthStateChanged / applyUserDocUI ที่รอ Firebase นานเกินไป ทำให้ปุ่มเริ่มว่างเปล่าชั่วคราว)
+    setTimeout(() => {
+        try { if (typeof window.renderStartButton === 'function') window.renderStartButton(); } catch(e) {}
+        try { if (typeof window.setFareProgressPct === 'function') window.setFareProgressPct(0); } catch(e) {}
+    }, 0);
     let meterPauseToastAt = 0;
 
     let loggedInUserId = localStorage.getItem('taxi_user_id');
