@@ -3,7 +3,7 @@
    - กัน "แคชเก่าค้าง": GitHub Pages สั่งให้เบราว์เซอร์เก็บไฟล์ได้ถึง ~10 นาที
      → ขอไฟล์จากเน็ตทุกครั้ง (cache:'no-store' ข้ามแคช HTTP) เวอร์ชันใหม่จะโผล่ทันทีหลัง deploy
    - สำรองจาก cache เฉพาะตอนออฟไลน์ */
-const CACHE = 'taxi-meter-v2';
+const CACHE = 'taxi-meter-v3'; /* bump version ทุกครั้งที่แก้ไขไฟล์ เพื่อบังคับลบ cache เก่าอัตโนมัติ */
 
 self.addEventListener('install', () => {
   self.skipWaiting();
