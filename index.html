@@ -366,61 +366,69 @@
         .log-time { font-size: 11px; color: var(--text-dim); margin-bottom: 3px; }
 
         .sp-modal-box { background: #0f111a; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
-        .sp-header { position: relative; padding: 25px 20px 20px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
+        .sp-header { position: relative; padding: 22px 20px 16px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
         .sp-neon-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, transparent, #00bcd4, #ff4757, #f1c40f, transparent); background-size: 200% 100%; animation: spLightRun 2.5s infinite linear; }
         @keyframes spLightRun { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
-        .sp-logo-text { font-family: 'Arial', Helvetica, sans-serif; font-size: 26px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
-        .sp-logo-text .h-box { background: linear-gradient(135deg, #333, #000); color: white; font-size: 18px; padding: 2px 7px; margin-left: 5px; border-radius: 6px; border: 1px solid #555; line-height: 1; box-shadow: inset 0 1px 3px rgba(255,255,255,0.3), 0 0 8px rgba(255,255,255,0.2); }
-        .sp-title { font-family: 'Kanit', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: #fff; text-transform: uppercase; }
-        .sp-cat-title { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; margin: 25px 0 15px 0; }
-        .sp-cat-title .material-symbols-outlined { font-size: 20px; margin-right: 5px; }
-        .sp-card { border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; text-align: left; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        .sp-card:active { transform: scale(0.98); }
-        .sp-info { flex: 1; min-width: 0; padding-right: 10px; }
-        .sp-item-title { font-size: 16px; font-weight: 600; color: white; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.5px; }
-        .sp-code { display: inline-block; padding: 6px 14px; border-radius: 8px; font-family: monospace; font-size: 18px; font-weight: bold; border: 1px solid; letter-spacing: 1.5px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.3); }
-        .sp-icon-box { width: 50px; height: 50px; border-radius: 12px; display: flex; justify-content: center; align-items: center; flex-shrink: 0; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
-        .sp-icon-box .material-symbols-outlined { font-size: 28px; }
+        .sp-logo-text { font-family: 'Arial', Helvetica, sans-serif; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+        .sp-logo-text .h-box { background: linear-gradient(135deg, #333, #000); color: white; font-size: 17px; padding: 2px 7px; margin-left: 5px; border-radius: 6px; border: 1px solid #555; line-height: 1; box-shadow: inset 0 1px 3px rgba(255,255,255,0.3), 0 0 8px rgba(255,255,255,0.2); }
+        .sp-title { font-family: 'Kanit', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 3px; color: rgba(255,255,255,0.85); text-transform: uppercase; }
+        /* 🧩 หัวหมวด: จุดสี + ชื่อหมวด + เส้นคั่น + จำนวนรายการ */
+        .sp-cat-title { display: flex; align-items: center; gap: 8px; margin: 22px 0 12px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.4px; color: #fff; }
+        .sp-cat-title .material-symbols-outlined { font-size: 20px; }
+        .sp-cat-dot { width: 8px; height: 8px; border-radius: 3px; flex-shrink: 0; background: var(--sp-accent, #94a3b8); box-shadow: 0 0 10px var(--sp-accent, #94a3b8); }
+        .sp-cat-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--sp-accent, #dbe1ec); }
+        .sp-cat-line { flex: 1; min-width: 10px; height: 1px; background: linear-gradient(90deg, var(--sp-border, rgba(255,255,255,0.16)), rgba(255,255,255,0)); }
+        .sp-cat-count { flex-shrink: 0; font-size: 11px; font-weight: 700; letter-spacing: 0; color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 999px; padding: 2px 9px; }
+        /* 🧩 การ์ดรายการ — พื้นไล่เฉดกรมท่าแบบเดียวกับหน้าต่างอื่นในแอป */
+        .sp-card { position: relative; border-radius: 18px; padding: 12px 13px; margin-bottom: 10px; display: flex; align-items: center; gap: 11px; text-align: left; overflow: hidden; transition: transform 0.15s, box-shadow 0.2s; background: linear-gradient(160deg, #151d2d 0%, #0e1421 100%); border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 8px 20px rgba(0,0,0,0.35); }
+        .sp-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--sp-accent, rgba(255,255,255,0.25)); }
+        .sp-card::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(140% 100% at 0% 0%, var(--sp-tint, rgba(255,255,255,0)), rgba(0,0,0,0) 62%); }
+        .sp-card:active { transform: scale(0.985); }
+        .sp-info { flex: 1; min-width: 0; position: relative; z-index: 1; }
+        .sp-item-title { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.2px; }
+        .sp-code { display: inline-block; padding: 5px 11px; border-radius: 10px; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 15px; font-weight: 700; letter-spacing: 1px; color: var(--sp-accent, #fff); background: rgba(0,0,0,0.4); border: 1px solid var(--sp-border, rgba(255,255,255,0.14)); }
+        .sp-icon-box { position: relative; z-index: 1; width: 42px; height: 42px; border-radius: 13px; display: flex; justify-content: center; align-items: center; flex-shrink: 0; background: var(--sp-soft, rgba(255,255,255,0.06)); border: 1px solid var(--sp-border, rgba(255,255,255,0.14)); }
+        .sp-icon-box .material-symbols-outlined { font-size: 22px; color: var(--sp-accent, #fff); }
+        /* 🧩 ปุ่มโทร (โหมดใช้งาน) — แทนที่ปุ่มแก้ไข/ลบ */
+        .sp-call { position: relative; z-index: 1; width: 38px; height: 38px; border-radius: 12px; display: flex; justify-content: center; align-items: center; flex-shrink: 0; background: var(--sp-soft, rgba(255,255,255,0.06)); border: 1px solid var(--sp-border, rgba(255,255,255,0.14)); }
+        .sp-call .material-symbols-outlined { font-size: 19px; color: var(--sp-accent, #fff); }
+        /* 🧩 โหมดจัดการ: ที่จับลาก + ปุ่มแก้ไข/ลบ */
+        .sp-grip { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: rgba(255,255,255,0.3); }
+        .sp-grip .material-symbols-outlined { font-size: 22px; }
+        .sp-actions { position: relative; z-index: 1; display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+        .sp-act { width: 34px; height: 34px; padding: 0; border-radius: 11px; display: flex; justify-content: center; align-items: center; cursor: pointer; border: 1px solid transparent; background: rgba(255,255,255,0.06); transition: transform 0.15s, filter 0.2s; -webkit-tap-highlight-color: transparent; }
+        .sp-act .material-symbols-outlined { font-size: 19px; }
+        .sp-act:active { transform: scale(0.9); }
+        .sp-act-edit { color: #ffd600; background: rgba(255,214,0,0.12); border-color: rgba(255,214,0,0.3); }
+        .sp-act-del { color: #ff7b7b; background: rgba(239,68,68,0.13); border-color: rgba(239,68,68,0.32); }
+        .sp-empty { text-align: center; color: rgba(255,255,255,0.45); padding: 28px 16px; font-size: 14px; }
+        /* 🧩 ฟอร์มเพิ่ม/แก้ไขรายการ (โหมดแอดมิน) */
+        #adminServiceAddSection { background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.4)); border-top: 1px solid rgba(255,255,255,0.07); padding: 14px 15px calc(14px + env(safe-area-inset-bottom, 0px)) 15px; }
+        #adminServiceAddSection .sp-field-label { display: block; text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.4px; color: rgba(255,255,255,0.55); margin: 0 0 7px 3px; }
+        #adminServiceAddSection input[type="text"] { width: 100%; height: 46px; box-sizing: border-box; text-align: left; border-radius: 13px; background: #171a24; border: 1px solid rgba(255,255,255,0.09); color: #fff; font-family: 'Kanit', sans-serif; font-size: 14px; padding: 0 14px; outline: none; transition: 0.2s; }
+        #adminServiceAddSection input[type="text"]:focus { border-color: rgba(255,214,0,0.55); background: #1c2030; box-shadow: 0 0 0 3px rgba(255,214,0,0.10); }
+        #newServiceCode { font-family: 'JetBrains Mono', 'Courier New', monospace; letter-spacing: 1px; color: var(--neon-yellow); }
+        #newServiceCategory::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: pointer; }
+        #adminServiceAddSection .sp-btn-add { flex: 1; justify-content: center; padding: 14px; border-radius: 14px; font-size: 15.5px; font-weight: 700; }
+        #adminServiceAddSection .sp-btn-add.is-edit { background: linear-gradient(135deg, #d9a300, #b07c00); box-shadow: 0 8px 22px rgba(217,163,0,0.28), inset 0 1px 0 rgba(255,255,255,0.18); }
+        #adminServiceAddSection .manual-timer-btn.sp-btn-cancel { flex: none; width: 50px; height: 50px; padding: 0; border-radius: 14px; background: rgba(239,68,68,0.16); color: #ff8b8b; border: 1px solid rgba(239,68,68,0.4); box-shadow: 0 8px 20px rgba(239,68,68,0.18); }
         .drag-handle { cursor: grab; touch-action: none !important; -webkit-user-select: none; user-select: none; }
         .drag-handle:active { cursor: grabbing; }
         .sp-card, .sp-cat-title { -webkit-user-select: none; user-select: none; }
-        .sortable-ghost { opacity: 0.4; background: rgba(255,255,255,0.1); border: 1px dashed var(--neon-yellow); }
+        .sortable-ghost { opacity: 0.45; background: rgba(255,255,255,0.08); border: 1px dashed var(--neon-yellow); border-radius: 18px; }
 
-        .theme-cat-0 { background: rgba(46, 204, 113, 0.15); border: 1px solid rgba(46, 204, 113, 0.4); border-left: 5px solid #2ecc71; }
-        .theme-cat-0 .sp-code { color: #2ecc71; border-color: #2ecc71; background: rgba(0,0,0,0.5); }
-        .theme-cat-0 .sp-icon-box { background: rgba(46, 204, 113, 0.2); border: 1px solid rgba(46, 204, 113, 0.3); }
-        .theme-cat-0 .sp-icon-box .material-symbols-outlined { color: #2ecc71; filter: drop-shadow(0 0 5px rgba(46, 204, 113, 0.5)); }
-        .title-theme-0 { color: #2ecc71; text-shadow: 0 0 8px rgba(46, 204, 113, 0.4); }
+        /* 🎨 สีประจำหมวด — ตั้งเป็นตัวแปรชุดเดียว แล้วให้การ์ด/หัวหมวด/รหัสใช้ร่วมกัน */
+        .theme-cat-0 { --sp-accent: #2ecc71; --sp-soft: rgba(46,204,113,0.16); --sp-tint: rgba(46,204,113,0.10); --sp-border: rgba(46,204,113,0.34); }
 
-        .theme-cat-1 { background: rgba(255, 152, 0, 0.15); border: 1px solid rgba(255, 152, 0, 0.4); border-left: 5px solid #ff9800; }
-        .theme-cat-1 .sp-code { color: #ff9800; border-color: #ff9800; background: rgba(0,0,0,0.5); }
-        .theme-cat-1 .sp-icon-box { background: rgba(255, 152, 0, 0.2); border: 1px solid rgba(255, 152, 0, 0.3); }
-        .theme-cat-1 .sp-icon-box .material-symbols-outlined { color: #ff9800; filter: drop-shadow(0 0 5px rgba(255, 152, 0, 0.5)); }
-        .title-theme-1 { color: #ff9800; text-shadow: 0 0 8px rgba(255, 152, 0, 0.4); }
+        .theme-cat-1 { --sp-accent: #ffb43a; --sp-soft: rgba(255,152,0,0.16); --sp-tint: rgba(255,152,0,0.10); --sp-border: rgba(255,152,0,0.34); }
 
-        .theme-cat-2 { background: rgba(255, 71, 87, 0.15); border: 1px solid rgba(255, 71, 87, 0.4); border-left: 5px solid #ff4757; }
-        .theme-cat-2 .sp-code { color: #ff4757; border-color: #ff4757; background: rgba(0,0,0,0.5); }
-        .theme-cat-2 .sp-icon-box { background: rgba(255, 71, 87, 0.2); border: 1px solid rgba(255, 71, 87, 0.3); }
-        .theme-cat-2 .sp-icon-box .material-symbols-outlined { color: #ff4757; filter: drop-shadow(0 0 5px rgba(255, 71, 87, 0.5)); }
-        .title-theme-2 { color: #ff4757; text-shadow: 0 0 8px rgba(255, 71, 87, 0.4); }
+        .theme-cat-2 { --sp-accent: #ff6b6b; --sp-soft: rgba(255,71,87,0.16); --sp-tint: rgba(255,71,87,0.10); --sp-border: rgba(255,71,87,0.34); }
 
-        .theme-cat-3 { background: rgba(0, 188, 212, 0.15); border: 1px solid rgba(0, 188, 212, 0.4); border-left: 5px solid #00bcd4; }
-        .theme-cat-3 .sp-code { color: #00bcd4; border-color: #00bcd4; background: rgba(0,0,0,0.5); }
-        .theme-cat-3 .sp-icon-box { background: rgba(0, 188, 212, 0.2); border: 1px solid rgba(0, 188, 212, 0.3); }
-        .theme-cat-3 .sp-icon-box .material-symbols-outlined { color: #00bcd4; filter: drop-shadow(0 0 5px rgba(0, 188, 212, 0.5)); }
-        .title-theme-3 { color: #00bcd4; text-shadow: 0 0 8px rgba(0, 188, 212, 0.4); }
+        .theme-cat-3 { --sp-accent: #35d0e0; --sp-soft: rgba(0,188,212,0.16); --sp-tint: rgba(0,188,212,0.10); --sp-border: rgba(0,188,212,0.34); }
         
-        .theme-cat-4 { background: rgba(156, 39, 176, 0.15); border: 1px solid rgba(156, 39, 176, 0.4); border-left: 5px solid #9c27b0; }
-        .theme-cat-4 .sp-code { color: #e040fb; border-color: #e040fb; background: rgba(0,0,0,0.5); }
-        .theme-cat-4 .sp-icon-box { background: rgba(156, 39, 176, 0.2); border: 1px solid rgba(156, 39, 176, 0.3); }
-        .theme-cat-4 .sp-icon-box .material-symbols-outlined { color: #e040fb; filter: drop-shadow(0 0 5px rgba(156, 39, 176, 0.5)); }
-        .title-theme-4 { color: #e040fb; text-shadow: 0 0 8px rgba(156, 39, 176, 0.4); }
+        .theme-cat-4 { --sp-accent: #c77dff; --sp-soft: rgba(156,39,176,0.18); --sp-tint: rgba(156,39,176,0.12); --sp-border: rgba(156,39,176,0.36); }
         
-        .theme-cat-5 { background: rgba(33, 150, 243, 0.15); border: 1px solid rgba(33, 150, 243, 0.4); border-left: 5px solid #2196f3; }
-        .theme-cat-5 .sp-code { color: #64b5f6; border-color: #64b5f6; background: rgba(0,0,0,0.5); }
-        .theme-cat-5 .sp-icon-box { background: rgba(33, 150, 243, 0.2); border: 1px solid rgba(33, 150, 243, 0.3); }
-        .theme-cat-5 .sp-icon-box .material-symbols-outlined { color: #64b5f6; filter: drop-shadow(0 0 5px rgba(33, 150, 243, 0.5)); }
-        .title-theme-5 { color: #64b5f6; text-shadow: 0 0 8px rgba(33, 150, 243, 0.4); }
+        .theme-cat-5 { --sp-accent: #7ab8ff; --sp-soft: rgba(33,150,243,0.16); --sp-tint: rgba(33,150,243,0.10); --sp-border: rgba(33,150,243,0.34); }
 
         .modal-content-scroll { padding: 20px; flex: 1; overflow-y: auto; overflow-x: hidden; -ms-overflow-style: none; scrollbar-width: none; text-align: center; }
         .modal-content-scroll::-webkit-scrollbar { display: none; }
@@ -2274,7 +2282,7 @@
 
 <div id="createRoleModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">สร้างตำแหน่งใหม่</h3><button class="btn-close-floating" onclick="window.toggleModal('createRoleModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><div style="font-size:12px; color:var(--text-dim); margin-bottom: var(--space-field); line-height:1.6;">ตั้งชื่อตำแหน่งตามหน้าที่จริง เช่น "หัวหน้ากะ" — แล้วเลือกว่าต้องการลอกสิทธิ์จากตำแหน่งไหน เพื่อตั้งสิทธิ์ไวขึ้น (ปรับทีหลังได้ในหน้าตั้งค่าสิทธิ์)</div><label style="color: var(--neon-yellow); font-size: 13px;">ชื่อตำแหน่ง</label><input type="text" id="crRoleName" placeholder="เช่น หัวหน้ากะ / พนักงานขับรถ" style="margin-top: 8px; margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="color: var(--neon-yellow); font-size: 13px;">ลอกแบบจากตำแหน่ง (สิทธิ์เริ่มต้น)</label><select id="crCopyFrom" style="width: 100%; padding: 14px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-top: 8px; margin-bottom: var(--space-field); outline: none; font-family: 'Kanit';"></select><button onclick="window.confirmCreateRole()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">add</span> สร้างตำแหน่ง</button></div></div></div>
 
-<div id="servicePortalModal" class="modal-overlay" style="z-index: 10020;"><div class="modal-box flex-col-box sp-modal-box" onclick="event.stopPropagation()"><div class="sp-header"><div class="sp-neon-line"></div><div class="sp-logo-text"><span style="color: #ef2f2c;">true</span><span style="color: #f7931e;">move</span><span class="h-box">H</span></div><div class="sp-title" id="serviceModalTitle">SERVICE PORTAL</div><button class="btn-back-profile" onclick="window.backToSettingsSub('servicePortalModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><button class="btn-close-floating" onclick="window.toggleModal('servicePortalModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="serviceListContainer" class="modal-content-scroll" style="text-align: left; padding: 15px;"><div style="text-align:center; color:gray; padding:20px;">กำลังโหลดข้อมูล...</div></div><div id="adminServiceAddSection" style="display: none; padding: 15px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.6); flex-shrink: 0;"><div style="display: flex; gap: 10px; margin-bottom: 10px;"><input type="text" id="newServiceCategory" list="existingCategories" placeholder="เลือก/พิมพ์ หมวดหมู่" style="font-size: 14px; padding: 12px; flex: 1;"><datalist id="existingCategories"></datalist></div><input type="text" id="newServiceTitle" placeholder="ชื่อรายการ (เช่น เพิ่มวัน 30 วัน)" style="margin-bottom: 10px; font-size: 14px; padding: 12px;"><input type="text" id="newServiceCode" placeholder="รหัส USSD / เบอร์โทร (เช่น *934*30#)" style="margin-bottom: 10px; font-size: 14px; padding: 12px; font-family: monospace;"><div style="display: flex; gap: 10px;"><button id="addServiceBtn" onclick="window.addNewServiceCode()" class="manual-timer-btn" style="background: var(--neon-green); flex: 1; justify-content: center; padding: 12px;"><span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span> เพิ่มรายการเข้าสู่ระบบ</button><button id="cancelEditBtn" onclick="window.cancelEditService()" class="manual-timer-btn" style="background: var(--accent-red); width: 50px; display: none; flex: none; justify-content: center; padding: 12px;"><span class="material-symbols-outlined" style="font-size: 18px;">close</span></button></div></div></div></div>
+<div id="servicePortalModal" class="modal-overlay" style="z-index: 10020;"><div class="modal-box flex-col-box sp-modal-box" onclick="event.stopPropagation()"><div class="sp-header"><div class="sp-neon-line"></div><div class="sp-logo-text"><span style="color: #ef2f2c;">true</span><span style="color: #f7931e;">move</span><span class="h-box">H</span></div><div class="sp-title" id="serviceModalTitle">SERVICE PORTAL</div><button class="btn-back-profile" onclick="window.backToSettingsSub('servicePortalModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><button class="btn-close-floating" onclick="window.toggleModal('servicePortalModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="serviceListContainer" class="modal-content-scroll" style="text-align: left; padding: 15px;"><div class="sp-empty">กำลังโหลดข้อมูล...</div></div><div id="adminServiceAddSection" style="display: none; flex-shrink: 0;"><div style="margin-bottom: 10px;"><label class="sp-field-label" for="newServiceCategory">หมวดหมู่</label><input type="text" id="newServiceCategory" list="existingCategories" placeholder="เลือก/พิมพ์ หมวดหมู่ (เช่น VALIDITY EXTENSION)" autocomplete="off"><datalist id="existingCategories"></datalist></div><div style="margin-bottom: 10px;"><label class="sp-field-label" for="newServiceTitle">ชื่อรายการ</label><input type="text" id="newServiceTitle" placeholder="เช่น เพิ่มวันใช้งาน 30 วัน" autocomplete="off"></div><div style="margin-bottom: 12px;"><label class="sp-field-label" for="newServiceCode">รหัส USSD / เบอร์โทร</label><input type="text" id="newServiceCode" placeholder="เช่น *934*30#" autocomplete="off" inputmode="tel"></div><div style="display: flex; gap: 10px; align-items: center;"><button id="addServiceBtn" onclick="window.addNewServiceCode()" class="manual-timer-btn sp-btn-add"><span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span> เพิ่มรายการเข้าสู่ระบบ</button><button id="cancelEditBtn" onclick="window.cancelEditService()" class="manual-timer-btn sp-btn-cancel" title="ยกเลิกการแก้ไข"><span class="material-symbols-outlined" style="font-size: 20px;">close</span></button></div></div></div></div>
 
 <div id="zoomOverlay" class="modal-overlay" onclick="window.toggleModal('zoomOverlay', false)">
     <div class="modal-box zoom-card-new" onclick="event.stopPropagation()">
@@ -8032,6 +8040,9 @@
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-12'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     const APP_RELEASE_NOTES = [ // bullet ของ "วันที่ใน APP_RELEASE_DATE" เท่านั้น - เพิ่มได้เรื่อย ๆ ในวันเดียวกัน (วันใหม่ให้ตั้ง APP_RELEASE_DATE เป็นวันนั้น แล้วย้าย bullet วันเก่าไปไว้ใน CHANGELOG_SEED)
+        '🎨 ปรับดีไซน์หน้าต่าง SERVICE PORTAL ให้เข้าธีมแอป — การ์ดพื้นไล่เฉดกรมท่า มุมโค้ง 18px พร้อมแถบสีบางด้านซ้าย · หัวหมวดมีจุดสี + จำนวนรายการ และปุ่มโทรสีเดียวกับหมวด (เดิมการ์ดทึบสีจัดเต็มใบ)',
+        '✏️ โหมดจัดการ SERVICE PORTAL: ปุ่มแก้ไข/ลบเป็นชิปเหลือง-แดง อ่านง่าย กดง่าย พร้อมที่จับลากแบบใหม่ — และโหมดใช้งานกดที่การ์ดทั้งใบเพื่อโทรได้ (เดิมกดได้เฉพาะข้อความ)',
+        '🧾 ฟอร์มเพิ่ม/แก้ไขรายการใน SERVICE PORTAL มีป้ายชื่อกำกับทุกช่อง ใช้ระยะ/มุมโค้งเดียวกับช่องกรอกอื่นในแอป · ปุ่มบันทึกเป็นสีทองเข้มตอนแก้ไขและเปลี่ยนกลับเป็นเขียวเมื่อเพิ่มใหม่ พร้อมปุ่มยกเลิกสีแดง',
         '🧭 ย้ายปุ่มแชร์จากมุมล่างซ้ายขึ้นไปอยู่ข้างเมนูแฮมเบอร์เกอร์บนหัวจอ — ใช้ดีไซน์ปุ่มเดิม แต่เมนูกาง "ลงด้านล่าง" กดที่ว่างตรงไหนก็ยุบ และเปิดค้างไว้ 2.5 วินาทีแล้วยุบเอง (เดิม 5 วินาที)',
         '📋 ปุ่ม “คัดลอกลิงก์” ในเมนูแชร์ เปลี่ยนเป็นเปิดหน้าต่าง “แชร์แอปพลิเคชัน” ที่รวม QR Code + ลิงก์แอป + ปุ่มคัดลอกลิงก์ไว้ในตัวเดียว',
         '🟦 ชิปค่าทางด่วนบนการ์ดมิเตอร์ขยาย: ตัดไอคอน 🛣️ ด้านหน้าออก อ่านเต็มว่า "ค่าทางด่วน 15 บาท" และย่อปุ่มให้กระชับ (สูง 32 → 25px · ปุ่ม ✕ 20 → 17px)',
@@ -9496,19 +9507,20 @@
 
     window.renderServicePortalUI = () => {
         let isManageMode = window.currentServiceModeManage; let html = ''; let datalistHtml = '';
-        if (window.currentServiceData.length === 0) { html = '<div style="text-align:center; color:gray; padding:20px;">ยังไม่มีรายการในระบบ</div>'; } 
+        if (window.currentServiceData.length === 0) { html = '<div class="sp-empty">ยังไม่มีรายการในระบบ</div>'; } 
         else {
             window.currentServiceData.forEach((cat, index) => {
                 datalistHtml += `<option value="${cat.name}">`;
-                let catDragHandle = isManageMode ? `<div class="drag-handle" style="display:inline-flex; align-items:center; padding-right:8px;"><span class="material-symbols-outlined" style="color:rgba(255,255,255,0.4); font-size:26px;">drag_indicator</span></div>` : `<span class="material-symbols-outlined">play_arrow</span>`;
+                let catDragHandle = isManageMode ? `<span class="drag-handle sp-grip"><span class="material-symbols-outlined">drag_indicator</span></span>` : '';
                 let themeClass = `theme-cat-${index % 6}`;
-                html += `<div class="category-block" data-id="${cat.id}" data-name="${cat.name}"><div class="sp-cat-title title-${themeClass}">${catDragHandle} ${cat.name}</div><div class="category-items-container" data-cat="${cat.id}" style="min-height: 20px;">`; 
+                html += `<div class="category-block" data-id="${cat.id}" data-name="${cat.name}"><div class="sp-cat-title ${themeClass}">${catDragHandle}<span class="sp-cat-dot"></span><span class="sp-cat-name">${cat.name}</span><span class="sp-cat-line"></span><span class="sp-cat-count">${cat.items.length}</span></div><div class="category-items-container" data-cat="${cat.id}" style="min-height: 20px;">`; 
                 cat.items.forEach((d) => {
-                    let itemDragHandle = isManageMode ? `<div class="drag-handle" style="display:flex; align-items:center; padding-right:10px;"><span class="material-symbols-outlined" style="color: rgba(255,255,255,0.3); font-size: 26px;">drag_indicator</span></div>` : '';
-                    let editBtn = isManageMode ? `<button onclick="window.editServiceItem('${cat.id}', '${d.id}', '${cat.name}', '${d.title}', '${d.code}', event)" style="background:none; border:none; color:var(--neon-yellow); margin-left:5px; padding:5px; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:24px;">edit</span></button>` : '';
-                    let delBtn = isManageMode ? `<button onclick="window.deleteServiceItem('${cat.id}', '${d.id}', event)" style="background:none; border:none; color:var(--accent-red); margin-left:5px; padding:5px; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:24px;">delete</span></button>` : '';
+                    let itemDragHandle = isManageMode ? `<span class="drag-handle sp-grip"><span class="material-symbols-outlined">drag_indicator</span></span>` : '';
+                    let editBtn = isManageMode ? `<button class="sp-act sp-act-edit" title="แก้ไขรายการ" onclick="window.editServiceItem('${cat.id}', '${d.id}', '${cat.name}', '${d.title}', '${d.code}', event)"><span class="material-symbols-outlined">edit</span></button>` : '';
+                    let delBtn = isManageMode ? `<button class="sp-act sp-act-del" title="ลบรายการ" onclick="window.deleteServiceItem('${cat.id}', '${d.id}', event)"><span class="material-symbols-outlined">delete</span></button>` : '';
+                    let tailHtml = isManageMode ? `<span class="sp-actions">${editBtn}${delBtn}</span>` : `<span class="sp-call"><span class="material-symbols-outlined">call</span></span>`;
                     let clickAction = isManageMode ? '' : `onclick="window.dialCode('${d.code}')" style="cursor:pointer;"`;
-                    html += `<div class="sp-card ${themeClass}" data-id="${d.id}" data-title="${d.title}" data-code="${d.code}">${itemDragHandle}<div class="sp-info" ${clickAction}><div class="sp-item-title">${d.title}</div><div class="sp-code">${d.code}</div></div><div class="sp-icon-box"><span class="material-symbols-outlined">${d.icon || getSmartIcon(d.title)}</span></div><div style="display:flex;">${editBtn}${delBtn}</div></div>`;
+                    html += `<div class="sp-card ${themeClass}" data-id="${d.id}" data-title="${d.title}" data-code="${d.code}" ${clickAction}>${itemDragHandle}<div class="sp-icon-box"><span class="material-symbols-outlined">${d.icon || getSmartIcon(d.title)}</span></div><div class="sp-info"><div class="sp-item-title">${d.title}</div><div class="sp-code">${d.code}</div></div>${tailHtml}</div>`;
                 });
                 html += `</div></div>`;
             });
@@ -9542,14 +9554,14 @@
     window.editServiceItem = (catId, itemId, catName, title, code, event) => {
         event.stopPropagation(); window.editingServiceCatId = catId; window.editingServiceItemId = itemId;
         document.getElementById('newServiceCategory').value = catName; document.getElementById('newServiceTitle').value = title; document.getElementById('newServiceCode').value = code;
-        let btn = document.getElementById('addServiceBtn'); btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">save</span> บันทึกการแก้ไข`; btn.style.background = 'var(--neon-yellow)'; btn.style.color = 'black';
-        document.getElementById('cancelEditBtn').style.display = 'block'; document.getElementById('adminServiceAddSection').scrollIntoView({behavior: "smooth"});
+        let btn = document.getElementById('addServiceBtn'); btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">save</span> บันทึกการแก้ไข`; btn.classList.add('is-edit');
+        document.getElementById('cancelEditBtn').style.display = 'flex'; document.getElementById('adminServiceAddSection').scrollIntoView({behavior: "smooth"});
     };
 
     window.cancelEditService = () => {
         window.editingServiceCatId = null; window.editingServiceItemId = null;
         document.getElementById('newServiceCategory').value = ''; document.getElementById('newServiceTitle').value = ''; document.getElementById('newServiceCode').value = '';
-        let btn = document.getElementById('addServiceBtn'); btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span> เพิ่มรายการเข้าสู่ระบบ`; btn.style.background = 'var(--neon-green)'; btn.style.color = 'white';
+        let btn = document.getElementById('addServiceBtn'); btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span> เพิ่มรายการเข้าสู่ระบบ`; btn.classList.remove('is-edit');
         document.getElementById('cancelEditBtn').style.display = 'none';
     };
 
