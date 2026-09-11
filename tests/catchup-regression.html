@@ -127,7 +127,10 @@
             throw new Error('แอปโหลดไม่ทันใน 25 วิ — ต้องเปิดผ่าน HTTP (GitHub Pages / localhost) ให้ firebase CDN เข้าถึงได้');
         }
 
-        async function freshApp() {
+        async function freshApp(keepTrip) {
+            // 🧹 ล้างเที่ยวค้างของรอบก่อนก่อนบูตแอป — เพราะแอปมีฟีเจอร์ "เริ่มต่ออัตโนมัติ" จะเริ่มมิเตอร์ของเที่ยวเก่าให้ทันที
+            //    แล้วเทสต์จะตั้งเที่ยวของตัวเองไม่ได้ (keepTrip = true สำหรับเทสต์ที่ต้องจำลอง "เที่ยวเดิมยังอยู่")
+            if (!keepTrip) { try { frame.contentWindow.localStorage.removeItem('taxi_active_trip_v1'); } catch (e) {} }
             const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
             frame.src = frame.src; // โหลดแอปใหม่ (จำลอง "เปิดแอปใหม่")
             await Promise.race([loaded, wait(25000).then(() => { throw new Error('iframe โหลดไม่ทัน (ต้องเปิดผ่าน HTTP)'); })]);
@@ -225,7 +228,8 @@
                 // ไม่ปล่อย fix หลังเริ่มต่อ → ไม่มีตัวเลขเพิ่มระหว่าง assert (กำหนดค่าได้)
                 const d = readDisplay();
                 near(d.km, 0.5, 0.01, 'กิโลเมตรบนจอ');
-                near(d.traffic, p.trafficSec, 2, 'เวลารถติดบนจอ');
+                // เทียบเวลารถติด: ±5 วิ (มิเตอร์เดินต่อหลังเริ่มต่อและยังจอดนิ่ง → ticker นับเวลาจอดเพิ่มตามจริง 1 วิ/วินาที)
+                near(d.traffic, p.trafficSec, 5, 'เวลารถติดบนจอ');
                 checkFareRange(0.5, p.trafficSec - 2, p.trafficSec + 2, 'ค่าโดยสารบนจอ');
                 return 'รถติด ' + Math.round(p.trafficSec) + ' วิ / ' + d.km.toFixed(2) + ' กม. / ' + d.fare + '฿';
             });
@@ -313,8 +317,8 @@
                 await wait(1000);
                 const billed = Math.round(JSON.parse(w().localStorage.getItem('taxi_active_trip_v1')).trafficSec);
                 assert(Math.abs(billed - 100) <= 8, 'รอบแรกต้องเบิก ~90 วิ (ได้ ' + billed + ')');
-                // จำลองเปิดแอปใหม่ (reload) — ช่วงปิดใหม่สั้นมาก (<8 วิ) → ต้องไม่เบิกซ้ำ
-                await freshApp();
+                // จำลองเปิดแอปใหม่ (reload) — ช่วงปิดใหม่สั้นมาก (<8 วิ) → ต้องไม่เบิกซ้ำ (เที่ยวเดิมต้องอยู่ต่อ)
+                await freshApp(true);
                 const savedTraffic = JSON.parse(w().localStorage.getItem('taxi_active_trip_v1')).trafficSec;
                 w().maybeShowResumeBanner();
                 await wait(1200);

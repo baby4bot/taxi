@@ -2550,6 +2550,10 @@
     let lastPos = null, actualDrivenKm = 0, startTime = null, wakeLock = null, lastCalcTime = null;
     let tripTimer = null, routeUpdateTimer = null, trafficSeconds = 0, lastTripSaveAt = 0;
     let kmCatchUpBusy = false;
+    // 🧭 ฐานหลักฐานของช่วงที่แอป "ซ่อน/ปิด" — จดค่า ณ วินาทีที่แอปถูกซ่อน/ปิดพอดี (km, เวลารถติด, ตำแหน่ง)
+    //    ใช้ยึดยอดตอนเบิกคืน กัน 2 อาการที่คนขับเจอ: (1) ระหว่างซ่อน/ปิด ticker นับเวลาจอดต่อเอง → เวลารถติดบวม
+    //    (2) ยอด km/เวลาในที่บันทึกถูกเขียนทับหรือค้างเก่า → ระยะทางที่วิ่งจริงหายไป
+    let hiddenKmBase = 0, gapBasePos = null, gapHiddenAt = null, tripCaughtUpAt = null;
     let trafficCharging = false, lastFixSpeedKmh = null, lastStopFixAt = null; // กำลังคิดค่าเวลาจอด? / ความเร็วจาก GPS ล่าสุด / เวลา fix สุดท้ายที่ยืนยันจอดจริง
     let lastPosTime = null, currentSpeedKmh = 0, currentTrueRemainKm = 0, currentTrueRemainSec = 0; 
     let hiddenGapStart = null, hiddenLastPos = null, hiddenTrafficBase = 0; // จดตอนแอปซ่อน/สลับแอป เพื่อเบิกเวลาจอด + ระยะทางที่หายกลับคืนเมื่อกลับมา; hiddenTrafficBase = trafficSeconds ตอนเริ่มซ่อน (อ้างอิงเบิก "exactly-once")
@@ -2979,7 +2983,11 @@
     // จดสถานะตอนแอปซ่อน/สลับไปแอปอื่น แล้วเมื่อกลับมาให้เบิกเวลาจอด + ระยะทางที่หายกลับคืน
     const captureHiddenGap = () => {
         if (!window.isManualRunning) return;
-        if (hiddenGapStart === null) { hiddenGapStart = Date.now(); hiddenTrafficBase = trafficSeconds; hiddenLastPos = lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null; }
+        if (hiddenGapStart === null) {
+            hiddenGapStart = Date.now(); hiddenTrafficBase = trafficSeconds; hiddenLastPos = lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null;
+            // 🧭 จด "ฐานหลักฐาน" ณ วินาทีที่ถูกซ่อน: km + เวลารถติด + ตำแหน่ง → ใช้ยึดยอดตอนเบิกคืน (กันยอดบวม/ยอดหาย)
+            hiddenKmBase = actualDrivenKm; gapBasePos = hiddenLastPos; gapHiddenAt = hiddenGapStart;
+        }
         openPause(Date.now()); // เริ่มจับเวลาช่วงที่มิเตอร์หยุด (แอปซ่อน/ปิดหน้าจอ)
         window.saveActiveTrip(true);
     };
@@ -6491,7 +6499,18 @@
                         caughtTimeSec += toBill;
                     }
                 }
+                // 🧭 ยึดยอดกับ "ฐานตอนเริ่มซ่อน": ระยะทาง = ฐาน + ที่วิ่งจริงระหว่างซ่อน (ไม่ทับ/ไม่หาย)
+                const kmTarget = (hiddenKmBase || 0) + caughtKm;
+                if (kmTarget > actualDrivenKm) actualDrivenKm = kmTarget;
+                // ⏱️ ช่วงซ่อนที่รถ "วิ่งจริง" ไม่ใช่ "จอด": ถอนเวลาจอดที่ ticker นับไว้ผิดช่วงนั้นออก ให้เหลือเท่าที่ประเมินได้
+                //    (เดิมบวกเพิ่มอย่างเดียว → เวลารถติดบวม เช่น จริง 2:15 กลายเป็น 7:31 หลังปิด/ซ่อนแอป)
+                const trafficTarget = (hiddenTrafficBase || 0) + Math.max(0, Math.round(gapEstTraffic));
+                // ⚠️ ลดยอดได้เฉพาะเมื่อ "มีหลักฐานตำแหน่ง" (รู้แน่ว่ารถวิ่งไป) — ถ้าไม่มีข้อมูล GPS เลย อย่าตัดเวลาจอดที่ ticker นับไว้ทิ้ง
+                if (hidePos && trafficSeconds > trafficTarget) trafficSeconds = trafficTarget;
+                caughtTimeSec = trafficSeconds - preTraffic; // ยอดสุทธิของรอบนี้ (ติดลบได้ = ถอนยอดที่นับเกินออก)
             }
+            // ✅ จบรอบเบิกคืนช่วงซ่อน: ปิดฐานของรอบนี้ (รอบถัดไปจะจดฐานใหม่ตอนซ่อน) + จดว่าเบิกคืนรอบนี้แล้ว
+            gapHiddenAt = null; gapBasePos = null; hiddenKmBase = actualDrivenKm; hiddenTrafficBase = trafficSeconds; tripCaughtUpAt = Date.now();
             window.saveActiveTrip(true);
             window.updateLiveMeterDisplay();
             // 🔔 แจ้งคนขับว่ามิเตอร์เบิกคืนให้แล้ว (กลับจากเบื้องหลัง) — ให้เชื่อใจว่าตัวเลข/ค่าโดยสารถูกต้อง
@@ -6529,6 +6548,9 @@
             baseFare: window.baseFare,
             estimateFare: window.estimateFareAmt || 0,
             pauseLog: pauseLog.slice(), pauseOpenAt: pauseOpenAt,
+            // 🧭 ฐานหลักฐานตอนเริ่มซ่อน/ปิด (km + เวลารถติด + ตำแหน่ง ณ วินาทีนั้น) — ใช้ยึดยอดตอนเบิกคืน
+            gapAt: gapHiddenAt, gapBaseKm: hiddenKmBase, gapBaseTraffic: hiddenTrafficBase, gapBasePos: gapBasePos,
+            caughtUpAt: tripCaughtUpAt, // ⏱️ เบิกคืนช่วงปิดรอบล่าสุดแล้วเมื่อไร (กันเบิกซ้ำทุกครั้งที่รีเฟรช/เปิดใหม่)
             catchUpLog: catchUpLog.slice(), // ประวัติการเบิกคืนทุกรอบ (กันหายถ้าแอปถูกคิลกลางเที่ยว)
             paused: window.isMeterPaused ? true : false
         };
@@ -6635,8 +6657,12 @@
         let data = null;
         try { data = JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY) || 'null'); } catch(e) {}
         if (!data || !data.startTime) { hideResumeBanner(); return; }
-        // แอปถูกปิด/คิล (ไม่ใช่แค่ซ่อน) → เบิกเวลาจอด/ระยะทางช่วงที่ปิดให้อัตโนมัติครั้งเดียว (ยังไม่เคยเบิก = ยังไม่มี caughtUpAt)
-        if (!data.caughtUpAt && typeof window.autoCatchUpSavedTrip === 'function') window.autoCatchUpSavedTrip(data);
+        // แอปถูกปิด/คิล (ไม่ใช่แค่ซ่อน) → เบิกเวลาจอด/ระยะทางช่วงที่ปิดให้อัตโนมัติ "ครั้งเดียวต่อช่วงปิด"
+        // 🧭 เทียบ "กุญแจของช่วงปิด" (gapAt/gapRef) กับที่เบิกไปแล้ว — ช่วงใหม่ = เบิกใหม่, ช่วงเดิม = ไม่เบิกซ้ำ
+        // 🧭 "เบิกแล้ว" = เครื่องหมายเบิกคืน (caughtUpAt) ใหม่กว่าหรือเท่าจุดเริ่มช่วงปิดนี้ → ช่วงเดิมไม่เบิกซ้ำ, ช่วงใหม่ยังเบิกปกติ
+        const gapRefKey = data.gapAt || data.pauseOpenAt || data.savedAt || data.startTime;
+        const gapAlreadyCaughtUp = Number(data.caughtUpAt || 0) >= Number(gapRefKey || 0);
+        if (!gapAlreadyCaughtUp && typeof window.autoCatchUpSavedTrip === 'function') window.autoCatchUpSavedTrip(data);
         const info = document.getElementById('trbInfo');
         if (info) {
             const started = new Date(data.startTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
@@ -6690,7 +6716,8 @@
         // เรียกได้ทั้งตอนยังไม่เริ่ม (โชว์แบนเนอร์ → เขียนลง payload) และตอนเริ่มต่อไปแล้ว (กดเริ่มต่อก่อน fix จะมา → บวกเข้าเที่ยวที่วิ่งอยู่)
         // กันซ้อน: crashCatchUpBusy + episode key (__liveCaughtUpKey) + เช็ค startTime ซ้ำอีกทีตอน commit
         if (window.crashCatchUpBusy) return;
-        const gapStart = data.pauseOpenAt || data.savedAt || data.startTime;
+        // 🧭 ถ้ามีฐานหลักฐานตอนซ่อน/ปิด (gapAt) ใช้เวลานั้นเป็นจุดเริ่มช่วงปิด — ตรงกว่าค่า savedAt ที่อาจถูกเขียนทับระหว่างซ่อน
+        const gapStart = data.gapAt || data.pauseOpenAt || data.savedAt || data.startTime;
         if (!gapStart) return;
         const gapSec = (Date.now() - gapStart) / 1000;
         if (gapSec < 8) return; // ปิดไปแป๊บเดียว ไม่ต้องเบิก
@@ -6710,7 +6737,13 @@
             const cur = (() => { try { return JSON.parse(localStorage.getItem(ACTIVE_TRIP_KEY) || 'null'); } catch(e) { return null; } })();
             if (!cur || cur.startTime !== data.startTime) return;
 
-            const hidePos = (data.lastPos || cur.lastPos) || null; // ตำแหน่ง "ก่อน" ปิดแอป (อ้างอิงเทียบกับ fix ปัจจุบัน)
+            // 🧭 ฐานหลักฐานตอนเริ่มซ่อน/ปิด: km + เวลารถติด + ตำแหน่ง ณ วินาทีนั้น (ถ้ามี) — ยึดยอดจากฐานนี้เสมอ
+            //    กัน 2 อาการที่คนขับเจอ: (1) ระหว่างซ่อน ticker นับเวลาจอดต่อเอง → เวลารถติดบวม
+            //    (2) ยอดในที่บันทึกถูกทับ/ค้างเก่า → ระยะทางที่วิ่งจริงหาย
+            const useGapBase = !!(data.gapAt && typeof data.gapBaseKm === 'number');
+            const baseKm = useGapBase ? data.gapBaseKm : (cur.km || 0);
+            const baseTraffic = useGapBase ? (data.gapBaseTraffic || 0) : (cur.trafficSec || 0);
+            const hidePos = ((useGapBase && data.gapBasePos) || data.lastPos || cur.lastPos) || null; // ตำแหน่ง "ก่อน" ปิดแอป (อ้างอิงเทียบกับ fix ปัจจุบัน)
             // ตรวจว่าจอดนิ่งตลอดช่วงที่ปิดแอปหรือไม่ (ตำแหน่งแทบไม่ขยับ / ความเร็วเฉลี่ย ≤ 6)
             // ใช้ stoppedWholeGap ซึ่งทน GPS ลอย + ความเร็วเพี้ยนตอนเปิดใหม่ (speed ที่มือถือให้ตอนจอดนิ่งลอยได้ ~20 กม./ชม.)
             const speedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
@@ -6721,10 +6754,13 @@
             let remainKm = cur.remainKm || 0, remainSec = cur.remainSec || 0;
 
             if (stoppedWholeTime) {
-                // จอดนิ่งตั้งแต่ปิดแอป (ตำแหน่งก่อน/หลังแทบไม่ขยับ) → เบิกเวลาจอด (จำกัด 15 นาที กันข้ามคืนบวม)
-                const idleBill = Math.min(gapSec, getKillIdleCapSec()); // จำกัดตามที่คนขับตั้งไว้ในหน้าโปรไฟล์ (ค่าเริ่มต้น 15 นาที)
-                trafficSec += idleBill;
-                caughtTimeSec += idleBill;
+                // จอดนิ่งตั้งแต่ปิดแอป (ตำแหน่งก่อน/หลังแทบไม่ขยับ) → เบิกเวลาจอด (จำกัดตามที่คนขับตั้งไว้ในหน้าโปรไฟล์)
+                // 🧭 ยึดจากฐาน: ยอดเป้าหมาย = ฐาน + ช่วงที่จอด — ไม่บวกทับยอดที่ถูกนับไปแล้ว (กันบวม/กันเบิกซ้ำ)
+                const idleBill = Math.min(gapSec, getKillIdleCapSec());
+                const targetTrafficIdle = baseTraffic + idleBill;
+                if (targetTrafficIdle > trafficSec) caughtTimeSec += (targetTrafficIdle - trafficSec);
+                trafficSec = Math.max(trafficSec, targetTrafficIdle);
+                if (baseKm > km) km = baseKm; // ระยะทางต้องไม่หาย — อย่างน้อยเท่าฐานตอนปิด
             } else {
                 // วิ่งไปช่วงที่ปิดแอป → ใช้ polyline เส้นทางจริงจากจุดก่อนปิดไปปลายทางเดิม (snap จุดก่อนปิด+จุดปัจจุบันลงเส้นทางเดียวกัน)
                 // หักส่วนต่างระยะเหลือถึงปลายทาง — แม่นกว่าเส้นตรง (เหมือนตอนซ่อนแอป)
@@ -6734,7 +6770,7 @@
                     try {
                         const polyRes = await window.catchUpKmViaRoutePolyline(cur.dest, hidePos, p);
                         if (polyRes) {
-                            km += polyRes.gapKm; caughtKm += polyRes.gapKm;
+                            caughtKm += polyRes.gapKm; // 🧭 สะสม "ที่วิ่งจริง" — ยึดฐานทีหลัง (กันนับทับยอดที่บันทึกไว้ระหว่างซ่อน)
                             remainKm = polyRes.remainKm;
                             if (polyRes.remainSec !== null) remainSec = polyRes.remainSec;
                             distanceAdded = true; kmVia = 'polyline';
@@ -6745,7 +6781,7 @@
                             const route = await window.fetchRouteFromTomTom(cur.dest.lat, cur.dest.lon, p.lat, p.lon);
                             if (route && route.km !== undefined) {
                                 const missing = remainKm - route.km;
-                                if (missing > 0.02 && missing < 100) { km += missing; caughtKm += missing; distanceAdded = true; kmVia = 'route'; gapEstTraffic = estimateGapTrafficSec(gapSec, missing, null); }
+                                if (missing > 0.02 && missing < 100) { caughtKm += missing; distanceAdded = true; kmVia = 'route'; gapEstTraffic = estimateGapTrafficSec(gapSec, missing, null); }
                                 else if (missing >= -0.02) { distanceAdded = true; kmVia = 'route'; } // ถึงแล้ว / นับครบแล้ว (กันเส้นตรงซ้ำ)
                                 remainKm = Math.max(0, route.km);
                                 if (route.sec !== undefined) remainSec = route.sec;
@@ -6759,37 +6795,44 @@
                     let roadKm = null;
                     if (!cur.dest) roadKm = await tryNoDestRouteKm(hidePos, p);
                     if (roadKm && roadKm.km > 0.02) {
-                        km += roadKm.km; caughtKm += roadKm.km; kmVia = 'route';
+                        caughtKm += roadKm.km; kmVia = 'route';
                         gapEstTraffic = estimateGapTrafficSec(gapSec, roadKm.km, roadKm.noTrafficSec);
                         remainKm = Math.max(0, remainKm - roadKm.km);
                     } else {
                         // ใช้หลายพิกัดล่าสุด (เส้นทางจริง) ประเมินระยะแทนเส้นตรงเส้นเดียว — ถนนคด = คูณมากขึ้น (จำกัด 60%)
                         const straight = estimateGapKm(data.lastPath || cur.lastPath, hidePos, p);
                         if (straight > 0.02 && straight < 100) {
-                            km += straight;
                             caughtKm += straight;
                             gapEstTraffic = estimateGapTrafficSec(gapSec, straight, null);
                             remainKm = Math.max(0, remainKm - straight);
                         }
                     }
                 }
-                // ⏱️ เบิกเวลารถติดของช่วงที่ปิดแอป (วิ่งจริง → เบิกเฉพาะส่วนที่เกิน "โล่ง" ไม่ใช่ทั้งช่วง)
-                if (gapEstTraffic >= 1) {
-                    trafficSec += Math.round(gapEstTraffic);
-                    caughtTimeSec += Math.round(gapEstTraffic);
-                }
+                // 🧭 ยึดฐาน: ระยะทาง = ฐานตอนปิด + ที่วิ่งจริงระหว่างปิด (กันยอดหาย/กันนับทับกับยอดที่บันทึกไว้)
+                const kmTargetKill = baseKm + caughtKm;
+                if (kmTargetKill > km) km = kmTargetKill;
+                // ⏱️ ช่วงปิดที่รถ "วิ่งจริง" ไม่ใช่ "จอด": เวลารถติดของช่วงนี้ = ฐาน + เวลาที่เกินกว่าวิ่งโล่ง (จากเส้นทางจริง)
+                //    ตั้งใหม่จากฐาน (ติดลบได้ = ถอนเวลาจอดที่ ticker นับผิดระหว่างซ่อน) — กันเวลารถติดบวมหลังปิด/ซ่อนแอป
+                const trafficTargetKill = baseTraffic + Math.max(0, Math.round(gapEstTraffic));
+                // เพิ่มยอดให้ครบตามหลักฐานได้เสมอ / ลดยอดได้เฉพาะเมื่อมีหลักฐานตำแหน่ง (กันตัดเวลาจอดทิ้งทั้งที่ไม่มีข้อมูล GPS)
+                if (trafficTargetKill > trafficSec || hidePos) { caughtTimeSec += (trafficTargetKill - trafficSec); trafficSec = trafficTargetKill; }
             }
-            if (caughtTimeSec < 1 && caughtKm <= 0.02) return; // ไม่มีอะไรต้องเบิกจริง
+            // มีอะไรเปลี่ยนจริงไหม (ยอดอาจ "ลดลง" ได้ = ถอนเวลาจอดที่นับเกิน) → ถ้าไม่เปลี่ยนก็ไม่ต้องทำอะไร
+            const gapChanged = Math.abs(trafficSec - (cur.trafficSec || 0)) >= 1 || Math.abs(km - (cur.km || 0)) > 0.02;
+            if (!gapChanged) return;
+            // ✅ จบรอบเบิกคืน: ปิดฐานของรอบนี้ + จดกุญแจ "ช่วงปิดที่เบิกแล้ว" (กันเบิกซ้ำเมื่อเปิดแอปใหม่/รีเฟรช)
+            tripCaughtUpAt = gapStart; gapHiddenAt = null; gapBasePos = null;
+            window.__liveCaughtUpKey = data.startTime + '|' + (data.pauseOpenAt || data.savedAt || 0); // กันเบิกซ้ำรอบเดิม
             if (window.isManualRunning) {
                 // ผู้ใช้กด "เริ่มต่อ" ระหว่างกำลังตรวจสอบ fix → เอา fix นี้ตัดสินแล้วบวกยอดที่เบิกเข้ามิเตอร์ที่กำลังวิ่งทันที
                 // (คนขับจอดนิ่งอยู่แล้วแตะเริ่มต่อไว ก่อนที่ระบบจะขอ fix เสร็จ — ช่วงที่แอปปิดต้องไม่หายไปจากเวลารถติด)
-                window.__liveCaughtUpKey = data.startTime + '|' + (data.pauseOpenAt || data.savedAt || 0); // กันเบิกซ้ำรอบเดิม
                 trafficSeconds += caughtTimeSec;
                 // ⏱️ ตั้ง "คิดเวลาจอดต่อเนื่อง" ต่อเมื่อรถจอดจริงตอนนี้ (stoppedWholeTime หรือ fix ปัจจุบัน speed ≤ 6)
                 // — ถ้าแค่ประเมินเวลารถติดของช่วงที่วิ่ง (gapEstTraffic) อย่าลากคิดเวลาจอดต่อ เพราะรถกำลังวิ่งจริง
                 if (caughtTimeSec >= 1 && (stoppedWholeTime || (speedKmh !== -1 && speedKmh <= 6))) { trafficCharging = true; lastStopFixAt = Date.now(); }
                 if (caughtKm > 0.02) {
-                    actualDrivenKm += caughtKm;
+                    // 🧭 ยึดฐาน: ระยะทางรวมต้องไม่น้อยกว่า ฐานตอนปิด + ที่วิ่งจริง (กันยอดหายหลังแอปถูกปิด/รีเฟรช)
+                    actualDrivenKm = Math.max(actualDrivenKm, baseKm + caughtKm);
                     currentTrueRemainKm = Math.max(0, remainKm); // ระยะเหลือใหม่จากเส้นทาง/เส้นตรงที่คำนวณไว้
                     if (remainSec !== undefined && remainSec > 0) currentTrueRemainSec = remainSec;
                 }
@@ -6806,6 +6849,7 @@
                 if (!cur2 || cur2.startTime !== data.startTime) return;
                 // เขียนยอดที่เบิกแล้วกลับลง payload → กด "เริ่มต่อ" จะต่อจากตัวเลขที่ถูกต้องทันที
                 cur2.km = km; cur2.trafficSec = trafficSec;
+                cur2.gapAt = null; cur2.gapBasePos = null; // ปิดฐานของรอบนี้ (รอบถัดไปจะจดฐานใหม่ตอนซ่อน/ปิด)
                 cur2.remainKm = remainKm; cur2.remainSec = remainSec;
                 cur2.lastPos = p;
                 cur2.savedAt = Date.now(); cur2.caughtUpAt = Date.now();
@@ -6865,8 +6909,8 @@
         if (banner) banner.style.display = 'none';
         window.cancelTrbCompact();
         // ยังไม่เคยเบิกช่วงที่แอปปิด (fix ตอนเปิดแอปยังไม่ทัน/หลุด หรือแตะเริ่มต่อไวไป) → หลังเริ่มต่อ ให้ลองเบิกอีกครั้งบนมิเตอร์ที่กำลังวิ่ง
-        const gapRef = data.pauseOpenAt || data.savedAt || 0;
-        const needDeferredCatchUp = !data.caughtUpAt && !data.paused && gapRef && (Date.now() - gapRef) > 8000;
+        const gapRef = data.gapAt || data.pauseOpenAt || data.savedAt || 0;
+        const needDeferredCatchUp = Number(data.caughtUpAt || 0) < Number(gapRef || 0) && !data.paused && gapRef && (Date.now() - gapRef) > 8000;
         window.startMeterAndTracking(data);
         if (needDeferredCatchUp && typeof window.autoCatchUpSavedTrip === 'function') {
             // ยังมีช่วงที่แอปปิดต้องเบิกคืน → โชว์แถบ "กำลังตรวจสอบ GPS…" สั้น ๆ แล้วปิดเมื่อเบิกเสร็จ (มิเตอร์อัปเดต + toast ทอง)
@@ -6970,6 +7014,13 @@
             lastPosTime = Date.now(); lastCalcTime = Date.now(); // ไม่คิดค่าเวลาช่วงที่แอปปิด (ตามกฎหลักฐานจอดจริง)
             lastPath = (seed.lastPath || []).slice(); // คืนค่าเส้นทางล่าสุด (ไว้ประมาณระยะช่วงปิด/ซ่อน)
             catchUpLog = (seed.catchUpLog || []).slice(); // คืนค่าประวัติการเบิกคืนเดิมของเที่ยวนี้ (ต่อยอดถ้ามีรอบใหม่)
+            // 🧭 คืนฐานหลักฐานช่วงซ่อน/ปิด + กุญแจเบิกคืนแล้วของเที่ยวนี้ (กันเบิกซ้ำหลังรีเฟรช/เปิดแอปใหม่)
+            tripCaughtUpAt = seed.caughtUpAt || null;
+            if (seed.gapAt && typeof seed.gapBaseKm === 'number') {
+                gapHiddenAt = seed.gapAt; hiddenKmBase = seed.gapBaseKm;
+                hiddenTrafficBase = (typeof seed.gapBaseTraffic === 'number') ? seed.gapBaseTraffic : (seed.trafficSec || 0);
+                gapBasePos = seed.gapBasePos || null;
+            } else { gapHiddenAt = null; gapBasePos = null; hiddenKmBase = actualDrivenKm; hiddenTrafficBase = trafficSeconds; }
             if (seed.dest) {
                 destLoc = { lat: seed.dest.lat, lon: seed.dest.lon, name: seed.destName || seed.dest.name || 'จุดหมาย' };
                 try {
@@ -6995,6 +7046,7 @@
             pauseLog = []; pauseOpenAt = null; window.isMeterPaused = false;
             lastPath = []; // เที่ยวใหม่ เริ่มจดเส้นทางใหม่
             catchUpLog = []; // เที่ยวใหม่ ประวัติการเบิกคืนเริ่มต้นใหม่
+            tripCaughtUpAt = null; gapHiddenAt = null; gapBasePos = null; hiddenKmBase = 0; hiddenTrafficBase = 0; // 🧭 เที่ยวใหม่ ฐานหลักฐานเริ่มใหม่
             // 🧹 เที่ยวใหม่แบบไม่มีจุดหมายจริง ๆ (ไม่มีจุดหมายที่ค้นหาไว้ และไม่มีเส้นทางค้างจากหน้าสรุป) → ล้างจุดหมายเก่าให้หมดทุกชั้น
             // ⚠️ อย่าล้างถ้ามี destLoc หรือ __pendingRouteStart — เที่ยวมีจุดหมาย (กดเริ่มมิเตอร์จากหน้าสรุปเส้นทาง) ต้องเก็บจุดหมายไว้
             //    ไม่งั้นจอมิเตอร์จะกลายเป็นเที่ยวธรรมดา (ไม่มีแถบจุดหมาย/เส้นทาง/รถ/ปุ่ม Google Maps)
@@ -7632,6 +7684,7 @@
         try { window.__lastDestInfo = null; } catch(e) {}
         try { window.__cachedLatestDest = null; } catch(e) {}
         lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; lastPath = []; catchUpLog = [];
+        tripCaughtUpAt = null; gapHiddenAt = null; gapBasePos = null; hiddenKmBase = 0; hiddenTrafficBase = 0; // 🧭 จบเที่ยว ล้างฐานหลักฐานช่วงซ่อน/ปิด
         window.isMeterPaused = false;
         window.updatePauseBtnUI();
         window.syncTollToggleVisibility();
@@ -7901,6 +7954,10 @@
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-11'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        '🧭 แก้ระยะทาง/เวลารถติดเพี้ยนหลังปิด ย่อ หรือรีเฟรชแอป: จด "ฐานหลักฐาน" ณ วินาทีที่แอปถูกซ่อน/ปิด (กม. + เวลารถติด + ตำแหน่ง) แล้วเบิกคืนจากฐานนั้น — ระยะทางที่วิ่งจริงไม่หาย และเวลารถติดไม่บวม (จริง 2:15 ต้องไม่กลายเป็น 7:31)',
+        '⏸️ รถวิ่งช่วงที่แอปซ่อน/ปิด: ระบบถอนเวลาจอดที่ ticker นับไว้ผิดออกให้อัตโนมัติ แล้วคิดเฉพาะเวลารถติดจริงของช่วงนั้นจากเส้นทาง GPS',
+        '🔁 กันเบิกคืนซ้ำซ้อน: บันทึกกุญแจ "ช่วงปิดที่เบิกแล้ว" ลงในเที่ยว → เปิดแอปใหม่/รีเฟรชกี่ครั้งก็เบิกช่วงเดิมครั้งเดียว',
+        '🧪 เทสต์อัตโนมัติเบิกคืน 15 สถานการณ์ ผ่านครบ + static server ไม่ค้างรอ connection',
         '⚡ เริ่มต่อเที่ยวค้างอัตโนมัติ: เปิดแอปแล้วเจอเที่ยวที่ยังไม่สิ้นสุด → มิเตอร์เดินต่อ + เปิดจอมิเตอร์ใหญ่ให้ทันที (ไม่ต้องกด "เริ่มต่อ") พร้อมเสียงเตือน 2 จังหวะ + สั่น 2 ครั้ง + toast "เริ่มต่ออัตโนมัติแล้ว 🚕 (เที่ยวเดิม)" ให้คนขับรู้ตัวว่าแอปเริ่มมิเตอร์เอง',
         '⚙️ เพิ่มสวิตช์ "เริ่มต่อเที่ยวค้างอัตโนมัติ" ในหน้าโปรไฟล์ (ค่าเริ่มต้นเปิด, บันทึกต่อบัญชี — ใช้ค่าซิงก์ข้ามเครื่องได้) — ปิดแล้วกลับไปโชว์แบนเนอร์ "เริ่มต่อ" ให้กดเองเหมือนเดิม',
         '🧹 แก้เริ่มมิเตอร์เที่ยวใหม่ยังค้างสถานที่/เส้นทาง/รถจากเที่ยวเก่า: ล้างข้อมูลจุดหมายเก่าทุกชั้น (window.destLoc + ตัวแปรสำรอง) ตอนจบเที่ยว — เที่ยวธรรมดาใหม่จะไม่มีแถบจุดหมาย/เส้นทาง/รถหลงเหลือ',

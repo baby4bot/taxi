@@ -15,6 +15,9 @@ while ($true) {
     $client = $listener.AcceptTcpClient()
     try {
         $stream = $client.GetStream()
+        # ⏱️ กันเบราว์เซอร์เปิด connection ทิ้งไว้ (preconnect) แล้วไม่มี request ส่งมา — ถ้าไม่ตั้ง timeout เซิร์ฟเวอร์จะค้างรออ่านไม่สิ้นสุด
+        #    ทำให้คำขอถัดไปต่อคิวรอนานจนเบราว์เซอร์ขึ้น error (chrome-error) ทั้งที่ไฟล์มีอยู่
+        try { $client.ReceiveTimeout = 5000; $stream.ReadTimeout = 5000 } catch { }
         $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::ASCII)
         $line = $reader.ReadLine()
         $path = ''
