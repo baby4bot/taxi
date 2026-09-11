@@ -144,17 +144,17 @@
         .fare-progress { width: 55%; max-width: 280px; height: 5px; background: rgba(255,255,255,0.08); border-radius: 999px; margin: 10px auto 0 auto; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.06); }
         .fare-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #4caf50, #8bc34a, #ffd600, #ff9800); border-radius: 999px; transition: width 0.35s ease-out; box-shadow: 0 0 8px rgba(255,193,7,0.55); }
 
-        /* ปุ่มแชร์ลอยมุมล่างซ้าย — ย่อขนาดให้สมดุลกับแถบล่าง (โลโก้/เครดิต + ป้ายเวอร์ชัน)
-           ขยายเมนูขึ้นด้านบน (column) แล้วปุ่มแชร์ยังยึดติดขอบล่างเสมอ */
-        .fab-expand { position: fixed; left: 12px; bottom: 12px; z-index: 42; display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
-        .fab-main { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #1e293b, #334155); color: #ffd600; border: 1.5px solid rgba(255,214,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,0.65), 0 0 0 0 rgba(255,214,0,0.0); transition: 0.25s cubic-bezier(.2,.9,.3,1.25); -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
-        .fab-main .material-symbols-outlined { font-size: 20px; }
+        /* 🧭 ปุ่มแชร์บนหัวจอ (ข้างเมนูแฮมเบอร์เกอร์) — ดีไซน์ปุ่มเดิมทุกอย่าง
+           แต่เมนูกาง “ลงด้านล่าง” (absolute) ไม่ดันเลย์เอาต์หัวจอ */
+        .fab-expand { position: relative; z-index: 60; display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+        .fab-main { width: 44px; height: 44px; border-radius: 999px; background: linear-gradient(135deg, #1e293b, #334155); color: #ffd600; border: 1.5px solid rgba(255,214,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,0.65), 0 0 0 0 rgba(255,214,0,0.0); transition: 0.25s cubic-bezier(.2,.9,.3,1.25); -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
+        .fab-main .material-symbols-outlined { font-size: 22px; }
         .fab-main:active { transform: scale(0.92); }
-        .fab-expand.open .fab-main { box-shadow: 0 6px 24px rgba(0,0,0,0.65), 0 0 0 4px rgba(255,214,0,0.18); transform: rotate(45deg); }
-        .fab-items { display: none; flex-direction: column; gap: 8px; }
-        .fab-expand.open .fab-items { display: flex; animation: fabRise 0.3s cubic-bezier(.2,.9,.3,1.25) both; }
-        @keyframes fabRise { from { opacity: 0; transform: translateY(15px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        .fab-item { width: 40px; height: 40px; border-radius: 999px; background: var(--input-bg); border: 1px solid var(--border-glass); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
+        .fab-expand.open .fab-main { box-shadow: 0 6px 24px rgba(0,0,0,0.65), 0 0 0 4px rgba(255,214,0,0.18); }
+        .fab-items { display: none; position: absolute; top: calc(100% + 8px); right: 0; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 61; }
+        .fab-expand.open .fab-items { display: flex; animation: fabDrop 0.28s cubic-bezier(.2,.9,.3,1.25) both; }
+        @keyframes fabDrop { from { opacity: 0; transform: translateY(-12px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .fab-item { width: 40px; height: 40px; border-radius: 999px; background: var(--input-bg); border: 1px solid var(--border-glass); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; box-shadow: 0 6px 18px rgba(0,0,0,0.55); }
         .fab-item:active { transform: scale(0.9); background: rgba(255,255,255,0.12); }
         .fab-item svg, .fab-item img { width: 20px !important; height: 20px !important; }
 
@@ -1828,7 +1828,27 @@
         </div>
 
         <div id="userMenu" class="header-right" style="display: none;">
-            <button class="hamburger-btn" onclick="window.openShareModal()" title="แชร์แอปพลิเคชัน"><span class="material-symbols-outlined">share</span></button>
+            <!-- 🧭 ปุ่มแชร์ (ย้ายจากมุมล่างซ้ายมาไว้ข้างเมนูแฮมเบอร์เกอร์) — ดีไซน์ปุ่มเดิม แต่เมนูกางลงด้านล่าง -->
+            <div id="fabSocial" class="fab-expand">
+                <button id="fabMainBtn" class="fab-main" aria-label="แชร์"><span class="material-symbols-outlined">share</span></button>
+                <div class="fab-items">
+                    <button class="fab-item" onclick="window.openMainQrCode()" title="สแกน QR Code">
+                        <svg viewbox="0 0 24 24" fill="#f1c40f" style="width:20px; height:20px;"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z"></path></svg>
+                    </button>
+                    <button class="fab-item" onclick="window.shareToPlatform('messenger')" title="Messenger">
+                        <svg viewbox="0 0 24 24" fill="#0084FF" style="width:22px; height:22px;"><path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.908 1.463 5.483 3.75 7.182V22l3.414-1.874A10.322 10.322 0 0012 20.516c5.523 0 10-4.145 10-9.258S17.523 2 12 2zm1.09 12.83l-2.774-2.954-5.414 2.954 5.952-6.32 2.844 2.954 5.344-2.954-5.952 6.32z"></path></svg>
+                    </button>
+                    <button class="fab-item" onclick="window.shareToPlatform('line')" title="LINE">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" style="width:22px; height:22px;" />
+                    </button>
+                    <button class="fab-item" onclick="window.openServicePortal(false)" title="TrueMoney">
+                        <img src="https://i.ibb.co/210jq8dS/unnamed.png" style="width:22px; height:22px; object-fit:contain;" />
+                    </button>
+                    <button class="fab-item" onclick="window.openShareModal()" title="แชร์แอปพลิเคชัน / คัดลอกลิงก์" style="font-weight:700; font-size:13px;">
+                        <span class="material-symbols-outlined" style="font-size:20px;">content_copy</span>
+                    </button>
+                </div>
+            </div>
             <button class="hamburger-btn" onclick="window.toggleSideMenu(true)"><span class="material-symbols-outlined">menu</span></button>
         </div>
                                                 
@@ -1989,46 +2009,28 @@
     </div>
 </div>
 
-<!-- 🧭 ปุ่มแชร์แบบ Floating Action Expandable (ลอยมุมล่างซ้าย) -->
-<div id="fabSocial" class="fab-expand">
-    <div class="fab-items">
-        <button class="fab-item" onclick="window.openMainQrCode()" title="สแกน QR Code">
-            <svg viewbox="0 0 24 24" fill="#f1c40f" style="width:20px; height:20px;"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z"></path></svg>
-        </button>
-        <button class="fab-item" onclick="window.shareToPlatform('messenger')" title="Messenger">
-            <svg viewbox="0 0 24 24" fill="#0084FF" style="width:22px; height:22px;"><path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.908 1.463 5.483 3.75 7.182V22l3.414-1.874A10.322 10.322 0 0012 20.516c5.523 0 10-4.145 10-9.258S17.523 2 12 2zm1.09 12.83l-2.774-2.954-5.414 2.954 5.952-6.32 2.844 2.954 5.344-2.954-5.952 6.32z"></path></svg>
-        </button>
-        <button class="fab-item" onclick="window.shareToPlatform('line')" title="LINE">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" style="width:22px; height:22px;" />
-        </button>
-        <button class="fab-item" onclick="window.openServicePortal(false)" title="TrueMoney">
-            <img src="https://i.ibb.co/210jq8dS/unnamed.png" style="width:22px; height:22px; object-fit:contain;" />
-        </button>
-        <button class="fab-item" onclick="window.copyAppShareLink()" title="คัดลอกลิงก์" style="font-weight:700; font-size:13px;">
-            <span class="material-symbols-outlined" style="font-size:20px;">content_copy</span>
-        </button>
-    </div>
-    <button id="fabMainBtn" class="fab-main" aria-label="แชร์"><span class="material-symbols-outlined">share</span></button>
-</div>
 <script>
-/* 🧭 ปุ่มแชร์ลอย: กดที่ว่างตรงไหนก็ยุบ + เปิดค้างไว้ 5 วินาทีแล้วยุบเอง */
+/* 🧭 ปุ่มแชร์บนหัวจอ: เมนูกางลงด้านล่าง — กดที่ว่างตรงไหนก็ยุบ + เปิดค้างไว้ 2.5 วินาทีแล้วยุบเอง */
 (function () {
     const fab = document.getElementById('fabSocial');
     const mainBtn = document.getElementById('fabMainBtn');
     if (!fab || !mainBtn) return;
+    const iconEl = mainBtn.querySelector('.material-symbols-outlined');
     let autoCollapseTimer = null;
     const isOpen = () => fab.classList.contains('open');
     const collapseFab = () => {
         if (autoCollapseTimer) { clearTimeout(autoCollapseTimer); autoCollapseTimer = null; }
         fab.classList.remove('open');
+        if (iconEl) iconEl.textContent = 'share'; // กลับเป็นไอคอนแชร์
     };
     const expandFab = () => {
         fab.classList.add('open');
+        if (iconEl) iconEl.textContent = 'close'; // เปิดอยู่ = ไอคอนกากบาทให้รู้ว่ากดอีกทีปิด
         if (autoCollapseTimer) clearTimeout(autoCollapseTimer);
-        autoCollapseTimer = setTimeout(collapseFab, 5000);
+        autoCollapseTimer = setTimeout(collapseFab, 2500);
     };
     mainBtn.addEventListener('click', () => { if (isOpen()) { collapseFab(); } else { expandFab(); } });
-    // เลือกเมนูแล้ว → ยุบทันที
+    // เลือกเมนูแล้ว → ยุบลงทันที
     fab.querySelectorAll('.fab-item').forEach(btn => btn.addEventListener('click', () => setTimeout(collapseFab, 150)));
     // แตะ/คลิกที่ว่างตรงไหนก็ได้ (นอกปุ่มแชร์) → ยุบลงมา
     document.addEventListener('click', (e) => { if (isOpen() && !fab.contains(e.target)) collapseFab(); });
@@ -8030,6 +8032,8 @@
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-12'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     const APP_RELEASE_NOTES = [ // bullet ของ "วันที่ใน APP_RELEASE_DATE" เท่านั้น - เพิ่มได้เรื่อย ๆ ในวันเดียวกัน (วันใหม่ให้ตั้ง APP_RELEASE_DATE เป็นวันนั้น แล้วย้าย bullet วันเก่าไปไว้ใน CHANGELOG_SEED)
+        '🧭 ย้ายปุ่มแชร์จากมุมล่างซ้ายขึ้นไปอยู่ข้างเมนูแฮมเบอร์เกอร์บนหัวจอ — ใช้ดีไซน์ปุ่มเดิม แต่เมนูกาง "ลงด้านล่าง" กดที่ว่างตรงไหนก็ยุบ และเปิดค้างไว้ 2.5 วินาทีแล้วยุบเอง (เดิม 5 วินาที)',
+        '📋 ปุ่ม “คัดลอกลิงก์” ในเมนูแชร์ เปลี่ยนเป็นเปิดหน้าต่าง “แชร์แอปพลิเคชัน” ที่รวม QR Code + ลิงก์แอป + ปุ่มคัดลอกลิงก์ไว้ในตัวเดียว',
         '🟦 ชิปค่าทางด่วนบนการ์ดมิเตอร์ขยาย: ตัดไอคอน 🛣️ ด้านหน้าออก อ่านเต็มว่า "ค่าทางด่วน 15 บาท" และย่อปุ่มให้กระชับ (สูง 32 → 25px · ปุ่ม ✕ 20 → 17px)',
         '📏 การ์ดค่าโดยสารจอมิเตอร์ขยายสูงเท่ากับการ์ดประเมินราคาหน้าแรกแล้ว (260px เท่ากัน · จอแคบ ≤380px เป็น 196px ตามกัน) — ตัวเลขค่าโดยสารอยู่กลางการ์ดพอดี ไม่ดูเล็กจิ๋วอีก',
         '💰 ชิปค่าทางด่วนหน้าการ์ดเรท: เป็นปุ่มสีฟ้าทึบ ตัวอักษรสีขาว และตัดเครื่องหมาย ฿ ออกจากตัวเลข — ชิปหดพอดีกับข้อความ (เดิมยืดเต็มความกว้างการ์ด)',
