@@ -144,13 +144,14 @@
         .fare-progress { width: 55%; max-width: 280px; height: 5px; background: rgba(255,255,255,0.08); border-radius: 999px; margin: 10px auto 0 auto; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.06); }
         .fare-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #4caf50, #8bc34a, #ffd600, #ff9800); border-radius: 999px; transition: width 0.35s ease-out; box-shadow: 0 0 8px rgba(255,193,7,0.55); }
 
-        /* 🧭 ปุ่มแชร์บนหัวจอ (ข้างเมนูแฮมเบอร์เกอร์) — ดีไซน์ปุ่มเดิมทุกอย่าง
-           แต่เมนูกาง “ลงด้านล่าง” (absolute) ไม่ดันเลย์เอาต์หัวจอ */
+        /* 🧭 ปุ่มแชร์บนหัวจอ (ข้างเมนูแฮมเบอร์เกอร์) — ใช้พื้น/มุมโค้งเดียวกันกับ .hamburger-btn
+           เพื่อให้ดูเป็นปุ่มคู่กัน · เมนูกาง “ลงด้านล่าง” (absolute) ไม่ดันเลย์เอาต์หัวจอ */
         .fab-expand { position: relative; z-index: 60; display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
-        .fab-main { width: 44px; height: 44px; border-radius: 999px; background: linear-gradient(135deg, #1e293b, #334155); color: #ffd600; border: 1.5px solid rgba(255,214,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,0.65), 0 0 0 0 rgba(255,214,0,0.0); transition: 0.25s cubic-bezier(.2,.9,.3,1.25); -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
-        .fab-main .material-symbols-outlined { font-size: 22px; }
-        .fab-main:active { transform: scale(0.92); }
-        .fab-expand.open .fab-main { box-shadow: 0 6px 24px rgba(0,0,0,0.65), 0 0 0 4px rgba(255,214,0,0.18); }
+        .fab-main { width: 44px; height: 44px; border-radius: 16px; background: rgba(255,255,255,0.06); color: #ffd24d; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 4px 12px rgba(0,0,0,0.25); transition: transform 0.18s, background 0.2s; -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
+        .fab-main .material-symbols-outlined { font-size: 26px; }
+        #userMenu .fab-main .material-symbols-outlined { font-size: 30px; } /* ให้เท่าปุ่มเมนูที่อยู่ข้างกัน */
+        .fab-main:active { transform: scale(0.92); background: rgba(255,210,77,0.14); }
+        .fab-expand.open .fab-main { background: rgba(255,210,77,0.14); box-shadow: inset 0 0 0 1px rgba(255,210,77,0.4), 0 4px 12px rgba(0,0,0,0.25), 0 0 0 3px rgba(255,210,77,0.12); }
         .fab-items { display: none; position: absolute; top: calc(100% + 8px); right: 0; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 61; }
         .fab-expand.open .fab-items { display: flex; animation: fabDrop 0.28s cubic-bezier(.2,.9,.3,1.25) both; }
         @keyframes fabDrop { from { opacity: 0; transform: translateY(-12px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -2015,6 +2016,8 @@
     <div class="footer-credit flex-center">
         <img src="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" class="footer-logo" /><span>Design by นักเลงคีย์บอร์ด</span>                          
     </div>
+    <!-- ⬛ ปุ่มสลับโหมดประหยัดแบต (OLED) — ย้ายมาจากการ์ดค่าโดยสารในจอมิเตอร์ มาอยู่ซ้ายสุดแถวล่างของหน้าแรก -->
+    <button id="homeOledBtn" onclick="event.stopPropagation(); window.toggleOledMode()" title="โหมดประหยัดแบตเตอรี่ (หน้าดำสนิท)"><span class="material-symbols-outlined">dark_mode</span></button>
 </div>
 
 <script>
@@ -2204,17 +2207,20 @@
         .tz-change-btn:active { transform: scale(0.93); background: #7c3aed; }
         .tz-change-btn .material-symbols-outlined { font-size: 12px; }
 
-        /* ===== ⬛ ปุ่มสลับโหมดประหยัดแบต (OLED) บนจอมิเตอร์ขยาย ===== */
-        .tz-oled-btn {
-            position: absolute; bottom: 10px; left: 14px; z-index: 60;
-            width: 34px; height: 34px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.35);
-            color: #fff; cursor: pointer; -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: 0.2s;
+        /* ===== ⬛ ปุ่มสลับโหมดประหยัดแบต (OLED) — ซ้ายสุดแถวล่างหน้าแรก (แถวเดียวกับป้ายเวอร์ชัน/เครดิต) ===== */
+        #homeOledBtn {
+            position: fixed; left: 14px; bottom: 12px; z-index: 40; margin: 0;
+            width: 30px; height: 30px; padding: 0; border-radius: 11px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.06); color: #ffd24d; border: none;
+            cursor: pointer; -webkit-tap-highlight-color: transparent;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 4px 12px rgba(0,0,0,0.25);
+            transition: transform 0.15s, background 0.2s;
         }
-        .tz-oled-btn .material-symbols-outlined { font-size: 19px; }
-        .tz-oled-btn:active { transform: scale(0.92); }
+        #homeOledBtn .material-symbols-outlined { font-size: 16px; }
+        #homeOledBtn:active { transform: scale(0.92); background: rgba(255,210,77,0.14); }
+        /* เปิดโหมดประหยัดแบตอยู่ = พื้นทองจาง ๆ ให้เห็นสถานะ (แบบเดียวกับตอนกดปุ่มอื่น) */
+        #homeOledBtn.on { background: rgba(255,210,77,0.16); box-shadow: inset 0 0 0 1px rgba(255,210,77,0.35), 0 4px 12px rgba(0,0,0,0.25); }
 
         /* ===== ⬛ โหมดประหยัดแบตเตอรี่ (OLED Pure Black) — พื้นดำสนิท ลดเรืองแสง/เงา =====
            ใช้ตอนวางมือถือหน้ารถเปิดจอค้างนาน ๆ: จอ OLED ยิ่งมืดยิ่งประหยัดแบต ลดความร้อน */
@@ -2250,7 +2256,7 @@
         @media (max-width: 430px) {
             .tz-change-btn { top: 10px; left: 122px; padding: 4px 10px; font-size: 12px; border-radius: 13px; }
             .tz-change-btn .material-symbols-outlined { font-size: 13px; }
-            .tz-oled-btn { bottom: 10px; left: 12px; width: 34px; height: 34px; }
+            #homeOledBtn { left: 12px; bottom: 10px; width: 28px; height: 28px; }
         }
 </style>
 <div id="settingsHubModal" class="modal-overlay" style="z-index: 10003;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">ตั้งค่าการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('settingsHubModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:6px 12px;">
@@ -2341,7 +2347,6 @@
             <div class="tz-fare-title">• ค่าโดยสารเรียลไทม์ •</div>
             <div class="tz-fare-price-box"><span id="tzMeterPrice">35</span><span class="tz-fare-currency">฿</span></div>
             <div id="tzEstFare" class="tz-est-fare">ประเมิน: -- ฿</div>
-            <button id="tzOledBtn" class="tz-oled-btn" onclick="event.stopPropagation(); window.toggleOledMode()" title="โหมดประหยัดแบตเตอรี่ (หน้าดำสนิท)"><span class="material-symbols-outlined">dark_mode</span></button>
         </div>
         <div class="tz-info-box" id="tzInfoBox">
             <div class="tz-info-col"><div class="tz-info-label">เวลาโดยประมาณ</div><div id="tzEtaTime" class="tz-info-val" style="color: var(--neon-yellow);">-- นาที</div></div>
@@ -4117,9 +4122,10 @@
         if (lbl) lbl.innerText = window.isOledMode ? 'โหมดประหยัดแบต: เปิด' : 'โหมดประหยัดแบต: ปิด';
         const ot = $('editOledToggle');
         if (ot && ot.checked !== window.isOledMode) ot.checked = window.isOledMode;
-        const zb = $('tzOledBtn');
+        const zb = $('homeOledBtn');
         if (zb) {
             zb.title = window.isOledMode ? 'ปิดโหมดประหยัดแบต (กลับหน้าจอปกติ)' : 'โหมดประหยัดแบต (หน้าดำสนิท)';
+            zb.classList.toggle('on', window.isOledMode);
             const ic = zb.querySelector('.material-symbols-outlined');
             if (ic) ic.textContent = window.isOledMode ? 'light_mode' : 'dark_mode';
         }
@@ -8040,6 +8046,8 @@
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-12'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     const APP_RELEASE_NOTES = [ // bullet ของ "วันที่ใน APP_RELEASE_DATE" เท่านั้น - เพิ่มได้เรื่อย ๆ ในวันเดียวกัน (วันใหม่ให้ตั้ง APP_RELEASE_DATE เป็นวันนั้น แล้วย้าย bullet วันเก่าไปไว้ใน CHANGELOG_SEED)
+        '⬛ ย้ายปุ่มสลับธีม (มืด/ดำ OLED) ออกจาก "การ์ดค่าโดยสารเรียลไทม์" ในจอมิเตอร์ มาอยู่ซ้ายสุดแถวล่างของหน้าแรก แถวเดียวกับเครดิตและป้ายเวอร์ชัน — เปิดโหมดประหยัดแบตอยู่ปุ่มเป็นพื้นทองจาง ๆ บอกสถานะโดยไม่หลุดธีม',
+        '🎛️ ปุ่มแชร์บนหัวจอใช้พื้นโปร่งขาว 6% + มุมโค้ง 16px + ไอคอนทอง ขนาด 44px เท่ากับปุ่มเมนูข้าง ๆ แล้ว (เดิมเป็นทรงกลมพื้นกรมท่าเข้ม ขอบทอง) — ตอนกด/ตอนเมนูกางเป็นพื้นทองจาง ๆ เหมือนกันทั้งคู่',
         '🎨 ปรับดีไซน์หน้าต่าง SERVICE PORTAL ให้เข้าธีมแอป — การ์ดพื้นไล่เฉดกรมท่า มุมโค้ง 18px พร้อมแถบสีบางด้านซ้าย · หัวหมวดมีจุดสี + จำนวนรายการ และปุ่มโทรสีเดียวกับหมวด (เดิมการ์ดทึบสีจัดเต็มใบ)',
         '✏️ โหมดจัดการ SERVICE PORTAL: ปุ่มแก้ไข/ลบเป็นชิปเหลือง-แดง อ่านง่าย กดง่าย พร้อมที่จับลากแบบใหม่ — และโหมดใช้งานกดที่การ์ดทั้งใบเพื่อโทรได้ (เดิมกดได้เฉพาะข้อความ)',
         '🧾 ฟอร์มเพิ่ม/แก้ไขรายการใน SERVICE PORTAL มีป้ายชื่อกำกับทุกช่อง ใช้ระยะ/มุมโค้งเดียวกับช่องกรอกอื่นในแอป · ปุ่มบันทึกเป็นสีทองเข้มตอนแก้ไขและเปลี่ยนกลับเป็นเขียวเมื่อเพิ่มใหม่ พร้อมปุ่มยกเลิกสีแดง',
