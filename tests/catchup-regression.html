@@ -146,8 +146,11 @@
             // ค่าโดยสารที่วิ่งอยู่โชว์ในใบเขียว (farePrice) — ปุ่มแดง "สิ้นสุดเดินทาง" ไม่มีตัวเลขค่าโดยสารแล้ว (ตัดออกตามที่ผู้ใช้ขอ)
             const fareEl = $('farePrice');
             const km = kmEl ? parseFloat(kmEl.innerText) : NaN;
-            const m = trEl ? trEl.innerText.match(/(\d+)น\.\s*(\d+)ว\./) : null;
-            const traffic = m ? parseInt(m[1]) * 60 + parseInt(m[2]) : NaN;
+            // 🕒 จอโชว์เวลารถติดแบบนาฬิกา — ยังไม่ถึงชั่วโมง = น.:ว. (3:28) · เกิน 1 ชม. = ชม.:น.:ว. (1:15:30)
+            const tParts = (trEl ? String(trEl.innerText).trim() : '').split(':').map(x => parseInt(x, 10));
+            let traffic = NaN;
+            if (tParts.length === 3 && tParts.every(n => !isNaN(n))) traffic = tParts[0] * 3600 + tParts[1] * 60 + tParts[2];
+            else if (tParts.length === 2 && tParts.every(n => !isNaN(n))) traffic = tParts[0] * 60 + tParts[1];
             const fm = fareEl ? fareEl.innerText.match(/(\d+[\s,]*(?:\.\d+)?)/) : null;
             const fare = fm ? parseFloat(fm[1].replace(/[\s,]/g, '')) : NaN;
             return { km: km, traffic: traffic, fare: fare };

@@ -143,16 +143,19 @@
         .fare-progress { width: 55%; max-width: 280px; height: 5px; background: rgba(255,255,255,0.08); border-radius: 999px; margin: 10px auto 0 auto; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.06); }
         .fare-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #4caf50, #8bc34a, #ffd600, #ff9800); border-radius: 999px; transition: width 0.35s ease-out; box-shadow: 0 0 8px rgba(255,193,7,0.55); }
 
-        .fab-expand { position: fixed; left: 14px; bottom: 12px; z-index: 42; display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 10px; }
-        .fab-main { width: 48px; height: 48px; border-radius: 999px; background: linear-gradient(135deg, #1e293b, #334155); color: #ffd600; border: 1.5px solid rgba(255,214,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,0.65), 0 0 0 0 rgba(255,214,0,0.0); transition: 0.25s cubic-bezier(.2,.9,.3,1.25); -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
+        /* ปุ่มแชร์ลอยมุมล่างซ้าย — ย่อขนาดให้สมดุลกับแถบล่าง (โลโก้/เครดิต + ป้ายเวอร์ชัน)
+           ขยายเมนูขึ้นด้านบน (column) แล้วปุ่มแชร์ยังยึดติดขอบล่างเสมอ */
+        .fab-expand { position: fixed; left: 12px; bottom: 12px; z-index: 42; display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+        .fab-main { width: 40px; height: 40px; border-radius: 999px; background: linear-gradient(135deg, #1e293b, #334155); color: #ffd600; border: 1.5px solid rgba(255,214,0,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,0.65), 0 0 0 0 rgba(255,214,0,0.0); transition: 0.25s cubic-bezier(.2,.9,.3,1.25); -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
+        .fab-main .material-symbols-outlined { font-size: 20px; }
         .fab-main:active { transform: scale(0.92); }
         .fab-expand.open .fab-main { box-shadow: 0 6px 24px rgba(0,0,0,0.65), 0 0 0 4px rgba(255,214,0,0.18); transform: rotate(45deg); }
         .fab-items { display: none; flex-direction: column; gap: 8px; }
         .fab-expand.open .fab-items { display: flex; animation: fabRise 0.3s cubic-bezier(.2,.9,.3,1.25) both; }
         @keyframes fabRise { from { opacity: 0; transform: translateY(15px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        .fab-item { width: 44px; height: 44px; border-radius: 999px; background: var(--input-bg); border: 1px solid var(--border-glass); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
+        .fab-item { width: 40px; height: 40px; border-radius: 999px; background: var(--input-bg); border: 1px solid var(--border-glass); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
         .fab-item:active { transform: scale(0.9); background: rgba(255,255,255,0.12); }
-        .fab-item svg, .fab-item img { width: 22px !important; height: 22px !important; }
+        .fab-item svg, .fab-item img { width: 20px !important; height: 20px !important; }
 
         .avatar-wrap-ring { position: relative; display: inline-block; line-height: 0; }
         .avatar-wrap-ring::before { content: ""; position: absolute; inset: -3px; border-radius: 999px; padding: 3px; background: var(--neon-green); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
@@ -457,7 +460,8 @@
         .tz-point-start { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; background: transparent; display: flex; justify-content: center; align-items: center; }
         .tz-point-start::before { content: ''; width: 8px; height: 8px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -16px; left: -14px; box-shadow: 16px 16px 0 var(--neon-yellow); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotate(45deg); }
         .tz-point-end { position: absolute; right: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--accent-red); background: transparent; }
-        .tz-stats-row { display: flex; justify-content: space-between; align-items: stretch; margin-bottom: var(--space-zoom); gap: 10px; padding: 0 10px 0 6px; }
+        /* --tz-num-h = ความสูงกล่องตัวเลข (ใช้ร่วมกันทุกคอลัมน์) → ป้าย "วิ่งแล้ว/รถติด/เหลือ" อยู่บรรทัดเดียวกันเสมอ */
+        .tz-stats-row { --tz-num-h: 48px; display: flex; justify-content: space-between; align-items: stretch; margin-bottom: var(--space-zoom); gap: 10px; padding: 0 10px 0 6px; }
         /* รถ taxi บนเส้น progress — ให้ลอยชัดเจน ไม่ถูกตัด/ทับ */
         .tracker-zoom-box #tzCarIcon { top: -24px; z-index: 5; }
         .tracker-zoom-box #tzCarIcon img { width: 52px; height: auto; }
@@ -472,13 +476,16 @@
             padding: 6px 4px 6px 4px;
             overflow: hidden;
         }
+        /* 🕒 ช่อง "รถติด" แสดงเวลาครบ 3 ช่องแบบนาฬิกา (0:19:22 = ชม.:น.:ว.) — ขยายช่องกลาง + ย่อตัวเลขลงให้พอดี */
+        .tz-stats-row .tz-stat-col:nth-child(2) { flex: 1.3; }
+        #tzTrafficTime.tz-stat-num { font-size: 40px; }
         .tz-stat-num { 
-            font-size: 55px; 
+            font-size: 48px; 
             font-weight: 700; 
             line-height: 1; 
             letter-spacing: -1px; 
             margin: 0; 
-            height: 1em; /* สูงเท่ากันทุกคอลัมน์ → ตัวเลขอยู่ baseline/กลางเดียวกัน */
+            height: var(--tz-num-h, 1em); /* สูงเท่ากันทุกคอลัมน์ → ตัวเลข + ป้าย อยู่บรรทัดเดียวกัน */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1344,8 +1351,9 @@
             .tz-start-time, .tz-elapsed-time { font-size: 16px; }
             .tz-progress-container { margin: 30px 6px 10px 6px; /* เหลือที่ว่างรถ taxi บนจอเล็กด้วย */ }
             .tz-stats-row { margin-bottom: 10px; gap: 6px; }
-            .tz-stat-num { font-size: 44px; height: 1em; }
-            #tzTrafficTime.tz-stat-num { font-size: 38px; height: 44px; /* สูงเท่ากับเพื่อนร่วมแถว → ตัวเลข/label อยู่บรรทัดเดียวกัน */ }
+            .tz-stat-num { font-size: 40px; }
+            .tz-stats-row { --tz-num-h: 40px; }
+            #tzTrafficTime.tz-stat-num { font-size: 28px; /* สูงเท่ากับเพื่อนร่วมแถว (--tz-num-h) → ตัวเลข/label อยู่บรรทัดเดียวกัน */ }
             .tz-stat-label { font-size: 15px; height: 1.4em; }
             .tz-fare-card { padding: 22px 10px; border-radius: 18px; margin-bottom: 10px; }
             .tz-fare-title { font-size: 17px; }
@@ -1376,8 +1384,9 @@
             .tz-header { margin-bottom: 10px; }
             .tz-progress-container { margin: 30px 8px 10px 8px; /* เหลือที่ว่างรถ taxi บนจอเตี้ยด้วย */ }
             .tz-stats-row { margin-bottom: 10px; gap: 6px; }
-            .tz-stat-num { font-size: 46px; height: 1em; }
-            #tzTrafficTime.tz-stat-num { font-size: 38px; height: 46px; /* สูงเท่ากับเพื่อนร่วมแถว → ตัวเลข/label อยู่บรรทัดเดียวกัน */ }
+            .tz-stat-num { font-size: 42px; }
+            .tz-stats-row { --tz-num-h: 42px; }
+            #tzTrafficTime.tz-stat-num { font-size: 30px; /* สูงเท่ากับเพื่อนร่วมแถว (--tz-num-h) → ตัวเลข/label อยู่บรรทัดเดียวกัน */ }
             .tz-fare-card { padding: 22px 12px; border-radius: 18px; margin-bottom: 10px; }
             #tzMeterPrice { font-size: 106px; }
             .tz-fare-currency { font-size: 44px; }
@@ -1498,7 +1507,7 @@
 
         /* ===== แบนเนอร์แนะนำติดตั้งแอปเต็มจอ (PWA) — ชวนใหม่ทุกครั้งจนกว่าจะติดตั้ง (ปิด = งด 7 วัน) ===== */
         .install-banner {
-            align-items: center; gap: 10px;
+            align-items: center; column-gap: 10px; row-gap: 6px; flex-wrap: wrap;
             margin: 0 0 var(--space-section) 0;
             padding: 10px 12px;
             border-radius: 18px;
@@ -1518,9 +1527,11 @@
             color: #ffd24d;
         }
         .ib-icon .material-symbols-outlined { font-size: 22px; }
+        .ib-head { flex: 0 0 100%; display: flex; align-items: center; gap: 10px; min-width: 0; }
         .ib-text { flex: 1; min-width: 0; }
-        .ib-title { font-size: 13.5px; font-weight: 700; color: #ffe9a8; line-height: 1.3; }
-        .ib-sub { font-size: 11.5px; color: rgba(255,255,255,0.72); line-height: 1.45; margin-top: 2px; }
+        /* หัวข้ออยู่บรรทัดของตัวเองเต็มความกว้างแบนเนอร์ → ไม่ตัดคำ/ไม่ขึ้นบรรทัดใหม่ทุกขนาดจอ */
+        .ib-title { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 700; color: #ffe9a8; line-height: 1.35; white-space: nowrap; }
+        .ib-sub { font-size: 11.5px; color: rgba(255,255,255,0.72); line-height: 1.45; }
         .ib-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
         .ib-btn {
             border: none; cursor: pointer; border-radius: 12px;
@@ -1535,6 +1546,11 @@
             .ib-actions { flex-direction: row; }
             .ib-title { font-size: 12.5px; }
             .ib-sub { font-size: 11px; }
+        }
+        /* จอเล็กมาก (≤340px) → ย่อไอคอน/ตัวอักษรลงนิดเดียว ให้หัวข้อยังอยู่บรรทัดเดียว */
+        @media (max-width: 340px) {
+            .ib-icon { width: 34px; height: 34px; }
+            .ib-title { font-size: 11.5px; }
         }
 
         /* ===== 🏷️ ระบบเวอร์ชัน + ประวัติอัปเดต (ver pill + modal) ===== */
@@ -1811,9 +1827,11 @@
                                                        
     <!-- 📱 แนะนำติดตั้งแอปเต็มจอ (PWA) — ชวนใหม่ทุกครั้งจนกว่าจะติดตั้ง (กดปิด = งดถาม 7 วัน) -->
     <div id="installBanner" class="install-banner" style="display:none;">
-        <div class="ib-icon"><span class="material-symbols-outlined">install_mobile</span></div>
+        <div class="ib-head">
+            <div class="ib-icon"><span class="material-symbols-outlined">install_mobile</span></div>
+            <div class="ib-title">ติดตั้งแอป “เต็มจอ” ไว้ใช้ประจำไหม?</div>
+        </div>
         <div class="ib-text">
-            <div class="ib-title">📱 ติดตั้งแอป “เต็มจอ” ไว้ใช้ประจำไหม?</div>
             <div id="ibSub" class="ib-sub">เปิดจากไอคอนบนหน้าจอหลัก → เต็มจอถาวร ไม่มีแถบเบราว์เซอร์บน/ล่าง เหมาะกับการวางบนแท่นรถ</div>
         </div>
         <div class="ib-actions">
@@ -1892,7 +1910,7 @@
         <div style="margin: 10px 0 0 0; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px; display: flex; flex-direction: column; gap: 8px;" class="tracker-stats">
             <div style="display: flex; justify-content: space-between; width: 100%;">
                 <div style="font-size: 13px;">เริ่ม: <span class="highlight" id="smallStartTime" style="color:white;">--:--</span> น.</div>
-                <div style="font-size: 13px;">รถติด: <span class="highlight" id="smallTrafficTime" style="color:var(--accent-orange);">0น. 0ว.</span></div>
+                <div style="font-size: 13px;">รถติด: <span class="highlight" id="smallTrafficTime" style="color:var(--accent-orange);">0:00</span></div>
             </div>
             <div id="ltEtaRow" style="display: flex; justify-content: space-between; width: 100%;">
                 <div style="font-size: 13px;">เวลาประเมิน: <span style="color:var(--neon-yellow);" class="highlight" id="smallEtaTime">--</span></div>
@@ -1965,14 +1983,14 @@
 <!-- 🧭 ปุ่มแชร์แบบ Floating Action Expandable (ลอยมุมล่างซ้าย) -->
 <div id="fabSocial" class="fab-expand">
     <div class="fab-items">
+        <button class="fab-item" onclick="window.openMainQrCode()" title="สแกน QR Code">
+            <svg viewbox="0 0 24 24" fill="#f1c40f" style="width:20px; height:20px;"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z"></path></svg>
+        </button>
         <button class="fab-item" onclick="window.shareToPlatform('messenger')" title="Messenger">
             <svg viewbox="0 0 24 24" fill="#0084FF" style="width:22px; height:22px;"><path d="M12 2C6.477 2 2 6.145 2 11.258c0 2.908 1.463 5.483 3.75 7.182V22l3.414-1.874A10.322 10.322 0 0012 20.516c5.523 0 10-4.145 10-9.258S17.523 2 12 2zm1.09 12.83l-2.774-2.954-5.414 2.954 5.952-6.32 2.844 2.954 5.344-2.954-5.952 6.32z"></path></svg>
         </button>
         <button class="fab-item" onclick="window.shareToPlatform('line')" title="LINE">
             <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" style="width:22px; height:22px;" />
-        </button>
-        <button class="fab-item" onclick="window.openMainQrCode()" title="QR Code">
-            <svg viewbox="0 0 24 24" fill="#f1c40f" style="width:22px; height:22px;"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z"></path></svg>
         </button>
         <button class="fab-item" onclick="window.openServicePortal(false)" title="TrueMoney">
             <img src="https://i.ibb.co/210jq8dS/unnamed.png" style="width:22px; height:22px; object-fit:contain;" />
@@ -1981,8 +1999,34 @@
             <span class="material-symbols-outlined" style="font-size:20px;">content_copy</span>
         </button>
     </div>
-    <button class="fab-main" onclick="document.getElementById('fabSocial').classList.toggle('open')" aria-label="แชร์"><span class="material-symbols-outlined">share</span></button>
+    <button id="fabMainBtn" class="fab-main" aria-label="แชร์"><span class="material-symbols-outlined">share</span></button>
 </div>
+<script>
+/* 🧭 ปุ่มแชร์ลอย: กดที่ว่างตรงไหนก็ยุบ + เปิดค้างไว้ 5 วินาทีแล้วยุบเอง */
+(function () {
+    const fab = document.getElementById('fabSocial');
+    const mainBtn = document.getElementById('fabMainBtn');
+    if (!fab || !mainBtn) return;
+    let autoCollapseTimer = null;
+    const isOpen = () => fab.classList.contains('open');
+    const collapseFab = () => {
+        if (autoCollapseTimer) { clearTimeout(autoCollapseTimer); autoCollapseTimer = null; }
+        fab.classList.remove('open');
+    };
+    const expandFab = () => {
+        fab.classList.add('open');
+        if (autoCollapseTimer) clearTimeout(autoCollapseTimer);
+        autoCollapseTimer = setTimeout(collapseFab, 5000);
+    };
+    mainBtn.addEventListener('click', () => { if (isOpen()) { collapseFab(); } else { expandFab(); } });
+    // เลือกเมนูแล้ว → ยุบทันที
+    fab.querySelectorAll('.fab-item').forEach(btn => btn.addEventListener('click', () => setTimeout(collapseFab, 150)));
+    // แตะ/คลิกที่ว่างตรงไหนก็ได้ (นอกปุ่มแชร์) → ยุบลงมา
+    document.addEventListener('click', (e) => { if (isOpen() && !fab.contains(e.target)) collapseFab(); });
+    document.addEventListener('touchstart', (e) => { if (isOpen() && !fab.contains(e.target)) collapseFab(); }, { passive: true });
+    window.collapseShareFab = collapseFab;
+})();
+</script>
 
 <div id="sideMenuOverlay" class="side-menu-overlay" onclick="window.toggleSideMenu(false)">
     <div id="sideMenuBox" class="side-menu" onclick="event.stopPropagation()">
@@ -2254,7 +2298,7 @@
         
         <div class="tz-header">
             <div class="tz-start-time">เริ่ม: <span id="tzStartTime">--:--</span> น.</div>
-            <div id="tzElapsedTime" class="tz-elapsed-time">0 นาที 0 วิ</div>
+            <div id="tzElapsedTime" class="tz-elapsed-time">0 ว.</div>
         </div>
         <div class="tz-progress-container" id="tzProgressContainer">
             <div class="tz-progress-line">
@@ -2265,7 +2309,7 @@
         </div>
         <div class="tz-stats-row">
             <div class="tz-stat-col"><div id="tzDrivenKm" class="tz-stat-num" style="color: var(--neon-green);">0.00</div><div class="tz-stat-label">วิ่งแล้ว (กม.)</div></div>
-            <div class="tz-stat-col"><div id="tzTrafficTime" class="tz-stat-num" style="color: var(--accent-orange);">0:00</div><div class="tz-stat-label">รถติด (นาที:วิ)</div></div>
+            <div class="tz-stat-col"><div id="tzTrafficTime" class="tz-stat-num" style="color: var(--accent-orange);">0:00</div><div class="tz-stat-label" id="tzTrafficLabel">รถติด (น.:ว.)</div></div>
             <div class="tz-stat-col" id="tzRemainKmCol"><div id="tzRemainKm" class="tz-stat-num" style="color: var(--neon-yellow);">0.00</div><div class="tz-stat-label">เหลือ (กม.)</div></div>
         </div>
         <div class="tz-fare-card">
@@ -3183,7 +3227,28 @@
         }
         return st.n;
     };
-    function formatDuration(totalMins) { if (totalMins < 60) return totalMins + " นาที"; let h = Math.floor(totalMins / 60); let m = totalMins % 60; return h + " ชม. " + (m > 0 ? m + " นาที" : ""); }
+    function formatDuration(totalMins) { if (totalMins < 60) return totalMins + " น."; let h = Math.floor(totalMins / 60); let m = Math.round(totalMins % 60); return h + " ชม." + (m > 0 ? " " + m + " น." : ""); }
+    // 🕒 จัดรูปแบบ "เวลาเป็นวินาที": ซ่อนหน่วยที่ยังเป็นศูนย์ทางซ้าย (ยังไม่ถึงนาที → โชว์แค่วินาที · ยังไม่ถึงชั่วโมง → ไม่โชว์ชั่วโมง)
+    //    ตัวอย่าง: 30 ว. · 52 น. 20 ว. · 1 ชม. 15 น. 30 ว. — กันข้อความยาวเกินจำเป็น
+    //    clockFromSec = ตัวเลขล้วนแบบนาฬิกา 3:28 / 1:15:30 (ใช้กับตัวเลขใหญ่) · formatHMS = ข้อความย่อ
+    function clockFromSec(totalSec) {
+        const t = Math.max(0, Math.round(Number(totalSec) || 0));
+        const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+        if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        return m + ':' + String(s).padStart(2, '0');
+    }
+    function formatHMS(totalSec) {
+        const t = Math.max(0, Math.round(Number(totalSec) || 0));
+        const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+        if (h > 0) return h + ' ชม. ' + m + ' น. ' + s + ' ว.';
+        if (m > 0) return m + ' น. ' + s + ' ว.';
+        return s + ' ว.';
+    }
+    // ป้ายใต้ตัวเลขรถติด — บอกหน่วยตามที่โชว์จริง (ยังไม่ถึงชั่วโมง = น.:ว.)
+    function hmsUnitLabel(totalSec) {
+        const t = Math.max(0, Number(totalSec) || 0);
+        return (t >= 3600) ? '(ชม.:น.:ว.)' : '(น.:ว.)';
+    }
 
     // อัปเดตสี/ไอคอนของปุ่มทั้งหมดตามโหมด (Main = สวิตช์เดียว, Live & Zoom = ปุ่มคู่)
     const tollBtnClass = (modeCls, el) => {
@@ -6566,9 +6631,9 @@
         const durTxt = (sec) => {
             sec = Math.max(0, Math.round(sec));
             const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-            if (h > 0) return h + ' ชม. ' + m + ' นาที';
-            if (m > 0) return s > 0 ? m + ' นาที ' + s + ' วิ' : m + ' นาที';
-            return s + ' วิ';
+            if (h > 0) return h + ' ชม. ' + m + ' น. ' + s + ' ว.';
+            if (m > 0) return m + ' น. ' + s + ' ว.';
+            return s + ' ว.';
         };
         const row = (icon, label, val, color) => `
             <div style="display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px dashed rgba(255,255,255,0.08);">
@@ -7382,11 +7447,13 @@
         const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         const clock = (ms) => new Date(ms).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
         const dur = (sec) => {
-            sec = Math.max(0, Math.round(sec));
-            const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), ss = sec % 60;
-            if (h > 0) return h + ' ชม. ' + m + ' นาที';
-            if (m > 0) return ss > 0 ? m + ' นาที ' + ss + ' วิ' : m + ' นาที';
-            return ss + ' วิ';
+            // 🕒 ซ่อนหน่วยทางซ้ายที่ยังเป็นศูนย์ (เดิมโชว์ "455 นาที" อ่านไม่ออกว่ากี่ชั่วโมง):
+            //    30 ว. · 52 น. 20 ว. · เกิน 1 ชม. ค่อยโชว์ "1 ชม. 15 น. 30 ว."
+            const t = Math.max(0, Math.round(sec));
+            const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), ss = t % 60;
+            if (h > 0) return h + ' ชม. ' + m + ' น. ' + ss + ' ว.';
+            if (m > 0) return m + ' น. ' + ss + ' ว.';
+            return ss + ' ว.';
         };
         const thb = (n) => Math.round(n).toLocaleString('th-TH') + ' ฿';
 
@@ -7528,7 +7595,7 @@
                     </div>
                     <div style="position:absolute; left:0; right:0; display:flex; flex-direction:column; align-items:center; pointer-events:none;">
                         <div style="display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div>
-                        <div style="font-size:11px; font-weight:400; color:rgba(255,255,255,0.8);">${window.isMeterPaused ? '⏸️ หยุดชั่วคราว' : Math.floor(elapsed/60) + ' นาที ' + elapsed%60 + ' วิ'}</div>
+                        <div style="font-size:11px; font-weight:400; color:rgba(255,255,255,0.8);">${window.isMeterPaused ? '⏸️ หยุดชั่วคราว' : formatHMS(elapsed)}</div>
                     </div>
                     <div style="width:52px; flex-shrink:0;"></div>
                 </div>
@@ -7541,7 +7608,7 @@
         if($('smallStartTime')) $('smallStartTime').innerText = startTimeStr;
 
         let tMins = Math.floor(trafficSeconds / 60); let tSecs = Math.floor(trafficSeconds % 60);
-        if ($('smallTrafficTime')) { $('smallTrafficTime').innerText = `${tMins}น. ${tSecs}ว.`; }
+        if ($('smallTrafficTime')) { $('smallTrafficTime').innerText = clockFromSec(trafficSeconds); }
         
         // อัปเดตแถบเล็ก "วิ่งแล้ว/เหลือ/คืบหน้า" ให้ตรงกับค่าล่าสุด (รวมที่เบิกคืนหลังซ่อนแอป)
         if ($('driveCovered')) $('driveCovered').innerText = targetKm.toFixed(2);
@@ -7573,12 +7640,12 @@
             $('tzMeterPrice').innerText = displayFare;
             $('tzDrivenKm').innerText = targetKm.toFixed(2);
             $('tzRemainKm').innerText = currentTrueRemainKm.toFixed(2);
-            $('tzTrafficTime').innerText = `${tMins}:${tSecs.toString().padStart(2, '0')}`;
+            $('tzTrafficTime').innerText = clockFromSec(trafficSeconds); // 3:28 (น.:ว.) · เกิน 1 ชม. → 1:15:30 (ชม.:น.:ว.)
+            // ป้ายหน่วยของช่องรถติด ขยับตามค่าจริง (ยังไม่ถึงชั่วโมง ไม่ต้องโชว์ ชม.)
+            const _tzTLbl = $('tzTrafficLabel'); if (_tzTLbl) _tzTLbl.innerText = 'รถติด ' + hmsUnitLabel(trafficSeconds);
             if ($('tzEstFare')) $('tzEstFare').innerText = (window.estimateFareAmt > 0 ? 'ประเมิน: ' + window.estimateFareAmt.toLocaleString('th-TH') + ' ฿' : 'ประเมิน: -- ฿');
             
-            let eMins = Math.floor(elapsed / 60); let eSecs = elapsed % 60;
-            let hStr = Math.floor(eMins/60) > 0 ? `${Math.floor(eMins/60)} ชม. ` : "";
-            $('tzElapsedTime').innerText = window.isMeterPaused ? '⏸️ หยุดชั่วคราว' : `${hStr}${eMins%60} นาที ${eSecs} วิ`;
+            $('tzElapsedTime').innerText = window.isMeterPaused ? '⏸️ หยุดชั่วคราว' : formatHMS(elapsed);
 
             let remainMins = Math.ceil(currentTrueRemainSec / 60); if(remainMins < 1) remainMins = 1;
             let arrTimeStr = new Date(Date.now() + remainMins * 60000).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
@@ -7642,7 +7709,7 @@
                         </div>
                         <div style="position:absolute; left:0; right:0; display:flex; flex-direction:column; align-items:center; pointer-events:none;">
                             <div style="display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">stop_circle</span> สิ้นสุดเดินทาง</div>
-                            <div style="font-size:12px; font-weight:400; color:rgba(255,255,255,0.8);">${window.isMeterPaused ? '⏸️ หยุดชั่วคราว' : Math.floor(eNum/60) + ' นาที ' + eNum%60 + ' วิ'}</div>
+                            <div style="font-size:12px; font-weight:400; color:rgba(255,255,255,0.8);">${window.isMeterPaused ? '⏸️ หยุดชั่วคราว' : formatHMS(eNum)}</div>
                         </div>
                         ${navRight}
                     </div>
@@ -7954,6 +8021,15 @@
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-11'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+        '🕒 เวลาซ่อนหน่วยที่ยังเป็นศูนย์ (อ่านสั้นลง): ยังไม่ถึงนาที → "30 ว." · ยังไม่ถึงชั่วโมง → "52 น. 20 ว." (ไม่โชว์ชั่วโมง) · เกิน 1 ชม. ค่อยโชว์ "1 ชม. 15 น. 30 ว." — ใช้พร้อมกันทั้งเวลาวิ่ง, ปุ่ม "สิ้นสุดเดินทาง", หน้าสรุปค่าโดยสาร, ใบเสร็จ และช่องรถติด (3:28 → 1:15:30 เมื่อเกินชั่วโมง)',
+        '🏷️ ป้ายช่องรถติดขยับตามค่าจริง — ยังไม่ถึงชั่วโมงโชว์ "รถติด (น.:ว.)" · เกินชั่วโมงค่อยเปลี่ยนเป็น "(ชม.:น.:ว.)" ให้ตรงกับตัวเลขที่เห็น',
+        '📐 จัดป้าย วิ่งแล้ว / รถติด / เหลือ ให้อยู่บรรทัดเดียวกันเป๊ะ — ล็อกความสูงกล่องตัวเลขทุกคอลัมน์ให้เท่ากันด้วยตัวแปรเดียว (เดิมช่องรถติดสูงกว่าเพื่อน 4px → ป้ายเยื้องขึ้นลงไม่เท่ากัน)',
+        '📤 ปุ่มแชร์ลอยมุมล่างซ้าย: ย่อขนาดลง (48 → 40px) ให้สมดุลกับแถบล่าง (โลโก้/เครดิต + ป้ายเวอร์ชัน) · เมนูกางขึ้นด้านบนเหนือปุ่มแทนที่จะทะลุขอบล่างจอ · สลับปุ่ม "สแกน QR Code" ขึ้นบนสุดตามลำดับใหม่ (QR → Messenger → LINE → TrueMoney → Copy)',
+        '👆 ปุ่มแชร์: แตะที่ว่างตรงไหนก็ยุบเมนูได้ (ไม่ต้องกดปุ่มแชร์ซ้ำ) · เลือกเมนูแล้วยุบเอง · เปิดค้างไว้ 5 วินาที ยุบอัตโนมัติ',
+        '📱 แบนเนอร์ "ติดตั้งแอปเต็มจอ": จัดหัวข้อ "ติดตั้งแอป “เต็มจอ” ไว้ใช้ประจำไหม?" ให้อยู่บรรทัดเดียว (ย้ายหัวข้อขึ้นเป็นบรรทัดเต็มความกว้างของแบนเนอร์ + ตัด emoji 📱 ที่ซ้ำกับไอคอนทองด้านซ้ายออก) — เดิมตัดเป็น 2 บรรทัด "ไว้ใช้ / ประจำไหม?"',
+        '🕒 เวลามิเตอร์อ่านครบ 3 ช่อง (ชม./น./ว.): ช่อง "รถติด" แสดงแบบนาฬิกา 0:19:22 + เปลี่ยนป้ายเป็น (ชม.:น.:ว.) — เดิมโชว์ 19:22 อ่านไม่ออกว่าเกิน 1 ชม. หรือยัง',
+        '🧾 เวลาวิ่ง/เวลาจอด ที่หัวจอมิเตอร์ ปุ่ม "สิ้นสุดเดินทาง" หน้าสรุปค่าโดยสาร และใบเสร็จ แสดง "0 ชม. 19 น. 22 ว." ครบทุกช่องด้วยตัวเลข (เดิมเป็น "455 นาที" อ่านแล้วไม่รู้ว่ากี่ชั่วโมง)',
+        '🏷️ แยกประวัติเวอร์ชันเป็นรายวัน: 1 วันที่มีการแก้ไข = 1 เวอร์ชันของตัวเอง (1.2.7 = 7 ก.ย. · 1.2.8 = 8 ก.ย. · 1.2.9 = 9 ก.ย. · 1.2.10 = 10 ก.ย. · 1.2.11 = 11 ก.ย.) แทนการมัดรวมทุกอย่างไว้การ์ดเดียว — ประวัติเดิมที่รวมอยู่ใน Firestore จะถูกย้ายแยกเป็นการ์ดรายวันให้อัตโนมัติเมื่อเปิดแอปครั้งถัดไป',
         '🧭 แก้ระยะทาง/เวลารถติดเพี้ยนหลังปิด ย่อ หรือรีเฟรชแอป: จด "ฐานหลักฐาน" ณ วินาทีที่แอปถูกซ่อน/ปิด (กม. + เวลารถติด + ตำแหน่ง) แล้วเบิกคืนจากฐานนั้น — ระยะทางที่วิ่งจริงไม่หาย และเวลารถติดไม่บวม (จริง 2:15 ต้องไม่กลายเป็น 7:31)',
         '⏸️ รถวิ่งช่วงที่แอปซ่อน/ปิด: ระบบถอนเวลาจอดที่ ticker นับไว้ผิดออกให้อัตโนมัติ แล้วคิดเฉพาะเวลารถติดจริงของช่วงนั้นจากเส้นทาง GPS',
         '🔁 กันเบิกคืนซ้ำซ้อน: บันทึกกุญแจ "ช่วงปิดที่เบิกแล้ว" ลงในเที่ยว → เปิดแอปใหม่/รีเฟรชกี่ครั้งก็เบิกช่วงเดิมครั้งเดียว',
@@ -7962,76 +8038,81 @@
         '⚙️ เพิ่มสวิตช์ "เริ่มต่อเที่ยวค้างอัตโนมัติ" ในหน้าโปรไฟล์ (ค่าเริ่มต้นเปิด, บันทึกต่อบัญชี — ใช้ค่าซิงก์ข้ามเครื่องได้) — ปิดแล้วกลับไปโชว์แบนเนอร์ "เริ่มต่อ" ให้กดเองเหมือนเดิม',
         '🧹 แก้เริ่มมิเตอร์เที่ยวใหม่ยังค้างสถานที่/เส้นทาง/รถจากเที่ยวเก่า: ล้างข้อมูลจุดหมายเก่าทุกชั้น (window.destLoc + ตัวแปรสำรอง) ตอนจบเที่ยว — เที่ยวธรรมดาใหม่จะไม่มีแถบจุดหมาย/เส้นทาง/รถหลงเหลือ',
         '🐛 แก้กดเริ่มมิเตอร์จากหน้าสรุปเส้นทางแล้วจุดหมายหาย (จอมิเตอร์กลายเป็นเที่ยวธรรมดา ไม่มีแถบจุดหมาย/เส้นทาง/รถ/ปุ่ม Google Maps) — ตอนนี้เก็บจุดหมายไว้ครบ และยังคงล้างจุดหมายเก่าเมื่อเริ่มเที่ยวธรรมดาใหม่',
-        '🔄 ย้ายปุ่ม "รีเฟรช" ในหน้าโควตา Firestore ลงมาที่มุมขวาล่างของหน้า (หลังรายการยอดแยกตาม ID) — หัวหน้าต่างโล่งขึ้น ปุ่มยังทำงานเหมือนเดิม',
-        '🧹 ลบปุ่มดินสอ (แก้ไขชื่อสิทธิ์) ที่กดแล้วไม่ทำงานออกจากรายการสิทธิ์ในตั้งค่าสิทธิ์การใช้งาน และจัดปุ่มลัด (โทร/แบน/ประวัติ/แก้ไข/ลบ) ในหน้าจัดการผู้ใช้งานให้อยู่กึ่งกลางการ์ดพอดี ไม่ชิดขวา',
-        '🎛️ รายการสิทธิ์ในตั้งค่าสิทธิ์การใช้งานเปลี่ยนจากกล่องติ๊กเป็นสวิตช์เปิด/ปิดแล้ว — แต่ละสิทธิ์มีชื่อ + คำอธิบายเล็ก ๆ ใต้ชื่อ (เหมือนหมวดบันทึกประวัติ) พร้อมปุ่มแก้ไขชื่อและที่จับลากเรียงลำดับตามเดิม',
-        '💾 ปุ่ม "บันทึกสิทธิ์" ฉลาดขึ้น: ถ้ายังไม่มีการเปลี่ยนแปลงอะไร ปุ่มจะเป็นสีเทา กดไม่ได้ — พอติ๊กสิทธิ์หรือสลับ log ปุ๊บ ปุ่มกลับมาเขียวและกดได้ทันที · หลังบันทึกสำเร็จ อยู่หน้าเดิมต่อได้เลย ไม่ปิดหน้าต่าง (กดบันทึกอีกรอบได้ถ้าจะแก้เพิ่ม)',
-        '🧹 ตั้งค่าการใช้งานซ่อนหัวข้อหมวดหมู่ที่ว่างแล้ว: ถ้าผู้ใช้ (เช่น ผู้จัดการ) ไม่มีสิทธิ์ในหมวดไหน (การแจ้งเตือน / บริการ/ระบบ) หัวข้อหมวดนั้นจะถูกซ่อนไปด้วย ไม่โผล่เป็นช่องว่าง — พอแอดมินให้สิทธิ์ หัวข้อจะเด้งกลับมาเอง',
-        '🎯 ป้ายระยะทางในผลค้นหาจุดหมายตรงกับหน้าสรุปเส้นทางแล้ว: จากเดิมแสดงระยะเส้นตรง (เช่น ไปเซ็นทรัลเวสต์เกต badge 9.8 กม. แต่เส้นทางจริง 15.15 กม.) — ตอนนี้ badge จะคำนวณเป็นระยะทางถนนจริง (TomTom routing เดียวกับหน้าสรุป) แสดง … ระหว่างโหลด แล้วแทนที่ด้วยเลขที่ตรงกัน (แคชตามจุดเริ่ม/ปลาย+โหมดทางด่วน กันยิง API ซ้ำ)',
-        '✏️ แอดมินแก้เลขเวอร์ชัน (v) ของแต่ละการ์ดในหน้าประวัติเวอร์ชันได้เอง (ปุ่มแก้ไข → มีช่องเลขเวอร์ชันให้พิมพ์) — กันเลขซ้ำกับรายการอื่นอัตโนมัติ ทั้งตอนพิมพ์และตอนบันทึก',
-        '📍 เพิ่ม "ตั้งตำแหน่งของฉัน" สำหรับเครื่องที่ GPS ใช้ไม่ได้ (คอมพิวเตอร์/แอป): แตะช่องค้นหาจุดหมาย → แถวบนสุด "ตั้งตำแหน่งของฉัน" → พิมพ์ที่อยู่/สถานที่ที่คุณอยู่ตอนนี้แล้วแตะผลลัพธ์ — ตั้งปุ๊บ การค้นหาจะเรียง"ใกล้ฉัน"และแสดงระยะทาง + เส้นทางคำนวณจากตำแหน่งนี้ทันที (ไม่เพี้ยนเป็น 9 กม. ทั้งที่จริง ~15 กม. เหมือนใช้ตำแหน่ง IP) · มีชิพสีส้มข้าง "ค้นหาจุดหมาย" โชว์ตำแหน่งที่ตั้งไว้ แตะชิพ = ล้างกลับไปใช้ GPS อัตโนมัติ',
-        '🎯 แก้ระยะทางเส้นทางคลาดเคลื่อน (เช่น ไปเซ็นทรัลเวสต์เกตขึ้น 9.6 กม. ทั้งที่จริง ~15 กม.): ตอนคำนวณเส้นทางใช้ GPS ที่แม่นสุดเท่าที่มีก่อน (fix สดจากมิเตอร์/แคชตำแหน่ง → ขอ GPS ใหม่) ไม่ดิ่งไปใช้ตำแหน่งโดยประมาณ (IP) ที่เพี้ยนหลายกม. ทันที — ถ้า GPS ใช้ไม่ได้จริง จะขึ้นคำเตือนสีส้มชัดเจนในหน้าสรุปเส้นทางว่า "ใช้ตำแหน่งโดยประมาณ ระยะทาง/ราคาอาจคลาดเคลื่อน" · ลบแถว "ใช้ตำแหน่งปัจจุบันของฉัน" ในช่องค้นหาจุดหมายออก (จุดเริ่มต้นเป็นตำแหน่งปัจจุบันอยู่แล้ว)',
-        '🔍 ค้นหาจุดหมายอัจฉริยะแบบ Bolt/Grab: ผลค้นหาเรียง"ใกล้ฉันก่อน"พร้อมป้ายระยะทาง (เช่น ค้น "เซ็นทรัล" → สาขาที่ใกล้ที่สุดขึ้นก่อน) · แตะช่องค้นหาเห็น "ตำแหน่งปัจจุบัน" + ที่โปรด + ประวัติล่าสุดในรายการเดียว · พิมพ์แล้วเดาได้ทันทีจากที่โปรด/ประวัติ · กันเรียก API ซ้ำ (แคชตำแหน่ง 2 นาที + ข้ามคำค้นซ้ำ)',
-        '⚙️ ตั้งค่าสิทธิ์การใช้งาน → เพิ่มหมวด "บันทึกประวัติ (Log)": แอดมินเปิด/ปิดการบันทึก log ได้ทีละประเภท (ล็อกอิน/เอาต์, สิทธิ์, รหัสผ่าน/แบน, จัดการสมาชิก, แก้ไขโปรไฟล์, พอร์ทัล, สมัครสมาชิก) — ค่าเริ่มต้นเปิดทุกประเภท ยกเว้นล็อกอิน/เอาต์ (ปิด = ประหยัดโควตา) · ฟังสดข้ามเครื่อง มีผลทันทีทุก user · ย้ายสวิตช์ log เดิมจากหน้าจัดการผู้ใช้มาอยู่ที่นี่',
-        '✂️ ลดบันทึกกิจกรรมที่เขียนทุกครั้ง: ตัด log ล็อกอิน/ล็อกเอาต์ออก (เดิม 1 เหตุการณ์ = เขียน 2 doc — log ของผู้ใช้ + global_logs) — เหลือเฉพาะเหตุการณ์สำคัญเท่านั้น (สมัครสมาชิก, แก้ไขโปรไฟล์/รหัสผ่าน, แบน/ปลดแบน, เพิ่ม/แก้ไขผู้ใช้, อนุมัติ/ปฏิเสธคำขอสิทธิ์, แก้ไข Portal) — ประหยัด ~4-6 เขียน/คน/วัน',
-        '❌ ลบระบบสถานะออนไลน์ (presence) ออกทั้งหมด: ไม่เขียนคอลเลกชัน presence อีกต่อไป (เข้า/ออกแอป, ล็อกอิน/เอาต์, แตะใช้งานทุก 10 นาที, ฟังสดตอนเปิดหน้าจัดการผู้ใช้) — ลดการเขียน Firestore ~8-20 ครั้ง/วัน/เครื่องให้เหลือศูนย์ เพื่อประหยัดโควตาสุด ๆ (ยังเหลือป้าย "ถูกระงับ (Ban)" ในหน้าจัดการผู้ใช้ตามเดิม — ไม่เกี่ยวกับออนไลน์)',
-        'กัน user ทั่วไปเด้งหลุดหลังล็อกอินตอนโควตา/เน็ตค้าง: เขียน session ใหม่ไม่ทัน (โควตาหมด) จะไม่ไล่ออกจากระบบอีกต่อไป — ระบบจำค่า session ที่เห็นตอนล็อกอินไว้ แล้วลองเขียนซ้ำเบื้องหลังจนกว่าจะสำเร็จ (ยังไล่เครื่องอื่นที่ล็อกอินซ้อนจริงอยู่เหมือนเดิม)',
-        'แก้ล็อกอินบอก "รหัสผู้ใช้หรือรหัสผ่านผิด" ทั้งที่รหัสถูก: ถ้าดึงข้อมูลผู้ใช้ไม่ได้จริง ๆ (Firestore โควตาหมด / เน็ตขัดข้อง) ระบบจะแจ้ง "เชื่อมต่อฐานข้อมูลขัดข้อง (เน็ต/โควตา Firestore) — ลองใหม่อีกครั้ง" แทน — เห็นสาเหตุจริง ไม่เข้าใจผิดว่ารหัสผ่านเสีย (ตรวจสอบแล้วฐานข้อมูลเก็บรหัสแอดมินปัจจุบันถูกต้อง เข้าสู่ระบบได้ปกติ)',
-        'ลำดับเมนูซิงก์ทุกคนแบบเรียลไทม์: แอดมินลากสลับเมนู (แฮมเบอร์เกอร์/ตั้งค่าการใช้งาน) แล้วบันทึก → ทุก user เห็นลำดับใหม่ทันที ไม่ต้องปิด-เปิดเมนูใหม่ (เก็บ settings/menuOrder ฟังสด)',
-        'โหลดข้อมูลผู้ใช้ทันทีหลังล็อกอิน/สมัคร/เปิดแอปต่อ: นำ doc ที่เพิ่งดึงมาแสดงผลเลย (ชื่อ/รูป/สิทธิ์/ตั้งค่า) — ไม่ต้องรอ snapshot เมื่อ Firestore ค้าง/โควตาหมด เลิกเห็น "กำลังโหลดข้อมูลของคุณ" ค้าง',
-        'ล็อกอินเร็วขึ้น: ดึงข้อมูลผู้ใช้ด้วย SDK+REST พร้อมกัน (เอาตัวที่ตอบก่อน — เดิมรอ SDK ครบ timeout ก่อนค่อย REST) + ยืนยันรหัสผ่านเสร็จออกจากหน้าเข้าสู่ระบบทันที (โชว์หน้าจอโหลด ไม่รอ snapshot) + watchdog สั้นลง 8→4 วิ กันค้างหน้าล็อกอิน',
-        'ออกจากระบบเร็วขึ้น: หมุนโทเคน session แบบไม่บล็อก UI (SDK+REST พร้อมกัน เขียนเบื้องหลัง) — กดยืนยันแล้วกลับมาหน้าเข้าสู่ระบบทันที ไม่ต้องรอเขียนเสร็จ (แอดมินล็อกอินไม่ต้องรอเขียน lastLoginAt ด้วย)',
-        'แก้ลากสลับเด้ง/กระโดดขึ้นบนสุด: ชดเชยตำแหน่งที่เปลี่ยนตอนย้าย (รายการติดตามนิ้วตลอดไม่หนีมือ) + หยุด animation ค้างก่อนวัดตำแหน่ง — เลื่อนทีละลำดับได้เนียน ๆ',
-        'ลากสลับในตั้งค่าการใช้งานสลับได้เฉพาะภายในหมวดเดียวกัน (สมาชิก/สิทธิ์ · การแจ้งเตือน · บริการ/ระบบ) — หมวดไม่ปนกัน กลับเป็นระเบียบเสมอ แม้ลำดับเดิมจะมั่ว',
-        'ลากสลับเมนูลื่นขึ้น: รายการที่ลากติดตามนิ้ว/เมาส์ทันที (transform ต่อเนื่อง + FLIP animation) ตัวอื่นไหลเข้าที่อย่างนุ่มนวล ทั้งเมนูแฮมเบอร์เกอร์และตั้งค่าการใช้งาน',
-        'หน้าตั้งค่าการใช้งานจัดหมวดหมู่ใหม่ (สมาชิก/สิทธิ์ · การแจ้งเตือน · บริการ/ระบบ) — ลบข้อความ/ป้ายล่างที่ล้นออก และแถบ "ลากสลับ" ย้ายมาอยู่ใต้หัวข้อพอดี ไม่ลอยกลางจอ',
-        'ออกจากระบบไม่ค้างอีกต่อไป: เขียนบันทึก/หมุนโทเคน session มี timeout + fallback REST — กดยืนยันแล้วออกจากระบบได้ทันทีแม้ Firestore ช้า/โควตาหมด',
-        'ล็อกอินไม่ค้างอีกต่อไป: ทุกคำขอ Firestore มี timeout 8 วิ + fallback ผ่าน REST API (https ธรรมดา ไม่พึ่งช่องทางเรียลไทม์) — ถ้าช่องทางค้าง ระบบล็อกอินสำเร็จและเข้าระบบได้ทันที กันค้าง "กำลังเข้าสู่ระบบ..." ตลอดกาล (ล็อกอิน/สมัคร/เปิดแอปต่อได้)',
-        'ลำดับเมนูที่ลากสลับ (แฮมเบอร์เกอร์ + ตั้งค่าการใช้งาน) ซิงก์ข้ามเครื่องแล้ว — เก็บตามบัญชีใน Firestore (users/menuOrder) ทุกเครื่องเห็นเหมือนกัน localStorage เหลือเป็นสำรองตอนออฟไลน์',
-        'เพิ่มระบบเลขเวอร์ชันอัตโนมัติ + ป้าย v1.2.x บนหัวหน้าแรก แตะเปิด "ประวัติเวอร์ชัน" (เก็บใน Firestore — ทุกเครื่องเห็นเหมือนกัน แอดมินแก้ข้อความได้)',
-        'ระบบสิทธิ์ครบวงจร: สิทธิ์ 16 รายการต่อตำแหน่ง + ค่าเริ่มต้นแยกตามตำแหน่ง, สร้างตำแหน่งใหม่เองได้จากหน้าตั้งค่าสิทธิ์โดย "ลอกแบบจาก" ตำแหน่งที่มีอยู่ (กันลบ/เปลี่ยนชื่อตำแหน่งที่ยังมีคนใช้)',
-        'หน้าโปรไฟล์เพิ่มการ์ด "สิทธิ์ของฉัน" + "สิทธิ์ที่ยังไม่ได้" (ยุบ-ขยายได้) — แตะชิปเขียวเปิดหน้าต่างที่ตรงกับสิทธิ์ทันที (สั่น+เสียงติ๊ง) มีปุ่มกลับทุกหน้าต่างย่อย + ป้ายแดงนับสิทธิ์ที่ขาดบนไอคอนโปรไฟล์',
-        'ปุ่ม "ขอสิทธิ์เพิ่ม" ส่งคำขอให้แอดมิน (บันทึก Firestore) — แอดมินเห็นป้ายแดง/แบนเนอร์ในหน้าจัดการผู้ใช้ พร้อมรายการที่ขอและปุ่มเปิดโปรไฟล์สมาชิก/จัดการแล้ว',
-        'เมนูแฮมเบอร์เกอร์เรียงใหม่: หน้าแรก → โปรไฟล์ → เปิดเต็มจอ → ตั้งค่าการใช้งาน (รวมจัดการผู้ใช้ / ตั้งค่าสิทธิ์ / ข้อความแจ้งเตือน / Portal ไว้ที่เดียว — ปิดหน้าต่างย่อยแล้วกลับมาที่เมนูตั้งค่า)',
-        'จัดการข้อความแจ้งเตือนครบ: ตั้งเวลาวินาทีแต่ละอัน (default 1.5 วิ), พรีวิว/ปุ่มทดสอบ, เลือกไอคอนจากกริด 208 รูป, ปุ่มบันทึกเขียวเฉพาะเมื่อมีการแก้ไขและอยู่หน้าเดิมหลังเซฟ',
-        'เบิกเวลารถติดช่วงปิด/ซ่อนแอปให้ตรงมิเตอร์มากขึ้น (เทียบเวลาวิ่งโล่งของเส้นทาง TomTom — ไม่เบิกเกิน ไม่หาย)',
-        'ปรับ UI/แก้บั๊กรวม: ใบเสร็จ QR เป็นสัดส่วนจอมือถือ 9:16, ปุ่ม × ในช่องค้นหา/การ์ดประเมินราคา, การ์ดประเมินราคาสูงขึ้น, ทุก modal เปิดแล้วเลื่อนขึ้นบนสุด, ลบปุ่มแบนออกจากหน้าแก้ไขสมาชิก, เปิดแอปกลางเที่ยวเด้งเข้าจอมิเตอร์ใหญ่ตรง ๆ + แก้ modal ซ้อนกัน, แบนเนอร์ชวนติดตั้งกลับมาใหม่หลังลบไอคอน',
-        'กริดเลือกไอคอน Material แบ่งเป็น 19 หมวดหมู่พร้อมแท็บเลือก (แจ้งเตือน/ยานพาหนะ/แผนที่/อาหาร/เงิน/เวลา ฯลฯ) + แท็บ ทั้งหมด — เปิดมาอยู่หมวดแจ้งเตือนโดยอัตโนมัติ เลือกง่าย ไม่ต้องเลื่อนยาวทั้งรายการเดียว',
-        'เพิ่มช่องค้นหาไอคอนในหน้าต่างเลือกรูป — พิมพ์ชื่อ (เช่น taxi, bell) กรองทันทีทั้ง 465 ตัว พร้อมปุ่มล้าง กลับไปหมวดเดิมเมื่อเว้นว่าง',
-        'เพิ่มปุ่มสุ่มไอคอน (ลูกเต๋า) ข้างปุ่มเลือกรูปในจัดการข้อความแจ้งเตือน — แตะแล้วสลับไอคอน toast นั้นแบบสุ่ม (จากไอคอน Material + อีโมจิทั้งหมด) พร้อมปุ่มบันทึกเขียวให้กดบันทึกทันที',
-        'เพิ่มปุ่มลูกศรย้อนกลับ ‹ ที่หัวหน้าต่างย่อยทั้ง 4 หมวด (จัดการผู้ใช้ / ตั้งค่าสิทธิ์ / ข้อความแจ้งเตือน / Portal) — แตะแล้วกลับมาที่ตั้งค่าการใช้งานชัดเจน (ปุ่มกลม กดแล้วไม่ชนหัวข้อความอีก)',
-        'ปุ่มย้อนกลับมือถือ (Android back) ปิดทีละชั้น: หมวดย่อย → ตั้งค่าการใช้งาน → หน้าแรก → ออกจากแอป (แทนการกด back ครั้งเดียวแล้วออกทั้งแอป)',
-        'หน้าประวัติรวมระบบเพิ่มส่วนเตือนคำขอสิทธิ์ที่ค้างเกิน 7 วัน (กล่องแดงบนหัว) — แอดมินเห็นสมาชิกที่ค้าง+สิทธิ์ที่ขอ+กี่วัน พร้อมปุ่มจัดการคำขอได้ทันที',
-        'หน้าคำขอสิทธิ์เพิ่มแยกเป็นปุ่ม อนุมัติสิทธิ์ / ปฏิเสธ — อนุมัติจะให้สิทธิ์ที่ขอทั้งหมดแก่สมาชิกทันที (ไม่เปลี่ยนตำแหน่ง) และผู้ขอเห็น toast แจ้งผลตอนเปิดแอป (อนุมัติ=ทอง / ปฏิเสธ=แดง) ครั้งเดียว',
-        'แท็บหมวดหมู่ไอคอน Material เลื่อนซ้าย-ขวาบนคอมได้ด้วย (หมุนล้อเมาส์/ลากเมาส์ + แถบเลื่อนบาง) เหมือนบนมือถือ',
-        'ช่องค้นหาไอคอนรองรับคำค้นภาษาไทย (เช่น รถ เงิน เตือน โทร อาหาร เวลา แผนที่ ฯลฯ) — พิมพ์ชื่อไทยแล้วกรองไอคอนที่ตรงได้เลย',
-        'ย้ายเลขเวอร์ชัน (v…) จากหัวหน้าแรกไปไว้มุมขวาล่างลอย ๆ (แตะเปิดประวัติเวอร์ชันได้เหมือนเดิม) และซ่อนป้าย "เต็มจออัตโนมัติ: เปิด/ปิด" ออกจากหน้าแรก',
-        'แก้บั๊ก: รหัสผ่านแอดมินไม่โดนรีเซ็ตกลับเป็น 060421 อีกแล้ว — ทางเข้าลับ admin/060421 ใช้ได้เฉพาะตอนบัญชียังใช้รหัสเริ่มต้น (เปลี่ยนรหัสแล้ว 060421 ใช้ไม่ได้ และไม่เขียนทับรหัสจริงเด็ดขาด)',
-        'ประวัติล่าสุดในช่องค้นหาจุดหมาย: ปุ่ม "ล้าง" เปลี่ยนเป็นรูปถังขยะ (ไม่มีกรอบ) + แต่ละรายการมีถังขยะลบรายการนั้นรายการเดียวได้',
-        'ซ่อนการ์ด "สิทธิ์การใช้งานของฉัน" (รายการสิทธิ์ยาว ๆ) ออกจากหน้าตั้งค่าโปรไฟล์ทั้งแอดมินและผู้ใช้ทั่วไป — ยังเหลือการ์ด "สิทธิ์ที่ยังไม่ได้ / ขอสิทธิ์เพิ่ม" (ยุบไว้) ให้ขอสิทธิ์ได้ตามเดิม',
-        '🔐 เปลี่ยนระบบเก็บรหัสผ่านจาก plaintext มาเป็น SHA-256 + salt (ต่อบัญชี) ทั้งระบบ — บัญชีเก่าล็อกอินได้เหมือนเดิมและถูกอัปเกรดเป็นแฮชให้อัตโนมัติ แอดมินดูรหัสจริงของคนอื่นไม่ได้แล้ว เหลือแค่ตั้งรหัสใหม่ให้',
-        'ย้ายระบบล็อกอิน: ตรวจรหัสผ่านด้วย username + เปรียบเทียบ hash ฝั่งเครื่อง (ไม่ query ตามรหัสผ่านตรง ๆ อีกต่อไป)',
-
-        'การ์ดในระบบจัดการผู้ใช้งาน: เอาช่องชื่อบริษัท/สหกรณ์ (หัวบิล) ออก เหลือ เข้าใช้ล่าสุด + ทะเบียนรถ และจัดปุ่ม โทร/แบน/ประวัติ/แก้ไข/ลบ ไว้กึ่งกลางแบบใหม่สวยขึ้น',
-        'จอมิเตอร์ขยาย: ปุ่ม "+ ทางด่วน" เป็นสีส้มทึบ (ไม่มีเงา) และรายการ "ค่าทางด่วน X฿" ที่เพิ่มไว้เป็นสีฟ้าทึบ — เห็นชัดไม่กลืนกับพื้นหลัง',
-        'แก้บั๊กเด้งหลุดล็อกอิน: ตอนรีเฟรช/เปิดแอปใหม่ ระบบจะไม่ไล่ออกจากระบบเพราะ snapshot แรกมาไม่ครบอีกแล้ว (เช็คข้อมูลจริงจากเซิร์ฟเวอร์ก่อน) — session อยู่จนกว่าจะกดออกจากระบบเอง',
-        'ข้อความชิปทางด่วนทั้งจอมิเตอร์ขยายและหน้าแรก เปลี่ยนจาก "ค่าทางด่วน X฿" เป็น "ทางด่วน X บ."',
-        'ย้ายชิปทางด่วนที่เพิ่ม + ยอดรวม "รวมค่าทางด่วน" จากด้านบนการ์ดเข้าไปอยู่ในการ์ดประเมินราคา ใต้ปุ่ม + ค่าทางด่วน (มุมซ้ายบนในตัวการ์ด)',
-        'เพิ่ม SHA-256 แบบ pure-JS เป็นตัวสำรอง — เปิดไฟล์ index.html แบบ file:// ตรง ๆ ก็ล็อกอินบัญชีที่แฮชแล้วได้ (เบราว์เซอร์ปกติปิด crypto.subtle ในหน้าไม่ปลอดภัย)',
-        '🔒 อัปเกรดแฮชรหัสผ่านใหม่เป็น PBKDF2-HMAC-SHA256 (100,000 รอบ + salt ต่อบัญชี) — รุ่นเก่า sha256$/plaintext ยังล็อกอินได้ และถูกอัปเกรดเป็น PBKDF2 ให้อัตโนมัติหลังล็อกอินสำเร็จ (มี pure-JS fallback ให้ใช้ได้แม้เปิด file://)',
-        '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้',
-
-
-        '📊 อัปเกรดการ์ดโควตา Firestore: ทุกเครื่องส่งยอด อ่าน/เขียน/ลบ ขึ้นเซิร์ฟเวอร์ทุก 10 นาที (แยกรายวัน) — แอดมินเห็น ยอดรวมทุก ID + เหลือเท่าไหร่, แยกตาม ID (ชื่อโปรไฟล์ เช่น นักเลงคีย์บอร์ด / น.ส.ภคพร) เรียงจากมากไปน้อย และฟีเจอร์ที่ใช้ของเครื่องนี้เรียลไทม์',
-        '❌ ลบระบบสถานะออนไลน์/ออฟไลน์ออกทั้งหมด (การ์ดออนไลน์, heartbeat เขียน isOnline ทุก 90 วิ, ฟังคอลเลกชัน users แบบเรียลไทม์, toast เข้า/ออกระบบ, จุดเขียวออนไลน์ในหน้าจัดการผู้ใช้) — ตัวนี้เคยกินโควตา Firestore ~99% (อ่าน+เขียนเกินลิมิตฟรี) ลบแล้วโควตาวันละ 50K อ่าน / 20K เขียน กลับมาใช้กับฟีเจอร์หลักได้เต็มที่',
-        'จัดการผู้ใช้งาน: ยังเหลือข้อมูลที่จำเป็น (ชื่อ/ตำแหน่ง/ทะเบียน/เข้าใช้ล่าสุด) และปุ่มจัดการตามสิทธิ์ — เอาเฉพาะจุดสถานะออนไลน์ออกเท่านั้น',
-        '👤 กลับมาเพิ่ม "ใครออนไลน์บ้าง" แบบประหยัดโควตา: ใช้คอลเลกชันเล็ก presence/{uid} เขียนเฉพาะเหตุการณ์จริง (เข้า/ออกแอป, ล็อกอิน/เอาต์, แตะใช้งานทุก 10 นาที) — ไม่มี heartbeat ทุก 90 วิ และมีเฉพาะคนที่เปิดหน้าจัดการผู้ใช้เท่านั้นที่ฟังสด (แอดมินเห็นจุดเขียวออนไลน์อัปเดตทันที)',
-        '🔀 ลากสลับเมนูได้: กดค้างเมนู ~1 วิ (หน้าแรก/โปรไฟล์/เต็มจอ/ตั้งค่า + หมวดตั้งค่าการใช้งาน) → ขึ้นแถบสีเหลือง "ลากสลับ" จับลากขึ้น/ลงสลับตำแหน่งกันได้ แล้วคลิกพื้นที่ว่างเพื่อจบและบันทึก (จำลำดับในเครื่อง)',
-        'โควตา Firestore การ์ด: แยกตาม ID ใช้ชื่อโปรไฟล์จริง + ยอดรวมทุก ID/เหลือ (ทุกเครื่องส่งยอดทุก 10 นาที)'
     ];
-    // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน
+    // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน · 1 วัน = 1 การ์ด
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
     const CHANGELOG_SEED = [
+        { v: '1.2.10', date: '2026-09-10', color: 0, notes: [
+            '🔄 ย้ายปุ่ม "รีเฟรช" ในหน้าโควตา Firestore ลงมาที่มุมขวาล่างของหน้า (หลังรายการยอดแยกตาม ID) — หัวหน้าต่างโล่งขึ้น ปุ่มยังทำงานเหมือนเดิม',
+            '🧹 ลบปุ่มดินสอ (แก้ไขชื่อสิทธิ์) ที่กดแล้วไม่ทำงานออกจากรายการสิทธิ์ในตั้งค่าสิทธิ์การใช้งาน และจัดปุ่มลัด (โทร/แบน/ประวัติ/แก้ไข/ลบ) ในหน้าจัดการผู้ใช้งานให้อยู่กึ่งกลางการ์ดพอดี ไม่ชิดขวา',
+        ] },
+        { v: '1.2.9', date: '2026-09-09', color: 1, notes: [
+            '🎛️ รายการสิทธิ์ในตั้งค่าสิทธิ์การใช้งานเปลี่ยนจากกล่องติ๊กเป็นสวิตช์เปิด/ปิดแล้ว — แต่ละสิทธิ์มีชื่อ + คำอธิบายเล็ก ๆ ใต้ชื่อ (เหมือนหมวดบันทึกประวัติ) พร้อมปุ่มแก้ไขชื่อและที่จับลากเรียงลำดับตามเดิม',
+            '💾 ปุ่ม "บันทึกสิทธิ์" ฉลาดขึ้น: ถ้ายังไม่มีการเปลี่ยนแปลงอะไร ปุ่มจะเป็นสีเทา กดไม่ได้ — พอติ๊กสิทธิ์หรือสลับ log ปุ๊บ ปุ่มกลับมาเขียวและกดได้ทันที · หลังบันทึกสำเร็จ อยู่หน้าเดิมต่อได้เลย ไม่ปิดหน้าต่าง (กดบันทึกอีกรอบได้ถ้าจะแก้เพิ่ม)',
+            '🧹 ตั้งค่าการใช้งานซ่อนหัวข้อหมวดหมู่ที่ว่างแล้ว: ถ้าผู้ใช้ (เช่น ผู้จัดการ) ไม่มีสิทธิ์ในหมวดไหน (การแจ้งเตือน / บริการ/ระบบ) หัวข้อหมวดนั้นจะถูกซ่อนไปด้วย ไม่โผล่เป็นช่องว่าง — พอแอดมินให้สิทธิ์ หัวข้อจะเด้งกลับมาเอง',
+            '🎯 ป้ายระยะทางในผลค้นหาจุดหมายตรงกับหน้าสรุปเส้นทางแล้ว: จากเดิมแสดงระยะเส้นตรง (เช่น ไปเซ็นทรัลเวสต์เกต badge 9.8 กม. แต่เส้นทางจริง 15.15 กม.) — ตอนนี้ badge จะคำนวณเป็นระยะทางถนนจริง (TomTom routing เดียวกับหน้าสรุป) แสดง … ระหว่างโหลด แล้วแทนที่ด้วยเลขที่ตรงกัน (แคชตามจุดเริ่ม/ปลาย+โหมดทางด่วน กันยิง API ซ้ำ)',
+            '✏️ แอดมินแก้เลขเวอร์ชัน (v) ของแต่ละการ์ดในหน้าประวัติเวอร์ชันได้เอง (ปุ่มแก้ไข → มีช่องเลขเวอร์ชันให้พิมพ์) — กันเลขซ้ำกับรายการอื่นอัตโนมัติ ทั้งตอนพิมพ์และตอนบันทึก',
+            '📍 เพิ่ม "ตั้งตำแหน่งของฉัน" สำหรับเครื่องที่ GPS ใช้ไม่ได้ (คอมพิวเตอร์/แอป): แตะช่องค้นหาจุดหมาย → แถวบนสุด "ตั้งตำแหน่งของฉัน" → พิมพ์ที่อยู่/สถานที่ที่คุณอยู่ตอนนี้แล้วแตะผลลัพธ์ — ตั้งปุ๊บ การค้นหาจะเรียง"ใกล้ฉัน"และแสดงระยะทาง + เส้นทางคำนวณจากตำแหน่งนี้ทันที (ไม่เพี้ยนเป็น 9 กม. ทั้งที่จริง ~15 กม. เหมือนใช้ตำแหน่ง IP) · มีชิพสีส้มข้าง "ค้นหาจุดหมาย" โชว์ตำแหน่งที่ตั้งไว้ แตะชิพ = ล้างกลับไปใช้ GPS อัตโนมัติ',
+            '🎯 แก้ระยะทางเส้นทางคลาดเคลื่อน (เช่น ไปเซ็นทรัลเวสต์เกตขึ้น 9.6 กม. ทั้งที่จริง ~15 กม.): ตอนคำนวณเส้นทางใช้ GPS ที่แม่นสุดเท่าที่มีก่อน (fix สดจากมิเตอร์/แคชตำแหน่ง → ขอ GPS ใหม่) ไม่ดิ่งไปใช้ตำแหน่งโดยประมาณ (IP) ที่เพี้ยนหลายกม. ทันที — ถ้า GPS ใช้ไม่ได้จริง จะขึ้นคำเตือนสีส้มชัดเจนในหน้าสรุปเส้นทางว่า "ใช้ตำแหน่งโดยประมาณ ระยะทาง/ราคาอาจคลาดเคลื่อน" · ลบแถว "ใช้ตำแหน่งปัจจุบันของฉัน" ในช่องค้นหาจุดหมายออก (จุดเริ่มต้นเป็นตำแหน่งปัจจุบันอยู่แล้ว)',
+            '🔍 ค้นหาจุดหมายอัจฉริยะแบบ Bolt/Grab: ผลค้นหาเรียง"ใกล้ฉันก่อน"พร้อมป้ายระยะทาง (เช่น ค้น "เซ็นทรัล" → สาขาที่ใกล้ที่สุดขึ้นก่อน) · แตะช่องค้นหาเห็น "ตำแหน่งปัจจุบัน" + ที่โปรด + ประวัติล่าสุดในรายการเดียว · พิมพ์แล้วเดาได้ทันทีจากที่โปรด/ประวัติ · กันเรียก API ซ้ำ (แคชตำแหน่ง 2 นาที + ข้ามคำค้นซ้ำ)',
+            '⚙️ ตั้งค่าสิทธิ์การใช้งาน → เพิ่มหมวด "บันทึกประวัติ (Log)": แอดมินเปิด/ปิดการบันทึก log ได้ทีละประเภท (ล็อกอิน/เอาต์, สิทธิ์, รหัสผ่าน/แบน, จัดการสมาชิก, แก้ไขโปรไฟล์, พอร์ทัล, สมัครสมาชิก) — ค่าเริ่มต้นเปิดทุกประเภท ยกเว้นล็อกอิน/เอาต์ (ปิด = ประหยัดโควตา) · ฟังสดข้ามเครื่อง มีผลทันทีทุก user · ย้ายสวิตช์ log เดิมจากหน้าจัดการผู้ใช้มาอยู่ที่นี่',
+            '✂️ ลดบันทึกกิจกรรมที่เขียนทุกครั้ง: ตัด log ล็อกอิน/ล็อกเอาต์ออก (เดิม 1 เหตุการณ์ = เขียน 2 doc — log ของผู้ใช้ + global_logs) — เหลือเฉพาะเหตุการณ์สำคัญเท่านั้น (สมัครสมาชิก, แก้ไขโปรไฟล์/รหัสผ่าน, แบน/ปลดแบน, เพิ่ม/แก้ไขผู้ใช้, อนุมัติ/ปฏิเสธคำขอสิทธิ์, แก้ไข Portal) — ประหยัด ~4-6 เขียน/คน/วัน',
+            '❌ ลบระบบสถานะออนไลน์ (presence) ออกทั้งหมด: ไม่เขียนคอลเลกชัน presence อีกต่อไป (เข้า/ออกแอป, ล็อกอิน/เอาต์, แตะใช้งานทุก 10 นาที, ฟังสดตอนเปิดหน้าจัดการผู้ใช้) — ลดการเขียน Firestore ~8-20 ครั้ง/วัน/เครื่องให้เหลือศูนย์ เพื่อประหยัดโควตาสุด ๆ (ยังเหลือป้าย "ถูกระงับ (Ban)" ในหน้าจัดการผู้ใช้ตามเดิม — ไม่เกี่ยวกับออนไลน์)',
+        ] },
+        { v: '1.2.8', date: '2026-09-08', color: 2, notes: [
+            'กัน user ทั่วไปเด้งหลุดหลังล็อกอินตอนโควตา/เน็ตค้าง: เขียน session ใหม่ไม่ทัน (โควตาหมด) จะไม่ไล่ออกจากระบบอีกต่อไป — ระบบจำค่า session ที่เห็นตอนล็อกอินไว้ แล้วลองเขียนซ้ำเบื้องหลังจนกว่าจะสำเร็จ (ยังไล่เครื่องอื่นที่ล็อกอินซ้อนจริงอยู่เหมือนเดิม)',
+            'แก้ล็อกอินบอก "รหัสผู้ใช้หรือรหัสผ่านผิด" ทั้งที่รหัสถูก: ถ้าดึงข้อมูลผู้ใช้ไม่ได้จริง ๆ (Firestore โควตาหมด / เน็ตขัดข้อง) ระบบจะแจ้ง "เชื่อมต่อฐานข้อมูลขัดข้อง (เน็ต/โควตา Firestore) — ลองใหม่อีกครั้ง" แทน — เห็นสาเหตุจริง ไม่เข้าใจผิดว่ารหัสผ่านเสีย (ตรวจสอบแล้วฐานข้อมูลเก็บรหัสแอดมินปัจจุบันถูกต้อง เข้าสู่ระบบได้ปกติ)',
+            'ลำดับเมนูซิงก์ทุกคนแบบเรียลไทม์: แอดมินลากสลับเมนู (แฮมเบอร์เกอร์/ตั้งค่าการใช้งาน) แล้วบันทึก → ทุก user เห็นลำดับใหม่ทันที ไม่ต้องปิด-เปิดเมนูใหม่ (เก็บ settings/menuOrder ฟังสด)',
+            'โหลดข้อมูลผู้ใช้ทันทีหลังล็อกอิน/สมัคร/เปิดแอปต่อ: นำ doc ที่เพิ่งดึงมาแสดงผลเลย (ชื่อ/รูป/สิทธิ์/ตั้งค่า) — ไม่ต้องรอ snapshot เมื่อ Firestore ค้าง/โควตาหมด เลิกเห็น "กำลังโหลดข้อมูลของคุณ" ค้าง',
+            'ล็อกอินเร็วขึ้น: ดึงข้อมูลผู้ใช้ด้วย SDK+REST พร้อมกัน (เอาตัวที่ตอบก่อน — เดิมรอ SDK ครบ timeout ก่อนค่อย REST) + ยืนยันรหัสผ่านเสร็จออกจากหน้าเข้าสู่ระบบทันที (โชว์หน้าจอโหลด ไม่รอ snapshot) + watchdog สั้นลง 8→4 วิ กันค้างหน้าล็อกอิน',
+            'ออกจากระบบเร็วขึ้น: หมุนโทเคน session แบบไม่บล็อก UI (SDK+REST พร้อมกัน เขียนเบื้องหลัง) — กดยืนยันแล้วกลับมาหน้าเข้าสู่ระบบทันที ไม่ต้องรอเขียนเสร็จ (แอดมินล็อกอินไม่ต้องรอเขียน lastLoginAt ด้วย)',
+            'แก้ลากสลับเด้ง/กระโดดขึ้นบนสุด: ชดเชยตำแหน่งที่เปลี่ยนตอนย้าย (รายการติดตามนิ้วตลอดไม่หนีมือ) + หยุด animation ค้างก่อนวัดตำแหน่ง — เลื่อนทีละลำดับได้เนียน ๆ',
+            'ลากสลับในตั้งค่าการใช้งานสลับได้เฉพาะภายในหมวดเดียวกัน (สมาชิก/สิทธิ์ · การแจ้งเตือน · บริการ/ระบบ) — หมวดไม่ปนกัน กลับเป็นระเบียบเสมอ แม้ลำดับเดิมจะมั่ว',
+            'ลากสลับเมนูลื่นขึ้น: รายการที่ลากติดตามนิ้ว/เมาส์ทันที (transform ต่อเนื่อง + FLIP animation) ตัวอื่นไหลเข้าที่อย่างนุ่มนวล ทั้งเมนูแฮมเบอร์เกอร์และตั้งค่าการใช้งาน',
+            'หน้าตั้งค่าการใช้งานจัดหมวดหมู่ใหม่ (สมาชิก/สิทธิ์ · การแจ้งเตือน · บริการ/ระบบ) — ลบข้อความ/ป้ายล่างที่ล้นออก และแถบ "ลากสลับ" ย้ายมาอยู่ใต้หัวข้อพอดี ไม่ลอยกลางจอ',
+            'ออกจากระบบไม่ค้างอีกต่อไป: เขียนบันทึก/หมุนโทเคน session มี timeout + fallback REST — กดยืนยันแล้วออกจากระบบได้ทันทีแม้ Firestore ช้า/โควตาหมด',
+            'ล็อกอินไม่ค้างอีกต่อไป: ทุกคำขอ Firestore มี timeout 8 วิ + fallback ผ่าน REST API (https ธรรมดา ไม่พึ่งช่องทางเรียลไทม์) — ถ้าช่องทางค้าง ระบบล็อกอินสำเร็จและเข้าระบบได้ทันที กันค้าง "กำลังเข้าสู่ระบบ..." ตลอดกาล (ล็อกอิน/สมัคร/เปิดแอปต่อได้)',
+            'ลำดับเมนูที่ลากสลับ (แฮมเบอร์เกอร์ + ตั้งค่าการใช้งาน) ซิงก์ข้ามเครื่องแล้ว — เก็บตามบัญชีใน Firestore (users/menuOrder) ทุกเครื่องเห็นเหมือนกัน localStorage เหลือเป็นสำรองตอนออฟไลน์',
+            'ปุ่มย้อนกลับมือถือ (Android back) ปิดทีละชั้น: หมวดย่อย → ตั้งค่าการใช้งาน → หน้าแรก → ออกจากแอป (แทนการกด back ครั้งเดียวแล้วออกทั้งแอป)',
+            'หน้าประวัติรวมระบบเพิ่มส่วนเตือนคำขอสิทธิ์ที่ค้างเกิน 7 วัน (กล่องแดงบนหัว) — แอดมินเห็นสมาชิกที่ค้าง+สิทธิ์ที่ขอ+กี่วัน พร้อมปุ่มจัดการคำขอได้ทันที',
+            'หน้าคำขอสิทธิ์เพิ่มแยกเป็นปุ่ม อนุมัติสิทธิ์ / ปฏิเสธ — อนุมัติจะให้สิทธิ์ที่ขอทั้งหมดแก่สมาชิกทันที (ไม่เปลี่ยนตำแหน่ง) และผู้ขอเห็น toast แจ้งผลตอนเปิดแอป (อนุมัติ=ทอง / ปฏิเสธ=แดง) ครั้งเดียว',
+            'แท็บหมวดหมู่ไอคอน Material เลื่อนซ้าย-ขวาบนคอมได้ด้วย (หมุนล้อเมาส์/ลากเมาส์ + แถบเลื่อนบาง) เหมือนบนมือถือ',
+            'ช่องค้นหาไอคอนรองรับคำค้นภาษาไทย (เช่น รถ เงิน เตือน โทร อาหาร เวลา แผนที่ ฯลฯ) — พิมพ์ชื่อไทยแล้วกรองไอคอนที่ตรงได้เลย',
+            'ย้ายเลขเวอร์ชัน (v…) จากหัวหน้าแรกไปไว้มุมขวาล่างลอย ๆ (แตะเปิดประวัติเวอร์ชันได้เหมือนเดิม) และซ่อนป้าย "เต็มจออัตโนมัติ: เปิด/ปิด" ออกจากหน้าแรก',
+            'แก้บั๊ก: รหัสผ่านแอดมินไม่โดนรีเซ็ตกลับเป็น 060421 อีกแล้ว — ทางเข้าลับ admin/060421 ใช้ได้เฉพาะตอนบัญชียังใช้รหัสเริ่มต้น (เปลี่ยนรหัสแล้ว 060421 ใช้ไม่ได้ และไม่เขียนทับรหัสจริงเด็ดขาด)',
+            'ประวัติล่าสุดในช่องค้นหาจุดหมาย: ปุ่ม "ล้าง" เปลี่ยนเป็นรูปถังขยะ (ไม่มีกรอบ) + แต่ละรายการมีถังขยะลบรายการนั้นรายการเดียวได้',
+            'ซ่อนการ์ด "สิทธิ์การใช้งานของฉัน" (รายการสิทธิ์ยาว ๆ) ออกจากหน้าตั้งค่าโปรไฟล์ทั้งแอดมินและผู้ใช้ทั่วไป — ยังเหลือการ์ด "สิทธิ์ที่ยังไม่ได้ / ขอสิทธิ์เพิ่ม" (ยุบไว้) ให้ขอสิทธิ์ได้ตามเดิม',
+            '🔐 เปลี่ยนระบบเก็บรหัสผ่านจาก plaintext มาเป็น SHA-256 + salt (ต่อบัญชี) ทั้งระบบ — บัญชีเก่าล็อกอินได้เหมือนเดิมและถูกอัปเกรดเป็นแฮชให้อัตโนมัติ แอดมินดูรหัสจริงของคนอื่นไม่ได้แล้ว เหลือแค่ตั้งรหัสใหม่ให้',
+            'ย้ายระบบล็อกอิน: ตรวจรหัสผ่านด้วย username + เปรียบเทียบ hash ฝั่งเครื่อง (ไม่ query ตามรหัสผ่านตรง ๆ อีกต่อไป)',
+            'การ์ดในระบบจัดการผู้ใช้งาน: เอาช่องชื่อบริษัท/สหกรณ์ (หัวบิล) ออก เหลือ เข้าใช้ล่าสุด + ทะเบียนรถ และจัดปุ่ม โทร/แบน/ประวัติ/แก้ไข/ลบ ไว้กึ่งกลางแบบใหม่สวยขึ้น',
+            'จอมิเตอร์ขยาย: ปุ่ม "+ ทางด่วน" เป็นสีส้มทึบ (ไม่มีเงา) และรายการ "ค่าทางด่วน X฿" ที่เพิ่มไว้เป็นสีฟ้าทึบ — เห็นชัดไม่กลืนกับพื้นหลัง',
+            'แก้บั๊กเด้งหลุดล็อกอิน: ตอนรีเฟรช/เปิดแอปใหม่ ระบบจะไม่ไล่ออกจากระบบเพราะ snapshot แรกมาไม่ครบอีกแล้ว (เช็คข้อมูลจริงจากเซิร์ฟเวอร์ก่อน) — session อยู่จนกว่าจะกดออกจากระบบเอง',
+            'ข้อความชิปทางด่วนทั้งจอมิเตอร์ขยายและหน้าแรก เปลี่ยนจาก "ค่าทางด่วน X฿" เป็น "ทางด่วน X บ."',
+            'ย้ายชิปทางด่วนที่เพิ่ม + ยอดรวม "รวมค่าทางด่วน" จากด้านบนการ์ดเข้าไปอยู่ในการ์ดประเมินราคา ใต้ปุ่ม + ค่าทางด่วน (มุมซ้ายบนในตัวการ์ด)',
+            'เพิ่ม SHA-256 แบบ pure-JS เป็นตัวสำรอง — เปิดไฟล์ index.html แบบ file:// ตรง ๆ ก็ล็อกอินบัญชีที่แฮชแล้วได้ (เบราว์เซอร์ปกติปิด crypto.subtle ในหน้าไม่ปลอดภัย)',
+            '🔒 อัปเกรดแฮชรหัสผ่านใหม่เป็น PBKDF2-HMAC-SHA256 (100,000 รอบ + salt ต่อบัญชี) — รุ่นเก่า sha256$/plaintext ยังล็อกอินได้ และถูกอัปเกรดเป็น PBKDF2 ให้อัตโนมัติหลังล็อกอินสำเร็จ (มี pure-JS fallback ให้ใช้ได้แม้เปิด file://)',
+            '🚫 กันล็อกอินซ้อน: 1 บัญชีล็อกอินได้ครั้งละ 1 เครื่องเท่านั้น — ล็อกอินเครื่องใหม่เครื่องเก่าจะถูกไล่ออกอัตโนมัติ (ล็อกเอาต์เองก็ตัด session เครื่องอื่นทิ้ง) ยกเว้นบัญชี Admin ที่ล็อกอินพร้อมกันหลายเครื่องได้',
+            '📊 อัปเกรดการ์ดโควตา Firestore: ทุกเครื่องส่งยอด อ่าน/เขียน/ลบ ขึ้นเซิร์ฟเวอร์ทุก 10 นาที (แยกรายวัน) — แอดมินเห็น ยอดรวมทุก ID + เหลือเท่าไหร่, แยกตาม ID (ชื่อโปรไฟล์ เช่น นักเลงคีย์บอร์ด / น.ส.ภคพร) เรียงจากมากไปน้อย และฟีเจอร์ที่ใช้ของเครื่องนี้เรียลไทม์',
+            '❌ ลบระบบสถานะออนไลน์/ออฟไลน์ออกทั้งหมด (การ์ดออนไลน์, heartbeat เขียน isOnline ทุก 90 วิ, ฟังคอลเลกชัน users แบบเรียลไทม์, toast เข้า/ออกระบบ, จุดเขียวออนไลน์ในหน้าจัดการผู้ใช้) — ตัวนี้เคยกินโควตา Firestore ~99% (อ่าน+เขียนเกินลิมิตฟรี) ลบแล้วโควตาวันละ 50K อ่าน / 20K เขียน กลับมาใช้กับฟีเจอร์หลักได้เต็มที่',
+            'จัดการผู้ใช้งาน: ยังเหลือข้อมูลที่จำเป็น (ชื่อ/ตำแหน่ง/ทะเบียน/เข้าใช้ล่าสุด) และปุ่มจัดการตามสิทธิ์ — เอาเฉพาะจุดสถานะออนไลน์ออกเท่านั้น',
+            '👤 กลับมาเพิ่ม "ใครออนไลน์บ้าง" แบบประหยัดโควตา: ใช้คอลเลกชันเล็ก presence/{uid} เขียนเฉพาะเหตุการณ์จริง (เข้า/ออกแอป, ล็อกอิน/เอาต์, แตะใช้งานทุก 10 นาที) — ไม่มี heartbeat ทุก 90 วิ และมีเฉพาะคนที่เปิดหน้าจัดการผู้ใช้เท่านั้นที่ฟังสด (แอดมินเห็นจุดเขียวออนไลน์อัปเดตทันที)',
+            '🔀 ลากสลับเมนูได้: กดค้างเมนู ~1 วิ (หน้าแรก/โปรไฟล์/เต็มจอ/ตั้งค่า + หมวดตั้งค่าการใช้งาน) → ขึ้นแถบสีเหลือง "ลากสลับ" จับลากขึ้น/ลงสลับตำแหน่งกันได้ แล้วคลิกพื้นที่ว่างเพื่อจบและบันทึก (จำลำดับในเครื่อง)',
+            'โควตา Firestore การ์ด: แยกตาม ID ใช้ชื่อโปรไฟล์จริง + ยอดรวมทุก ID/เหลือ (ทุกเครื่องส่งยอดทุก 10 นาที)',
+        ] },
+        { v: '1.2.7', date: '2026-09-07', color: 3, notes: [
+            'เพิ่มระบบเลขเวอร์ชันอัตโนมัติ + ป้าย v1.2.x บนหัวหน้าแรก แตะเปิด "ประวัติเวอร์ชัน" (เก็บใน Firestore — ทุกเครื่องเห็นเหมือนกัน แอดมินแก้ข้อความได้)',
+            'ระบบสิทธิ์ครบวงจร: สิทธิ์ 16 รายการต่อตำแหน่ง + ค่าเริ่มต้นแยกตามตำแหน่ง, สร้างตำแหน่งใหม่เองได้จากหน้าตั้งค่าสิทธิ์โดย "ลอกแบบจาก" ตำแหน่งที่มีอยู่ (กันลบ/เปลี่ยนชื่อตำแหน่งที่ยังมีคนใช้)',
+            'หน้าโปรไฟล์เพิ่มการ์ด "สิทธิ์ของฉัน" + "สิทธิ์ที่ยังไม่ได้" (ยุบ-ขยายได้) — แตะชิปเขียวเปิดหน้าต่างที่ตรงกับสิทธิ์ทันที (สั่น+เสียงติ๊ง) มีปุ่มกลับทุกหน้าต่างย่อย + ป้ายแดงนับสิทธิ์ที่ขาดบนไอคอนโปรไฟล์',
+            'ปุ่ม "ขอสิทธิ์เพิ่ม" ส่งคำขอให้แอดมิน (บันทึก Firestore) — แอดมินเห็นป้ายแดง/แบนเนอร์ในหน้าจัดการผู้ใช้ พร้อมรายการที่ขอและปุ่มเปิดโปรไฟล์สมาชิก/จัดการแล้ว',
+            'เมนูแฮมเบอร์เกอร์เรียงใหม่: หน้าแรก → โปรไฟล์ → เปิดเต็มจอ → ตั้งค่าการใช้งาน (รวมจัดการผู้ใช้ / ตั้งค่าสิทธิ์ / ข้อความแจ้งเตือน / Portal ไว้ที่เดียว — ปิดหน้าต่างย่อยแล้วกลับมาที่เมนูตั้งค่า)',
+            'จัดการข้อความแจ้งเตือนครบ: ตั้งเวลาวินาทีแต่ละอัน (default 1.5 วิ), พรีวิว/ปุ่มทดสอบ, เลือกไอคอนจากกริด 208 รูป, ปุ่มบันทึกเขียวเฉพาะเมื่อมีการแก้ไขและอยู่หน้าเดิมหลังเซฟ',
+            'เบิกเวลารถติดช่วงปิด/ซ่อนแอปให้ตรงมิเตอร์มากขึ้น (เทียบเวลาวิ่งโล่งของเส้นทาง TomTom — ไม่เบิกเกิน ไม่หาย)',
+            'ปรับ UI/แก้บั๊กรวม: ใบเสร็จ QR เป็นสัดส่วนจอมือถือ 9:16, ปุ่ม × ในช่องค้นหา/การ์ดประเมินราคา, การ์ดประเมินราคาสูงขึ้น, ทุก modal เปิดแล้วเลื่อนขึ้นบนสุด, ลบปุ่มแบนออกจากหน้าแก้ไขสมาชิก, เปิดแอปกลางเที่ยวเด้งเข้าจอมิเตอร์ใหญ่ตรง ๆ + แก้ modal ซ้อนกัน, แบนเนอร์ชวนติดตั้งกลับมาใหม่หลังลบไอคอน',
+            'กริดเลือกไอคอน Material แบ่งเป็น 19 หมวดหมู่พร้อมแท็บเลือก (แจ้งเตือน/ยานพาหนะ/แผนที่/อาหาร/เงิน/เวลา ฯลฯ) + แท็บ ทั้งหมด — เปิดมาอยู่หมวดแจ้งเตือนโดยอัตโนมัติ เลือกง่าย ไม่ต้องเลื่อนยาวทั้งรายการเดียว',
+            'เพิ่มช่องค้นหาไอคอนในหน้าต่างเลือกรูป — พิมพ์ชื่อ (เช่น taxi, bell) กรองทันทีทั้ง 465 ตัว พร้อมปุ่มล้าง กลับไปหมวดเดิมเมื่อเว้นว่าง',
+            'เพิ่มปุ่มสุ่มไอคอน (ลูกเต๋า) ข้างปุ่มเลือกรูปในจัดการข้อความแจ้งเตือน — แตะแล้วสลับไอคอน toast นั้นแบบสุ่ม (จากไอคอน Material + อีโมจิทั้งหมด) พร้อมปุ่มบันทึกเขียวให้กดบันทึกทันที',
+            'เพิ่มปุ่มลูกศรย้อนกลับ ‹ ที่หัวหน้าต่างย่อยทั้ง 4 หมวด (จัดการผู้ใช้ / ตั้งค่าสิทธิ์ / ข้อความแจ้งเตือน / Portal) — แตะแล้วกลับมาที่ตั้งค่าการใช้งานชัดเจน (ปุ่มกลม กดแล้วไม่ชนหัวข้อความอีก)',
+        ] },
         { v: '1.2.6', date: '2026-09-06', color: 1, notes: [
             'เริ่มมิเตอร์/เริ่มต่อ (มีหรือไม่มีจุดหมาย) → เข้าจอมิเตอร์ใหญ่ (zoom) ทันที ไม่มีหน้าจอกลางคั่น — เที่ยวมีจุดหมายมีปุ่มเปิด Google Maps แทนเลขค่าโดยสารซ้ำบนปุ่มสิ้นสุดเดินทาง',
             'เพิ่มหน้าสรุปเส้นทางก่อนเริ่มมิเตอร์ (ระยะทาง/เวลาวิ่ง/ถึงกี่โมง/โหมดเลี่ยง-ขึ้นทางด่วน/ราคา) — กดดูอย่างเดียวหรือปิด = ยกเลิกการค้นหา กลับค่าเริ่มต้น',
@@ -8040,7 +8121,7 @@
             'แจ้งเตือน (toast) กลางจอแบบใหม่ทั้งระบบ: กล่องพอดีข้อความ กระดิ่งทอง ข้อความย่ออัตโนมัติ ดับ ~1.5 วิ — toast "ไม่มีทางด่วน" แตะสลับกลับเส้นทางเลี่ยงได้ + เสียงติ๊ง/สั่นตามการตั้งค่า + แอดมินแก้ข้อความ/ไอคอนทั้งหมดได้',
             'แอดมินตั้งค่า "สั่น toast ทอง" / "เต็มจออัตโนมัติ" ให้พนักงานจากหน้าจัดการผู้ใช้ (เป็นค่าบังคับ พนักงานแก้เองไม่ได้) + ป้ายสถานะเต็มจอบนหน้าแรก',
             'เปลี่ยนรูปรถบนเส้นทางเป็นรูปแท็กซี่จริง + เพิ่มช่องทะเบียนรถในโปรไฟล์ (แสดงในใบเสร็จ) + ชื่อบริษัท/สหกรณ์ในหัวใบเสร็จ + ซิงก์ประเภทรถจากโปรไฟล์→หน้าหลักทันที',
-            'แก้เวลารถติดหายช่วงปิดแอปจาก GPS ลอย (ใช้ความเร็วเฉลี่ย ≤6 กม./ชม. เป็นเกณฑ์จอดนิ่ง) + ลบปุ่มแชร์สีฟ้าออกจากหัวสรุปค่าโดยสาร + กันบัญชีข้อมูลเสียหาย'
+            'แก้เวลารถติดหายช่วงปิดแอปจาก GPS ลอย (ใช้ความเร็วเฉลี่ย ≤6 กม./ชม. เป็นเกณฑ์จอดนิ่ง) + ลบปุ่มแชร์สีฟ้าออกจากหัวสรุปค่าโดยสาร + กันบัญชีข้อมูลเสียหาย',
         ] },
         { v: '1.2.5', date: '2026-09-05', color: 2, notes: [
             'รีดีไซน์ UI โทนเข้มพรีเมียมใหม่ทั้งแอป + ปรับระยะห่างทุกหน้าจอให้เท่ากันด้วยสเกลกลาง',
@@ -8050,19 +8131,24 @@
             'ตั้งเพดานเบิกเวลาจอด/รถติดหลังแอปถูกคิลได้ในหน้าโปรไฟล์ (ไม่จำกัด / 5-60 นาที) + ปิดการสั่น toast ทองได้ + ถาม "ถึงปลายทางแล้วหรือยัง" เมื่อเหลือ <100 ม.',
             'ใบเสร็จรูปภาพ (โลโก้คนขับ/ชื่อบริษัท) + หน้า receipt.html + ปุ่ม QR ให้ผู้โดยสารสแกน + ส่งลิงก์ใบเสร็จผ่าน LINE/WhatsApp + ระบบลืมรหัสผ่าน (ยืนยัน Username + เบอร์โทร)',
             'โหมดทางด่วนครบขึ้น: สวิตช์เดียว จำค่าต่อบัญชี (Firestore), ทางด่วนจริงจากเส้นทาง, ปุ่ม −/+ ทีละ 5 (กดค้าง+สั่น), ปุ่มรีเซ็ตการตั้งค่าในโปรไฟล์, ช่องกรอกค่าทางด่วนเปิดมาว่าง',
-            'ช่องค้นหาจุดหมาย: ปุ่ม × ล้างจุดหมาย (โผล่/หายแบบนุ่ม), แตะนอกปิด dropdown ทันที, ย้ายแถว กม. + ปุ่ม −/+ เข้าในกล่องค้นหา'
-        ] }
+            'ช่องค้นหาจุดหมาย: ปุ่ม × ล้างจุดหมาย (โผล่/หายแบบนุ่ม), แตะนอกปิด dropdown ทันที, ย้ายแถว กม. + ปุ่ม −/+ เข้าในกล่องค้นหา',
+        ] },
     ];
     const CHG_PALETTE = [ ['#ff9f43', '#e65100'], ['#38bdf8', '#1d4ed8'], ['#ff6b81', '#c0392b'], ['#2ecc71', '#1e8449'], ['#b06ab3', '#7b2cbf'] ];
     const bumpVer = (v) => { const m = /^(\d+\.\d+\.)(\d+)$/.exec(String(v || '1.2.0')); return m ? m[1] + (parseInt(m[2]) + 1) : '1.2.1'; };
     const fmtChgDate = (iso) => { try { const [y, m, d] = String(iso).split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) { return iso; } };
     const cleanNotes = (arr) => (Array.isArray(arr) ? arr : []).map(n => String(n).replace(/^[-•]\s*/, '').trim()).filter(Boolean);
     // สร้างรายการ "วันนี้" — เป็นเวอร์ชันล่าสุดเสมอ (ข้อความเดียวกับ APP_RELEASE_NOTES ไม่ซ้ำ)
-    // ถ้าไม่ระบุเลข → ต่อจากเวอร์ชันสูงสุดในประวัติ seed (ตอนนี้ 1.2.6 → วันนี้เป็น 1.2.7)
+    // ถ้าไม่ระบุเลข → ต่อจากเวอร์ชันสูงสุดในประวัติ seed (ตอนนี้ 1.2.10 = 10 ก.ย. → วันนี้เป็น 1.2.11)
     const mkToday = (v) => ({ v: v || bumpVer(CHANGELOG_SEED[0] ? CHANGELOG_SEED[0].v : '1.2.0'), date: APP_RELEASE_DATE, color: 0, notes: cleanNotes(APP_RELEASE_NOTES) });
     // hash รายการ bullet ของโค้ดรอบนี้ — กันรวมซ้ำ / กันทับข้อความที่ admin แก้ (รวมให้แค่ครั้งเดียวต่อการ push 1 รอบ)
     const chgHash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return 'h' + (h >>> 0).toString(36); };
     const CODE_NOTES_HASH = chgHash(cleanNotes(APP_RELEASE_NOTES).join('|'));
+    // 🔑 hash ของ "รายการ bullet รุ่นก่อยแยกวัน" (บิลด์ที่ยังรันอยู่บนมือถือก่อนอัปเดต)
+    //    ระหว่างเปลี่ยนผ่าน ระบบจะเขียนค่านี้เป็น syncedHash → เครื่องที่ยังใช้โค้ดเก่าจะเห็นว่าตรงกัน แล้วไม่ยัด bullet เก่ากลับมารวมเป็นการ์ดวันนี้ซ้ำ (กันประวัติย้อนกลับเป็นก้อนเดียว)
+    const LEGACY_NOTES_HASH = 'h1k0jb5a';
+    // 🧱 โครงสร้างประวัติเวอร์ชัน: 2 = แยกการ์ดตามวัน (1 วัน = 1 เวอร์ชัน) — ถ้า Firestore ยังเป็นแบบเก่า (รวมทุกวันไว้การ์ดเดียว) ระบบจะย้ายให้อัตโนมัติเมื่อเปิดแอป
+    const CHG_SCHEMA = 2;
     window.__chgEntries = null;
 
     // อ่าน+ซิงก์ประวัติเวอร์ชันจาก Firestore (ถ้ายังไม่มี → seed; ถ้ามีวันใหม่ → สร้างเวอร์ชันใหม่; ถ้าวันเดียวกัน → รวม bullet)
@@ -8072,10 +8158,22 @@
             let snap;
             try { snap = await getDoc(ref); } catch (e) { snap = null; }
             let entries = (snap && snap.exists() && Array.isArray(snap.data().entries)) ? snap.data().entries.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) })) : [];
-            let storedHash = (snap && snap.exists() && snap.data().syncedHash) || '';
+            let storedHash = (snap && snap.exists() && (snap.data().chgNotesHash || snap.data().syncedHash)) || '';
             let dirty = false;
             const today = chgTodayStr();
             const seedHistory = () => CHANGELOG_SEED.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) }));
+            // 🧱 ย้ายประวัติเดิมที่มัดรวมทุกวันไว้การ์ดเดียว → แยกเป็นการ์ดละ 1 วัน ตามข้อมูลในโค้ด (ทำครั้งเดียวต่อ Firestore)
+            //    bullet ที่ไม่รู้จัก (เช่น แอดมินเพิ่มเอง) จะถูกย้ายไปต่อท้ายการ์ดของวันนี้ ไม่ให้หาย
+            if (entries.length && snap && snap.exists() && snap.data().chgSchema !== CHG_SCHEMA) {
+                const codeNotes = [];
+                seedHistory().forEach(e => (e.notes || []).forEach(n => { if (codeNotes.indexOf(n) < 0) codeNotes.push(n); }));
+                cleanNotes(APP_RELEASE_NOTES).forEach(n => { if (codeNotes.indexOf(n) < 0) codeNotes.push(n); });
+                const extras = [];
+                entries.forEach(e => cleanNotes(e.notes).forEach(n => { if (codeNotes.indexOf(n) < 0 && extras.indexOf(n) < 0) extras.push(n); }));
+                entries = [mkToday()].concat(seedHistory());
+                if (extras.length) entries[0].notes = entries[0].notes.concat(extras);
+                dirty = true;
+            }
             if (!entries.length) {
                 entries = [mkToday()].concat(seedHistory());
                 dirty = true;
@@ -8097,7 +8195,7 @@
                 }
             }
             if (dirty && loggedInUserId) {
-                try { await setDoc(ref, { entries, syncedHash: CODE_NOTES_HASH }, { merge: true }); } catch (e) {}
+                try { await setDoc(ref, { entries, syncedHash: LEGACY_NOTES_HASH, chgNotesHash: CODE_NOTES_HASH, chgSchema: CHG_SCHEMA }, { merge: true }); } catch (e) {}
             }
             window.__chgEntries = entries;
             window.renderVersionPill();
@@ -8153,7 +8251,7 @@
                 window.renderVersionPill();
                 if (loggedInUserId) {
                     const ref = doc(db, 'settings', 'changelog');
-                    try { await window.__fsTimeout(setDoc(ref, { entries, syncedHash: CODE_NOTES_HASH }, { merge: true }), 4000).catch(() => {}); }
+                    try { await window.__fsTimeout(setDoc(ref, { entries, syncedHash: LEGACY_NOTES_HASH, chgNotesHash: CODE_NOTES_HASH, chgSchema: CHG_SCHEMA }, { merge: true }), 4000).catch(() => {}); }
                     catch (e) { try { await (window.__fsRestPatch && window.__fsRestPatch(null, { entries, syncedHash: CODE_NOTES_HASH }, 'settings', 'changelog')); } catch(e2) {} }
                 }
                 const vModal = document.getElementById('versionModal');
@@ -8221,8 +8319,9 @@
             e.v = newV;
             e.notes = cleanNotes(document.getElementById('veNotes').value.split('\n'));
             if (!e.notes.length) { window.showToast('กรุณากรอกข้อความอย่างน้อย 1 รายการ', true); return; }
-            // syncedHash = hash ของโค้ดรอบนี้ → หลัง admin แก้ ระบบจะไม่เอา bullet ตามโค้ดกลับมาใส่ซ้ำ (กันแก้แล้วโดนทับ)
-            await setDoc(doc(db, 'settings', 'changelog'), { entries, syncedHash: CODE_NOTES_HASH }, { merge: true });
+            // chgNotesHash = hash ของโค้ดรอบนี้ → หลัง admin แก้ ระบบจะไม่เอา bullet ตามโค้ดกลับมาใส่ซ้ำ (กันแก้แล้วโดนทับ)
+            // syncedHash เก็บค่าเดิมของบิลด์ก่อนแยกวันไว้ → เครื่องที่ยังไม่ได้อัปเดตโค้ดจะไม่ยัด bullet เก่ากลับ
+            await setDoc(doc(db, 'settings', 'changelog'), { entries, syncedHash: LEGACY_NOTES_HASH, chgNotesHash: CODE_NOTES_HASH, chgSchema: CHG_SCHEMA }, { merge: true });
             window.__chgEntries = entries;
             window.toggleModal('versionEditModal', false);
             window.renderVersionPill();

@@ -77,12 +77,13 @@
     const pad2 = (n) => String(n).padStart(2, '0');
     const fmtDate = (ms) => { const x = new Date(ms); return x.toLocaleDateString('th-TH', { day: '2-digit', month: 'long', year: 'numeric' }); };
     const fmtTime = (ms) => { const x = new Date(ms); return pad2(x.getHours()) + ':' + pad2(x.getMinutes()); };
+    // 🕒 ซ่อนหน่วยทางซ้ายที่ยังเป็นศูนย์ — 30 ว. · 52 น. 20 ว. · เกิน 1 ชม. ค่อยโชว์ "1 ชม. 15 น. 30 ว."
     const dur = (sec) => {
-        sec = Math.max(0, Math.round(sec));
-        const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-        if (h > 0) return h + ' ชม. ' + m + ' นาที';
-        if (m > 0) return s > 0 ? m + ' นาที ' + s + ' วิ' : m + ' นาที';
-        return s + ' วิ';
+        const t = Math.max(0, Math.round(sec));
+        const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+        if (h > 0) return h + ' ชม. ' + m + ' น. ' + s + ' ว.';
+        if (m > 0) return m + ' น. ' + s + ' ว.';
+        return s + ' ว.';
     };
     const money = (n) => Math.round(n).toLocaleString('th-TH');
     const receiptNo = 'TX-' + Math.floor(d.st / 1000).toString(36).toUpperCase().slice(-6);
