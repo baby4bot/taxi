@@ -129,9 +129,10 @@
 
         .gradient-title-text { background: linear-gradient(135deg, #ffd54f 0%, #ffb300 45%, #ff9800 100%); -webkit-background-clip: text; background-clip: text; color: transparent !important; text-shadow: 0 2px 12px rgba(255,183,77,0.22); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); font-weight: 800; }
 
-        .toll-way-pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px 5px 12px; border-radius: 99px; background: rgba(52,152,219,0.18); color: #93c5fd; border: 1px solid rgba(52,152,219,0.55); font-size: 12.5px; font-weight: 600; box-shadow: 0 2px 7px rgba(52,152,219,0.18); cursor: default; }
-        .toll-way-pill .pill-x { background: rgba(255,255,255,0.08); border: none; color: #fca5a5; border-radius: 99px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px !important; flex-shrink: 0; transition: 0.18s; }
-        .toll-way-pill .pill-x:hover, .toll-way-pill .pill-x:active { background: rgba(239,68,68,0.35); color: #fff; transform: scale(0.9); }
+        /* 💰 ชิปค่าทางด่วนแต่ละรายการ — ปุ่มสีฟ้าทึบ ตัวอักษรสีขาว อ่านเต็ม "ค่าทางด่วน 15 บาท" (ไม่มีไอคอนนำหน้า) + ปุ่มลบสีแดง X ขาว */
+        .toll-way-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 6px 3px 10px; border-radius: 99px; background: linear-gradient(135deg, #2f80ed, #1b5fd0); color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 11.5px; font-weight: 600; box-shadow: 0 2px 8px rgba(27,95,208,0.35); cursor: default; } /* ย่อจาก 32px → 25px ให้กระชับ */
+        .toll-way-pill .pill-x { background: #ef4444; border: none; color: #fff; border-radius: 99px; width: 17px; height: 17px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12.5px !important; line-height: 1; flex-shrink: 0; transition: 0.18s; box-shadow: 0 1px 4px rgba(0,0,0,0.35); }
+        .toll-way-pill .pill-x:hover, .toll-way-pill .pill-x:active { background: #dc2626; color: #fff; transform: scale(0.9); }
 
         .taxi-chip-normal { background: linear-gradient(135deg, #ffca28, #ffa000); color: #1a1200; border: 2px solid #ffffff; box-shadow: 0 2px 8px rgba(255,160,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35); }
         .taxi-chip-van { background: linear-gradient(135deg, #ff8a65, #e64a19); color: #fff; border: 2px solid #ffffff; box-shadow: 0 2px 8px rgba(230,74,25,0.45), inset 0 1px 0 rgba(255,255,255,0.25); }
@@ -504,7 +505,8 @@
             align-items: center;
             justify-content: center;
         }
-        .tz-fare-card { position: relative; background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 25px; padding: 35px 15px; text-align: center; box-shadow: 0 12px 28px rgba(46, 204, 113, 0.36); margin-bottom: var(--space-zoom); }
+        /* 📏 การ์ดค่าโดยสารจอมิเตอร์ขยาย — บังคับความสูงให้เท่ากับการ์ดประเมินราคาหน้าแรก (232 content + 14*2 padding = 260px ด้านนอก) แล้วจัดเนื้อหากลางการ์ด */
+        .tz-fare-card { position: relative; box-sizing: border-box; min-height: 260px; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 25px; padding: 35px 15px; text-align: center; box-shadow: 0 12px 28px rgba(46, 204, 113, 0.36); margin-bottom: var(--space-zoom); }
         .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 20px; font-weight: 500; margin-bottom: 5px; }
         .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 10px; }
         #tzMeterPrice { font-size: 140px; font-weight: 800; color: white; line-height: 0.88; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
@@ -928,7 +930,13 @@
             padding: 6px 13px; border-radius: 20px;
             font-size: 13px; font-weight: 600; line-height: 1;
             white-space: nowrap;
+            /* ปุ่มเหลืองเข้มทึบ ตัวอักษรสีขาว (เดิมเป็นกรอบเหลืองโปร่ง) */
+            background: linear-gradient(135deg, #d9a300, #b07c00);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.25);
+            box-shadow: 0 4px 12px rgba(176,124,0,0.45);
         }
+        #fareTollBtn:active { background: linear-gradient(135deg, #c49200, #9a6b00); transform: scale(0.96); }
         #fareTollBtn .material-symbols-outlined { font-size: 16px; }
 
         /* 💰 รายการทางด่วนแต่ละอัน — มุมบนซ้าย ใต้ปุ่ม + ค่าทางด่วน (เรียงทีละแถวลงมา, ไม่ต่อกันเป็นแถวยาว) */
@@ -944,14 +952,13 @@
             display: flex;
             flex-direction: column;   /* เรียงแต่ละรายการลงทีละแถว (ไม่ต่อเป็นแถวเดียว) */
             justify-content: flex-start;
-            align-items: stretch;
+            align-items: flex-start;  /* ชิปหดพอดีข้อความ ไม่ยืดเต็มความกว้าง */
             gap: 5px;
             width: 100%; max-width: 100%;
         }
         #fareTollArea .surcharge-list-container .toll-way-pill {
-            width: 100%; /* แต่ละอันเต็มความกว้างแถว */
+            width: auto; max-width: 100%; /* หดพอดีกับข้อความ (เดิมยืดเต็มแถว) */
             box-sizing: border-box;
-            justify-content: space-between; /* ชิดซ้ายชื่อ, ชิดขวาปุ่มลบ */
         }
         /* 💰 Badge รวมค่าทางด่วน — อยู่ตรงกลางล่างสุดของการ์ด (ใต้ progress bar) */
         #totalTollBadge {
@@ -1462,6 +1469,8 @@
             .tz-pause-btn { top: 8px; right: 8px; width: 34px; height: 34px; box-shadow: none !important; }
             .tz-pause-btn .material-symbols-outlined { font-size: 18px; }
             .tz-toll-list { top: 36px; left: 10px; }
+            /* การ์ดค่าโดยสารจอมิเตอร์ขยาย — สูงเท่ากับการ์ดประเมินราคาหน้าแรกบนจอแคบ (186 content + 6 + 4 padding = 196px) */
+            .tz-fare-card { min-height: 196px; }
             .tz-est-fare { font-size: 13px; right: 12px; bottom: 10px; }
             #fareResetBtn { top: 4px; right: 6px; width: 22px; height: 22px; }
             #fareResetBtn .material-symbols-outlined { font-size: 14px; }
@@ -5660,7 +5669,7 @@
         if(window.surchargeList.length > 0) {
             let html = '';
             window.surchargeList.forEach(item => { 
-                html += `<div class="toll-way-pill"><span>🛣️ ${item.name === 'ค่าทางด่วน' ? 'ทางด่วน' : item.name} ${item.amount} ฿</span><button class="pill-x" onclick="window.removeSurcharge(${item.id})" aria-label="ลบ">×</button></div>`; 
+                html += `<div class="toll-way-pill"><span>${item.name === 'ค่าทางด่วน' ? 'ค่าทางด่วน' : item.name} ${item.amount} บาท</span><button class="pill-x" onclick="window.removeSurcharge(${item.id})" aria-label="ลบ">×</button></div>`; 
                 if(item.name === 'ค่าทางด่วน') totalToll += item.amount;
             });
             container.innerHTML = html; container.style.display = 'flex';
@@ -5686,7 +5695,7 @@
         if (!box) return;
         if (window.surchargeList.length > 0) {
             box.innerHTML = window.surchargeList.map(item =>
-                `<div class="toll-way-pill" style="margin:3px 0;"><span>🛣️ ${item.name === 'ค่าทางด่วน' ? 'ทางด่วน' : item.name} ${item.amount} ฿</span><button class="pill-x" onclick="window.removeSurcharge(${item.id})" aria-label="ลบ">×</button></div>`
+                `<div class="toll-way-pill" style="margin:3px 0;"><span>${item.name === 'ค่าทางด่วน' ? 'ค่าทางด่วน' : item.name} ${item.amount} บาท</span><button class="pill-x" onclick="window.removeSurcharge(${item.id})" aria-label="ลบ">×</button></div>`
             ).join('');
             box.style.display = 'flex';
         } else {
@@ -8019,8 +8028,13 @@
     const chgTodayBuildStamp = () => chgTodayStr() + chgBuildSuffix();
     // ✅ อัปเดต APP_BUILD หลังจากฟังก์ชันถูกประกาศเสร็จ (แก้ Temporal Dead Zone — อ้างก่อนประกาศ)
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
-    const APP_RELEASE_DATE = '2026-09-11'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
-    const APP_RELEASE_NOTES = [ // สิ่งที่เปลี่ยนในรอบนี้ (push เพิ่มในวันเดียวกัน → เติม bullet เพิ่มตรงนี้ ระบบจะรวมให้)
+    const APP_RELEASE_DATE = '2026-09-12'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
+    const APP_RELEASE_NOTES = [ // bullet ของ "วันที่ใน APP_RELEASE_DATE" เท่านั้น - เพิ่มได้เรื่อย ๆ ในวันเดียวกัน (วันใหม่ให้ตั้ง APP_RELEASE_DATE เป็นวันนั้น แล้วย้าย bullet วันเก่าไปไว้ใน CHANGELOG_SEED)
+        '🟦 ชิปค่าทางด่วนบนการ์ดมิเตอร์ขยาย: ตัดไอคอน 🛣️ ด้านหน้าออก อ่านเต็มว่า "ค่าทางด่วน 15 บาท" และย่อปุ่มให้กระชับ (สูง 32 → 25px · ปุ่ม ✕ 20 → 17px)',
+        '📏 การ์ดค่าโดยสารจอมิเตอร์ขยายสูงเท่ากับการ์ดประเมินราคาหน้าแรกแล้ว (260px เท่ากัน · จอแคบ ≤380px เป็น 196px ตามกัน) — ตัวเลขค่าโดยสารอยู่กลางการ์ดพอดี ไม่ดูเล็กจิ๋วอีก',
+        '💰 ชิปค่าทางด่วนหน้าการ์ดเรท: เป็นปุ่มสีฟ้าทึบ ตัวอักษรสีขาว และตัดเครื่องหมาย ฿ ออกจากตัวเลข — ชิปหดพอดีกับข้อความ (เดิมยืดเต็มความกว้างการ์ด)',
+        '🧱 ปุ่ม "✕" ลบรายการทางด่วนเปลี่ยนเป็นปุ่มสีแดงทึบ เครื่องหมาย X สีขาว — เห็นชัด กดง่าย',
+        '🟡 ปุ่ม "＋ ค่าทางด่วน" มุมบนซ้ายเปลี่ยนจากกรอบเหลืองโปร่ง เป็นปุ่มเหลืองเข้มทึบ ตัวอักษรสีขาว ให้เด่นและตัดกับชิปสีฟ้าด้านล่าง',
         '🕒 เวลาซ่อนหน่วยที่ยังเป็นศูนย์ (อ่านสั้นลง): ยังไม่ถึงนาที → "30 ว." · ยังไม่ถึงชั่วโมง → "52 น. 20 ว." (ไม่โชว์ชั่วโมง) · เกิน 1 ชม. ค่อยโชว์ "1 ชม. 15 น. 30 ว." — ใช้พร้อมกันทั้งเวลาวิ่ง, ปุ่ม "สิ้นสุดเดินทาง", หน้าสรุปค่าโดยสาร, ใบเสร็จ และช่องรถติด (3:28 → 1:15:30 เมื่อเกินชั่วโมง)',
         '🏷️ ป้ายช่องรถติดขยับตามค่าจริง — ยังไม่ถึงชั่วโมงโชว์ "รถติด (น.:ว.)" · เกินชั่วโมงค่อยเปลี่ยนเป็น "(ชม.:น.:ว.)" ให้ตรงกับตัวเลขที่เห็น',
         '📐 จัดป้าย วิ่งแล้ว / รถติด / เหลือ ให้อยู่บรรทัดเดียวกันเป๊ะ — ล็อกความสูงกล่องตัวเลขทุกคอลัมน์ให้เท่ากันด้วยตัวแปรเดียว (เดิมช่องรถติดสูงกว่าเพื่อน 4px → ป้ายเยื้องขึ้นลงไม่เท่ากัน)',
@@ -8042,6 +8056,28 @@
     // ประวัติเริ่มต้น (ถ้า Firestore ยังว่าง/พึ่งเริ่มใช้ระบบนี้) — เรียงใหม่สุดก่อน · 1 วัน = 1 การ์ด
     // หมายเหตุ: ไม่รวม "วันนี้" ไว้ตรงนี้ — รายการของวันนี้สร้างจาก APP_RELEASE_NOTES ใน mkToday() เสมอ (กันข้อความซ้ำ 2 ชุด)
     const CHANGELOG_SEED = [
+        { v: '1.2.11', date: '2026-09-11', color: 1, notes: [
+            '🕒 เวลาซ่อนหน่วยที่ยังเป็นศูนย์ (อ่านสั้นลง): ยังไม่ถึงนาที → "30 ว." · ยังไม่ถึงชั่วโมง → "52 น. 20 ว." (ไม่โชว์ชั่วโมง) · เกิน 1 ชม. ค่อยโชว์ "1 ชม. 15 น. 30 ว." — ใช้พร้อมกันทั้งเวลาวิ่ง, ปุ่ม "สิ้นสุดเดินทาง", หน้าสรุปค่าโดยสาร, ใบเสร็จ และช่องรถติด (3:28 → 1:15:30 เมื่อเกินชั่วโมง)',
+            '🏷️ ป้ายช่องรถติดขยับตามค่าจริง — ยังไม่ถึงชั่วโมงโชว์ "รถติด (น.:ว.)" · เกินชั่วโมงค่อยเปลี่ยนเป็น "(ชม.:น.:ว.)" ให้ตรงกับตัวเลขที่เห็น',
+            '📐 จัดป้าย วิ่งแล้ว / รถติด / เหลือ ให้อยู่บรรทัดเดียวกันเป๊ะ — ล็อกความสูงกล่องตัวเลขทุกคอลัมน์ให้เท่ากันด้วยตัวแปรเดียว (เดิมช่องรถติดสูงกว่าเพื่อน 4px → ป้ายเยื้องขึ้นลงไม่เท่ากัน)',
+            '📤 ปุ่มแชร์ลอยมุมล่างซ้าย: ย่อขนาดลง (48 → 40px) ให้สมดุลกับแถบล่าง (โลโก้/เครดิต + ป้ายเวอร์ชัน) · เมนูกางขึ้นด้านบนเหนือปุ่มแทนที่จะทะลุขอบล่างจอ · สลับปุ่ม "สแกน QR Code" ขึ้นบนสุดตามลำดับใหม่ (QR → Messenger → LINE → TrueMoney → Copy)',
+            '👆 ปุ่มแชร์: แตะที่ว่างตรงไหนก็ยุบเมนูได้ (ไม่ต้องกดปุ่มแชร์ซ้ำ) · เลือกเมนูแล้วยุบเอง · เปิดค้างไว้ 5 วินาที ยุบอัตโนมัติ',
+            '📱 แบนเนอร์ "ติดตั้งแอปเต็มจอ": จัดหัวข้อ "ติดตั้งแอป “เต็มจอ” ไว้ใช้ประจำไหม?" ให้อยู่บรรทัดเดียว (ย้ายหัวข้อขึ้นเป็นบรรทัดเต็มความกว้างของแบนเนอร์ + ตัด emoji 📱 ที่ซ้ำกับไอคอนทองด้านซ้ายออก) — เดิมตัดเป็น 2 บรรทัด "ไว้ใช้ / ประจำไหม?"',
+            '🕒 เวลามิเตอร์อ่านครบ 3 ช่อง (ชม./น./ว.): ช่อง "รถติด" แสดงแบบนาฬิกา 0:19:22 + เปลี่ยนป้ายเป็น (ชม.:น.:ว.) — เดิมโชว์ 19:22 อ่านไม่ออกว่าเกิน 1 ชม. หรือยัง',
+            '🧾 เวลาวิ่ง/เวลาจอด ที่หัวจอมิเตอร์ ปุ่ม "สิ้นสุดเดินทาง" หน้าสรุปค่าโดยสาร และใบเสร็จ แสดง "0 ชม. 19 น. 22 ว." ครบทุกช่องด้วยตัวเลข (เดิมเป็น "455 นาที" อ่านแล้วไม่รู้ว่ากี่ชั่วโมง)',
+            '🏷️ แยกประวัติเวอร์ชันเป็นรายวัน: 1 วันที่มีการแก้ไข = 1 เวอร์ชันของตัวเอง (1.2.7 = 7 ก.ย. · 1.2.8 = 8 ก.ย. · 1.2.9 = 9 ก.ย. · 1.2.10 = 10 ก.ย. · 1.2.11 = 11 ก.ย.) แทนการมัดรวมทุกอย่างไว้การ์ดเดียว — ประวัติเดิมที่รวมอยู่ใน Firestore จะถูกย้ายแยกเป็นการ์ดรายวันให้อัตโนมัติเมื่อเปิดแอปครั้งถัดไป',
+            '🧭 แก้ระยะทาง/เวลารถติดเพี้ยนหลังปิด ย่อ หรือรีเฟรชแอป: จด "ฐานหลักฐาน" ณ วินาทีที่แอปถูกซ่อน/ปิด (กม. + เวลารถติด + ตำแหน่ง) แล้วเบิกคืนจากฐานนั้น — ระยะทางที่วิ่งจริงไม่หาย และเวลารถติดไม่บวม (จริง 2:15 ต้องไม่กลายเป็น 7:31)',
+            '⏸️ รถวิ่งช่วงที่แอปซ่อน/ปิด: ระบบถอนเวลาจอดที่ ticker นับไว้ผิดออกให้อัตโนมัติ แล้วคิดเฉพาะเวลารถติดจริงของช่วงนั้นจากเส้นทาง GPS',
+            '🔁 กันเบิกคืนซ้ำซ้อน: บันทึกกุญแจ "ช่วงปิดที่เบิกแล้ว" ลงในเที่ยว → เปิดแอปใหม่/รีเฟรชกี่ครั้งก็เบิกช่วงเดิมครั้งเดียว',
+            '🧪 เทสต์อัตโนมัติเบิกคืน 15 สถานการณ์ ผ่านครบ + static server ไม่ค้างรอ connection',
+            '⚡ เริ่มต่อเที่ยวค้างอัตโนมัติ: เปิดแอปแล้วเจอเที่ยวที่ยังไม่สิ้นสุด → มิเตอร์เดินต่อ + เปิดจอมิเตอร์ใหญ่ให้ทันที (ไม่ต้องกด "เริ่มต่อ") พร้อมเสียงเตือน 2 จังหวะ + สั่น 2 ครั้ง + toast "เริ่มต่ออัตโนมัติแล้ว 🚕 (เที่ยวเดิม)" ให้คนขับรู้ตัวว่าแอปเริ่มมิเตอร์เอง',
+            '⚙️ เพิ่มสวิตช์ "เริ่มต่อเที่ยวค้างอัตโนมัติ" ในหน้าโปรไฟล์ (ค่าเริ่มต้นเปิด, บันทึกต่อบัญชี — ใช้ค่าซิงก์ข้ามเครื่องได้) — ปิดแล้วกลับไปโชว์แบนเนอร์ "เริ่มต่อ" ให้กดเองเหมือนเดิม',
+            '🧹 แก้เริ่มมิเตอร์เที่ยวใหม่ยังค้างสถานที่/เส้นทาง/รถจากเที่ยวเก่า: ล้างข้อมูลจุดหมายเก่าทุกชั้น (window.destLoc + ตัวแปรสำรอง) ตอนจบเที่ยว — เที่ยวธรรมดาใหม่จะไม่มีแถบจุดหมาย/เส้นทาง/รถหลงเหลือ',
+            '🐛 แก้กดเริ่มมิเตอร์จากหน้าสรุปเส้นทางแล้วจุดหมายหาย (จอมิเตอร์กลายเป็นเที่ยวธรรมดา ไม่มีแถบจุดหมาย/เส้นทาง/รถ/ปุ่ม Google Maps) — ตอนนี้เก็บจุดหมายไว้ครบ และยังคงล้างจุดหมายเก่าเมื่อเริ่มเที่ยวธรรมดาใหม่',
+            'ปิด โหมดประหยัดแบต (OLED Mode) — ซิงก์ข้ามทุกเครื่องผ่านบัญชีผู้ใช้',
+            'เปิด โหมดประหยัดแบต (OLED Mode) — ซิงก์ข้ามทุกเครื่องผ่านบัญชีผู้ใช้',
+        ] },
+
         { v: '1.2.10', date: '2026-09-10', color: 0, notes: [
             '🔄 ย้ายปุ่ม "รีเฟรช" ในหน้าโควตา Firestore ลงมาที่มุมขวาล่างของหน้า (หลังรายการยอดแยกตาม ID) — หัวหน้าต่างโล่งขึ้น ปุ่มยังทำงานเหมือนเดิม',
             '🧹 ลบปุ่มดินสอ (แก้ไขชื่อสิทธิ์) ที่กดแล้วไม่ทำงานออกจากรายการสิทธิ์ในตั้งค่าสิทธิ์การใช้งาน และจัดปุ่มลัด (โทร/แบน/ประวัติ/แก้ไข/ลบ) ในหน้าจัดการผู้ใช้งานให้อยู่กึ่งกลางการ์ดพอดี ไม่ชิดขวา',
@@ -8138,70 +8174,73 @@
     const bumpVer = (v) => { const m = /^(\d+\.\d+\.)(\d+)$/.exec(String(v || '1.2.0')); return m ? m[1] + (parseInt(m[2]) + 1) : '1.2.1'; };
     const fmtChgDate = (iso) => { try { const [y, m, d] = String(iso).split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) { return iso; } };
     const cleanNotes = (arr) => (Array.isArray(arr) ? arr : []).map(n => String(n).replace(/^[-•]\s*/, '').trim()).filter(Boolean);
-    // สร้างรายการ "วันนี้" — เป็นเวอร์ชันล่าสุดเสมอ (ข้อความเดียวกับ APP_RELEASE_NOTES ไม่ซ้ำ)
-    // ถ้าไม่ระบุเลข → ต่อจากเวอร์ชันสูงสุดในประวัติ seed (ตอนนี้ 1.2.10 = 10 ก.ย. → วันนี้เป็น 1.2.11)
-    const mkToday = (v) => ({ v: v || bumpVer(CHANGELOG_SEED[0] ? CHANGELOG_SEED[0].v : '1.2.0'), date: APP_RELEASE_DATE, color: 0, notes: cleanNotes(APP_RELEASE_NOTES) });
-    // hash รายการ bullet ของโค้ดรอบนี้ — กันรวมซ้ำ / กันทับข้อความที่ admin แก้ (รวมให้แค่ครั้งเดียวต่อการ push 1 รอบ)
+    // 🗓️ การ์ดของวันที่มีการแก้ไข - 1 วัน = 1 การ์ด (ห้ามรวมวัน ห้ามลบของเก่า)
+    const verNum = (v) => { const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(v || '')); return m ? (+m[1]) * 10000 + (+m[2]) * 100 + (+m[3]) : 0; };
+    const chgMaxVer = (cards) => (cards || []).reduce((best, c) => verNum(c && c.v) > verNum(best) ? String(c.v) : best, '1.2.0');
+    const mkDayCard = (date, notes, v) => ({ v: v || bumpVer(chgMaxVer(CHANGELOG_SEED)), date: date, color: 0, notes: cleanNotes(notes) });
+    const mkToday = (v) => mkDayCard(APP_RELEASE_DATE, APP_RELEASE_NOTES, v); // การ์ดของรอบโค้ดนี้ (ใช้ตอนออฟไลน์/โหลด Firestore ไม่ทัน)
+    // hash รายการ bullet ของโค้ดรอบนี้ - กันรวมซ้ำ / กันทับข้อความที่ admin แก้
     const chgHash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return 'h' + (h >>> 0).toString(36); };
     const CODE_NOTES_HASH = chgHash(cleanNotes(APP_RELEASE_NOTES).join('|'));
-    // 🔑 hash ของ "รายการ bullet รุ่นก่อยแยกวัน" (บิลด์ที่ยังรันอยู่บนมือถือก่อนอัปเดต)
-    //    ระหว่างเปลี่ยนผ่าน ระบบจะเขียนค่านี้เป็น syncedHash → เครื่องที่ยังใช้โค้ดเก่าจะเห็นว่าตรงกัน แล้วไม่ยัด bullet เก่ากลับมารวมเป็นการ์ดวันนี้ซ้ำ (กันประวัติย้อนกลับเป็นก้อนเดียว)
+    // 🔑 hash ของ "รายการ bullet รุ่นก่อนแยกวัน" - เขียนเป็น syncedHash ให้บิลด์เก่าที่ค้างอยู่ไม่ยัด bullet เก่ากลับ
     const LEGACY_NOTES_HASH = 'h1k0jb5a';
-    // 🧱 โครงสร้างประวัติเวอร์ชัน: 2 = แยกการ์ดตามวัน (1 วัน = 1 เวอร์ชัน) — ถ้า Firestore ยังเป็นแบบเก่า (รวมทุกวันไว้การ์ดเดียว) ระบบจะย้ายให้อัตโนมัติเมื่อเปิดแอป
+    // 🧱 โครงสร้างประวัติเวอร์ชัน: 2 = แยกการ์ดตามวัน (1 วัน = 1 เวอร์ชัน)
     const CHG_SCHEMA = 2;
     window.__chgEntries = null;
 
-    // อ่าน+ซิงก์ประวัติเวอร์ชันจาก Firestore (ถ้ายังไม่มี → seed; ถ้ามีวันใหม่ → สร้างเวอร์ชันใหม่; ถ้าวันเดียวกัน → รวม bullet)
+    // 🔒 กฎเหล็กของประวัติเวอร์ชัน (ห้ามละเมิด - เคยเป็นต้นเหตุที่วันเก่าหาย/ถูกรวมวัน)
+    //    1) การ์ดของวันเก่า "ห้ามลบ ห้ามเปลี่ยนวันที่ ห้ามรวมเข้าวันอื่น" - เป็นความจริงของวันนั้นตลอดไป
+    //    2) เติมวันย้อนหลังที่หายไปทั้งการ์ดจาก CHANGELOG_SEED (เฉพาะวันที่ยังไม่มีการ์ด - การ์ดที่มีอยู่ไม่แตะ ข้อความที่แอดมินแก้จึงไม่กลับมา)
+    //    3) bullet จากโค้ดเพิ่มได้เฉพาะ bullet ที่ "ยังไม่เคยมีในประวัติเลย" และลงการ์ดของ APP_RELEASE_DATE เท่านั้น
+    //    4) ไม่สร้างการ์ดวันใหม่ถ้าไม่มีข้อความจริง (กันการ์ดวันเปล่าที่ไปดูด bullet ของวันอื่นมารวม)
+    window.chgMerge = (raw, seedCards, codeCards) => {
+        const byDate = new Map(), seen = new Set();
+        let dirty = false;
+        (Array.isArray(raw) ? raw : []).forEach(e => {
+            const d = String((e && e.date) || '').trim(); if (!d) return;
+            const notes = cleanNotes(e.notes);
+            if (!notes.length) { dirty = true; return; } // การ์ดวันเปล่า (ไม่มีข้อความ) - ไม่เก็บไว้
+            notes.forEach(n => seen.add(n));
+            byDate.set(d, { v: e.v, date: d, color: e.color, notes: notes });
+        });
+        (Array.isArray(seedCards) ? seedCards : []).forEach(s => {
+            const d = String((s && s.date) || '').trim(); const notes = cleanNotes(s.notes);
+            if (!d || !notes.length || byDate.has(d)) return;
+            notes.forEach(n => seen.add(n));
+            byDate.set(d, { v: s.v, date: d, color: s.color, notes: notes });
+            dirty = true;
+        });
+        (Array.isArray(codeCards) ? codeCards : []).forEach(s => {
+            const d = String((s && s.date) || '').trim(); if (!d) return;
+            const fresh = cleanNotes(s.notes).filter(n => !seen.has(n));
+            if (!fresh.length) return;
+            const cur = byDate.get(d);
+            if (cur) { cur.notes = cur.notes.concat(fresh); }
+            else { byDate.set(d, { v: bumpVer(chgMaxVer(Array.from(byDate.values()))), date: d, color: 0, notes: fresh }); }
+            fresh.forEach(n => seen.add(n)); dirty = true;
+        });
+        const entries = Array.from(byDate.values()).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+        entries.forEach((e, i) => { if (e.color === undefined || e.color === null || e.color === '') e.color = (entries.length - i) % CHG_PALETTE.length; });
+        return { entries: entries, dirty: dirty };
+    };
+
+    // อ่าน+ซิงก์ประวัติเวอร์ชันจาก Firestore - ซิงก์แบบ "เพิ่มเท่านั้น" (ของเก่าไม่ถูกลบ/ไม่ถูกย้ายวัน)
     window.ensureChangelog = async () => {
         try {
             const ref = doc(db, 'settings', 'changelog');
-            let snap;
-            try { snap = await getDoc(ref); } catch (e) { snap = null; }
-            let entries = (snap && snap.exists() && Array.isArray(snap.data().entries)) ? snap.data().entries.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) })) : [];
-            let storedHash = (snap && snap.exists() && (snap.data().chgNotesHash || snap.data().syncedHash)) || '';
-            let dirty = false;
-            const today = chgTodayStr();
-            const seedHistory = () => CHANGELOG_SEED.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) }));
-            // 🧱 ย้ายประวัติเดิมที่มัดรวมทุกวันไว้การ์ดเดียว → แยกเป็นการ์ดละ 1 วัน ตามข้อมูลในโค้ด (ทำครั้งเดียวต่อ Firestore)
-            //    bullet ที่ไม่รู้จัก (เช่น แอดมินเพิ่มเอง) จะถูกย้ายไปต่อท้ายการ์ดของวันนี้ ไม่ให้หาย
-            if (entries.length && snap && snap.exists() && snap.data().chgSchema !== CHG_SCHEMA) {
-                const codeNotes = [];
-                seedHistory().forEach(e => (e.notes || []).forEach(n => { if (codeNotes.indexOf(n) < 0) codeNotes.push(n); }));
-                cleanNotes(APP_RELEASE_NOTES).forEach(n => { if (codeNotes.indexOf(n) < 0) codeNotes.push(n); });
-                const extras = [];
-                entries.forEach(e => cleanNotes(e.notes).forEach(n => { if (codeNotes.indexOf(n) < 0 && extras.indexOf(n) < 0) extras.push(n); }));
-                entries = [mkToday()].concat(seedHistory());
-                if (extras.length) entries[0].notes = entries[0].notes.concat(extras);
-                dirty = true;
-            }
-            if (!entries.length) {
-                entries = [mkToday()].concat(seedHistory());
-                dirty = true;
-            } else {
-                const top = entries[0];
-                if (!top.date || APP_RELEASE_DATE > top.date) {
-                    entries = [mkToday(bumpVer(top.v))].concat(entries);
-                    dirty = true;
-                } else if (today > top.date) {
-                    const colorIdx = entries.length % CHG_PALETTE.length;
-                    entries.unshift({ v: bumpVer(top.v), date: today, color: colorIdx, notes: [] });
-                    dirty = true;
-                } else if (APP_RELEASE_DATE === top.date) {
-                    if (storedHash !== CODE_NOTES_HASH) {
-                        const missing = cleanNotes(APP_RELEASE_NOTES).filter(n => !top.notes.includes(n));
-                        if (missing.length) { top.notes = top.notes.concat(missing); }
-                        dirty = true;
-                    }
-                }
-            }
+            let snap; try { snap = await getDoc(ref); } catch (e) { snap = null; }
+            const raw = (snap && snap.exists() && Array.isArray(snap.data().entries)) ? snap.data().entries : [];
+            const storedHash = (snap && snap.exists() && (snap.data().chgNotesHash || snap.data().syncedHash)) || '';
+            const merged = window.chgMerge(raw, CHANGELOG_SEED, [{ v: null, date: APP_RELEASE_DATE, color: 0, notes: APP_RELEASE_NOTES }]);
+            let dirty = merged.dirty;
+            if (storedHash !== CODE_NOTES_HASH) dirty = true;
             if (dirty && loggedInUserId) {
-                try { await setDoc(ref, { entries, syncedHash: LEGACY_NOTES_HASH, chgNotesHash: CODE_NOTES_HASH, chgSchema: CHG_SCHEMA }, { merge: true }); } catch (e) {}
+                try { await setDoc(ref, { entries: merged.entries, syncedHash: LEGACY_NOTES_HASH, chgNotesHash: CODE_NOTES_HASH, chgSchema: CHG_SCHEMA }, { merge: true }); } catch (e) {}
             }
-            window.__chgEntries = entries;
+            window.__chgEntries = merged.entries;
             window.renderVersionPill();
-        } catch (e) { window.__chgEntries = CHANGELOG_SEED; window.renderVersionPill(); }
+        } catch (e) { try { window.__chgEntries = chgFallback(); } catch (e2) { window.__chgEntries = CHANGELOG_SEED; } window.renderVersionPill(); }
     };
-
     const chgFallback = () => [mkToday()].concat(CHANGELOG_SEED.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) }))); // ใช้ตอนยังโหลด Firestore ไม่ทัน/พลาด
     // ป้าย v1.2.x บนหัวหน้าแรก — อัปเดตทุกครั้งที่ข้อมูลเปลี่ยน
     window.renderVersionPill = () => {
@@ -8217,31 +8256,30 @@
 
     // ➕ Runtime: เพิ่ม bullet note ลงประวัติเวอร์ชันอัตโนมัติ (เรียกใช้ทุกครั้งที่มีการเปลี่ยนแปลง)
     // กฎ: 1 วัน = 1 เวอร์ชัน — ภายในวันเดียวกัน → ต่อ notes[] เดิม (ไม่ bump v); ข้ามเที่ยงคืน → bump เวอร์ชันใหม่ + สร้างการ์ดวันใหม่
+    // ➕ Runtime: เพิ่ม bullet ลงประวัติเวอร์ชันอัตโนมัติ (1 วัน = 1 การ์ด - วันเก่าไม่ถูกแตะ/ไม่ถูกลบ)
     window.addChangelogEntry = async (rawText, opts) => {
         opts = opts || {};
         const text = cleanNotes([rawText])[0];
         if (!text) return false;
         try {
             if (!window.__chgEntries || !window.__chgEntries.length) {
-                try { await window.ensureChangelog(); } catch(e) {}
+                try { await window.ensureChangelog(); } catch (e) {}
                 if (!window.__chgEntries || !window.__chgEntries.length) { window.__chgEntries = chgFallback(); }
             }
-            const today = chgTodayStr();
-            let entries = window.__chgEntries.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) }));
+            const day = opts.date || chgTodayStr(); // วันที่เกิดการเปลี่ยนแปลงจริง
+            let entries = window.__chgEntries.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) })).filter(e => e.notes.length);
+            if (entries.some(e => e.notes.includes(text))) return false; // ข้อความนี้มีในประวัติแล้ว - ไม่เพิ่มซ้ำ
             let dirty = false;
-            const top = entries[0];
-            if (top && top.date === today) {
-                const _nd = (x) => cleanNotes([x])[0] || String(x).trim();
-                if (!top.notes.some(n => _nd(n) === _nd(text))) { top.notes.push(text); dirty = true; }
-            } else {
-                const newV = top && top.v ? bumpVer(top.v) : bumpVer('1.2.0');
-                const colorIdx = entries.length % CHG_PALETTE.length;
-                entries.unshift({ v: newV, date: today, color: colorIdx, notes: [text] });
+            const card = entries.find(e => e.date === day);
+            if (card) { card.notes.push(text); dirty = true; }
+            else {
+                entries.push({ v: bumpVer(chgMaxVer(entries)), date: day, color: entries.length % CHG_PALETTE.length, notes: [text] });
+                entries.sort((a, b) => String(b.date).localeCompare(String(a.date)));
                 dirty = true;
             }
             if (dirty) {
                 try {
-                    const k = 'taxi_chg_buildcount_' + today;
+                    const k = 'taxi_chg_buildcount_' + day;
                     Object.keys(localStorage).forEach(x => { if (x.startsWith('taxi_chg_buildcount_') && x !== k) { try { localStorage.removeItem(x); } catch(e){} } });
                     let prev = parseInt(localStorage.getItem(k) || '0') || 0;
                     localStorage.setItem(k, String(prev + 1));
@@ -8261,7 +8299,6 @@
             return false;
         } catch (e) { return false; }
     };
-
     // เปิดหน้าต่างประวัติเวอร์ชัน — สร้างการ์ดจาก Firestore
     window.openVersionModal = async () => {
         if (!window.__chgEntries) await window.ensureChangelog();
