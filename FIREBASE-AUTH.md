@@ -63,13 +63,16 @@ allow read, write: if request.auth != null && request.auth.uid == uid;
 ### ขั้นที่ 1 — ขอคีย์ของ reCAPTCHA v3 (ฟรี) — ต้องได้ **2 คีย์**
 
 1. เปิด <https://www.google.com/recaptcha/admin/create>
-2. Label: `taxi-meter` · reCAPTCHA type: **v3** · Domains: `baby4bot.github.io` (และ `127.0.0.1` ถ้าทดสอบในเครื่อง)
+2. Label: `taxi-meter` · reCAPTCHA type: **v3** (ห้ามเลือก v2) · Domains: `baby4bot.github.io` + `127.0.0.1`
+   (ถ้ามีช่อง GOOGLE CLOUD PLATFORM ให้เลือกโปรเจกต์ `mytalkie-3955a` — โปรเจกต์เดียวกับ Firebase)
 3. กด Submit → ได้ 2 ค่า ซึ่งใช้คนละที่:
    • **Site key** (ขึ้นต้น `6L...`) → ใส่ใน **โค้ดแอป** (คีย์สาธารณะ)
    • **Secret key** → ใส่ใน **Firebase Console** (ห้ามอยู่ในโค้ด)
 
-> reCAPTCHA v3 ให้ประเมินฟรี **1,000,000 ครั้ง/เดือน** — เกินพอสำหรับแอปคนขับไม่กี่สิบคน
-> (ถ้าภายหลังอยากใช้ reCAPTCHA Enterprise ที่ Firebase แนะนำ มีโควตาฟรี 10,000 ครั้ง/เดือน)
+> ⚠️ **โควตาฟรีปัจจุบันคือ 10,000 ครั้ง/เดือน** (ต่อองค์กร) — Google ย้ายมาใช้ Cloud Fraud Defense แล้ว
+> ลดจากเดิม 1,000,000 ครั้ง/เดือน ของ reCAPTCHA v3 รุ่นเก่า
+> คำนวณจริง: โทเคนอายุ 1 วัน → ขอประมาณ 2–3 ครั้ง/เครื่อง/วัน → 30 เครื่อง ≈ 2,700 ครั้ง/เดือน = อยู่ในโควตา
+> ถ้ามีเครื่องเกิน 100 คัน ให้เพิ่ม **token TTL** เป็น 3–7 วัน ในคอนโซล (ประเมินถี่น้อยลง)
 
 ### ขั้นที่ 2 — ลงทะเบียนกับ Firebase
 
