@@ -2922,6 +2922,28 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // 🔐 App Check (สวิตช์ปิดไว้เป็นค่าเริ่มต้น — ดูวิธีเปิดใน SECURITY.md)
+    //    เปิดแล้ว "เฉพาะแอปนี้" ที่อ่าน/เขียน Firestore ได้ (สคริปต์/คนนอกที่ไม่มี token จะโดนปฏิเสธ)
+    //    ⚠️ ต้องเปิด enforcement ใน Firebase Console "หลัง" ยืนยันว่าแอปจริงส่ง token ได้แล้ว (โหมด Monitor ก่อน)
+    //       ไม่งั้นแอปจะอ่าน/เขียนไม่ได้เลย — และต้องมีค่า site key ตรงกับโดเมนที่ให้บริการ
+    const APP_CHECK_SITE_KEY = ""; // ← วาง reCAPTCHA v3 site key ที่นี่เพื่อเปิดใช้ (เว้นว่าง = ปิด ไม่กระทบพฤติกรรมเดิม)
+    let appCheckReady = false;
+    if (APP_CHECK_SITE_KEY) {
+        try {
+            const ac = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app-check.js");
+            const appCheck = ac.initializeAppCheck(app, { provider: new ac.ReCaptchaV3Provider(APP_CHECK_SITE_KEY), isTokenAutoRefreshEnabled: true });
+            window.__appCheckGetToken = () => ac.getToken(appCheck);
+            appCheckReady = true;
+        } catch (e) { try { console.warn('App Check เปิดใช้ไม่สำเร็จ:', e); } catch (e2) {} }
+    }
+    // แนบ token ให้ทุกคำขอ REST ตรง (สำรองเมื่อ SDK ค้าง) — คืน {} เมื่อปิดอยู่ จึงไม่กระทบพฤติกรรมเดิมเลย
+    window.__fsHeaders = async (extra) => {
+        const h = Object.assign({}, extra || {});
+        if (!appCheckReady) return h;
+        try { h['X-Firebase-AppCheck'] = (await window.__appCheckGetToken()).token; } catch (e) {}
+        return h;
+    };
+
     // TomTom API key — ใช้คำนวณเส้นทางแบบรถติดสด (Routing API) + ค้นหาสถานที่ (Search API)
     const TOMTOM_KEY = "SA8pNpsaSKlTglSLWKwclRYArnFmWsyW";
 
@@ -3146,7 +3168,7 @@
     window.__fsFieldsToObj = (fields) => { const out = {}; if (fields) for (const k of Object.keys(fields)) out[k] = window.__fsVal(fields[k]); return out; };
     // ค้น user ตาม username ผ่าน REST (runQuery) → [{ id, data }]
     window.__fsRestQuery = async (username) => {
-        const res = await fetch(`${__fsBase}:runQuery?key=${__FS_KEY}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "users" }], where: { fieldFilter: { field: { fieldPath: "username" }, op: "EQUAL", value: { stringValue: String(username) } } }, limit: 2 } }) });
+        const res = await fetch(`${__fsBase}:runQuery?key=${__FS_KEY}`, { method: "POST", headers: await window.__fsHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "users" }], where: { fieldFilter: { field: { fieldPath: "username" }, op: "EQUAL", value: { stringValue: String(username) } } }, limit: 2 } }) });
         if (!res.ok) throw new Error("REST query failed " + res.status);
         const arr = await res.json();
         return (Array.isArray(arr) ? arr : []).filter(x => x && x.document).map(x => ({ id: decodeURIComponent(x.document.name.split("/").pop()), data: window.__fsFieldsToObj(x.document.fields) }));
@@ -3155,7 +3177,7 @@
     window.__fsRestPatch = async (uid, obj) => {
         const masks = Object.keys(obj).map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");
         const fields = {}; for (const k of Object.keys(obj)) { const v = obj[k]; fields[k] = (typeof v === "number") ? { integerValue: String(v) } : (typeof v === "boolean") ? { booleanValue: v } : { stringValue: String(v) }; }
-        const res = await fetch(`${__fsBase}/users/${uid}?${masks}&key=${__FS_KEY}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }) });
+        const res = await fetch(`${__fsBase}/users/${uid}?${masks}&key=${__FS_KEY}`, { method: "PATCH", headers: await window.__fsHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ fields }) });
         if (!res.ok) throw new Error("REST patch failed " + res.status);
         return res.json();
     };
@@ -3163,21 +3185,21 @@
     window.__fsRestPatchDoc = async (docPath, obj) => {
         const masks = Object.keys(obj).map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");
         const fields = {}; for (const k of Object.keys(obj)) { const v = obj[k]; fields[k] = (typeof v === "number") ? { integerValue: String(v) } : (typeof v === "boolean") ? { booleanValue: v } : { stringValue: String(v) }; }
-        const res = await fetch(`${__fsBase}/${docPath}?${masks}&key=${__FS_KEY}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }) });
+        const res = await fetch(`${__fsBase}/${docPath}?${masks}&key=${__FS_KEY}`, { method: "PATCH", headers: await window.__fsHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ fields }) });
         if (!res.ok) throw new Error("REST patch doc failed " + res.status);
         return res.json();
     };
     // สร้าง doc ใหม่ผ่าน REST (คืน uid)
     window.__fsRestAdd = async (collectionId, obj) => {
         const fields = {}; for (const k of Object.keys(obj)) { const v = obj[k]; fields[k] = (typeof v === "number") ? { integerValue: String(v) } : (typeof v === "boolean") ? { booleanValue: v } : { stringValue: String(v) }; }
-        const res = await fetch(`${__fsBase}?collectionId=${collectionId}&key=${__FS_KEY}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }) });
+        const res = await fetch(`${__fsBase}?collectionId=${collectionId}&key=${__FS_KEY}`, { method: "POST", headers: await window.__fsHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ fields }) });
         if (!res.ok) throw new Error("REST add failed " + res.status);
         const j = await res.json();
         return decodeURIComponent(j.name.split("/").pop());
     };
     // ดึง doc ผู้ใช้ตาม uid ผ่าน REST (GET ตรง ๆ) — ใช้ตอนเปิดแอปต่อ/รีเฟรช เพื่อ seed ข้อมูลขึ้นจอทันที (ไม่ต้องรอ snapshot)
     window.__fsRestGet = async (uid) => {
-        const res = await fetch(`${__fsBase}/users/${uid}?key=${__FS_KEY}`);
+        const res = await fetch(`${__fsBase}/users/${uid}?key=${__FS_KEY}`, { headers: await window.__fsHeaders() });
         if (!res.ok) throw new Error("REST get failed " + res.status);
         const j = await res.json();
         return window.__fsFieldsToObj(j.fields);
@@ -8064,7 +8086,7 @@
                     // ช่องเรียลไทม์ค้าง/โควตาหมด → ลองยิง REST ตรง (https ธรรมดา) เหมือนที่ล็อกอินใช้สำรองอยู่
                     try {
                         const fields = {}; for (const k of Object.keys(entry.data)) fields[k] = toFsValue(entry.data[k]);
-                        const res = await window.__fsTimeout(fetch(`${__fsBase}/users/${uid}/trips/${entry.tripId}?key=${__FS_KEY}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) }), 8000);
+                        const res = await window.__fsTimeout(fetch(`${__fsBase}/users/${uid}/trips/${entry.tripId}?key=${__FS_KEY}`, { method: 'PATCH', headers: await window.__fsHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ fields }) }), 8000);
                         ok = !!(res && res.ok);
                     } catch(e2) { ok = false; }
                 }
@@ -8179,13 +8201,18 @@
                 // ⚠️ ต้อง { source: 'server' } — ถ้าไม่ระบุ SDK จะคืน "แคชว่าง" แบบไม่ error ตอนออฟไลน์ แล้วเราจะเข้าใจผิดว่าไม่มีเที่ยว
                 const snap = await window.__fsTimeout(getDocs(collection(db, 'users', uid, 'trips'), { source: 'server' }), 9000);
                 snap.forEach((d) => { const o = d.data() || {}; o.tripId = o.tripId || d.id; out.push(o); });
-                gotServer = true;
+                // ยังเปิดแอปไม่เสร็จ/เซสชันยังไม่กู้เสร็จ SDK อาจตอบว่างทั้งที่ของจริงมี → ยิง REST ตรวจซ้ำ (กันขึ้น “ยังไม่มีเที่ยว” ทั้งที่มี)
+                gotServer = out.length > 0;
             } catch (e) { gotServer = false; }
         }
         if (!gotServer) {
             try {
-                const res = await window.__fsTimeout(fetch(`${__fsBase}/users/${uid}/trips?pageSize=500&key=${__FS_KEY}`), 9000);
-                if (res && res.ok) {
+                // ⚠️ Firestore REST คืนได้สูงสุด 300 เอกสารต่อหน้า (แม้ส่ง pageSize=500) — ต้องไล่ pageToken ไม่งั้นประวัติขาด
+                let pageToken = '', page = 0;
+                do {
+                    const url = `${__fsBase}/users/${uid}/trips?pageSize=300&key=${__FS_KEY}` + (pageToken ? '&pageToken=' + encodeURIComponent(pageToken) : '');
+                    const res = await window.__fsTimeout(fetch(url, { headers: await window.__fsHeaders() }), 9000);
+                    if (!res || !res.ok) break;
                     const j = await res.json();
                     (j.documents || []).forEach((docObj) => {
                         const o = fsValToJs({ mapValue: { fields: docObj.fields || {} } }) || {};
@@ -8193,7 +8220,9 @@
                         o.tripId = o.tripId || parts[parts.length - 1];
                         out.push(o);
                     });
-                }
+                    pageToken = j.nextPageToken || '';
+                    page++;
+                } while (pageToken && page < 10);
             } catch (e2) {}
         }
         try { tripQueueRead().filter((e) => e && e.uid === uid && e.data).forEach((e) => { if (!out.some((t) => t.tripId === e.tripId)) { const o = Object.assign({}, e.data); o.tripId = e.tripId; o.__pending = true; out.push(o); } }); } catch (e3) {}
@@ -8971,6 +9000,9 @@
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-12'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     const APP_RELEASE_NOTES = [
+        '🔐 ชุดกติกาความปลอดภัย Firestore พร้อมใช้ (ไฟล์ firestore.rules): จำกัดว่าเขียนอะไรได้/ไม่ได้ · ห้ามลบเที่ยวในประวัติรายได้ · ประวัติการใช้งานเป็นแบบ "เขียนเพิ่มอย่างเดียว" (ลบร่องรอยไม่ได้) · ห้ามลบทั้งเอกสารตั้งค่า และปิดไม่ให้ใช้โปรเจกต์เป็นที่ฝากไฟล์ — วิธีวาง: Firebase Console → Firestore Database → Rules → วางทั้งไฟล์ → Publish (รายละเอียดในคู่มือ SECURITY.md)',
+        '📚 คู่มือความปลอดภัย SECURITY.md + สคริปต์ตรวจช่องโหว่ tests/security-check.ps1: รันครั้งเดียวรู้ทันทีว่าฐานข้อมูลยังเปิดให้คนนอกอ่าน/เขียนอยู่ไหมโดยไม่ต้องล็อกอิน — ตรวจ 7 ข้อ (อ่านเอกสารสมาชิก · อ่านเอกสารตั้งค่า · คิวรีรายชื่อ · เขียนเที่ยว · ลบเที่ยว · เขียนคอลเลกชันแปลกปลอม · ลบร่องรอย) รายงานผลเป็นตารางสี พร้อมบอกขั้นตอนปิดทีละข้อ (ต้องรันจากเครื่องก่อน/หลังวางกติกา)',
+        '🛡️ ต่อสถานะเตรียมใช้ App Check (reCAPTCHA v3) แบบ "เปิดได้เมื่อพร้อม": วาง site key ที่ตัวแปร APP_CHECK_SITE_KEY แล้วระบบจะแนบโทเคนไปกับทุกคำขอ Firestore ให้เอง — เว้นว่างไว้ = ปิด ไม่กระทบพฤติกรรมเดิมของแอปเลย (เดิมจะเปิดใช้ไม่ได้เพราะทุกคำขอไม่มีโทเคน แม้จะตั้งค่าในคอนโซลแล้ว)',
         '💵 หน้าประวัติเที่ยว / รายได้ (ใหม่): เปิดจากเมนูข้าง → "ประวัติเที่ยว / รายได้" หรือกดปุ่มในหน้าสรุปค่าโดยสารหลังจบเที่ยว — เห็นสรุป วันนี้ · 7 วันล่าสุด · เดือนนี้ (ยอดเงิน จำนวนเที่ยว ระยะทาง) และรายการเที่ยวแยกตามวัน (เวลา · จุดหมาย · กม. · ค่าโดยสาร) พร้อมปุ่มส่งออก CSV เอาไปทำบัญชีต่อได้',
         '🧲 ประวัติเที่ยวไม่เอา "เที่ยวที่เป็นไปไม่ได้ในโลกจริง" มาคิดยอด (เที่ยวทดสอบที่ค้างในประวัติ / เที่ยวที่ค่าโดยสารสูงผิดปกติเทียบระยะทาง / ระยะทาง 0 กม.) — เดิมเที่ยวทดสอบทำให้ "รายได้ 7 วันล่าสุด" พองเป็น 5,223 ฿ ทั้งที่เที่ยวจริงรวมกัน 1,683 ฿ · ที่ซ่อนไว้ไม่หาย: บอกจำนวนไว้ชัดเจนและกดดูได้ตลอด (ไม่ซ่อนเงียบ ๆ) · เที่ยวที่ยังรอซิงก์ขึ้นเซิร์ฟเวอร์ก็โชว์ในประวัตินี้ด้วย พร้อมป้าย "รอซิงก์"',
         '🗓️ ประวัติเวอร์ชันข้ามวันเองได้แล้ว: ระบบจำ “วันที่ bullet แต่ละข้อถูกเพิ่มครั้งแรก” ไว้ในเครื่อง แล้วสร้างการ์ดตามวันนั้นอัตโนมัติ — เพิ่มข้อความวันใหม่ได้การ์ดวันใหม่เอง ไม่ต้องย้ายข้อความวันเก่าไปไว้ในโค้ดเอง (กันเคสเดิมที่ bullet ของวันที่ 11 หลุดไปรวมกับวันที่ 12)',

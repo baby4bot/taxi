@@ -1,0 +1,133 @@
+rules_version = '2';
+
+// ════════════════════════════════════════════════════════════════════════════
+// 🔐 Taxi Meter 2026 — Firestore Security Rules (ฉบับเสริมความปลอดภัย)
+//
+// วิธีใช้: คัดลอกทั้งไฟล์ไปวางที่ Firebase Console → Firestore Database → Rules
+//         แล้วกด Publish (หรือใช้ `firebase deploy --only firestore:rules` ถ้ามี Firebase CLI)
+//
+// ⚠️ อ่านก่อนใช้ — กติกาชุดนี้ "ลดความเสียหาย" แต่ยังไม่ใช่การปิดประตูสนิท
+//    แอปนี้ล็อกอินด้วย Username/รหัสผ่านของตัวเอง ไม่ได้ใช้ Firebase Authentication
+//    จึงตรวจไม่ได้ว่าคนที่ยิงคำขอมาเป็น "แอปของเรา" หรือ "สคริปต์ของคนนอก" (ทั้งคู่ไม่มีตัวตน)
+//    → สิ่งที่ทำได้ในไฟล์นี้: จำกัดว่าเขียนอะไรได้/ไม่ได้ ป้องกันการลบข้อมูลทิ้ง การยัดข้อมูลบวม
+//      และปิดไม่ให้ใช้โปรเจกต์เป็นที่ฝากไฟล์ — ส่วน "ใครอ่านได้" ต้องปิดด้วย App Check / Firebase Auth
+//      (ดูคู่มือครบขั้นตอนใน SECURITY.md)
+//
+// 📌 สัญญาระหว่างไฟล์นี้กับแอป: ชื่อคอลเลกชัน/ฟิลด์ในนี้ ต้องตรงกับที่ index.html เขียนจริง
+//    ถ้าแอปเพิ่มฟิลด์ใหม่ใน trips/logs แล้วยังไม่อัปเดตกติกา การบันทึกจะถูกปฏิเสธ (จะรู้ทันทีตอนทดสอบ)
+// ════════════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─────────────────────────── ตัวช่วยตรวจรูปแบบข้อมูล ───────────────────────────
+    // ทุกตัวเช็กแบบ "ถ้าไม่มีฟิลด์นั้น = ผ่าน" เพื่อไม่ให้เขียนเอกสารเก่า/บางส่วนพัง
+    function maxKeys(n) { return request.resource.data.keys().size() <= n; }
+    function strLe(f, n) { return !(f in request.resource.data) || (request.resource.data[f] is string && request.resource.data[f].size() <= n); }
+    function numBetween(f, lo, hi) { return !(f in request.resource.data) || (request.resource.data[f] is number && request.resource.data[f] >= lo && request.resource.data[f] <= hi); }
+    function listLe(f, n) { return !(f in request.resource.data) || (request.resource.data[f] is list && request.resource.data[f].size() <= n); }
+    function mapLe(f, n) { return !(f in request.resource.data) || (request.resource.data[f] is map && request.resource.data[f].keys().size() <= n); }
+
+    // 📄 รูปโปรไฟล์/QR เก็บเป็น base64 data URL — เพดาน 900,000 ตัวอักษร
+    //    (Firestore จำกัด 1 MB ต่อเอกสารอยู่แล้ว จึงไม่ตัดความสามารถเดิมของแอป แต่กันการยัดสตริงยักษ์)
+    function okImages() { return strLe('photoURL', 900000) && strLe('qrCodeURL', 900000) && strLe('profilePic', 900000) && strLe('qrPic', 900000); }
+
+    // ─────────────────────────────── 👤 สมาชิก (users) ───────────────────────────────
+    // อ่าน: ต้องเปิดไว้ เพราะหน้าเข้าสู่ระบบค้นหา username ในคอลเลกชันนี้ (ยังไม่มี Firebase Auth)
+    // เขียน: จำกัดขนาด/ประเภทของฟิลด์สำคัญ — ไม่ตรวจ "ใคร" เพราะตรวจไม่ได้ (ดูหมายเหตุหัวไฟล์)
+    match /users/{uid} {
+      allow read: if true;
+
+      allow create, update: if
+        maxKeys(60) && okImages() &&
+        strLe('username', 60) && strLe('displayName', 80) && strLe('companyName', 80) &&
+        strLe('phoneNumber', 20) && strLe('plateNo', 20) && strLe('role', 30) &&
+        strLe('password', 300) && strLe('sessionId', 100) &&
+        strLe('themeMode', 20) && strLe('taxiType', 20) && strLe('tollwayMode', 20) &&
+        mapLe('extraPerms', 80); // สิทธิ์พิเศษรายคน = map
+
+      // ลบบัญชีได้ (แอดมินใช้จริง) — กติกาชุดนี้กันไม่ได้ว่าใครสั่งลบ ต้องพึ่ง App Check (SECURITY.md)
+      allow delete: if true;
+
+      // 📒 ประวัติเที่ยว — แอปเขียนเพิ่ม/แก้ (retry) แต่ "ไม่เคยลบ" จึงห้ามลบจากภายนอก
+      match /trips/{tripId} {
+        allow read: if true;
+        allow create, update: if
+          request.resource.data.keys().hasOnly(['startTime', 'endTime', 'destName', 'km', 'trafficSec', 'baseFare', 'surcharges', 'pauses', 'catchUps', 'fare', 'driverUid', 'createdAt']) &&
+          numBetween('startTime', 1000000000000, 9999999999999) &&
+          numBetween('endTime', 1000000000000, 9999999999999) &&
+          numBetween('km', 0, 5000) &&
+          numBetween('trafficSec', 0, 200000) &&
+          numBetween('baseFare', 0, 1000) &&
+          numBetween('fare', 0, 200000) &&
+          numBetween('createdAt', 1000000000000, 9999999999999) &&
+          strLe('destName', 200) && strLe('driverUid', 60) &&
+          listLe('surcharges', 200) && listLe('pauses', 200) && listLe('catchUps', 200);
+        allow delete: if false; // 🛡️ ห้ามลบเที่ยวจากภายนอก (กันประวัติรายได้ถูกลบทิ้ง)
+      }
+
+      // 🧾 ประวัติการใช้งานรายบุคคล — เขียนเพิ่มได้อย่างเดียว (append-only) เพื่อไม่ให้ลบร่องรอย
+      match /logs/{logId} {
+        allow read: if true;
+        allow create: if
+          request.resource.data.keys().hasOnly(['action', 'detail', 'timestamp', 'byUid', 'byName', 'targetUid']) &&
+          strLe('action', 200) && strLe('detail', 1000) && strLe('byName', 80) &&
+          strLe('byUid', 60) && strLe('targetUid', 60) &&
+          numBetween('timestamp', 1000000000000, 9999999999999);
+        allow update, delete: if false;
+      }
+    }
+
+    // ─────────────────────────── 📜 ประวัติการใช้งานรวมทั้งระบบ ───────────────────────────
+    // append-only: เขียนเพิ่มได้ ลบ/แก้ไม่ได้ (เดิมใครก็ลบร่องรอยทั้งหมดได้)
+    match /global_logs/{logId} {
+      allow read: if true;
+      allow create: if
+        request.resource.data.keys().hasOnly(['action', 'detail', 'timestamp', 'byUid', 'byName', 'targetUid']) &&
+        strLe('action', 200) && strLe('detail', 1000) && strLe('byName', 80) &&
+        strLe('byUid', 60) && strLe('targetUid', 60);
+      allow update, delete: if false;
+    }
+
+    // ─────────────────────────── 🙋 คำขอสิทธิ์เพิ่ม / แจ้งผลคำขอ ───────────────────────────
+    match /perm_requests/{uid} {
+      allow read: if true;
+      allow write: if maxKeys(40) && strLe('username', 60) && strLe('displayName', 80) && listLe('perms', 80) && mapLe('extraPerms', 80);
+    }
+    match /perm_notices/{uid} {
+      allow read: if true;
+      allow write: if maxKeys(40) && listLe('items', 80);
+    }
+
+    // ─────────────────────────── 📊 โควตาการใช้งาน (ตัวนับรายวัน) ───────────────────────────
+    match /quota_usage/{uid} {
+      allow read: if true;
+      allow create, update: if
+        maxKeys(30) &&
+        numBetween('reads', 0, 100000000) && numBetween('writes', 0, 100000000) && numBetween('deletes', 0, 100000000);
+      allow delete: if false;
+    }
+
+    // ─────────────────────────── ⚙️ เอกสารตั้งค่าระบบ ───────────────────────────
+    // เขียนได้เฉพาะเอกสารที่แอปใช้จริง และห้ามลบทั้งเอกสาร
+    match /settings/{docId} {
+      allow read: if true;
+      allow create, update: if
+        docId in ['roles', 'changelog', 'toast_messages', 'app_config', 'appConfig', 'permission_config', 'menuOrder'] &&
+        maxKeys(60) &&
+        listLe('entries', 600); // ประวัติเวอร์ชันรายวัน (การ์ดวันละใบ + bullet)
+      allow delete: if false;
+    }
+    match /system/{docId} {
+      allow read: if true;
+      allow create, update: if docId == 'service_data' && maxKeys(40);
+      allow delete: if false;
+    }
+
+    // ─────────────────────────── 🚫 ที่เหลือทั้งหมด: ปฏิเสธ ───────────────────────────
+    // กันการใช้โปรเจกต์เป็นที่ฝากไฟล์/ฐานข้อมูลส่วนตัว (เดิมสร้างคอลเลกชันอะไรก็ได้ ไม่จำกัด)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
