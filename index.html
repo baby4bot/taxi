@@ -2926,7 +2926,11 @@
     //    เปิดแล้ว "เฉพาะแอปนี้" ที่อ่าน/เขียน Firestore ได้ (สคริปต์/คนนอกที่ไม่มี token จะโดนปฏิเสธ)
     //    ⚠️ ต้องเปิด enforcement ใน Firebase Console "หลัง" ยืนยันว่าแอปจริงส่ง token ได้แล้ว (โหมด Monitor ก่อน)
     //       ไม่งั้นแอปจะอ่าน/เขียนไม่ได้เลย — และต้องมีค่า site key ตรงกับโดเมนที่ให้บริการ
-    const APP_CHECK_SITE_KEY = ""; // ← วาง reCAPTCHA v3 site key ที่นี่เพื่อเปิดใช้ (เว้นว่าง = ปิด ไม่กระทบพฤติกรรมเดิม)
+    const APP_CHECK_SITE_KEY = ""; // ← วาง site key ที่นี่เพื่อเปิดใช้ (เว้นว่าง = ปิด ไม่กระทบพฤติกรรมเดิม)
+    // 🧭 ต้องตรงกับ provider ที่ลงทะเบียนไว้ที่ Firebase Console → App Check → Apps:
+    //    "v3"         = ตัวเลือกชื่อ "reCAPTCHA" (คีย์ลับ + site key)  — ⚠️ Firebase ขึ้นว่า deprecated แล้ว
+    //    "enterprise" = ตัวเลือกชื่อ "reCAPTCHA Enterprise" (สร้างคีย์ที่ Google Cloud Console) — แนะนำ
+    const APP_CHECK_PROVIDER = "v3"; // ← เปลี่ยนเป็น "enterprise" เมื่อลงทะเบียนแบบ Enterprise
     let appCheckReady = false, appCheckError = null;
     // 🧪 ทดสอบในเครื่อง (127.0.0.1 / localhost): ให้ SDK พิมพ์ "debug token" ในคอนโซล
     //    → เอาไปลงทะเบียนที่ Firebase Console → App Check → Apps → จัดการ → Debug tokens
@@ -2937,10 +2941,11 @@
     if (APP_CHECK_SITE_KEY) {
         try {
             const ac = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app-check.js");
-            const appCheck = ac.initializeAppCheck(app, { provider: new ac.ReCaptchaV3Provider(APP_CHECK_SITE_KEY), isTokenAutoRefreshEnabled: true });
+            const ProviderClass = (APP_CHECK_PROVIDER === 'enterprise') ? ac.ReCaptchaEnterpriseProvider : ac.ReCaptchaV3Provider;
+            const appCheck = ac.initializeAppCheck(app, { provider: new ProviderClass(APP_CHECK_SITE_KEY), isTokenAutoRefreshEnabled: true });
             window.__appCheckGetToken = () => ac.getToken(appCheck);
             appCheckReady = true;
-            try { console.info('[App Check] เปิดใช้แล้ว — site key ลงท้าย …' + APP_CHECK_SITE_KEY.slice(-6)); } catch (e2) {}
+            try { console.info('[App Check] เปิดใช้แล้ว — provider=' + APP_CHECK_PROVIDER + ' · site key ลงท้าย …' + APP_CHECK_SITE_KEY.slice(-6)); } catch (e2) {}
         } catch (e) { appCheckError = String(e && e.message || e); try { console.warn('App Check เปิดใช้ไม่สำเร็จ:', e); } catch (e2) {} }
     }
     // 🔎 ตรวจว่าตอนนี้ "แอปของเราส่งโทเคนได้จริงไหม" + "คนนอกที่ไม่มีโทเคนยังเข้าได้อยู่ไหม"
@@ -2969,14 +2974,14 @@
             : (withTok.http === 403) ? 'อันตราย: แอปจริงส่งโทเคนไม่ผ่าน — ให้กลับเป็น Unenforced'
             : (withTok.http === 200) ? 'ผ่าน: โทเคนใช้ได้ (ยังไม่ถูกบังคับใช้)'
             : 'ขอโทเคนไม่ได้ — ตรวจ site key / โดเมน';
-        const out = { configured: !!APP_CHECK_SITE_KEY, ready: appCheckReady, error: appCheckError, withoutToken: noTok, withToken: withTok, verdict, short };
+        const out = { configured: !!APP_CHECK_SITE_KEY, provider: APP_CHECK_PROVIDER, ready: appCheckReady, error: appCheckError, withoutToken: noTok, withToken: withTok, verdict, short };
         try { console.table ? (console.info(verdict), console.table({ withoutToken: noTok, withToken: withTok })) : console.log(out); } catch (e) {}
         try { if (window.showToast) window.showToast('App Check — ' + short, !!(APP_CHECK_SITE_KEY && withTok.http !== 200)); } catch (e) {}
         return out;
     };
     // 📋 ดูสถานะเร็ว ๆ: configured / ready / token ที่ได้ (ไม่ยิงเครือข่าย)
     window.appCheckStatus = async () => {
-        const out = { configured: !!APP_CHECK_SITE_KEY, ready: appCheckReady, error: appCheckError, token: null };
+        const out = { configured: !!APP_CHECK_SITE_KEY, provider: APP_CHECK_PROVIDER, ready: appCheckReady, error: appCheckError, token: null };
         if (!APP_CHECK_SITE_KEY) { out.error = 'ยังไม่ได้วาง site key (APP_CHECK_SITE_KEY ว่าง)'; return out; }
         try { const t = await window.__appCheckGetToken(); out.token = (t && t.token) ? t.token.slice(0, 14) + '…' : null; }
         catch (e) { out.error = String(e && e.message || e); }

@@ -144,6 +144,24 @@ await appCheckSelfTest()   // 📊 ยิงคำขอจริง 2 ครั
 | reCAPTCHA risk threshold | 0.5 | ปล่อยไว้ · อย่าตั้ง 1.0 (คนจริงจะโดนบล็อกด้วย) |
 | โควตา reCAPTCHA | — | ฟรี **10,000 ครั้ง/เดือน** (นับรวมทั้งองค์กร — ลดจากเดิม 1 ล้าน เมื่อ Google ย้ายมาใช้ Cloud Fraud Defense) |
 
+### ⚠️ ตัวเลือกในคอนโซลมี 2 แบบ (ตรวจ 13 ก.ย. 2569)
+
+ในหน้า App Check → Apps → Register จะให้เลือก 2 ตัว และอันแรกขึ้นคำเตือน **"reCAPTCHA is deprecated"**:
+
+| ตัวเลือก | สถานะ | ต้องใช้คีย์จากที่ไหน | โค้ดแอป |
+|---|---|---|---|
+| **reCAPTCHA** | ⚠️ Firebase ขึ้นว่า deprecated (ยังใช้ได้) | หน้า [reCAPTCHA admin](https://www.google.com/recaptcha/admin) → วาง **secret key** | `APP_CHECK_PROVIDER = "v3"` |
+| **reCAPTCHA Enterprise** ⭐ | แนะนำ | [Google Cloud Console → Fraud Defense](https://console.cloud.google.com/security/recaptcha) → สร้าง **Web-type key** (ต้อง Enable API) → วาง **site key** | `APP_CHECK_PROVIDER = "enterprise"` |
+
+ข้อควรรู้จากเอกสารทางการ:
+- App Check รองรับคีย์แบบ **score-based** เท่านั้น (ห้ามติ๊ก "Use checkbox challenge")
+- **ห้ามใส่ `localhost` / `127.0.0.1` เป็นโดเมนของคีย์ที่จะใช้จริงบนโปรดักชัน** → การทดสอบในเครื่องจึงอาจไม่ผ่านเสมอ
+  (แต่ตัวแอปทดสอบได้จากโดเมนจริง — ใช้ `tests/recaptcha-key-test.html`)
+- แผน **Spark** (ฟรี) จะใช้คะแนนได้แค่ 4 ระดับ: 0.1 · 0.3 · 0.7 · 0.9 (threshold 0.5 ยังแนะนำอยู่)
+- **TTL ของ Enterprise เริ่มต้น = 1 ชั่วโมง** → ขอประเมินใหม่ถี่มาก (ประมาณ 24 ครั้ง/เครื่อง/วัน = 720/เดือน/เครื่อง)
+  → กับโควตา 10,000/เดือนจะรับได้แค่ ~13 เครื่อง ⚠️ **ให้ตั้ง TTL เป็น 7 วัน** ในหน้า Register
+  (7 วัน → ขอประเมินประมาณ 8–9 ครั้ง/เดือน/เครื่อง → 10,000 รับได้กว่า 1,000 เครื่อง)
+
 ### 🧮 โควตาพอไหม? (คำนวณให้แล้ว)
 
 App Check ขอโทเคนใหม่ **เมื่อโทเคนเก่าหมดอายุครึ่งทาง** (TTL เริ่มต้น 1 วัน → ขอประมาณ 2–3 ครั้ง/เครื่อง/วัน)
