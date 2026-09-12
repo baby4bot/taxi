@@ -123,7 +123,7 @@ await appCheckSelfTest()   // 📊 ยิงคำขอจริง 2 ครั
    | ป้ายกำกับ | `taxi-meter` (ตั้งชื่ออะไรก็ได้ — ใช้หาง่าย ๆ ตอนกลับมาแก้) |
    | ประเภท reCAPTCHA | **อัจฉริยะแบบคะแนน (v3)** — ⚠️ ห้ามเลือก v2 (จะให้คนขับแก้ภาพบิดเบี้ยว) |
    | โดเมน | `baby4bot.github.io` แล้วกด Enter · เพิ่มอีกอัน: `127.0.0.1` (สำหรับทดสอบในเครื่อง) |
-   | GOOGLE CLOUD PLATFORM → ชื่อโปรเจกต์ | เลือกโปรเจกต์ **เดียวกับ Firebase** — ดูชื่อที่ Firebase Console → ⚙️ Project settings → General (Project ID = `mytalkie-3955a`) แล้วไปหาในลิสต์ · ห้ามเลือก `Default Gemini Project`<br>**ถ้าหาไม่เจอ/ชื่อซ้ำจนแยกไม่ออก:** เลือกโปรเจกต์ขององค์กรตัวเองอันไหนก็ได้ — ไม่มีผลต่อการทำงาน เพราะโควตาฟรีก็นับรวมทั้งองค์กร และตัวที่ทำให้ App Check ทำงานจริงคือ **ตอนวาง secret key ที่ Firebase Console → App Check → Apps** · ใช้ `appCheckSelfTest()` เป็นตัวตัดสินสุดท้าย |
+   | GOOGLE CLOUD PLATFORM → ชื่อโปรเจกต์ | เลือก **`crazy4bot`** — นี่คือโปรเจกต์ Firebase ของแอปนี้ (Project name = `crazy4bot` · Project ID = `mytalkie-3955a` ตามที่เห็นใน Firebase Console) · ห้ามเลือก `Default Gemini Project`<br>**ถ้าลิสต์เปลี่ยนไป/หาชื่อ `crazy4bot` ไม่เจอ:** เปิด <https://console.cloud.google.com> → ตัวเลือกโปรเจกต์มุมซ้ายบน → หาแถวที่ Project ID = `mytalkie-3955a` · ถ้าหาไม่ได้จริง ๆ เลือกโปรเจกต์อื่นในองค์กรตัวเองก็ยังใช้ได้ (โควตานับรวมทั้งองค์กร · ตัวที่ผูกจริงคือขั้นวาง secret key ที่ App Check → Apps · ใช้ `appCheckSelfTest()` เป็นตัวตัดสินสุดท้าย) |
 
    กด **ส่ง** → หน้าใหม่จะแสดง **Site key** และ **Secret key** (คัดลอกไว้ทั้งคู่)
 2. **Firebase Console → App Check → Apps** → เลือกเว็บแอป → ติ๊ก **reCAPTCHA v3**
@@ -196,6 +196,17 @@ App Check พิสูจน์ว่า "คำขอมาจากแอป�
 
 > ⚠️ แนวทาง B (อีเมลจริง) แม้ฟรี แต่จะทำให้ "ลืมรหัสผ่านแบบยืนยัน username + เบอร์โทร" ที่ใช้อยู่หายไป
 > และแอดมินจะตั้งรหัสผ่านให้คนอื่นไม่ได้ → เหมาะกับแอปใหม่มากกว่า
+
+---
+
+### 🗂️ ข้อมูลโปรเจกต์ (ใช้ตอนตั้งค่า)
+
+| อะไร | ค่า |
+|---|---|
+| Firebase project name (ชื่อที่เห็นในคอนโซล) | `crazy4bot` |
+| Firebase Project ID (ใช้ในโค้ด/URL) | `mytalkie-3955a` |
+| Firestore REST base | `https://firestore.googleapis.com/v1/projects/mytalkie-3955a/databases/(default)/documents` |
+| เว็บแอป Firebase (App Check จะลงทะเบียนตัวนี้) | `...:web:02e22031ad6d7c7bc6713b` |
 
 ---
 
