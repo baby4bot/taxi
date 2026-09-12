@@ -145,6 +145,29 @@
   เพราะตำแหน่งที่สร้างเองกับสิทธิ์พิเศษรายคนจะไม่ถูกนับ
 - ระบบ **1 บัญชี = 1 เครื่อง** ใช้ `sessionId` ในเอกสารผู้ใช้ (Admin ยกเว้น ล็อกอินพร้อมกันได้หลายเครื่อง)
 
+### 🗺️ แผนที่โค้ด (หาให้เจอเร็วในไฟล์เดียว)
+
+`index.html` เป็นไฟล์เดียวที่รวมทุกอย่าง — เรียงจากบนลงล่างคือ **CSS → HTML → JS**
+ตารางนี้บอกว่าเรื่องไหนอยู่ที่ชื่ออะไร (ค้นหาชื่อนั้นในไฟล์ได้เลย)
+
+| อยากแก้เรื่อง | ไปที่ |
+|---|---|
+| สี / ระยะห่าง / ขนาดทุกจอ | บล็อก `<style>` ช่วงต้นไฟล์ — ค่าสีรวมอยู่ที่ `:root` แล้วมีบล็อกทับต่อธีม `html.oled` / `html.light` |
+| ธีม (สลับ / จำค่า / ไอคอนปุ่ม) | `THEME_ORDER` · `applyThemeMode` · `setThemeMode` · `cycleThemeMode` · `syncThemeUi` |
+| วงแหวนรูปโปรไฟล์ | CSS `.avatar-wrap-ring` + `.avatar-wrap-ring.role-*` · JS `applyAvatarRingRole` |
+| สูตรค่าโดยสาร | `calcThaiMeterDist` (ช่วงระยะ/อัตราก้าวหน้า) → `currentMeterFare` (ยอดรวม) |
+| เริ่ม–จบเที่ยว + หน้าสรุป | `startMeterAndTracking` · `finishTripWithSummary` · `renderTripSummary` |
+| บันทึกเที่ยว + คิวออฟไลน์ | `saveTripToFirestore` · `drainTripSyncQueue` · `tripQueueCount` |
+| สิทธิ์ผู้ใช้ | `currentUserPerms` · `effectiveRolePerms` · `godPermsAll` |
+| โหลดข้อมูลสมาชิกขึ้นหน้าจอ | `__applyUserDocUI` |
+| ประวัติเวอร์ชันรายวัน | `APP_RELEASE_NOTES` · `CHANGELOG_SEED` · `chgMerge` · `addChangelogEntry` |
+| เปิด Google Maps นำทาง | `__openMapsToDest` |
+| ทางสำรองเมื่อ SDK ค้าง (ยิง REST ตรง) | `__fsTimeout` · `__fsRestGet` · `__fsRestPatch` · `__fsRestQuery` · `__fsRestAdd` |
+| เที่ยวค้าง/เบิกคืนเวลาหลังปิดแอป | `autoCatchUpSavedTrip` · `catchUpDrivenKmAfterHidden` · `catchUpKmViaRoutePolyline` |
+
+> 💡 ไฟล์ยาว ~10,000 บรรทัด — ใช้การค้นหาชื่อฟังก์ชันจากตารางนี้แทนการเลื่อนหาจะเร็วกว่ามาก
+> และไฟล์สำรองรายรอบอยู่ในชื่อ `index - N <สิ่งที่แก้>.html` (เก็บไว้เทียบย้อนหลัง)
+
 ---
 
 ## 🚀 วิธีใช้งาน
