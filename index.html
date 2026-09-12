@@ -4438,9 +4438,14 @@
                     if (g) {
                         let side = Array.isArray(g.side) ? g.side : [];
                         let hub = Array.isArray(g.hub) ? g.hub : [];
-                        // เก็บเฉพาะ key ที่ยังมีอยู่จริง (กันลำดับเก่าที่ลบเมนูไปแล้วมากวน) + เพิ่ม key ใหม่ (oled) ที่เพิ่งเพิ่มเข้ามา
-                        const sideKeys = ['home', 'profile', 'fullscreen', 'oled', 'settings'];
-                        const hubKeys = ['hubAdminItem', 'hubRoleItem', 'hubToastItem', 'hubServiceItem', 'hubQuotaItem'];
+                        // เก็บเฉพาะ key ที่ยังมีอยู่จริง (กันลำดับเก่าที่ลบเมนูไปแล้วมากวน) + เพิ่ม key ใหม่ที่เพิ่งเพิ่มเข้ามา
+                        // ⚠️ เดิมลิสต์นี้เขียนตายตัว ทำให้เมนูที่เพิ่มทีหลัง (เช่น 'trips' = ประวัติ) ถูกตัดออกจากลำดับทุกครั้งที่เปิดแอป
+                        //    → ลากสลับแล้วรีเฟรชก็เด้งกลับไปอยู่ท้ายสุด เพราะลำดับที่บันทึกไม่รู้จัก key ใหม่
+                        //    ตอนนี้ดึงจากเมนูจริงบนหน้าจอ: เมนูใหม่ถูกนับให้อัตโนมัติ และเมนูที่ลบไปแล้วก็หลุดออกเอง
+                        const domSideKeys = Array.from(document.querySelectorAll('#sideMenuBox .side-menu-item')).map(el => el.dataset.ordKey || el.id).filter(Boolean);
+                        const domHubKeys = Array.from(document.querySelectorAll('#settingsHubModal .hub-item')).map(el => el.dataset.ordKey || el.id).filter(Boolean);
+                        const sideKeys = domSideKeys.length ? domSideKeys : ['home', 'profile', 'trips', 'settings'];
+                        const hubKeys = domHubKeys.length ? domHubKeys : ['hubAdminItem', 'hubRoleItem', 'hubToastItem', 'hubServiceItem', 'hubQuotaItem'];
                         // Normalize: ถ้า key ใหม่ไม่มีใน global side → push ต่อท้าย (กับของ user มาตรฐาน)
                         sideKeys.forEach(k => { if (side.indexOf(k) === -1) side.push(k); });
                         hubKeys.forEach(k => { if (hub.indexOf(k) === -1) hub.push(k); });
