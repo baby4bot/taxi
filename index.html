@@ -2980,6 +2980,8 @@
     //    (2) ยอด km/เวลาในที่บันทึกถูกเขียนทับหรือค้างเก่า → ระยะทางที่วิ่งจริงหายไป
     let hiddenKmBase = 0, gapBasePos = null, gapHiddenAt = null, tripCaughtUpAt = null;
     let trafficCharging = false, lastFixSpeedKmh = null, lastStopFixAt = null; // กำลังคิดค่าเวลาจอด? / ความเร็วจาก GPS ล่าสุด / เวลา fix สุดท้ายที่ยืนยันจอดจริง
+    // ⏳ ยอดเวลารถติดที่ "คิดไปก่อน" ตอนไม่มี fix ยืนยันเลย (GPS ตาย/ถูกกรองทั้งหมด) — จะถูกถอนคืนทันทีถ้าหลักฐานใหม่บอกว่ารถวิ่งจริง
+    let staleAccruedSec = 0, staleBaseAt = null, staleBasePos = null;
     let lastPosTime = null, currentSpeedKmh = 0, currentTrueRemainKm = 0, currentTrueRemainSec = 0; 
     let hiddenGapStart = null, hiddenLastPos = null, hiddenTrafficBase = 0; // จดตอนแอปซ่อน/สลับแอป เพื่อเบิกเวลาจอด + ระยะทางที่หายกลับคืนเมื่อกลับมา; hiddenTrafficBase = trafficSeconds ตอนเริ่มซ่อน (อ้างอิงเบิก "exactly-once")
     // ⏸️ บันทึกช่วงที่มิเตอร์ "หยุด" ระหว่างเที่ยว (แอปถูกปิด/ซ่อนหน้าจอ) เพื่อโชว์ในหน้าสรุปหลังจบเที่ยว (ความโปร่งใสกับผู้โดยสาร)
@@ -3460,6 +3462,7 @@
         if (!window.isManualRunning) return;
         if (hiddenGapStart === null) {
             hiddenGapStart = Date.now(); hiddenTrafficBase = trafficSeconds; hiddenLastPos = lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null;
+            staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null; // ⏳ ช่วงที่ซ่อน/ปิดมี catch-up บริหารเองแล้ว — ไม่ให้มียอด "คิดไปก่อน" ค้างข้ามรอบ
             // 🧭 จด "ฐานหลักฐาน" ณ วินาทีที่ถูกซ่อน: km + เวลารถติด + ตำแหน่ง → ใช้ยึดยอดตอนเบิกคืน (กันยอดบวม/ยอดหาย)
             hiddenKmBase = actualDrivenKm; gapBasePos = hiddenLastPos; gapHiddenAt = hiddenGapStart;
         }
@@ -6989,6 +6992,75 @@
         } catch(e) {}
     };
 
+    // ===== 🚦 ความแม่นยำของ "เวลารถติด/เวลาจอด" (แก้ 2026-09-12) =====
+    // มิเตอร์จริงคิดเวลา นาทีละ 3 บาท เมื่อรถไม่เคลื่อนที่/ช้ากว่า 6 กม./ชม.
+    const TRAFFIC_SPEED_KMH = 6;
+    // ⏳ หลักฐาน "จอด" ต้องสด: ไม่มี fix ยืนยันว่าจอดเกินเวลานี้ = เริ่มคิดแบบ "ยังไม่ยืนยัน"
+    //    อาการจริงที่คนขับเจอ (12 ก.ย.): แอป 13:34 / มิเตอร์จริง 8:38 → 109 บาท แทนที่จะเป็น 95
+    //    ต้นเหตุ: fix ที่ความแม่นยำ > 30 ม. เดิมถูกทิ้งทั้งลูก (รวมความเร็ว) → สถานะ "จอด" ค้างจาก fix เก่า
+    //    แล้ว advanceMeterTime คิดเวลารถติดต่อให้เรื่อย ๆ ทั้งที่รถวิ่งไปแล้ว
+    //    − หลังเวลานี้ยังคิดต่อ (ไม่ตัดทิ้ง เพื่อไม่ให้เวลาจอดจริงในที่อับสัญญาณหาย) แต่เป็นยอด "ยังไม่ยืนยัน"
+    //      และจะถูก "ถอนคืน" ทันทีเมื่อมีหลักฐานว่ารถวิ่งจริง — ดู resolveStaleBill()
+    const STOP_EVIDENCE_GRACE_SEC = 15;
+    // 🚦 ตั้งสถานะ "กำลังคิดเวลารถติด" + ประทับเวลาหลักฐานล่าสุด (lastStopFixAt)
+    //    speedKmh ≤ 6 → จอด/คลาน = เริ่ม/ต่ออายุการคิดเวลาจอด · speedKmh > 6 → วิ่ง = หยุดคิดทันที
+    const applyStopState = (speedKmh, atMs, pos) => {
+        if (typeof speedKmh !== 'number' || !(speedKmh >= 0)) return false;
+        if (staleBaseAt !== null && pos) resolveStaleBill(pos, atMs || Date.now(), speedKmh); // ⏳ ยอดที่คิดไปก่อนต้องถูกตัดสินก่อนเปลี่ยนสถานะ
+        trafficCharging = (speedKmh <= TRAFFIC_SPEED_KMH);
+        lastStopFixAt = trafficCharging ? (atMs || Date.now()) : null;
+        return true;
+    };
+    // ⏳ ตัดสินยอดที่ "คิดไปก่อน" ตอนไม่มี fix ยืนยันเลย (GPS ตาย/ถูกกรองทั้งหมด)
+    //    - หลักฐานใหม่บอกว่าในช่วงนั้นรถ "วิ่งจริง" (เฉลี่ย > 6 กม./ชม.) → ถอนเวลารถติดที่คิดไปคืน
+    //      (มิเตอร์จริงคิดเป็นระยะทางช่วงนั้น ไม่ใช่เวลาซ้ำทั้งสองอย่าง)
+    //    - เฉลี่ย ≤ 6 กม./ชม. (จอด/คลานในรถติด/ลานใต้ดิน) → เก็บเวลานั้นไว้ = คิดตามจริง
+    //    => เกณฑ์เดียวกับที่ catch-up ใช้ตอนแอปถูกปิด (stoppedWholeGap) เพื่อให้ตัวเลขพูดภาษาเดียวกัน
+    const resolveStaleBill = (pos, now, speedKmhNow) => {
+        if (staleBaseAt === null) return 0;
+        const accrued = staleAccruedSec;
+        const windowSec = Math.max(1, (now - staleBaseAt) / 1000);
+        const basePos = staleBasePos;
+        staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null;
+        if (!(accrued > 0)) return 0;
+        let moving = false;
+        if (basePos && pos) {
+            const movedKm = calcGPS(basePos.lat, basePos.lon, pos.coords.latitude, pos.coords.longitude);
+            const avgKmh = movedKm / (windowSec / 3600); // ความเร็วเฉลี่ยของทั้งช่วงที่ไม่มีหลักฐาน (ทน GPS ลอย)
+            if (movedKm >= 0.03 && avgKmh > TRAFFIC_SPEED_KMH) moving = true;
+        } else if (typeof speedKmhNow === 'number' && speedKmhNow > TRAFFIC_SPEED_KMH) {
+            moving = true; // ไม่มีตำแหน่งอ้างอิงเทียบ → ใช้ความเร็วปัจจุบัน (ถอนคืนดีกว่าปล่อยให้เก็บเกิน)
+        }
+        if (!moving) return 0;
+        const rollback = Math.min(trafficSeconds, accrued);
+        trafficSeconds -= rollback;
+        return rollback;
+    };
+    // 🚦 ตัดสินสถานะจอด/วิ่งจาก fix หนึ่งครั้ง — ใช้ได้ทั้ง fix ที่แม่นยำและไม่แม่นยำ
+    //    ต้องเรียก "ก่อน" การกรองความแม่นยำ (accuracy > 30) เพื่อไม่ให้สถานะค้างจาก fix เก่าขณะรถวิ่งจริง
+    const updateStopStateFromFix = (pos, now) => {
+        if (!lastPos) return; // ยังไม่มี fix ก่อนหน้า = ยังเทียบการเคลื่อนที่ไม่ได้
+        const spd = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
+        if (spd !== -1) { applyStopState(spd, now, pos); return; } // coords.speed = Doppler วัดที่ตัวรถ — เชื่อได้แม้ตำแหน่งจะไม่แม่น
+        if (pos.coords.accuracy > 30) {
+            // ไม่มีค่า speed จากมือถือ + ตำแหน่งไม่แม่น → ตัดสินได้ทางเดียวคือ "ขยับไกลกว่าความคลาดเคลื่อนของตัวเอง"
+            // (GPS ลอยตอนจอดนิ่งไม่ขยับเกิน ~1.5 เท่าของค่าความคลาดเคลื่อน) → ขยับขนาดนั้น = รถวิ่งจริง
+            // ปิดการคิดเวลารถติดได้เท่านั้น — ไม่ "เริ่ม" คิดเอง เพราะยังไม่มีหลักฐานยืนยันว่าจอด
+            const movedM = calcGPS(lastPos.lat, lastPos.lon, pos.coords.latitude, pos.coords.longitude) * 1000;
+            const noiseM = Math.max(50, (pos.coords.accuracy || 30) * 1.5);
+            if (movedM > noiseM) applyStopState(99, now, pos);
+        }
+    };
+    // 🔎 อ่านอย่างเดียว (ใช้ตรวจสอบ/เทสต์): สถานะการคิดเวลารถติด + อายุหลักฐานล่าสุด
+    window.__meterTimeDiag = () => ({
+        running: !!window.isManualRunning, paused: !!window.isMeterPaused,
+        trafficSeconds: Math.round(trafficSeconds),
+        charging: !!trafficCharging,
+        evidenceAgeSec: lastStopFixAt ? Math.round((Date.now() - lastStopFixAt) / 1000) : null,
+        lastSpeedKmh: (typeof lastFixSpeedKmh !== 'number') ? null : Math.round(lastFixSpeedKmh * 10) / 10,
+        staleAccruedSec: Math.round(staleAccruedSec * 10) / 10, // ⏳ ยอดที่คิดไปก่อน ยังไม่ถูกยืนยัน (รอ fix ตัดสิน)
+        staleWindowSec: staleBaseAt ? Math.round((Date.now() - staleBaseAt) / 1000) : null
+    });
     // ⏱️ เดินเวลามิเตอร์จากนาฬิกาจริง (Date.now) ไม่ใช่นับรอบ setInterval
     // => แม้เบราว์เซอร์ลดความถี่ตอนซ่อนหน้าต่าง เวลาก็ยังตรงกับมิเตอร์จริง ไม่เพี้ยน
     window.advanceMeterTime = (now) => {
@@ -6998,12 +7070,22 @@
         const deltaSec = (now - lastCalcTime) / 1000;
         if (deltaSec <= 0) { lastCalcTime = now; return; }
 
-        // คิดเวลาจอด/รถติดต่อเนื่องตลอดเวลาที่ GPS ยืนยันว่ารถหยุด (trafficCharging = true)
-        // trafficCharging ถูกตั้งค่าโดย GPS handler: true เมื่อ speed <= 6 กม./ชม., false เมื่อวิ่ง
-        // => คิดต่อเนื่องไม่มีช่วงว่าง (ตรงกับมิเตอร์จริงที่คิดเวลารอตลอด)
-        // จำกัดไม่เกิน 30 วิ/ครั้งกัน over-bill กรณี GPS หลุดยาวwhileรถวิ่ง (edge case หายาก)
+        // ⏳ คิดเวลารถติดต่อเนื่องเมื่อ GPS ยืนยันว่าจอด (trafficCharging = true ตั้งโดย applyStopState) — แยกเป็น 2 ระดับ
+        //    - หลักฐานยังสด (ไม่เกิน STOP_EVIDENCE_GRACE_SEC) → เป็นยอด "ยืนยันแล้ว"
+        //    - หลักฐานเก่าเกินไป (GPS ตาย/ถูกกรองทั้งหมด) → ยังนับไปก่อน แต่เป็นยอด "ยังไม่ยืนยัน" (staleAccruedSec)
+        //      แล้วถูกถอนคืนทันทีที่มีหลักฐานว่ารถวิ่งจริง — ไม่ตัดทิ้งทันที (เวลาจอดจริงในลานใต้ดิน/อุโมงค์จะหาย)
+        //      และไม่นับค้างแบบไม่มีใครตรวจสอบเหมือนบั๊กเดิม (แอป 13:34 / มิเตอร์จริง 8:38)
+        // จำกัดไม่เกิน 30 วิ/ครั้งกัน over-bill กรณี GPS หลุดยาวขณะรถวิ่ง (edge case หายาก)
         if (trafficCharging) {
-            trafficSeconds += Math.min(deltaSec, 30);
+            const evidenceAgeSec = lastStopFixAt ? (now - lastStopFixAt) / 1000 : Infinity;
+            const addSec = Math.min(deltaSec, 30);
+            if (evidenceAgeSec <= STOP_EVIDENCE_GRACE_SEC) {
+                trafficSeconds += addSec;
+            } else {
+                if (staleBaseAt === null) { staleBaseAt = now; staleBasePos = lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null; }
+                trafficSeconds += addSec;
+                staleAccruedSec += addSec;
+            }
         }
 
         // เวลาที่เหลือของเส้นทางลดลงตามเวลาจริง (อัปเดต ETA)
@@ -7625,6 +7707,7 @@
             currentTrueRemainKm = seed.remainKm || 0;
             currentTrueRemainSec = seed.remainSec || 0;
             currentSpeedKmh = 0; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; // รอ fix ใหม่ยืนยันจอดก่อน ค่อยคิดเวลาจอด
+            staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null;
             startTime = seed.startTime || Date.now();
             lastPosTime = Date.now(); lastCalcTime = Date.now(); // ไม่คิดค่าเวลาช่วงที่แอปปิด (ตามกฎหลักฐานจอดจริง)
             lastPath = (seed.lastPath || []).slice(); // คืนค่าเส้นทางล่าสุด (ไว้ประมาณระยะช่วงปิด/ซ่อน)
@@ -7657,6 +7740,7 @@
             window.updateSurchargeUI();
         } else {
             actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; trafficCharging = true; lastFixSpeedKmh = null;
+            staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null; // เที่ยวใหม่ เริ่มนับยอด "ยังไม่ยืนยัน" ใหม่
             startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime; lastStopFixAt = startTime;
             pauseLog = []; pauseOpenAt = null; window.isMeterPaused = false;
             lastPath = []; // เที่ยวใหม่ เริ่มจดเส้นทางใหม่
@@ -7724,9 +7808,9 @@
         if(watchId) navigator.geolocation.clearWatch(watchId);
         watchId = navigator.geolocation.watchPosition((pos) => { 
             let now = Date.now(); 
-            if (pos.coords.accuracy > 30) return; 
+            if (pos.coords.accuracy > 30) { updateStopStateFromFix(pos, now); return; } // fix หยาบเกินใช้คิดระยะทาง — แต่ยังใช้ตัดสิน "จอด/วิ่ง" ได้ 
 
-            let OS_SpeedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
+            const OS_SpeedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
 
             if (lastPos) { 
                 let dMoved = calcGPS(lastPos.lat, lastPos.lon, pos.coords.latitude, pos.coords.longitude); 
@@ -7741,8 +7825,7 @@
                 // อัปเดตสถานะจอด/วิ่ง จากความเร็ว GPS สดล่าสุดเท่านั้น
                 // fix ที่ยืนยัน "จอดจริง" จะต่ออายุหลักฐานให้คิดค่าเวลาจอดต่อไปได้
                 lastFixSpeedKmh = currentSpeedKmh;
-                trafficCharging = (currentSpeedKmh <= 6);
-                lastStopFixAt = trafficCharging ? now : null;
+                applyStopState(currentSpeedKmh, now, pos);
                 
                 // ปรับปรุงการกรองสัญญาณและการชดเชย GPS ให้สอดคล้องกับมิเตอร์จริง
                 // 🎯 นับระยะแบบ "มิเตอร์จริง" (ล้อหมุน): ถ้า GPS ให้ความเร็วมือถือมา (Android/Chrome ให้ coords.speed)
@@ -8391,7 +8474,7 @@
         try { window.__restoredDestInfo = null; } catch(e) {}
         try { window.__lastDestInfo = null; } catch(e) {}
         try { window.__cachedLatestDest = null; } catch(e) {}
-        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; lastPath = []; catchUpLog = [];
+        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; lastPath = []; catchUpLog = [];
         tripCaughtUpAt = null; gapHiddenAt = null; gapBasePos = null; hiddenKmBase = 0; hiddenTrafficBase = 0; // 🧭 จบเที่ยว ล้างฐานหลักฐานช่วงซ่อน/ปิด
         window.isMeterPaused = false;
         window.updatePauseBtnUI();
@@ -8662,6 +8745,8 @@
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-12'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     const APP_RELEASE_NOTES = [
+        '🚦 เวลารถติดแม่นขึ้นอีกขั้น (แก้เคสจริง 12 ก.ย.: แอป 13:34 / มิเตอร์จริง 8:38 → คิดเกิน ~14 บาท): ตัดสิน “จอดหรือวิ่ง” จาก “ความเร็วจากตัวรถ” (Doppler) ก่อนการกรองความแม่นยำ GPS — เดิม fix ที่ความแม่นยำเกิน 30 เมตรถูกทิ้งทั้งลูก สถานะ “จอด” จึงค้างจาก fix เก่า แล้วคิดเวลารถติดต่อทั้งที่รถวิ่งไปแล้ว',
+        '⏳ คิดเวลารถติดแบบ “คิดไปก่อน แล้วตรวจคืน” เมื่อ GPS หลุดหรือไม่ส่ง fix ยืนยัน: ไม่มีหลักฐานเกิน 15 วินาที ระบบยังนับเวลาจอดต่อ (เวลาจอดจริงในลานใต้ดิน/อุโมงค์จึงไม่หาย) แต่ถ้าหลักฐานใหม่บอกว่าช่วงนั้นรถวิ่งจริง จะถอนเวลาที่นับไปคืนทันที — ช่วงนั้นต้องคิดเป็นระยะทาง ไม่ใช่คิดทั้งเวลาและระยะซ้ำกัน (ระยะทาง/สูตรค่าโดยสารยังเป็นสูตรมิเตอร์เดิมทุกตัว)',
         '🔐 เพิ่มด่าน “ยืนยันตัวตนอีกครั้ง” (พิมพ์รหัสผ่านของผู้ที่ล็อกอินอยู่) ก่อนทำรายการที่แก้ข้อมูลสำคัญ 7 จุด: แก้โปรไฟล์ (ชื่อที่แสดง · เบอร์โทรที่ใช้กู้รหัสผ่าน · ชื่อบริษัท/สหกรณ์ · ทะเบียนรถ) · ลบบัญชี · แอดมินเพิ่ม/แก้บัญชีสมาชิก · ระงับ–ปลดระงับบัญชี · อนุมัติสิทธิ์เพิ่ม · บันทึกรายการสิทธิ์+ลำดับ · บันทึกสิทธิ์ของตำแหน่ง — กันเครื่องที่ล็อกอินค้างไว้ (วางบนรถ/ให้คนอื่นยืม) ถูกแก้ข้อมูลหรือตัดสิทธิ์โดยไม่รู้ตัว',
         '🔓 ด่านยืนยันตัวตนทำงานเมื่อ “ค่าจริงเปลี่ยน” เท่านั้น — ตั้งค่า/ธีม/การแจ้งเตือนที่แก้บ่อยไม่ต้องพิมพ์รหัส · ยืนยันผ่านแล้วมีช่วงปลอดภัย 2 นาที (ทำหลายขั้นตอนต่อกันไม่ต้องพิมพ์รัว) · ถ้าออฟไลน์ดึงรหัสมาตรวจไม่ได้ จะถามยืนยันกับคนขับแทนการล็อกไม่ให้ทำงาน · กรอกรหัสผิด 3 ครั้ง = ยกเลิกเพื่อความปลอดภัย · กดยกเลิกได้ทุกเมื่อโดยข้อมูลไม่ถูกแก้',
         '🪪 เก็บกวาดทุกจุดที่เอารหัสผู้ใช้ (uid) ยาว ๆ มาโชว์ให้เห็น — หน้ารายชื่อสมาชิก · การ์ดคำขอสิทธิ์ · รายการคำขอค้าง · โควต้า Firestore · ประวัติการใช้งาน และช่องคำขอสิทธิ์ที่ส่งให้แอดมิน เปลี่ยนเป็นชื่อผู้ใช้/ชื่อที่แสดงเสมอ (ถ้าข้อมูลเก่าไม่มีชื่อเลย จะย่อเป็น “ผู้ใช้ …4 ตัวท้าย” แทนรหัสเต็ม 20 ตัว · ดูรหัสเต็มได้โดยชี้เมาส์ที่ชื่อในหน้าโควต้า)',
