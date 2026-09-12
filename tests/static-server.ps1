@@ -23,6 +23,10 @@ while ($true) {
         $path = ''
         if ($line) { $parts = $line.Split(' '); if ($parts.Count -ge 2) { $path = [Uri]::UnescapeDataString($parts[1]) } }
         if ($path -eq '' -or $path -eq '/') { $path = '/index.html' }
+        # ✂️ ตัด query string ออก (?a=1) — ถ้าไม่ตัด Join-Path/GetFullPath จะ throw (ตัวอักษร '?' ห้าม),
+        #    แล้วเซิร์ฟเวอร์จะตอบเปล่า (curl ได้ 000 / เบราว์เซอร์เห็น chrome-error) แทนที่จะเสิร์ฟไฟล์
+        $qi = $path.IndexOf('?')
+        if ($qi -ge 0) { $path = $path.Substring(0, $qi) }
         $full = ''
         if ($path.Contains('..')) {
             $full = $null # ป้องกัน path traversal

@@ -2120,6 +2120,7 @@
         <div class="side-menu-items">
             <div class="side-menu-item" data-ord-key="home" onclick="window.toggleSideMenu(false)"><span class="material-symbols-outlined">home</span><span>หน้าแรก</span></div>
             <div class="side-menu-item" data-ord-key="profile" onclick="window.toggleSideMenu(false); window.openProfileModal();"><span class="material-symbols-outlined" style="position: relative;">person<span id="menuProfileBadge" class="perm-badge" style="display: none;"></span></span><span>โปรไฟล์</span></div>
+            <div id="tripHistoryMenuItem" class="side-menu-item" data-ord-key="trips" onclick="window.toggleSideMenu(false); setTimeout(function(){ window.openTripHistory(); }, 250);"><span class="material-symbols-outlined">receipt_long</span><span>ประวัติเที่ยว / รายได้</span></div>
             <div id="settingsMenuBtn" class="side-menu-item" data-ord-key="settings" onclick="window.toggleSideMenu(false); setTimeout(() => { window.openSettingsHub(); }, 300);" style="display: none;"><span class="material-symbols-outlined">settings</span><span>ตั้งค่าการใช้งาน</span></div>
         </div>
         <hr class="side-divider">
@@ -2133,6 +2134,41 @@
 
 <!-- ⏳ ป้ายเที่ยวรอซิงก์ (โผล่เฉพาะตอนมีเที่ยวที่ส่งขึ้นเชิร์ฟเวอร์ไม่ได้) — อยู่เหนือป้ายเวอร์ชัน แตะเพื่อลองส่งใหม่ -->
 <button id="tripSyncChip" onclick="window.drainTripSyncQueue(true)" style="position: fixed; right: 14px; bottom: 44px; z-index: 40; display: none; margin: 0; box-shadow: 0 4px 14px rgba(0,0,0,0.5);"><span class="material-symbols-outlined">cloud_upload</span><span id="tripSyncChipText"></span></button>
+
+<!-- 💵 ประวัติเที่ยว / รายได้ (เพิ่ม 2026-09-12) — ดูเที่ยวย้อนหลัง + สรุปวันนี้/สัปดาห์นี้/เดือนนี้ + ออก CSV -->
+<style id="tripHistoryStyles">
+    .th-sum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+    .th-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 9px 11px; text-align: left; }
+    .th-card .th-lab { font-size: 11.5px; color: var(--text-dim); font-weight: 700; }
+    .th-card .th-fare { font-size: 19px; font-weight: 800; color: var(--neon-yellow); line-height: 1.25; white-space: nowrap; }
+    .th-card .th-sub { font-size: 10.5px; color: var(--text-dim); line-height: 1.5; }
+    html.light .th-card { background: rgba(18,26,48,0.05); border-color: rgba(18,26,48,0.10); }
+    html.light .th-card .th-fare { color: #a97400; }
+    .th-actions { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+    .th-btn { border: 0; border-radius: 10px; padding: 8px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer; background: rgba(255,210,77,0.14); color: var(--neon-yellow); display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+    .th-btn:active { transform: scale(0.96); }
+    .th-btn.th-green { background: rgba(46,204,113,0.16); color: #2ecc71; }
+    .th-note { font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 6px; }
+    .th-day { margin-top: 12px; }
+    .th-day-hd { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--neon-yellow); font-weight: 700; padding-bottom: 5px; border-bottom: 1px dashed rgba(255,255,255,0.12); }
+    html.light .th-day-hd { color: #a97400; border-bottom-color: rgba(18,26,48,0.12); }
+    .th-day-tot { margin-left: auto; color: white; white-space: nowrap; }
+    .th-trip { display: flex; align-items: center; gap: 8px; padding: 7px 2px; border-bottom: 1px dashed rgba(255,255,255,0.06); font-size: 12.5px; }
+    .th-trip .th-t { color: var(--text-dim); width: 44px; flex-shrink: 0; }
+    .th-trip .th-dest { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: white; }
+    .th-trip .th-km { color: #38bdf8; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+    .th-trip .th-f { color: var(--neon-green); font-weight: 700; width: 62px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+    .th-trip.th-short .th-dest { color: var(--text-dim); font-style: italic; }
+    .th-loading { text-align: center; color: var(--text-dim); font-size: 13px; padding: 22px 0; line-height: 1.7; }
+</style>
+<div id="tripHistoryModal" class="modal-overlay" style="z-index: 10058;">
+    <div class="modal-box flex-col-box" onclick="event.stopPropagation()">
+        <div class="modal-header"><h3 style="display:flex; align-items:center; justify-content:center; gap:8px; color: var(--neon-yellow); margin:0;"><span class="material-symbols-outlined" style="font-size:22px;">receipt_long</span> ประวัติเที่ยว / รายได้</h3><button class="btn-close-floating" onclick="window.toggleModal('tripHistoryModal', false)"><span class="material-symbols-outlined">close</span></button></div>
+
+        <div id="thSummary" style="padding: 12px 14px 0 14px; flex-shrink: 0;"></div>
+        <div id="thBody" class="modal-content-scroll" style="padding: 0 14px 16px 14px;"></div>
+    </div>
+</div>
 
 <div id="versionModal" class="modal-overlay" style="z-index: 10060;">
     <div class="modal-box flex-col-box" onclick="event.stopPropagation()">
@@ -2730,6 +2766,7 @@
             <div id="tsSummaryContent"></div>
         </div>
         <div style="padding:14px 18px; border-top:1px solid rgba(255,255,255,0.07); width:100%; box-sizing:border-box; background:rgba(0,0,0,0.25); flex-shrink:0;">
+            <button onclick="window.toggleModal('tripSummaryOverlay', false); setTimeout(function(){ window.openTripHistory(); }, 250);" class="th-btn" style="width:100%; justify-content:center; margin-bottom:8px; padding:10px 12px; font-size:13.5px;"><span class="material-symbols-outlined" style="font-size:18px;">history</span> ดูประวัติเที่ยว / รายได้</button>
             <div style="font-size:12px; color:var(--text-dim); text-align:center; line-height:1.6;">💡 แตะปุ่ม <span style="color:var(--neon-green); font-weight:700;">QR</span> ที่มุมซ้ายบน เพื่อให้ผู้โดยสารสแกนรับใบเสร็จ (รูปภาพ) แล้วปิดหน้าต่างนี้ด้วย ✕</div>
         </div>
     </div>
@@ -7974,6 +8011,11 @@
     //    - ส่งไม่ได้ (เน็ตหลุด/โควตาหมด) → ค้างในคิว แล้วลองใหม่เองเมื่อเน็ตกลับ/กลับเข้าแอป/ทุก 30 วิ
     //    - มีป้าย "รอซิงก์ N" มุมขวาล่างให้คนขับเห็น (แตะเพื่อลองใหม่ได้) — ไม่มีเที่ยวค้าง = ไม่แสดง
     window.__tripSyncSimulateOffline = false; // 🧪 สวิตช์เทสต์: ตั้ง true เพื่อบังคับให้ "ส่งไม่สำเร็จ" (ลองคิว/ป้าย/ซิงก์ซ้ำได้โดยไม่ต้องตัดเน็ตจริง)
+    // 🧪 โหมดทดสอบ (?fsNowrite=1 หรือ harness ตั้ง __testNoDbWrites เอง) = ห้าม “เขียนเที่ยวลงฐานข้อมูลจริง”
+    //    เหตุผล: tests/catchup-regression.html เรียก finishTripWithSummary() จริง → ประวัติเที่ยวของคนขับมีเที่ยวปลอมปน
+    //    (พบเที่ยว 0.5 กม. / 123 วิ ราว 400 รายการ ที่ลายเซ็นตรงกับชุดทดสอบ) — โหมดนี้กันตั้งแต่ต้นทาง
+    window.__testNoDbWrites = /(^|[?&])fsNowrite=1(&|$)/.test(location.search);
+    window.__testSkippedTripWrites = 0;
     const TRIP_SYNC_QUEUE_KEY = 'taxi_pending_trips_v1';
     const tripQueueRead = () => { try { const q = JSON.parse(localStorage.getItem(TRIP_SYNC_QUEUE_KEY) || '[]'); return Array.isArray(q) ? q : []; } catch(e) { return []; } };
     const tripQueueWrite = (q) => { try { localStorage.setItem(TRIP_SYNC_QUEUE_KEY, JSON.stringify(q)); return true; } catch(e) { return false; } };
@@ -8047,6 +8089,8 @@
     //    ⚠️ ตัวเลขค่าโดยสารคิดจากสูตรเดิมทุกตัว (distFare / meterTravel / surchargeTotal) — ห้ามแก้สูตรในฟังก์ชันนี้
     window.saveTripToFirestore = (s) => {
         if (!loggedInUserId) return;
+        // 🧪 โหมดทดสอบ: ไม่เขียนลง Firestore และ “ไม่เข้าคิวรอซิงก์” (ไม่งั้นคิวจะส่งขึ้นเซิร์ฟเวอร์จริงทีหลัง)
+        if (window.__testNoDbWrites) { window.__testSkippedTripWrites = (window.__testSkippedTripWrites || 0) + 1; try { console.info('[โหมดทดสอบ] ข้ามการบันทึกเที่ยวลงฐานข้อมูลจริง (fsNowrite=1)'); } catch(e) {} return; }
         let entry = null;
         try {
             const distFare = window.calcThaiMeterDist(s.km);
@@ -8083,6 +8127,188 @@
         });
     };
     
+    // 💵 ประวัติเที่ยว / รายได้ (12 ก.ย.) — ดูเที่ยวย้อนหลัง + สรุป วันนี้ / 7 วันล่าสุด / เดือนนี้ + ส่งออก CSV
+    //    ⚠️ อ่านอย่างเดียว — ไม่แก้สูตรค่าโดยสาร และไม่เขียนทับเที่ยวที่บันทึกไว้แล้ว
+    //    ที่มา: users/{uid}/trips (ที่ saveTripToFirestore เขียน) + เที่ยวที่ยังค้างในคิวจริงในเครื่อง (ติดป้าย “รอซิงก์”)
+    const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const TH_DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+    const thMoney = (n) => Math.round(Number(n) || 0).toLocaleString('th-TH') + ' ฿';
+    const thDayKey = (ts) => { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+    const thDayLabel = (ts) => { const d = new Date(ts); return d.getDate() + ' ' + TH_MONTHS[d.getMonth()] + ' ' + (d.getFullYear() + 543) + ' · วัน' + TH_DAYS[d.getDay()]; };
+    const thShortDate = (ts) => { const d = new Date(ts); return d.getDate() + ' ' + TH_MONTHS[d.getMonth()] + ' ' + (d.getFullYear() + 543); };
+    const thClock = (ts) => { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+    const thEsc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    // แปลงค่า Firestore REST → ค่าปกติ (เส้นทางสำรองตอน SDK ต่อเซิร์ฟเวอร์ไม่ได้)
+    const fsValToJs = (v) => {
+        if (!v || typeof v !== 'object') return null;
+        if ('nullValue' in v) return null;
+        if ('integerValue' in v) return Number(v.integerValue);
+        if ('doubleValue' in v) return Number(v.doubleValue);
+        if ('booleanValue' in v) return !!v.booleanValue;
+        if ('stringValue' in v) return v.stringValue;
+        if ('timestampValue' in v) return Date.parse(v.timestampValue);
+        if ('arrayValue' in v) return (v.arrayValue.values || []).map(fsValToJs);
+        if ('mapValue' in v) { const o = {}; const f = v.mapValue.fields || {}; Object.keys(f).forEach((k) => { o[k] = fsValToJs(f[k]); }); return o; }
+        return null;
+    };
+    // เที่ยวที่ “หน้าตาเหมือนข้อมูลทดสอบ” (ชุดทดสอบเคยเขียน 0.5 กม. / ~2 นาที ลงประวัติจริง) — ซ่อนไว้ก่อน แต่บอกจำนวนและกดดูได้ ไม่ซ่อนเงียบ ๆ
+    //    เกณฑ์ 4 ข้อ (ต้องเป็นเที่ยวที่ “เป็นไปไม่ได้ในโลกจริง” เท่านั้น) — 1) ไม่ขยับเลยแล้วค่าโดยสารสูง 2) รูปแบบชุดทดสอบเดิม 3) ค่าโดยสารสูงเกินเทียบระยะทาง 4) คิดเวลารถติดเกิน 3 ชม. ในเที่ยวเดียว
+    const isJunkTrip = (t) => {
+        const km = Number(t.km) || 0;
+        const fare = Number(t.fare) || 0;
+        const traffic = Number(t.trafficSec) || 0;
+        const dur = (Number(t.endTime) || 0) - (Number(t.startTime) || 0);
+        if (km <= 0 && fare <= 100) return true;
+        if (km < 0.6 && dur > 0 && dur < 180000) return true;
+        if (km < 1.5 && fare > 300) return true;
+        if (traffic > 10800) return true;
+        return false;
+    };
+    window.__thTrips = [];
+    window.__thShowAll = false;
+    // โหลดเที่ยวของบัญชีที่ล็อกอินอยู่ (SDK ก่อน → ไม่ได้ค่อยยิง REST → บวกเที่ยวที่ยังรอซิงก์ในเครื่อง)
+    window.fetchMyTrips = async () => {
+        // uid: ใช้ตัวแปรเครื่องก่อน — ถ้ายังว่าง (เปิดประวัติเร็วกว่าที่ระบบกู้เซสชันเสร็จ) อ่านจากที่เก็บในเครื่องแทน
+        let uid = loggedInUserId;
+        if (!uid) { try { uid = localStorage.getItem('taxi_user_id') || ''; } catch (e) { uid = ''; } }
+        if (!uid) return [];
+        const out = [];
+        let gotServer = false;
+        if (db) {
+            try {
+                // ⚠️ ต้อง { source: 'server' } — ถ้าไม่ระบุ SDK จะคืน "แคชว่าง" แบบไม่ error ตอนออฟไลน์ แล้วเราจะเข้าใจผิดว่าไม่มีเที่ยว
+                const snap = await window.__fsTimeout(getDocs(collection(db, 'users', uid, 'trips'), { source: 'server' }), 9000);
+                snap.forEach((d) => { const o = d.data() || {}; o.tripId = o.tripId || d.id; out.push(o); });
+                gotServer = true;
+            } catch (e) { gotServer = false; }
+        }
+        if (!gotServer) {
+            try {
+                const res = await window.__fsTimeout(fetch(`${__fsBase}/users/${uid}/trips?pageSize=500&key=${__FS_KEY}`), 9000);
+                if (res && res.ok) {
+                    const j = await res.json();
+                    (j.documents || []).forEach((docObj) => {
+                        const o = fsValToJs({ mapValue: { fields: docObj.fields || {} } }) || {};
+                        const parts = String(docObj.name || '').split('/');
+                        o.tripId = o.tripId || parts[parts.length - 1];
+                        out.push(o);
+                    });
+                }
+            } catch (e2) {}
+        }
+        try { tripQueueRead().filter((e) => e && e.uid === uid && e.data).forEach((e) => { if (!out.some((t) => t.tripId === e.tripId)) { const o = Object.assign({}, e.data); o.tripId = e.tripId; o.__pending = true; out.push(o); } }); } catch (e3) {}
+        return out.filter((t) => t && t.startTime).sort((a, b) => (Number(b.startTime) || 0) - (Number(a.startTime) || 0));
+    };
+    const thTotals = (list) => list.reduce((a, t) => { a.fare += Number(t.fare) || 0; a.km += Number(t.km) || 0; a.n++; return a; }, { fare: 0, km: 0, n: 0 });
+    const thGroups = (list) => {
+        const map = new Map();
+        list.forEach((t) => { const k = thDayKey(t.startTime); if (!map.has(k)) map.set(k, { key: k, ts: Number(t.startTime), list: [] }); map.get(k).list.push(t); });
+        return Array.from(map.values());
+    };
+    window.renderTripHistory = () => {
+        const sumEl = document.getElementById('thSummary');
+        const bodyEl = document.getElementById('thBody');
+        if (!sumEl || !bodyEl) return;
+        const all = window.__thTrips || [];
+        const showAll = !!window.__thShowAll;
+        const trips = all.filter((t) => showAll || !isJunkTrip(t));
+        const hidden = all.length - trips.length;
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const weekStart = todayStart - 6 * 86400000;
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        const tToday = thTotals(trips.filter((t) => Number(t.startTime) >= todayStart));
+        const tWeek = thTotals(trips.filter((t) => Number(t.startTime) >= weekStart));
+        const tMonth = thTotals(trips.filter((t) => Number(t.startTime) >= monthStart));
+        const tAll = thTotals(trips);
+        const pending = trips.filter((t) => t.__pending).length;
+        const card = (lab, tot) => '<div class="th-card"><div class="th-lab">' + lab + '</div><div class="th-fare">' + thMoney(tot.fare) + '</div><div class="th-sub">' + tot.n + ' เที่ยว · ' + tot.km.toFixed(1) + ' กม.</div></div>';
+        const junkBtn = hidden > 0
+            ? '<button class="th-btn" onclick="window.__thToggleJunk()"><span class="material-symbols-outlined" style="font-size:16px;">visibility</span> ดูเที่ยวทดสอบที่ซ่อนไว้ ' + hidden + '</button>'
+            : (showAll && all.length ? '<button class="th-btn" onclick="window.__thToggleJunk()"><span class="material-symbols-outlined" style="font-size:16px;">visibility_off</span> ซ่อนเที่ยวทดสอบกลับ</button>' : '');
+        sumEl.innerHTML =
+            '<div class="th-sum-grid">' + card('วันนี้', tToday) + card('7 วันล่าสุด', tWeek) + card('เดือนนี้', tMonth) + '</div>' +
+            '<div class="th-actions">' +
+                '<button class="th-btn" onclick="window.__thRefresh()"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span> รีเฟรช</button>' +
+                '<button class="th-btn th-green" onclick="window.exportTripHistoryCsv()"><span class="material-symbols-outlined" style="font-size:16px;">download</span> ส่งออก CSV</button>' +
+                junkBtn +
+            '</div>' +
+            (hidden > 0 ? '<div class="th-note" style="color:#ffb347;">ซ่อน ' + hidden + ' เที่ยวที่เป็นไปไม่ได้ในโลกจริง (เที่ยวทดสอบ/ค่าโดยสารสูงผิดปกติเทียบระยะทาง) — ไม่นำมาคิดยอด</div>' : '') +
+            '<div class="th-note">รวม <b style="color:#fff;">' + tAll.n + '</b> เที่ยว · ยอดรวม <b style="color:#fff;">' + thMoney(tAll.fare) + '</b> · ' + tAll.km.toFixed(1) + ' กม.' +
+                (pending ? ' · <span style="color:#ffb347; font-weight:700;">รอซิงก์ ' + pending + ' เที่ยว</span>' : '') +
+                (trips.length ? '<br>ตั้งแต่ ' + thShortDate(trips[trips.length - 1].startTime) + ' ถึง ' + thShortDate(trips[0].startTime) : '') + '</div>';
+        if (!trips.length) {
+            bodyEl.innerHTML = '<div class="th-loading">' + (all.length
+                ? 'เที่ยวที่โหลดมาเป็นข้อมูลทดสอบทั้งหมด<br><span style="font-size:11px;">กดปุ่ม “ดูเที่ยวทดสอบที่ซ่อนไว้” ด้านบนถ้าต้องการดู</span>'
+                : 'ยังไม่มีประวัติเที่ยว<br><span style="font-size:11px;">เที่ยวจะถูกบันทึกอัตโนมัติเมื่อกด “สิ้นสุดการเดินทาง”</span>') + '</div>';
+            return;
+        }
+        const groups = thGroups(trips.slice(0, 200));
+        let html = '';
+        groups.forEach((g) => {
+            const tot = thTotals(g.list);
+            html += '<div class="th-day"><div class="th-day-hd"><span class="material-symbols-outlined" style="font-size:16px;">calendar_month</span>' + thEsc(thDayLabel(g.ts)) +
+                '<span class="th-day-tot">' + thMoney(tot.fare) + ' <span style="color:var(--text-dim); font-weight:600; font-size:11px;">(' + tot.n + ' เที่ยว · ' + tot.km.toFixed(1) + ' กม.)</span></span></div>';
+            g.list.forEach((t) => {
+                const dest = String(t.destName || '').trim();
+                html += '<div class="th-trip' + (dest ? '' : ' th-short') + '">' +
+                    '<span class="th-t">' + thClock(t.startTime) + '</span>' +
+                    '<span class="th-dest">' + (dest ? thEsc(dest) : 'มิเตอร์ (ไม่ระบุจุดหมาย)') +
+                        (t.__pending ? ' <span style="color:#ffb347; font-size:10.5px; font-style:normal;">· รอซิงก์</span>' : '') + '</span>' +
+                    '<span class="th-km">' + (Number(t.km) || 0).toFixed(2) + ' กม.</span>' +
+                    '<span class="th-f">' + thMoney(t.fare) + '</span>' +
+                '</div>';
+            });
+            html += '</div>';
+        });
+        if (trips.length > 200) html += '<div class="th-loading">แสดง 200 เที่ยวล่าสุด จากทั้งหมด ' + trips.length + ' เที่ยว<br><span style="font-size:11px;">ดูทั้งหมดได้จากปุ่ม “ส่งออก CSV”</span></div>';
+        bodyEl.innerHTML = html;
+    };
+    window.exportTripHistoryCsv = () => {
+        const all = window.__thTrips || [];
+        const trips = all.filter((t) => window.__thShowAll || !isJunkTrip(t));
+        if (!trips.length) { window.showToast('ยังไม่มีเที่ยวให้ส่งออก', true); return; }
+        const q = (s) => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
+        const rows = [['วันที่', 'วัน', 'เวลาเริ่ม', 'เวลาจบ', 'จุดหมาย', 'กม.', 'วินาที', 'วินาทีรถติด', 'ค่าโดยสาร (บาท)', 'สถานะ']];
+        trips.slice().sort((a, b) => Number(a.startTime) - Number(b.startTime)).forEach((t) => {
+            const d = new Date(t.startTime);
+            rows.push([
+                d.getDate() + '/' + (d.getMonth() + 1) + '/' + (d.getFullYear() + 543),
+                'วัน' + TH_DAYS[d.getDay()],
+                thClock(t.startTime),
+                t.endTime ? thClock(t.endTime) : '',
+                String(t.destName || '').trim(),
+                (Number(t.km) || 0).toFixed(2),
+                Math.max(0, Math.round(((Number(t.endTime) || 0) - (Number(t.startTime) || 0)) / 1000)),
+                Math.max(0, Math.round(Number(t.trafficSec) || 0)),
+                Math.round(Number(t.fare) || 0),
+                t.__pending ? 'รอซิงก์' : 'ซิงก์แล้ว'
+            ]);
+        });
+        try {
+            const csv = '\ufeff' + rows.map((r) => r.map(q).join(',')).join('\r\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'taxi-history-' + thDayKey(Date.now()) + '.csv';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 4000);
+            window.showToast('ส่งออก ' + (rows.length - 1) + ' เที่ยวเป็นไฟล์ CSV แล้ว', false, null, true);
+        } catch (e) { window.showToast('ส่งออก CSV ไม่สำเร็จ', true); }
+    };
+    window.__thToggleJunk = () => { window.__thShowAll = !window.__thShowAll; window.renderTripHistory(); };
+    window.__thRefresh = async () => { await window.openTripHistory(); };
+    window.openTripHistory = async () => {
+        window.toggleModal('tripHistoryModal', true);
+        const sumEl = document.getElementById('thSummary');
+        const bodyEl = document.getElementById('thBody');
+        if (sumEl) sumEl.innerHTML = '<div class="th-actions"><button class="th-btn" onclick="window.__thRefresh()"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span> รีเฟรช</button></div>';
+        if (bodyEl) bodyEl.innerHTML = '<div class="th-loading">กำลังโหลดประวัติเที่ยว…<br><span style="font-size:11px;">(ดึงจากเซิร์ฟเวอร์ + เที่ยวที่ยังรอซิงก์ในเครื่อง)</span></div>';
+        window.__thTrips = await window.fetchMyTrips();
+        window.renderTripHistory();
+    };
+
     // 🧾 จบเที่ยว (จากปุ่มหลัก หรือหน้าจอขยาย): ถ่ายข้อมูลสรุป → รีเซ็ตระบบ → เปิดหน้าสรุปค่าโดยสาร
     // หน้าสรุปโชว์ช่วง "หยุด/เริ่มต่อ" ระหว่างเที่ยว (แอปปิด/สลับหน้าจอ) ให้ผู้โดยสารเห็นอย่างโปร่งใส
     window.finishTripWithSummary = () => {
@@ -8745,6 +8971,10 @@
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-12'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     const APP_RELEASE_NOTES = [
+        '💵 หน้าประวัติเที่ยว / รายได้ (ใหม่): เปิดจากเมนูข้าง → "ประวัติเที่ยว / รายได้" หรือกดปุ่มในหน้าสรุปค่าโดยสารหลังจบเที่ยว — เห็นสรุป วันนี้ · 7 วันล่าสุด · เดือนนี้ (ยอดเงิน จำนวนเที่ยว ระยะทาง) และรายการเที่ยวแยกตามวัน (เวลา · จุดหมาย · กม. · ค่าโดยสาร) พร้อมปุ่มส่งออก CSV เอาไปทำบัญชีต่อได้',
+        '🧲 ประวัติเที่ยวไม่เอา "เที่ยวที่เป็นไปไม่ได้ในโลกจริง" มาคิดยอด (เที่ยวทดสอบที่ค้างในประวัติ / เที่ยวที่ค่าโดยสารสูงผิดปกติเทียบระยะทาง / ระยะทาง 0 กม.) — เดิมเที่ยวทดสอบทำให้ "รายได้ 7 วันล่าสุด" พองเป็น 5,223 ฿ ทั้งที่เที่ยวจริงรวมกัน 1,683 ฿ · ที่ซ่อนไว้ไม่หาย: บอกจำนวนไว้ชัดเจนและกดดูได้ตลอด (ไม่ซ่อนเงียบ ๆ) · เที่ยวที่ยังรอซิงก์ขึ้นเซิร์ฟเวอร์ก็โชว์ในประวัตินี้ด้วย พร้อมป้าย "รอซิงก์"',
+        '🗓️ ประวัติเวอร์ชันข้ามวันเองได้แล้ว: ระบบจำ “วันที่ bullet แต่ละข้อถูกเพิ่มครั้งแรก” ไว้ในเครื่อง แล้วสร้างการ์ดตามวันนั้นอัตโนมัติ — เพิ่มข้อความวันใหม่ได้การ์ดวันใหม่เอง ไม่ต้องย้ายข้อความวันเก่าไปไว้ในโค้ดเอง (กันเคสเดิมที่ bullet ของวันที่ 11 หลุดไปรวมกับวันที่ 12)',
+        '🧪 ความแม่นยำของประวัติเที่ยว: ดึงเที่ยวจากเซิร์ฟเวอร์แบบบังคับอ่านจากเซิร์ฟเวอร์ (ไม่ใช่แคชว่างตอนออฟไลน์) และถ้าช่องหลักติด จะสลับไปอ่านผ่าน REST ให้เอง — ชุดทดสอบไม่เขียนเที่ยวปลอมลงประวัติจริงแล้ว (มี flag fsNowrite=1 ให้ทุกครั้งที่รันชุดทดสอบ)',
         '🚦 เวลารถติดแม่นขึ้นอีกขั้น (แก้เคสจริง 12 ก.ย.: แอป 13:34 / มิเตอร์จริง 8:38 → คิดเกิน ~14 บาท): ตัดสิน “จอดหรือวิ่ง” จาก “ความเร็วจากตัวรถ” (Doppler) ก่อนการกรองความแม่นยำ GPS — เดิม fix ที่ความแม่นยำเกิน 30 เมตรถูกทิ้งทั้งลูก สถานะ “จอด” จึงค้างจาก fix เก่า แล้วคิดเวลารถติดต่อทั้งที่รถวิ่งไปแล้ว',
         '⏳ คิดเวลารถติดแบบ “คิดไปก่อน แล้วตรวจคืน” เมื่อ GPS หลุดหรือไม่ส่ง fix ยืนยัน: ไม่มีหลักฐานเกิน 15 วินาที ระบบยังนับเวลาจอดต่อ (เวลาจอดจริงในลานใต้ดิน/อุโมงค์จึงไม่หาย) แต่ถ้าหลักฐานใหม่บอกว่าช่วงนั้นรถวิ่งจริง จะถอนเวลาที่นับไปคืนทันที — ช่วงนั้นต้องคิดเป็นระยะทาง ไม่ใช่คิดทั้งเวลาและระยะซ้ำกัน (ระยะทาง/สูตรค่าโดยสารยังเป็นสูตรมิเตอร์เดิมทุกตัว)',
         '🔐 เพิ่มด่าน “ยืนยันตัวตนอีกครั้ง” (พิมพ์รหัสผ่านของผู้ที่ล็อกอินอยู่) ก่อนทำรายการที่แก้ข้อมูลสำคัญ 7 จุด: แก้โปรไฟล์ (ชื่อที่แสดง · เบอร์โทรที่ใช้กู้รหัสผ่าน · ชื่อบริษัท/สหกรณ์ · ทะเบียนรถ) · ลบบัญชี · แอดมินเพิ่ม/แก้บัญชีสมาชิก · ระงับ–ปลดระงับบัญชี · อนุมัติสิทธิ์เพิ่ม · บันทึกรายการสิทธิ์+ลำดับ · บันทึกสิทธิ์ของตำแหน่ง — กันเครื่องที่ล็อกอินค้างไว้ (วางบนรถ/ให้คนอื่นยืม) ถูกแก้ข้อมูลหรือตัดสิทธิ์โดยไม่รู้ตัว',
@@ -8911,13 +9141,33 @@
     // 🗓️ การ์ดของวันที่มีการแก้ไข - 1 วัน = 1 การ์ด (ห้ามรวมวัน ห้ามลบของเก่า)
     const verNum = (v) => { const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(v || '')); return m ? (+m[1]) * 10000 + (+m[2]) * 100 + (+m[3]) : 0; };
     const chgMaxVer = (cards) => (cards || []).reduce((best, c) => verNum(c && c.v) > verNum(best) ? String(c.v) : best, '1.2.0');
-    const mkDayCard = (date, notes, v) => ({ v: v || bumpVer(chgMaxVer(CHANGELOG_SEED)), date: date, color: 0, notes: cleanNotes(notes) });
-    const mkToday = (v) => mkDayCard(APP_RELEASE_DATE, APP_RELEASE_NOTES, v); // การ์ดของรอบโค้ดนี้ (ใช้ตอนออฟไลน์/โหลด Firestore ไม่ทัน)
+    // (ลบ mkDayCard/mkToday เดิมออก — สร้างการ์ดของรอบโค้ดนี้ผ่าน chgCodeCards() ที่แยกวันเองเสมอ ห้ามกลับมาใช้ตัวเก่าเพราะจะรวมวัน)
     // hash รายการ bullet ของโค้ดรอบนี้ - กันรวมซ้ำ / กันทับข้อความที่ admin แก้
     const chgHash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return 'h' + (h >>> 0).toString(36); };
     const CODE_NOTES_HASH = chgHash(cleanNotes(APP_RELEASE_NOTES).join('|'));
     // 🔑 hash ของ "รายการ bullet รุ่นก่อนแยกวัน" - เขียนเป็น syncedHash ให้บิลด์เก่าที่ค้างอยู่ไม่ยัด bullet เก่ากลับ
     const LEGACY_NOTES_HASH = 'h1k0jb5a';
+    // 🗓️ ตัวช่วย “ข้ามวันอัตโนมัติ” ของประวัติเวอร์ชัน — กันพลาดแบบที่เคยทำให้ bullet ของวันที่ 11 ถูกยุบไปวันที่ 12
+    //    หลักการ: จำ “วันที่ bullet นี้ปรากฏครั้งแรก” ไว้ในเครื่อง (ต่อ 1 bullet) แล้วสร้างการ์ดตามวันนั้น
+    //    → เพิ่ม bullet วันใหม่ = ได้การ์ดวันใหม่เอง ไม่ต้องย้าย bullet วันเก่าไป CHANGELOG_SEED เอง
+    //    ครั้งแรกสุดบนเครื่องหนึ่ง ๆ จะตรึงทุก bullet ด้วย APP_RELEASE_DATE (ไม่ให้เครื่องคนขับที่ติดตั้งช้าได้วันผิด)
+    const CHG_NOTE_DAYS_KEY = 'taxi_chg_note_days_v1';
+    const chgCodeCards = () => {
+        let map = {};
+        try { const p = JSON.parse(localStorage.getItem(CHG_NOTE_DAYS_KEY) || '{}'); if (p && typeof p === 'object') map = p; } catch (e) {}
+        const firstRun = !map.__init;
+        if (firstRun) map.__init = 1;
+        const byDate = new Map();
+        cleanNotes(APP_RELEASE_NOTES).forEach((n) => {
+            const k = chgHash(n);
+            if (!map[k]) map[k] = firstRun ? APP_RELEASE_DATE : chgTodayStr();
+            const d = /^\d{4}-\d{2}-\d{2}$/.test(map[k]) ? map[k] : APP_RELEASE_DATE;
+            if (!byDate.has(d)) byDate.set(d, []);
+            byDate.get(d).push(n);
+        });
+        try { localStorage.setItem(CHG_NOTE_DAYS_KEY, JSON.stringify(map)); } catch (e) {}
+        return Array.from(byDate.keys()).sort().map((d) => ({ v: null, date: d, color: 0, notes: byDate.get(d) }));
+    };
     // 🧱 โครงสร้างประวัติเวอร์ชัน: 2 = แยกการ์ดตามวัน (1 วัน = 1 เวอร์ชัน)
     const CHG_SCHEMA = 2;
     window.__chgEntries = null;
@@ -8925,7 +9175,7 @@
     // 🔒 กฎเหล็กของประวัติเวอร์ชัน (ห้ามละเมิด - เคยเป็นต้นเหตุที่วันเก่าหาย/ถูกรวมวัน)
     //    1) การ์ดของวันเก่า "ห้ามลบ ห้ามเปลี่ยนวันที่ ห้ามรวมเข้าวันอื่น" - เป็นความจริงของวันนั้นตลอดไป
     //    2) เติมวันย้อนหลังที่หายไปทั้งการ์ดจาก CHANGELOG_SEED (เฉพาะวันที่ยังไม่มีการ์ด - การ์ดที่มีอยู่ไม่แตะ ข้อความที่แอดมินแก้จึงไม่กลับมา)
-    //    3) bullet จากโค้ดเพิ่มได้เฉพาะ bullet ที่ "ยังไม่เคยมีในประวัติเลย" และลงการ์ดของ APP_RELEASE_DATE เท่านั้น
+    //    3) bullet จากโค้ดเพิ่มได้เฉพาะ bullet ที่ "ยังไม่เคยมีในประวัติเลย" และลงการ์ดของ "วันที่ bullet นั้นปรากฏครั้งแรก" (chgCodeCards — ตัวช่วยข้ามวันอัตโนมัติ)
     //    4) ไม่สร้างการ์ดวันใหม่ถ้าไม่มีข้อความจริง (กันการ์ดวันเปล่าที่ไปดูด bullet ของวันอื่นมารวม)
     window.chgMerge = (raw, seedCards, codeCards) => {
         const byDate = new Map(), seen = new Set();
@@ -8965,7 +9215,7 @@
             let snap; try { snap = await getDoc(ref); } catch (e) { snap = null; }
             const raw = (snap && snap.exists() && Array.isArray(snap.data().entries)) ? snap.data().entries : [];
             const storedHash = (snap && snap.exists() && (snap.data().chgNotesHash || snap.data().syncedHash)) || '';
-            const merged = window.chgMerge(raw, CHANGELOG_SEED, [{ v: null, date: APP_RELEASE_DATE, color: 0, notes: APP_RELEASE_NOTES }]);
+            const merged = window.chgMerge(raw, CHANGELOG_SEED, chgCodeCards());
             let dirty = merged.dirty;
             if (storedHash !== CODE_NOTES_HASH) dirty = true;
             if (dirty && loggedInUserId) {
@@ -8975,7 +9225,14 @@
             window.renderVersionPill();
         } catch (e) { try { window.__chgEntries = chgFallback(); } catch (e2) { window.__chgEntries = CHANGELOG_SEED; } window.renderVersionPill(); }
     };
-    const chgFallback = () => [mkToday()].concat(CHANGELOG_SEED.map(e => ({ v: e.v, date: e.date, color: e.color, notes: cleanNotes(e.notes) }))); // ใช้ตอนยังโหลด Firestore ไม่ทัน/พลาด
+    // ใช้ตอนยังโหลด Firestore ไม่ทัน/พลาด — สร้างการ์ดจาก bullet ของโค้ดด้วยตัวช่วยข้ามวันอัตโนมัติ + วันที่เก่าจาก seed
+    const chgFallback = () => {
+        const cards = [];
+        let v = chgMaxVer(CHANGELOG_SEED);
+        chgCodeCards().sort((a, b) => String(a.date).localeCompare(String(b.date))).forEach((c) => { v = bumpVer(v); cards.push({ v: v, date: c.date, color: 0, notes: c.notes }); });
+        CHANGELOG_SEED.forEach((s) => { if (!cards.some((c) => c.date === s.date)) cards.push({ v: s.v, date: s.date, color: s.color, notes: cleanNotes(s.notes) }); });
+        return cards.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    };
     // ป้าย v1.2.x บนหัวหน้าแรก — อัปเดตทุกครั้งที่ข้อมูลเปลี่ยน
     window.renderVersionPill = () => {
         const pillBtn = document.getElementById('versionPillBtn');

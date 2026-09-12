@@ -33,7 +33,9 @@
     <button id="runBtn">🔄 รันการทดสอบใหม่ (15 สถานการณ์)</button>
     <div id="summary"></div>
     <ol id="results"></ol>
-    <iframe id="appFrame" src="../index.html"></iframe>
+    <!-- ⚠️ ?fsNowrite=1 = ห้ามแอปเขียนเที่ยวลงฐานข้อมูลจริง — ชุดทดสอบนี้เรียก finishTripWithSummary() จริง
+         ถ้าไม่ใส่ flag นี้ ประวัติเที่ยวของคนขับจะมีเที่ยวปลอมปนทุกครั้งที่กดรัน (พบมาแล้ว ~400 รายการ) -->
+    <iframe id="appFrame" src="../index.html?fsNowrite=1"></iframe>
 
 <script>
     (function () {
@@ -104,6 +106,9 @@
             while (Date.now() - t0 < 25000) {
                 const cw = frame.contentWindow;
                 if (cw && typeof cw.resumeSavedTrip === 'function' && typeof cw.maybeShowResumeBanner === 'function' && typeof cw.startMeterAndTracking === 'function') {
+                    // 🧪 กันพลาด: บังคับโหมด “ไม่เขียนฐานข้อมูลจริง” ใส่ iframe ทุกครั้ง (ไม่พึ่ง query string อย่างเดียว)
+                    //    — ไม่งั้นเที่ยวทดสอบเข้า Firestore + คิวรอซิงก์ของจริง
+                    try { cw.__testNoDbWrites = true; } catch (e) {}
                     injectStub();
                     await wait(250);
                     // รอให้โปรไฟล์ผู้ใช้ (Firestore) โหลดเสร็จ — กันสถานการณ์ที่ 6 โดนโปรไฟล์เขียนทับ cap ที่เทสต์ตั้งไว้ (flaky race)

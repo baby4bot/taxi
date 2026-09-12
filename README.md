@@ -47,6 +47,9 @@
   ให้ผู้โดยสารสแกนเปิดใบเสร็จของตัวเอง (หัวใบเสร็จใช้ชื่อบริษัท/สหกรณ์ + ทะเบียนรถของคนขับ)
 - 📤 **แชร์ค่าโดยสาร** — ปุ่มแชร์บนหัวจอ: **QR Code · Messenger · LINE · TrueMoney · คัดลอกลิงก์**
   (เมนูห้อยลง แตะที่ว่างก็ยุบ และยุบเองใน 2.5 วินาที)
+- 💵 **ประวัติเที่ยว / รายได้** — สรุป **วันนี้ · 7 วันล่าสุด · เดือนนี้** (ยอดเงิน · จำนวนเที่ยว · ระยะทาง)
+  + รายการเที่ยวแยกตามวัน (เวลา · จุดหมาย · กม. · ค่าโดยสาร) · เปิดจาก **เมนูข้าง** หรือปุ่มในหน้าสรุปค่าโดยสาร
+  หลังจบเที่ยว · **ส่งออก CSV** เอาไปทำบัญชีต่อได้ · เที่ยวที่ยังส่งขึ้นเซิร์ฟเวอร์ไม่ได้จะโชว์พร้อมป้าย "รอซิงก์"
 - ⭐ **จุดโปรด + ประวัติการค้นหา** — เก็บไว้ในเครื่อง แตะดาวบนผลค้นหาเพื่อบันทึก
 - 🐬 **Service Portal** — รวมเบอร์บริการ / รหัส USSD ที่ใช้บ่อย กดโทรออกได้เลย
 - 🎨 **ธีม 3 โหมด** — **มืด** (กรมท่าปกติ) · **ดำ OLED** (ประหยัดแบต/ลดความร้อนจอตอนวางหน้ารถ) ·
@@ -160,7 +163,8 @@
 | บันทึกเที่ยว + คิวออฟไลน์ | `saveTripToFirestore` · `drainTripSyncQueue` · `tripQueueCount` |
 | สิทธิ์ผู้ใช้ | `currentUserPerms` · `effectiveRolePerms` · `godPermsAll` |
 | โหลดข้อมูลสมาชิกขึ้นหน้าจอ | `__applyUserDocUI` |
-| ประวัติเวอร์ชันรายวัน | `APP_RELEASE_NOTES` · `CHANGELOG_SEED` · `chgMerge` · `addChangelogEntry` |
+| ประวัติเที่ยว / รายได้ | `openTripHistory` · `fetchMyTrips` · `renderTripHistory` · `exportTripHistoryCsv` · `isJunkTrip` |
+| ประวัติเวอร์ชันรายวัน | `APP_RELEASE_NOTES` · `CHANGELOG_SEED` · `chgCodeCards` (แยกวันอัตโนมัติ) · `chgMerge` · `addChangelogEntry` |
 | เปิด Google Maps นำทาง | `__openMapsToDest` |
 | ทางสำรองเมื่อ SDK ค้าง (ยิง REST ตรง) | `__fsTimeout` · `__fsRestGet` · `__fsRestPatch` · `__fsRestQuery` · `__fsRestAdd` |
 | เที่ยวค้าง/เบิกคืนเวลาหลังปิดแอป | `autoCatchUpSavedTrip` · `catchUpDrivenKmAfterHidden` · `catchUpKmViaRoutePolyline` |
@@ -247,6 +251,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/static-server.ps1 -Por
 | ธีมที่เลือก | **Firestore `users/<uid>.themeMode`** + `localStorage` | ซิงก์ข้ามเครื่อง · ค่าในเครื่องเป็นสำรองตอนออฟไลน์ |
 | บทบาทล่าสุดที่จำไว้ (`taxi_role_cache_<uid>`) | **ในเครื่อง** | ใช้ตั้งสีวงแหวนตั้งแต่เฟรมแรก แล้วเขียนทับด้วยค่าจริงจาก Firestore ทุกครั้งที่โหลดโปรไฟล์ |
 | เที่ยวที่จบแต่ยังส่งไม่สำเร็จ (คิวรอซิงก์) | **ในเครื่อง** (`taxi_pending_trips_v1`) | ส่งขึ้น Firestore ให้เองเมื่อเน็ตกลับมา/กลับเข้าแอป |
+| ประวัติเที่ยวที่จบแล้ว (ใช้ในหน้าประวัติเที่ยว / รายได้) | **Firestore** (`users/<uid>/trips`) | อ่านจากเซิร์ฟเวอร์ก่อนเสมอ (ไม่ใช่แคช) — SDK ติดก็มีเส้นทาง REST สำรอง |
 
 ---
 
