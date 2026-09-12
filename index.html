@@ -2817,7 +2817,7 @@
             if (last.date !== st.date) last = { date: st.date, read: 0, write: 0, del: 0 };
             const delta = { read: cur.read - (last.read || 0), write: cur.write - (last.write || 0), del: cur.del - (last.del || 0) };
             if (delta.read <= 0 && delta.write <= 0 && delta.del <= 0) return;
-            const myName = (() => { try { const el = document.getElementById('displayUserName'); return (el && el.innerText) || ''; } catch (e) { return ''; } })() || (window.currentUserInfo && window.currentUserInfo.displayName) || '';
+            const myName = (() => { try { const el = document.getElementById('displayUserName'); return (el && el.innerText) || ''; } catch (e) { return ''; } })() || (window.currentUserInfo && window.currentUserInfo.displayName) || window.myCurrentDisplayName || window.myCurrentUsername || 'ไม่ทราบชื่อ';
             const ref = doc(db, 'quota_usage', loggedInUserId);
             // เก็บแยกรายวัน (เช่น 2026-09-08.read) — กันยอดของเมื่อวานบวกทับวันนี้ (increment ต่อยอดจากค่าเดิม)
             const day = st.date;
@@ -3005,6 +3005,32 @@
         const owner = uid || loggedInUserId;
         if (owner) { try { localStorage.setItem('taxi_role_cache_' + owner, r); } catch (e) {} }
         return r;
+    };
+
+    // 🪪 ชื่อที่คนขับอ่านรู้เรื่อง — ห้ามเอารหัส uid ยาว ๆ (20 ตัว) มาแสดงให้ผู้ใช้เห็น
+    //    ลำดับการเลือก: ชื่อจริง (username) → ชื่อที่แสดง → "ผู้ใช้ …4 ตัวท้าย" (พอแยกแยะได้ ไม่เปิดรหัสเต็ม)
+    window.fmtUname = (u) => {
+        if (u === null || u === undefined) return '';
+        if (typeof u === 'string') return u.trim();
+        const un = String(u.username || '').trim();
+        if (un) return un;
+        const nm = String(u.displayName || u.name || '').trim();
+        if (nm) return nm;
+        const id = String(u.uid || u.id || '').trim();
+        return id ? ('ผู้ใช้ …' + id.slice(-4)) : 'ผู้ใช้ไม่ทราบชื่อ';
+    };
+    // ใส่ @ น่าเฉพาะเมื่อมีชื่อผู้ใช้จริง — ถ้าไม่มีให้ใช้ชื่อที่แสดง/ชื่อย่อแทน (ไม่ใช่ @ เปล่า ๆ)
+    window.fmtAtUname = (u) => {
+        const isObj = !!(u && typeof u === 'object');
+        const un = String((isObj ? u.username : u) || '').trim();
+        if (un) return '@' + un;
+        return isObj ? window.fmtUname(u) : '';
+    };
+    // ข้อมูลเก่าในฐานข้อมูลที่เผลอเก็บ uid ไว้ในช่องชื่อ (เช่น global_logs.byName) — ย่อให้อ่านออก
+    window.fmtNameMaybeUid = (s) => {
+        const v = String(s || '').trim();
+        if (!v) return '';
+        return /^[A-Za-z0-9_-]{16,}$/.test(v) ? ('ผู้ใช้ …' + v.slice(-4)) : v;
     };
     // ใช้ค่าที่จำไว้ทันทีตั้งแต่โหลดหน้า (ก่อน Firestore ตอบ) — กันวงแหวนกระพริบเปลี่ยนสี
     try {
@@ -5729,7 +5755,8 @@
         if(!missing.length) return window.showToast('บัญชีนี้ได้สิทธิ์ครบทุกอย่างแล้ว 🎉');
         try {
             const uid = loggedInUserId;
-            const uname = window.myCurrentUsername || uid;
+            // ส่ง "ชื่อที่อ่านออก" ไปให้แอดมิน (เดิมถ้ายังโหลดโปรไฟล์ไม่เสร็จจะส่ง uid ยาว ๆ ไปแทน)
+            const uname = window.fmtUname({ username: window.myCurrentUsername, displayName: window.myCurrentDisplayName, uid: uid });
             const dname = window.myCurrentDisplayName || uname;
             const photo = window.myCurrentPhotoURL || '';
             await setDoc(doc(db, 'perm_requests', uid), {
@@ -5785,7 +5812,7 @@
             list.forEach(r => {
                 const when = r.requestedAt ? new Date(r.requestedAt).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
                 const chips = (r.missingLabels || []).map(l => '<span class="myperm-chip missing" style="font-size:11px; padding:3px 9px;"><span class="material-symbols-outlined" style="font-size:13px;">lock</span>' + l + '</span>').join('');
-                html += '<div class="admin-user-card" style="align-items: flex-start;"><img class="admin-avatar" src="' + ((r.photoURL && r.photoURL.length > 10) ? r.photoURL : window.DEFAULT_AVATAR) + '"><div style="flex:1; min-width:0;"><div class="admin-user-head"><div class="admin-user-name">' + (r.displayName || r.username || '') + ' <span class="admin-role-badge" style="background: rgba(239,68,68,0.15); color:#ff8a95; border-color:rgba(239,68,68,0.4);">ขอสิทธิ์</span></div><div class="admin-user-sub"><span class="admin-user-uname">@' + (r.username || r.uid || '') + '</span><span class="admin-user-statusline">' + when + '</span></div></div>' + (chips ? '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' + chips + '</div>' : '') + '<div style="display:flex; gap:8px; margin-top:12px;"><button onclick="window.openAdminEditUser(\'' + r.uid + '\')" class="manual-timer-btn" style="flex:1; padding:9px; font-size:13px; background:#4285F4; justify-content:center;"><span class="material-symbols-outlined" style="font-size:16px;">person_search</span> เปิดโปรไฟล์สมาชิก</button><button onclick="window.approvePermRequest(\'' + r.uid + '\')" class="manual-timer-btn" style="flex:1; padding:9px; font-size:13px; background:var(--neon-green); justify-content:center;"><span class="material-symbols-outlined" style="font-size:16px;">check_circle</span> อนุมัติสิทธิ์</button></div><button onclick="window.rejectPermRequest(\'' + r.uid + '\')" class="manual-timer-btn" style="margin-top:8px; padding:8px; font-size:13px; background:rgba(239,68,68,0.15); color:#ff8a95; border:1px solid rgba(239,68,68,0.4); justify-content:center; width:100%;"><span class="material-symbols-outlined" style="font-size:16px;">block</span> ปฏิเสธ (ไม่ให้สิทธิ์)</button></div></div>';
+                html += '<div class="admin-user-card" style="align-items: flex-start;"><img class="admin-avatar" src="' + ((r.photoURL && r.photoURL.length > 10) ? r.photoURL : window.DEFAULT_AVATAR) + '"><div style="flex:1; min-width:0;"><div class="admin-user-head"><div class="admin-user-name">' + (r.displayName || r.username || '') + ' <span class="admin-role-badge" style="background: rgba(239,68,68,0.15); color:#ff8a95; border-color:rgba(239,68,68,0.4);">ขอสิทธิ์</span></div><div class="admin-user-sub"><span class="admin-user-uname">' + window.fmtAtUname(r) + '</span><span class="admin-user-statusline">' + when + '</span></div></div>' + (chips ? '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' + chips + '</div>' : '') + '<div style="display:flex; gap:8px; margin-top:12px;"><button onclick="window.openAdminEditUser(\'' + r.uid + '\')" class="manual-timer-btn" style="flex:1; padding:9px; font-size:13px; background:#4285F4; justify-content:center;"><span class="material-symbols-outlined" style="font-size:16px;">person_search</span> เปิดโปรไฟล์สมาชิก</button><button onclick="window.approvePermRequest(\'' + r.uid + '\')" class="manual-timer-btn" style="flex:1; padding:9px; font-size:13px; background:var(--neon-green); justify-content:center;"><span class="material-symbols-outlined" style="font-size:16px;">check_circle</span> อนุมัติสิทธิ์</button></div><button onclick="window.rejectPermRequest(\'' + r.uid + '\')" class="manual-timer-btn" style="margin-top:8px; padding:8px; font-size:13px; background:rgba(239,68,68,0.15); color:#ff8a95; border:1px solid rgba(239,68,68,0.4); justify-content:center; width:100%;"><span class="material-symbols-outlined" style="font-size:16px;">block</span> ปฏิเสธ (ไม่ให้สิทธิ์)</button></div></div>';
             });
             body.innerHTML = html;
         }
@@ -8557,6 +8584,7 @@
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-12'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     const APP_RELEASE_NOTES = [
+        '🪪 เก็บกวาดทุกจุดที่เอารหัสผู้ใช้ (uid) ยาว ๆ มาโชว์ให้เห็น — หน้ารายชื่อสมาชิก · การ์ดคำขอสิทธิ์ · รายการคำขอค้าง · โควต้า Firestore · ประวัติการใช้งาน และช่องคำขอสิทธิ์ที่ส่งให้แอดมิน เปลี่ยนเป็นชื่อผู้ใช้/ชื่อที่แสดงเสมอ (ถ้าข้อมูลเก่าไม่มีชื่อเลย จะย่อเป็น “ผู้ใช้ …4 ตัวท้าย” แทนรหัสเต็ม 20 ตัว · ดูรหัสเต็มได้โดยชี้เมาส์ที่ชื่อในหน้าโควต้า)',
         '🏷️ หน้าต่าง “เปลี่ยนรหัสผ่าน” แสดงตัวตนถูกต้องแล้ว: บรรทัดเหลืองเป็นชื่อผู้ใช้ที่ใช้ล็อกอิน (@ชื่อผู้ใช้) ไม่ใช่รหัสเอกสารยาว ๆ และชิปตำแหน่งโชว์บทบาทจริงเป็นภาษาไทยพร้อมสีตามบทบาท (Admin ทอง · Manager ฟ้า · User เงิน) — เดิมโชว์เป็น “User” ตลอดแม้เป็นแอดมิน',
         '🎖️ วงแหวนรูปโปรไฟล์บอกบทบาทกลับมาแบบตั้งใจ: Admin = ทอง-ส้ม · Manager = ฟ้า · User = เงินเทา (ยังเป็นวงเดียวที่กรอบ ไม่ซับกับตัวรูป) — และจำบทบาทไว้ในเครื่อง เปิดแอปครั้งถัดไปได้สีถูกตั้งแต่เฟรมแรก ไม่ต้องรอโหลดข้อมูลจากเซิร์ฟเวอร์',
         '🖼️ วงแหวนรอบรูปโปรไฟล์: ลบขอบสีที่ติดอยู่กับตัวรูปออกทั้งหมด (เหลือง #f1c40f ที่เมนูข้าง · เขียวที่หัวจอ/หน้าแก้ไขโปรไฟล์ · ฟ้าที่หน้าแอดมินแก้ไขสมาชิก) — เหลือวงแหวนทอง-ส้มวงเดียวที่กรอบ และจัดรูปให้อยู่กลางวงพอดีเป๊ะ (เดิมกรอบยืดเป็นวงรี/เหลื่อม เพราะระยะห่างไปผูกกับตัวรูป) ใช้เหมือนกันทุกสิทธิ์ User/Manager/Admin',
@@ -9642,7 +9670,9 @@
                     const roleKey = u.role || 'User';
                     const roleBadge = `<span class="admin-role-badge role-${window.roleClassKey(roleKey)}">${window.roleLabelShort(roleKey)}</span>`;
                     const lastLoginChip = u.lastLoginAt ? `<span class="admin-meta-chip"><span class="material-symbols-outlined">lightbulb</span>เข้าใช้ล่าสุด: ${formatDate(u.lastLoginAt)}</span>` : '';
-                    let safePhoto = u.photoURL && u.photoURL.length > 10 ? u.photoURL : window.DEFAULT_AVATAR; let safeName = u.displayName || u.username; let safeRole = u.role || 'User'; let safeUsername = u.username || '';
+                    let safePhoto = u.photoURL && u.photoURL.length > 10 ? u.photoURL : window.DEFAULT_AVATAR; let safeRole = u.role || 'User';
+                    // ชื่อ/ชื่อผู้ใช้ที่แสดงบนการ์ด — เดิมถ้าเอกสารไม่มีทั้ง displayName และ username จะโชว์ "undefined" และโชว์ "@" เปล่า ๆ
+                    let safeName = window.fmtUname(u); let safeUsername = window.fmtAtUname(u);
                     
                     let dragHandleHtml = myPerms.canEdit ? `<div class="drag-handle" style="display:flex; align-items:center; cursor:grab; padding-right:5px; touch-action:none;"><span class="material-symbols-outlined" style="color: rgba(255,255,255,0.4); font-size: 28px;">drag_indicator</span></div>` : '';
                     
@@ -9668,7 +9698,7 @@
                     if(canDeleteThisUser) { deleteBtn = `<button onclick="window.quickDeleteUser('${uid}', '${safeName}')" class="action-icon-btn icon-del" title="ลบผู้ใช้"><span class="material-symbols-outlined" style="font-size:26px;">delete</span></button>`; }
 
                     const plateChip = (u.plateNo && u.plateNo.trim()) ? `<span class="admin-meta-chip"><span class="material-symbols-outlined">directions_car</span>ทะเบียน: ${u.plateNo.trim()}</span>` : '';
-                    html += `<div class="admin-user-card"><div class="admin-user-top">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">@${safeUsername}</span><span class="admin-user-statusline" id="admin-status-${uid}">${statusHtml}</span></div></div><div class="admin-meta-row">${lastLoginChip}${plateChip}</div></div></div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
+                    html += `<div class="admin-user-card"><div class="admin-user-top">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">${safeUsername}</span><span class="admin-user-statusline" id="admin-status-${uid}">${statusHtml}</span></div></div><div class="admin-meta-row">${lastLoginChip}${plateChip}</div></div></div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
                 });
                 document.getElementById('adminUserList').innerHTML = html || '<div style="padding: 20px; color: gray;">ไม่พบข้อมูล</div>';
 
@@ -9722,7 +9752,7 @@
                 const warn = r.total >= 4000;
                 html += `<div style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,0.03); margin-bottom:6px; border:1px solid rgba(255,255,255,0.05);">` +
                     `<div style="flex:1; min-width:0;">` +
-                    `<div style="font-size:13px; color:#fff; font-weight:600;">${r.name || r.uid}</div>` +
+                    `<div style="font-size:13px; color:#fff; font-weight:600;" title="รหัสผู้ใช้: ${r.uid}">${window.fmtUname({ name: r.name, uid: r.uid })}</div>` +
                     `<div style="font-size:11px; color:#9aa3b5; margin-top:2px;">อ่าน ${(r.read||0).toLocaleString()} · เขียน ${(r.write||0).toLocaleString()} · ลบ ${(r.del||0).toLocaleString()}</div></div>` +
                     `<div style="font-size:14px; font-weight:700; white-space:nowrap; color:${warn ? '#ff8a95' : '#ffd24d'};">${r.total.toLocaleString()}</div></div>`;
             });
@@ -9990,7 +10020,7 @@
                         const days = Math.floor((now - r.requestedAt) / 86400000);
                         const miss = r.missingLabels || [];
                         const chips = miss.slice(0, 4).map(l => '<span class="myperm-chip missing" style="font-size:10.5px; padding:2px 7px;"><span class="material-symbols-outlined" style="font-size:12px;">lock</span>' + l + '</span>').join('');
-                        staleHtml += '<div class="admin-user-card" style="align-items:flex-start; margin-bottom:8px; background:rgba(0,0,0,0.3);"><img class="admin-avatar" src="' + ((r.photoURL && r.photoURL.length > 10) ? r.photoURL : window.DEFAULT_AVATAR) + '"><div style="flex:1; min-width:0;"><div class="admin-user-head"><div class="admin-user-name">' + (r.displayName || r.username || '') + ' <span class="admin-role-badge" style="background:rgba(255,77,95,0.15); color:#ff8491; border-color:rgba(255,77,95,0.4);">ค้าง ' + days + ' วัน</span></div><div class="admin-user-sub"><span class="admin-user-uname">@' + (r.username || r.uid || '') + '</span><span class="admin-user-statusline">ขอเมื่อ ' + when + '</span></div></div>' + (chips ? '<div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:7px;">' + chips + (miss.length > 4 ? '<span style="font-size:11px; color:var(--text-dim); align-self:center;">+' + (miss.length - 4) + ' รายการ</span>' : '') + '</div>' : '') + '<button onclick="window.openPermRequests()" class="manual-timer-btn" style="margin-top:9px; padding:7px 12px; font-size:12.5px; background:var(--neon-yellow); color:#121212; justify-content:center;"><span class="material-symbols-outlined" style="font-size:15px;">campaign</span> จัดการคำขอ</button></div></div>';
+                        staleHtml += '<div class="admin-user-card" style="align-items:flex-start; margin-bottom:8px; background:rgba(0,0,0,0.3);"><img class="admin-avatar" src="' + ((r.photoURL && r.photoURL.length > 10) ? r.photoURL : window.DEFAULT_AVATAR) + '"><div style="flex:1; min-width:0;"><div class="admin-user-head"><div class="admin-user-name">' + (r.displayName || r.username || '') + ' <span class="admin-role-badge" style="background:rgba(255,77,95,0.15); color:#ff8491; border-color:rgba(255,77,95,0.4);">ค้าง ' + days + ' วัน</span></div><div class="admin-user-sub"><span class="admin-user-uname">' + window.fmtAtUname(r) + '</span><span class="admin-user-statusline">ขอเมื่อ ' + when + '</span></div></div>' + (chips ? '<div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:7px;">' + chips + (miss.length > 4 ? '<span style="font-size:11px; color:var(--text-dim); align-self:center;">+' + (miss.length - 4) + ' รายการ</span>' : '') + '</div>' : '') + '<button onclick="window.openPermRequests()" class="manual-timer-btn" style="margin-top:9px; padding:7px 12px; font-size:12.5px; background:var(--neon-yellow); color:#121212; justify-content:center;"><span class="material-symbols-outlined" style="font-size:15px;">campaign</span> จัดการคำขอ</button></div></div>';
                     });
                     staleHtml += '</div>';
                 }
@@ -10000,7 +10030,7 @@
             else { 
                 querySnapshot.forEach((doc) => { 
                     const data = doc.data(); 
-                    html += `<div class="log-item"><div class="log-time">${formatDate(data.timestamp)} - โดย: <span style="color:var(--neon-yellow); font-weight:bold;">${data.byName}</span></div><div style="font-weight:600; color:white;">${data.action}</div><div style="color:#ccc; margin-top:3px;">${data.detail}</div></div>`; 
+                    html += `<div class="log-item"><div class="log-time">${formatDate(data.timestamp)} - โดย: <span style="color:var(--neon-yellow); font-weight:bold;">${window.fmtNameMaybeUid(data.byName)}</span></div><div style="font-weight:600; color:white;">${data.action}</div><div style="color:#ccc; margin-top:3px;">${data.detail}</div></div>`; 
                 }); 
             }
             listDiv.innerHTML = html;
