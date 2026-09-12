@@ -1584,6 +1584,21 @@
         #versionPillBtn:active { transform: scale(0.94); }
         #versionPillBtn .material-symbols-outlined { font-size: 14px; color: #fff; }
 
+        /* ⏳ ป้าย "รอซิงก์" เที่ยวที่ส่งขึ้นเซิร์ฟเวอร์ไม่ได้ (อยู่เหนือป้ายเวอร์ชัน — แตะเพื่อลองส่งใหม่) */
+        #tripSyncChip {
+            align-items: center; gap: 5px;
+            padding: 3px 12px 3px 8px; border: none; cursor: pointer;
+            border-radius: 999px; color: #1f1700; font-family: 'Kanit', sans-serif;
+            font-size: 11.5px; font-weight: 700; letter-spacing: 0.3px;
+            background: linear-gradient(135deg, #ffd24d, #e0a800);
+            box-shadow: 0 3px 10px rgba(224, 168, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.35);
+            -webkit-tap-highlight-color: transparent; transition: transform 0.15s;
+        }
+        #tripSyncChip:active { transform: scale(0.94); }
+        #tripSyncChip .material-symbols-outlined { font-size: 14px; color: #1f1700; }
+        html.light #tripSyncChip { background: linear-gradient(135deg, #f0b429, #c98a00); color: #241a00; box-shadow: 0 3px 10px rgba(160, 110, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.5); }
+        html.light #tripSyncChip .material-symbols-outlined { color: #241a00; }
+
         .ver-modal-head { display: flex; align-items: center; gap: 8px; }
         .ver-modal-head .material-symbols-outlined { font-size: 20px; color: var(--neon-yellow, #ffd24d); }
 
@@ -2076,6 +2091,9 @@
 
 <!-- ปุ่มเลขเวอร์ชัน ลอยมุมขวาล่างของหน้าแรก (แตะเปิดประวัติเวอร์ชัน) -->
 <button id="versionPillBtn" onclick="window.openVersionModal()" title="ดูเวอร์ชัน / อัปเดตล่าสุด" style="position: fixed; right: 14px; bottom: 12px; z-index: 40; display: none; margin: 0; box-shadow: 0 4px 14px rgba(0,0,0,0.5);"><span class="material-symbols-outlined">sell</span><span id="versionPillText">v…</span></button>
+
+<!-- ⏳ ป้ายเที่ยวรอซิงก์ (โผล่เฉพาะตอนมีเที่ยวที่ส่งขึ้นเชิร์ฟเวอร์ไม่ได้) — อยู่เหนือป้ายเวอร์ชัน แตะเพื่อลองส่งใหม่ -->
+<button id="tripSyncChip" onclick="window.drainTripSyncQueue(true)" style="position: fixed; right: 14px; bottom: 44px; z-index: 40; display: none; margin: 0; box-shadow: 0 4px 14px rgba(0,0,0,0.5);"><span class="material-symbols-outlined">cloud_upload</span><span id="tripSyncChipText"></span></button>
 
 <div id="versionModal" class="modal-overlay" style="z-index: 10060;">
     <div class="modal-box flex-col-box" onclick="event.stopPropagation()">
@@ -7706,28 +7724,119 @@
     };
     window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; window.updateKmStepper(); window.updateFareEstimation(km); window.checkAppStatus(); const est = parseFloat(window.estimateFareAmt || 0); window.setFareProgressPct(est > 0 ? est : (km > 0 ? (window.calcThaiMeterFare(km) + window.baseFare) : 0)); };
 
+    // 📤 คิวซิงก์เที่ยว (กันเที่ยวหายตอนเน็ตหลุด/ปิดแอปทันที)
+    //    หลักการ: "เก็บลงคิวก่อน → ค่อยส่งขึ้น Firestore" แล้วลบออกจากคิวเมื่อส่งสำเร็จเท่านั้น
+    //    - tripId คงที่ (มาจาก startTime) + setDoc(merge) → ส่งซ้ำกี่ครั้งก็ได้เที่ยวเดียว ไม่เกิดเที่ยวซ้ำ
+    //    - ส่งไม่ได้ (เน็ตหลุด/โควตาหมด) → ค้างในคิว แล้วลองใหม่เองเมื่อเน็ตกลับ/กลับเข้าแอป/ทุก 30 วิ
+    //    - มีป้าย "รอซิงก์ N" มุมขวาล่างให้คนขับเห็น (แตะเพื่อลองใหม่ได้) — ไม่มีเที่ยวค้าง = ไม่แสดง
+    window.__tripSyncSimulateOffline = false; // 🧪 สวิตช์เทสต์: ตั้ง true เพื่อบังคับให้ "ส่งไม่สำเร็จ" (ลองคิว/ป้าย/ซิงก์ซ้ำได้โดยไม่ต้องตัดเน็ตจริง)
+    const TRIP_SYNC_QUEUE_KEY = 'taxi_pending_trips_v1';
+    const tripQueueRead = () => { try { const q = JSON.parse(localStorage.getItem(TRIP_SYNC_QUEUE_KEY) || '[]'); return Array.isArray(q) ? q : []; } catch(e) { return []; } };
+    const tripQueueWrite = (q) => { try { localStorage.setItem(TRIP_SYNC_QUEUE_KEY, JSON.stringify(q)); return true; } catch(e) { return false; } };
+    const tripIdOf = (startTime, uid) => 't' + String(startTime || Date.now()) + '_' + String(uid || '').slice(0, 6);
+    // แปลงค่าซ้อนชั้น (array/object/null) เป็นรูปแบบ Firestore REST — เผื่อส่งผ่าน REST ตอน SDK ติด
+    const toFsValue = (v) => {
+        if (v === null || v === undefined) return { nullValue: null };
+        if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+        if (typeof v === 'boolean') return { booleanValue: v };
+        if (Array.isArray(v)) return { arrayValue: { values: v.map(toFsValue) } };
+        if (typeof v === 'object') { const f = {}; for (const k of Object.keys(v)) f[k] = toFsValue(v[k]); return { mapValue: { fields: f } }; }
+        return { stringValue: String(v) };
+    };
+    // นับเฉพาะเที่ยวค้างของบัญชีที่ล็อกอินอยู่ (เที่ยวของบัญชีอื่นค้างไว้ ไม่ไปเขียนข้ามบัญชี)
+    const tripQueueCount = () => tripQueueRead().filter(e => e && (!e.uid || !loggedInUserId || e.uid === loggedInUserId)).length;
+    window.tripQueueCount = tripQueueCount;
+    window.renderTripSyncChip = () => {
+        const chip = document.getElementById('tripSyncChip'); if (!chip) return;
+        const n = tripQueueCount();
+        const txt = document.getElementById('tripSyncChipText');
+        if (txt) txt.textContent = n > 0 ? ('รอซิงก์ ' + n) : '';
+        chip.style.display = n > 0 ? 'inline-flex' : 'none';
+        chip.title = n > 0 ? ('มีเที่ยวที่ยังส่งขึ้นเซิร์ฟเวอร์ไม่ได้ ' + n + ' เที่ยว — แตะเพื่อลองส่งใหม่') : '';
+    };
+    let tripSyncBusy = false;
+    // manual = true เมื่อผู้ใช้กดปุ่มเอง (จะขึ้นข้อความบอกด้วยว่าส่งไม่ได้) — ตัวจับเวลาอัตโนมัติไม่ต้องเด้ง
+    window.drainTripSyncQueue = async (manual = false) => {
+        if (tripSyncBusy) return 0;
+        const uid = loggedInUserId; if (!uid) return 0;
+        let q = tripQueueRead();
+        const mine = q.filter(e => e && e.uid === uid && e.tripId && e.data);
+        if (!mine.length) { window.renderTripSyncChip(); return 0; }
+        tripSyncBusy = true;
+        let doneCount = 0;
+        try {
+            for (const entry of mine) {
+                if (window.__tripSyncSimulateOffline) break; // 🧪 โหมดเทสต์: ให้เหมือนเน็ตหลุด
+                let ok = false;
+                if (db) {
+                    try {
+                        await window.__fsTimeout(setDoc(doc(db, 'users', uid, 'trips', entry.tripId), entry.data, { merge: true }), 8000);
+                        ok = true;
+                    } catch(e) { ok = false; }
+                }
+                if (!ok) {
+                    // ช่องเรียลไทม์ค้าง/โควตาหมด → ลองยิง REST ตรง (https ธรรมดา) เหมือนที่ล็อกอินใช้สำรองอยู่
+                    try {
+                        const fields = {}; for (const k of Object.keys(entry.data)) fields[k] = toFsValue(entry.data[k]);
+                        const res = await window.__fsTimeout(fetch(`${__fsBase}/users/${uid}/trips/${entry.tripId}?key=${__FS_KEY}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) }), 8000);
+                        ok = !!(res && res.ok);
+                    } catch(e2) { ok = false; }
+                }
+                if (!ok) break; // ยังส่งไม่ได้ — หยุดทั้งรอบ เก็บที่เหลือไว้ลองใหม่ (ไม่ยิงรัว ๆ กินโควตา)
+                doneCount++;
+                q = q.filter(e => !(e && e.uid === uid && e.tripId === entry.tripId));
+                tripQueueWrite(q);
+            }
+        } finally { tripSyncBusy = false; }
+        window.renderTripSyncChip();
+        if (doneCount > 0) window.showToast('ซิงก์เที่ยวที่ค้างแล้ว ' + doneCount + ' เที่ยว', false, null, true);
+        else if (manual && tripQueueCount() > 0) window.showToast('ยังส่งขึ้นเซิร์ฟเวอร์ไม่ได้ — ตรวจสัญญาณเน็ตแล้วลองใหม่', true);
+        return doneCount;
+    };
+    // 🔁 ลองซิงก์ใหม่ให้เอง: เน็ตกลับมา / กลับเข้าหน้าแอป / ทุก 30 วิ (เฉพาะตอนมีของค้างจริง ๆ) / หลังเปิดแอป 3 วิ
+    window.addEventListener('online', () => { window.drainTripSyncQueue(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) window.drainTripSyncQueue(); });
+    setInterval(() => { if (tripQueueCount() > 0) window.drainTripSyncQueue(); }, 30000);
+    setTimeout(() => { window.renderTripSyncChip(); window.drainTripSyncQueue(); }, 3000);
+
     // 📒 เซฟเที่ยว (รวมประวัติการเบิกคืนทุกรอบ) ลง Firestore: users/{uid}/trips — ให้คนขับเปิดดูย้อนหลังกับผู้โดยสารได้
+    //    ⚠️ ตัวเลขค่าโดยสารคิดจากสูตรเดิมทุกตัว (distFare / meterTravel / surchargeTotal) — ห้ามแก้สูตรในฟังก์ชันนี้
     window.saveTripToFirestore = (s) => {
-        if (!loggedInUserId || !db) return;
+        if (!loggedInUserId) return;
+        let entry = null;
         try {
             const distFare = window.calcThaiMeterDist(s.km);
             const meterTravel = Math.floor((distFare + s.trafficSec * (3.0 / 60)) / 2) * 2;
             const surchargeTotal = (s.surcharges || []).reduce((sum, it) => sum + it.amount, 0);
-            addDoc(collection(db, "users", loggedInUserId, "trips"), {
-                startTime: s.startTime,
-                endTime: s.endTime,
-                destName: s.destName || '',
-                km: s.km,
-                trafficSec: s.trafficSec,
-                baseFare: s.baseFare,
-                surcharges: s.surcharges || [],
-                pauses: s.pauses || [],
-                catchUps: s.catchUps || [], // [{type:'hidden'|'kill', from, to, idleSec, km, fareDelta}]
-                fare: s.baseFare + meterTravel + surchargeTotal,
-                driverUid: loggedInUserId,
-                createdAt: Date.now()
-            }).catch(() => {}); // ไม่บล็อกการสรุปเที่ยว ถ้า Firestore ติด/ออฟไลน์
-        } catch(e) {}
+            entry = {
+                tripId: tripIdOf(s.startTime, loggedInUserId),
+                uid: loggedInUserId,
+                queuedAt: Date.now(),
+                data: {
+                    startTime: s.startTime,
+                    endTime: s.endTime,
+                    destName: s.destName || '',
+                    km: s.km,
+                    trafficSec: s.trafficSec,
+                    baseFare: s.baseFare,
+                    surcharges: s.surcharges || [],
+                    pauses: s.pauses || [],
+                    catchUps: s.catchUps || [], // [{type:'hidden'|'kill', from, to, idleSec, km, fareDelta}]
+                    fare: s.baseFare + meterTravel + surchargeTotal,
+                    driverUid: loggedInUserId,
+                    createdAt: Date.now()
+                }
+            };
+        } catch(e) { return; }
+        // เก็บลงคิวก่อน (ปิดแอป/รีเฟรชทันทีหลังจบเที่ยวก็ยังไม่หาย) แล้วค่อยลองส่ง
+        const q = tripQueueRead().filter(e => !(e && e.uid === entry.uid && e.tripId === entry.tripId));
+        q.push(entry);
+        const stored = tripQueueWrite(q.slice(-500)); // กันคิวบวมจน localStorage เต็ม
+        window.renderTripSyncChip();
+        if (!stored) window.showToast('บันทึกเที่ยวลงเครื่องไม่สำเร็จ (พื้นที่เต็ม) — กรุณาอย่าปิดแอปจนกว่าจะซิงก์', true);
+        Promise.resolve(window.drainTripSyncQueue()).then(() => {
+            if (tripQueueCount() > 0) window.showToast('เที่ยวนี้ยังส่งขึ้นเซิร์ฟเวอร์ไม่ได้ — เก็บไว้ในเครื่องแล้ว จะส่งให้เองเมื่อเน็ตกลับมา', false, null, true);
+        });
     };
     
     // 🧾 จบเที่ยว (จากปุ่มหลัก หรือหน้าจอขยาย): ถ่ายข้อมูลสรุป → รีเซ็ตระบบ → เปิดหน้าสรุปค่าโดยสาร
@@ -8391,7 +8500,9 @@
     // ✅ อัปเดต APP_BUILD หลังจากฟังก์ชันถูกประกาศเสร็จ (แก้ Temporal Dead Zone — อ้างก่อนประกาศ)
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-12'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
-    const APP_RELEASE_NOTES = [ // bullet ของ "วันที่ใน APP_RELEASE_DATE" เท่านั้น - เพิ่มได้เรื่อย ๆ ในวันเดียวกัน (วันใหม่ให้ตั้ง APP_RELEASE_DATE เป็นวันนั้น แล้วย้าย bullet วันเก่าไปไว้ใน CHANGELOG_SEED)
+    const APP_RELEASE_NOTES = [
+        '📤 เที่ยวที่จบตอนเน็ตหลุดหรือปิดแอปทันทีไม่หายแล้ว — เก็บเที่ยวลงเครื่องก่อน แล้วส่งขึ้นเซิร์ฟเวอร์ให้เองเมื่อเน็ตกลับมา/กลับเข้าแอป (มีป้าย "รอซิงก์" มุมขวาล่างให้เห็นและกดลองใหม่ได้)',
+        '🧩 บันทึกเที่ยวใช้รหัสเที่ยวถาวร + เขียนแบบรวมฟิลด์ — ส่งซ้ำกี่ครั้งก็ได้เที่ยวเดียว ไม่เกิดเที่ยวซ้ำในประวัติ', // bullet ของ "วันที่ใน APP_RELEASE_DATE" เท่านั้น - เพิ่มได้เรื่อย ๆ ในวันเดียวกัน (วันใหม่ให้ตั้ง APP_RELEASE_DATE เป็นวันนั้น แล้วย้าย bullet วันเก่าไปไว้ใน CHANGELOG_SEED)
         '☀️ เพิ่ม "ธีมสว่าง" (Light Theme) เป็นโหมดที่ 3 ของแอป — พื้นขาว/เทาอ่อน ตัวอักษรกรมท่าเข้ม ใช้ตอนกลางวันหรือแดดจัดที่จอมือถือสะท้อนจนอ่านไม่ออก (เดิมมีแค่ มืด และ ดำ OLED) โดยหน้าตา/ขนาด/ระยะห่างทุกจอเหมือนเดิมเป๊ะ แค่สลับชุดสี',
         '🎨 ปุ่มสลับธีมแถวล่างหน้าแรกกดวน 3 โหมด: มืด → ดำ OLED → สว่าง พร้อมไอคอนบอกโหมดปัจจุบัน (พระจันทร์/พระจันทร์มีดาว/ดวงอาทิตย์) และในหน้าตั้งค่าโปรไฟล์เลือกธีมได้ 3 โหมด — ค่าธีมซิงก์ข้ามทุกเครื่องผ่านบัญชี (บัญชีเดิมที่เคยตั้ง OLED ไว้จะย้ายค่าให้อัตโนมัติ)',
         '⬛ ย้ายปุ่มสลับธีม (มืด/ดำ OLED) ออกจาก "การ์ดค่าโดยสารเรียลไทม์" ในจอมิเตอร์ มาอยู่ซ้ายสุดแถวล่างของหน้าแรก แถวเดียวกับเครดิตและป้ายเวอร์ชัน — เปิดโหมดประหยัดแบตอยู่ปุ่มเป็นพื้นทองจาง ๆ บอกสถานะโดยไม่หลุดธีม',
