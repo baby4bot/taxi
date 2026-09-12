@@ -160,11 +160,17 @@
         .fab-item:active { transform: scale(0.9); background: rgba(255,255,255,0.12); }
         .fab-item svg, .fab-item img { width: 20px !important; height: 20px !important; }
 
-        /* 🖼️ กรอบรูปโปรไฟล์: มี "วงเดียว" สีส้มทองรอบรูป เหมือนกันทุกตำแหน่ง (ไม่แยกสี Admin/Manager/User แล้ว)
-           - ตัวรูปไม่มีขอบของตัวเอง (เดิมมีขอบไล่สีซ้อนอีกชั้น → เห็นเป็น 2 วงและดูเหลื่อม)
-           - wrap เป็น inline-flex ที่มีขนาดเท่าตัวรูปเป๊ะ → ::before จึงเป็นวงกลมสมดุล ไม่ยืดเป็นวงรี */
+        /* 🖼️ กรอบรูปโปรไฟล์: มี "วงเดียว" รอบรูปเท่านั้น — ตัวรูปห้ามมีขอบ/มาร์จินของตัวเอง
+           (เดิมมีขอบไล่สีที่ตัวรูปซ้อนกับวงแหวน → เห็นเป็น 2 วงและดูเหลื่อม)
+           - wrap เป็น inline-flex ที่มีขนาดเท่าตัวรูปเป๊ะ → ::before จึงเป็นวงกลมสมดุล ไม่ยืดเป็นวงรี
+           - สีวงแหวนบอกบทบาท (ตั้งคลาสด้วย window.applyAvatarRingRole): Admin=ทอง-ส้ม · Manager=ฟ้า · User=เงินเทา
+             ค่าเริ่มต้น (ยังไม่รู้สิทธิ์) = เงินเทา เหมือน User */
         .avatar-wrap-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; line-height: 0; border-radius: 999px; }
-        .avatar-wrap-ring::before { content: ""; position: absolute; inset: -3px; border-radius: 999px; padding: 3px; background: conic-gradient(from 0deg, #ffd700, #ffb300, #ff7043, #ffb300, #ffd700); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+        .avatar-wrap-ring::before { content: ""; position: absolute; inset: -3px; border-radius: 999px; padding: 3px; background: conic-gradient(from 0deg, #f2f5fb, #aeb9cc, #7b8aa5, #aeb9cc, #f2f5fb); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+        /* 🎖️ สีวงแหวนตามบทบาท — วงเดียวที่กรอบ ไม่ซ้อนกับตัวรูป (เรียงลำดับความเด่น: ทอง > ฟ้า > เงิน) */
+        .avatar-wrap-ring.role-admin::before { background: conic-gradient(from 0deg, #ffd700, #ffb300, #ff7043, #ffb300, #ffd700); }
+        .avatar-wrap-ring.role-manager::before { background: conic-gradient(from 0deg, #a8d5ff, #3b8cff, #1f5fd0, #3b8cff, #a8d5ff); }
+        .avatar-wrap-ring.role-user::before { background: conic-gradient(from 0deg, #f2f5fb, #aeb9cc, #7b8aa5, #aeb9cc, #f2f5fb); }
         /* ระยะห่างจากชื่อผู้ใช้: ย้ายมาไว้ที่กรอบ (เดิมเป็น margin ของตัวรูป ทำให้กรอบสูงเกินรูป → วงแหวนกลายเป็นวงรีและเหลื่อม) */
         #sideAvatarRing { margin-bottom: 15px; }
         @keyframes ringSpinSlow { to { transform: rotate(360deg); } }
@@ -2973,6 +2979,30 @@
     let myExtraPerms = {}; // สิทธิ์พิเศษที่แอดมินอนุมัติให้บัญชีนี้โดยเฉพาะ (extraPerms ใน user doc — ไม่เปลี่ยนตำแหน่ง)
     let isBannedState = false;
     let permsUnsub = null, permConfigUnsub = null, myUserUnsub = null, serviceDataUnsub = null, adminSnapshotUnsub = null, permReqUnsub = null;
+
+    // 🎖️ สีวงแหวนรูปโปรไฟล์ตามบทบาท — Admin=ทอง-ส้ม · Manager=ฟ้า · User=เงินเทา
+    //    ตั้งคลาสที่ "กรอบ" (.avatar-wrap-ring) เท่านั้น ห้ามใส่ขอบที่ตัวรูป (จะกลายเป็น 2 วงเหลื่อมกันอีก)
+    //    จำค่าไว้ต่อบัญชีใน localStorage → เปิดแอปครั้งถัดไปได้สีถูกตั้งแต่เฟรมแรก ไม่ต้องรอ Firestore ตอบ
+    window.applyAvatarRingRole = (role, uid) => {
+        const r = (role === 'Admin' || role === 'Manager' || role === 'User') ? role : 'User';
+        ['mainAvatarRing', 'sideAvatarRing'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.remove('role-admin', 'role-manager', 'role-user');
+            el.classList.add('role-' + r.toLowerCase());
+            el.setAttribute('data-avatar-role', r);
+        });
+        const owner = uid || loggedInUserId;
+        if (owner) { try { localStorage.setItem('taxi_role_cache_' + owner, r); } catch (e) {} }
+        return r;
+    };
+    // ใช้ค่าที่จำไว้ทันทีตั้งแต่โหลดหน้า (ก่อน Firestore ตอบ) — กันวงแหวนกระพริบเปลี่ยนสี
+    try {
+        if (loggedInUserId) {
+            const cachedRole = localStorage.getItem('taxi_role_cache_' + loggedInUserId);
+            if (cachedRole) window.applyAvatarRingRole(cachedRole, loggedInUserId);
+        }
+    } catch (e) {}
 
     // ⏱️ กัน "กำลังเข้าสู่ระบบ..." ค้างตลอดกาล — ทุกคำขอ Firestore มี timeout + fallback ผ่าน REST API
     //    (https ธรรมดา ไม่พึ่งช่องทางเรียลไทม์ที่อาจค้างจากโควตาหมด/เน็ต) — ล็อกอินได้แม้ SDK ยังไม่ recover
@@ -8506,6 +8536,7 @@
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-12'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     const APP_RELEASE_NOTES = [
+        '🎖️ วงแหวนรูปโปรไฟล์บอกบทบาทกลับมาแบบตั้งใจ: Admin = ทอง-ส้ม · Manager = ฟ้า · User = เงินเทา (ยังเป็นวงเดียวที่กรอบ ไม่ซับกับตัวรูป) — และจำบทบาทไว้ในเครื่อง เปิดแอปครั้งถัดไปได้สีถูกตั้งแต่เฟรมแรก ไม่ต้องรอโหลดข้อมูลจากเซิร์ฟเวอร์',
         '🖼️ วงแหวนรอบรูปโปรไฟล์: ลบขอบสีที่ติดอยู่กับตัวรูปออกทั้งหมด (เหลือง #f1c40f ที่เมนูข้าง · เขียวที่หัวจอ/หน้าแก้ไขโปรไฟล์ · ฟ้าที่หน้าแอดมินแก้ไขสมาชิก) — เหลือวงแหวนทอง-ส้มวงเดียวที่กรอบ และจัดรูปให้อยู่กลางวงพอดีเป๊ะ (เดิมกรอบยืดเป็นวงรี/เหลื่อม เพราะระยะห่างไปผูกกับตัวรูป) ใช้เหมือนกันทุกสิทธิ์ User/Manager/Admin',
         '📤 เที่ยวที่จบตอนเน็ตหลุดหรือปิดแอปทันทีไม่หายแล้ว — เก็บเที่ยวลงเครื่องก่อน แล้วส่งขึ้นเซิร์ฟเวอร์ให้เองเมื่อเน็ตกลับมา/กลับเข้าแอป (มีป้าย "รอซิงก์" มุมขวาล่างให้เห็นและกดลองใหม่ได้)',
         '🧩 บันทึกเที่ยวใช้รหัสเที่ยวถาวร + เขียนแบบรวมฟิลด์ — ส่งซ้ำกี่ครั้งก็ได้เที่ยวเดียว ไม่เกิดเที่ยวซ้ำในประวัติ', // bullet ของ "วันที่ใน APP_RELEASE_DATE" เท่านั้น - เพิ่มได้เรื่อย ๆ ในวันเดียวกัน (วันใหม่ให้ตั้ง APP_RELEASE_DATE เป็นวันนั้น แล้วย้าย bullet วันเก่าไปไว้ใน CHANGELOG_SEED)
@@ -8904,18 +8935,7 @@
             }
 
             currentUserRole = data.role || "User"; myExtraPerms = data.extraPerms || {}; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
-            try {
-                const mRing = document.getElementById('mainAvatarRing');
-                const sRing = document.getElementById('sideAvatarRing');
-                if (mRing) {
-                    mRing.classList.remove('role-admin');
-                    if (currentUserRole === 'Admin' || currentUserRole === 'Manager') mRing.classList.add('role-admin');
-                }
-                if (sRing) {
-                    sRing.classList.remove('role-admin');
-                    if (currentUserRole === 'Admin' || currentUserRole === 'Manager') sRing.classList.add('role-admin');
-                }
-            } catch (e) {}
+            try { window.applyAvatarRingRole(currentUserRole, loggedInUserId); } catch (e) {}
             // ⭐ Default Favorites: ถ้ายังไม่มีใน localStorage → นำเข้าจาก Admin global (settings/appConfig.defaultFavorites) หรือ DEFAULT_ADMIN_FAVORITES ถ้า DB ยังไม่มี
             try {
                 const seedKey = 'taxi_fav_seeded_' + (loggedInUserId || '');
