@@ -218,6 +218,7 @@ FIREBASE-AUTH.md        ← 🔑 สอนทำ Firebase Authentication ให�
 tests/
   ├── catchup-regression.html  ← ชุดทดสอบอัตโนมัติ: เที่ยวค้าง/ปิด-เปิดแอป/เบิกคืนเวลา (15 สถานการณ์)
   ├── security-check.ps1       ← 🔎 ตรวจสดว่าฐานข้อมูลยังเปิดให้คนนอกรึเปล่า (7 ข้อ · ไม่ต้องล็อกอิน)
+  ├── recaptcha-key-test.html  ← 🔎 ตรวจว่าคีย์ reCAPTCHA ใช้ได้จากโดเมนนั้นจริงไหม (ก่อนเปิด App Check)
   ├── space-check.html         ← ตรวจระยะห่างแนวตั้งของ UI หลายขนาดจอ
   ├── static-server.ps1        ← เซิร์ฟเวอร์ทดสอบในเครื่อง (ไม่ต้องติดตั้งอะไร)
   └── serve-tests.ps1          ← ตัวช่วยเปิดหน้าทดสอบเร็ว ๆ

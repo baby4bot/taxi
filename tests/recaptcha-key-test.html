@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ตรวจคีย์ reCAPTCHA ก่อนเปิด App Check</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background:#0f1116; color:#e8eaf0; margin:0; padding:22px; line-height:1.6; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  p.sub { color:#9aa3b5; margin:0 0 18px; font-size:13px; }
+  .card { background:#161a22; border:1px solid #232a36; border-radius:14px; padding:16px; margin-bottom:14px; }
+  label { display:block; font-size:13px; color:#9aa3b5; margin-bottom:6px; }
+  input[type=text] { width:100%; box-sizing:border-box; padding:11px 12px; border-radius:10px; border:1px solid #2c3442; background:#0f1319; color:#fff; font-family:ui-monospace,Consolas,monospace; font-size:13px; }
+  button { margin-top:12px; padding:11px 20px; border-radius:10px; border:0; background:#ffd24d; color:#1a1a1a; font-weight:700; font-size:14px; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  table { border-collapse:collapse; width:100%; margin-top:6px; font-size:14px; }
+  th,td { border-bottom:1px solid #232a36; padding:9px 8px; text-align:left; vertical-align:top; }
+  th { color:#9aa3b5; font-weight:600; font-size:12.5px; }
+  .ok { color:#4ade80; font-weight:700; }
+  .bad { color:#f87171; font-weight:700; }
+  .wait { color:#fbbf24; }
+  code { background:#0f1319; padding:2px 6px; border-radius:6px; font-size:12.5px; }
+  #verdict { font-size:14px; margin-top:4px; }
+  ol { margin:8px 0 0; padding-left:22px; font-size:13px; color:#c3c9d6; }
+</style>
+</head>
+<body>
+<h1>🔎 ตรวจคีย์ reCAPTCHA ก่อนเปิด App Check</h1>
+<p class="sub">หน้านี้ตอบคำถามเดียว: <b>คีย์นี้ใช้งานได้จากโดเมนนี้จริงไหม</b> — ถ้าไม่ผ่าน อย่าเพิ่งไปกด Enforce ที่ Firebase</p>
+
+<div class="card">
+  <label for="key">Site key (วางคีย์ได้เลย — ไม่ต้องคัดลอกจากภาพ ทำได้ทั้งมือถือและคอม)</label>
+  <input type="text" id="key" placeholder="6L..." autocomplete="off" spellcheck="false">
+  <button id="go">ทดสอบคีย์</button>
+  <p class="sub" style="margin:12px 0 0">โดเมนที่กำลังทดสอบ: <code id="host"></code> — โดเมนนี้ต้องอยู่ในรายการ Domains ของคีย์ด้วย มิฉะนั้นจะไม่ผ่าน</p>
+</div>
+
+<div class="card">
+  <table id="tbl">
+    <thead><tr><th>วิธีโหลด</th><th style="width:110px">ผล</th><th>รายละเอียด</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div id="verdict"></div>
+</div>
+
+<div class="card">
+  <b style="font-size:14px">📋 อ่านผลแล้วทำอะไรต่อ</b>
+  <ol>
+    <li><b>api.js ผ่าน</b> → ใช้กับ App Check แบบ <b>reCAPTCHA v3</b> ได้เลย (แบบที่แอปนี้เตรียมไว้)</li>
+    <li><b>ผ่านเฉพาะ enterprise.js</b> → คีย์เป็นแบบ Cloud Fraud Defense/Enterprise → ต้องเปลี่ยนไปใช้ provider แบบ Enterprise</li>
+    <li><b>ไม่ผ่านทั้งคู่</b> → คีย์ผิด / ยังไม่อัปเดต (รอ 5–10 นาทีหลังสร้าง) / โดเมนที่ทดสอบไม่ได้อยู่ในรายการ</li>
+  </ol>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const qs = new URLSearchParams(location.search);
+$('#host').textContent = location.host;
+$('#key').value = qs.get('key') || localStorage.getItem('rc_test_key') || '';
+
+function rowOf(method) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<td>' + method + '</td><td class="wait">…</td><td></td>';
+  $('#tbl tbody').appendChild(tr);
+  return (ok, detail, skipped) => {
+    tr.children[1].innerHTML = skipped ? '<span class="wait">—</span>'
+      : (ok ? '<span class="ok">✅ ผ่าน</span>' : '<span class="bad">❌ ไม่ผ่าน</span>');
+    tr.children[2].textContent = detail || '';
+    results.push({ method, ok, detail, skipped });
+    renderVerdict();
+  };
+}
+
+let results = [];
+function renderVerdict() {
+  const v = $('#verdict');
+  const done = results.filter(r => !r.skipped).length;
+  if (done === 0) { v.innerHTML = ''; return; }
+  const classic = results.find(r => r.method.indexOf('api.js') === 0);
+  const ent = results.find(r => r.method.indexOf('enterprise.js') === 0);
+  if (classic && classic.ok) v.innerHTML = '<span class="ok">→ ใช้กับ App Check แบบ reCAPTCHA v3 ได้เลย ✅</span>';
+  else if (ent && ent.ok) v.innerHTML = '<span class="ok">→ คีย์เป็นแบบ Cloud Fraud Defense/Enterprise — ต้องใช้ provider แบบ Enterprise</span>';
+  else if (classic && ent && !classic.ok && !ent.ok)
+    v.innerHTML = '<span class="bad">→ ยังใช้ไม่ได้ทั้งสองแบบ</span> — ถ้าคีย์เพิ่งสร้าง ให้รอ 5–10 นาทีแล้วกดทดสอบซ้ำ · ถ้ายังไม่ผ่าน ให้ตรวจว่าคีย์ถูกคัดลอกมาครบทุกตัว (เทียบกับหน้า reCAPTCHA admin) และโดเมน <code>' + location.host + '</code> อยู่ในรายการ Domains';
+  window.__verdictText = v.textContent;
+}
+
+function testInIframe(method, scriptUrl, useEnterprise) {
+  const done = rowOf(method);
+  const f = document.createElement('iframe');
+  f.style.cssText = 'width:1px;height:1px;opacity:0;border:0';
+  document.body.appendChild(f);
+  const finish = (ok, detail, skipped) => { try { f.remove(); } catch (e) {} done(ok, detail, skipped); };
+  setTimeout(() => finish(false, 'หมดเวลา 20 วินาที'), 20000);
+  const d = f.contentDocument, w = f.contentWindow;
+  const s = d.createElement('script');
+  s.src = scriptUrl;
+  s.onload = async () => {
+    try {
+      const g = w.grecaptcha;
+      if (!g) return finish(false, 'โหลดสคริปต์ได้แต่ไม่พบ grecaptcha');
+      const api = useEnterprise ? (g.enterprise || g) : g;
+      await new Promise(res => api.ready(res));
+      const t = await api.execute(KEY, { action: 'appcheck' });
+      finish(!!t, t ? ('ได้โทเคนยาว ' + String(t).length + ' ตัว (ขึ้นต้น ' + String(t).slice(0, 14) + '…)') : 'ไม่ได้โทเคน');
+    } catch (e) { finish(false, String(e && e.message || e)); }
+  };
+  s.onerror = () => finish(false, 'โหลดสคริปต์ไม่สำเร็จ');
+  d.head.appendChild(s);
+}
+
+let KEY = '';
+$('#go').onclick = () => {
+  KEY = $('#key').value.trim();
+  if (!KEY) { alert('วาง site key ก่อนครับ'); return; }
+  localStorage.setItem('rc_test_key', KEY);
+  $('#tbl tbody').innerHTML = '';
+  results = []; $('#verdict').innerHTML = '';
+  $('#go').disabled = true;
+  testInIframe('api.js (v3 แบบเดิม)', 'https://www.google.com/recaptcha/api.js?render=' + KEY, false);
+  setTimeout(() => testInIframe('enterprise.js (แบบใหม่)', 'https://www.google.com/recaptcha/enterprise.js?render=' + KEY, true), 1500);
+  setTimeout(() => { $('#go').disabled = false; }, 22000);
+};
+window.__runTest = (k) => { $('#key').value = k; $('#go').click(); };
+// ถ้ามี ?key=... ให้ทดสอบให้เลย
+if (qs.get('key')) $('#go').click();
+</script>
+</body>
+</html>
