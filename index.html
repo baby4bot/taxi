@@ -1713,6 +1713,24 @@
     </div>
 </div>
 
+<!-- 🔐 ยืนยันตัวตนซ้ำก่อนทำรายการสำคัญ (เปลี่ยนข้อมูลบัญชี / ลบสมาชิก / แก้บัญชีคนอื่น) -->
+<div id="sysReauth" class="custom-confirm-overlay" style="display: none;">
+    <div class="custom-confirm-box">
+        <div class="material-symbols-outlined custom-confirm-icon warning">lock_person</div>
+        <h3 class="custom-confirm-title">ยืนยันตัวตนอีกครั้ง</h3>
+        <div id="raDesc" class="custom-confirm-desc">กรอกรหัสผ่านของคุณเพื่อดำเนินการต่อ</div>
+        <div class="password-wrapper" style="margin: 14px 0 2px;">
+            <input type="password" id="raPassword" placeholder="รหัสผ่านของคุณ" autocomplete="current-password" style="text-align: left;">
+            <span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('raPassword', this)">visibility_off</span>
+        </div>
+        <div id="raError" style="display: none; color: var(--accent-red); font-size: 12.5px; text-align: left; margin: 6px 2px 0; line-height: 1.4;"></div>
+        <div class="custom-confirm-actions">
+            <button id="raBtnCancel" class="btn-cc-cancel">ยกเลิก</button>
+            <button id="raBtnOk" class="btn-cc-ok">ยืนยัน</button>
+        </div>
+    </div>
+</div>
+
 <div id="tollModal" class="custom-confirm-overlay" style="display: none;">
     <div class="custom-confirm-box" style="padding: 25px 20px;">
         <h3 class="custom-confirm-title" style="margin-bottom: var(--space-field);">เพิ่มค่าทางด่วน</h3>
@@ -5629,6 +5647,64 @@
         });
     };
 
+    // 🔐 ด่านยืนยันตัวตนซ้ำ — ถามรหัสผ่านของผู้ที่ล็อกอินอยู่ก่อนทำรายการที่แก้ข้อมูลสำคัญ
+    //    เหตุผล: เครื่องที่ตั้งล็อกอินค้างไว้ (วางบนแท็กซี่/ให้คนอื่นยืม) เปิดแล้วแก้ข้อมูลหรือลบบัญชีได้ทันที
+    //    คืนค่า: true = ยืนยันผ่าน (หรือตรวจไม่ได้ตอนออฟไลน์แล้วผู้ใช้เลือกดำเนินการต่อ), false = ยกเลิก/รหัสผิดครบจำนวน
+    window.__reauthOkUntil = 0; // เพิ่งยืนยันสำเร็จ → ไม่ถามซ้ำภายใน 2 นาที (กันกดหลายขั้นตอนติดกันแล้วต้องพิมพ์รัว ๆ)
+    window.requireReauth = (reason) => new Promise((resolve) => {
+        const overlay = document.getElementById('sysReauth');
+        if (!overlay) return resolve(true);                 // หน้าจอไม่มีด่าน (บิลด์เก่า) → ไม่บล็อกการทำงาน
+        if (!loggedInUserId) return resolve(false);         // ไม่มีบัญชีล็อกอิน → ทำรายการสำคัญไม่ได้
+        if (Date.now() < (window.__reauthOkUntil || 0)) return resolve(true);
+        const inp = document.getElementById('raPassword');
+        const err = document.getElementById('raError');
+        const desc = document.getElementById('raDesc');
+        const btnOk = document.getElementById('raBtnOk');
+        const btnCancel = document.getElementById('raBtnCancel');
+        if (desc) desc.innerText = reason || 'กรอกรหัสผ่านของคุณเพื่อดำเนินการต่อ';
+        if (err) { err.style.display = 'none'; err.innerText = ''; }
+        if (inp) { inp.value = ''; inp.type = 'password'; }
+        let tries = 0;
+        overlay.style.display = 'flex';
+        setTimeout(() => { try { inp.focus(); } catch (e) {} }, 60);
+        const close = (val) => {
+            overlay.style.display = 'none';
+            btnOk.onclick = null; btnCancel.onclick = null; inp.onkeydown = null; overlay.onclick = null;
+            if (val) window.__reauthOkUntil = Date.now() + 120000; // ให้เวลาทำงานต่อ 2 นาที
+            resolve(val);
+        };
+        const showErr = (msg) => { if (err) { err.innerText = msg; err.style.display = 'block'; } };
+        const submit = async () => {
+            const pass = (inp.value || '').trim();
+            if (!pass) return showErr('กรุณากรอกรหัสผ่าน');
+            btnOk.disabled = true; btnOk.innerText = 'กำลังตรวจสอบ...';
+            let stored = '';
+            try {
+                const snap = await window.__fsTimeout(getDoc(doc(db, 'users', loggedInUserId)), 6000);
+                if (snap && snap.exists && snap.exists()) stored = (snap.data() || {}).password || '';
+            } catch (e) {}
+            if (!stored) { try { const d = await window.__fsTimeout(window.__fsRestGet(loggedInUserId), 6000); if (d) stored = d.password || ''; } catch (e) {} }
+            btnOk.disabled = false; btnOk.innerText = 'ยืนยัน';
+            if (!stored) {
+                // ออฟไลน์/ดึงแฮชไม่ได้ → ตรวจให้ไม่ได้ ต้องให้ผู้ใช้ตัดสินใจเอง (ไม่ล็อกไม่ให้ทำงานตอนเน็ตหลุด)
+                const goOn = await window.showCustomConfirm('ตรวจรหัสผ่านไม่ได้', 'ตอนนี้ออฟไลน์ ระบบยืนยันรหัสผ่านให้ไม่ได้\nต้องการดำเนินการต่อหรือไม่?', 'warning', 'ดำเนินการต่อ');
+                return close(!!goOn);
+            }
+            let ok = false;
+            try { ok = await window.pwVerify(pass, stored); } catch (e) {}
+            if (ok) return close(true);
+            tries++;
+            showErr(tries >= 3 ? 'รหัสผ่านไม่ถูกต้อง — ยกเลิกเพื่อความปลอดภัย' : ('รหัสผ่านไม่ถูกต้อง (เหลืออีก ' + (3 - tries) + ' ครั้ง)'));
+            inp.value = '';
+            try { inp.focus(); } catch (e) {}
+            if (tries >= 3) close(false);
+        };
+        btnOk.onclick = submit;
+        btnCancel.onclick = () => close(false);
+        inp.onkeydown = (e) => { if (e.key === 'Enter' && !btnOk.disabled) submit(); };
+        overlay.onclick = (e) => { if (e.target === overlay) close(false); };
+    });
+
     window.togglePasswordVisibility = (inputId, iconEl) => {
         const input = document.getElementById(inputId);
         if (input.type === "password") { input.type = "text"; iconEl.innerText = "visibility"; } else { input.type = "password"; iconEl.innerText = "visibility_off"; }
@@ -5821,6 +5897,8 @@
     // ✅ แอดมินกด "อนุมัติสิทธิ์" — ให้สิทธิ์ที่ขอทั้งหมดลงตัวผู้ใช้นั้น (extraPerms — ไม่เปลี่ยนตำแหน่ง) + แจ้งผู้ขอ + ลบคำขอ
     window.approvePermRequest = async (uid) => {
         if (!uid) return;
+        // 🔐 การอนุมัติสิทธิ์ = เพิ่มอำนาจให้บัญชีอื่น (มีผลกับทุกเครื่อง) → ขอยืนยันรหัสผ่านก่อน
+        if (!(await window.requireReauth('ยืนยันเพื่อ “อนุมัติสิทธิ์เพิ่ม” ให้ผู้ใช้นี้ — กรอกรหัสผ่านของคุณ'))) return window.showToast('ยกเลิกการอนุมัติ — ยังไม่ได้ยืนยันตัวตน', true);
         try {
             const reqSnap = await getDoc(doc(db, 'perm_requests', uid));
             if (!reqSnap.exists()) { window.showToast('ไม่พบคำขอนี้แล้ว', true); return; }
@@ -8584,6 +8662,8 @@
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-12'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     const APP_RELEASE_NOTES = [
+        '🔐 เพิ่มด่าน “ยืนยันตัวตนอีกครั้ง” (พิมพ์รหัสผ่านของผู้ที่ล็อกอินอยู่) ก่อนทำรายการที่แก้ข้อมูลสำคัญ 7 จุด: แก้โปรไฟล์ (ชื่อที่แสดง · เบอร์โทรที่ใช้กู้รหัสผ่าน · ชื่อบริษัท/สหกรณ์ · ทะเบียนรถ) · ลบบัญชี · แอดมินเพิ่ม/แก้บัญชีสมาชิก · ระงับ–ปลดระงับบัญชี · อนุมัติสิทธิ์เพิ่ม · บันทึกรายการสิทธิ์+ลำดับ · บันทึกสิทธิ์ของตำแหน่ง — กันเครื่องที่ล็อกอินค้างไว้ (วางบนรถ/ให้คนอื่นยืม) ถูกแก้ข้อมูลหรือตัดสิทธิ์โดยไม่รู้ตัว',
+        '🔓 ด่านยืนยันตัวตนทำงานเมื่อ “ค่าจริงเปลี่ยน” เท่านั้น — ตั้งค่า/ธีม/การแจ้งเตือนที่แก้บ่อยไม่ต้องพิมพ์รหัส · ยืนยันผ่านแล้วมีช่วงปลอดภัย 2 นาที (ทำหลายขั้นตอนต่อกันไม่ต้องพิมพ์รัว) · ถ้าออฟไลน์ดึงรหัสมาตรวจไม่ได้ จะถามยืนยันกับคนขับแทนการล็อกไม่ให้ทำงาน · กรอกรหัสผิด 3 ครั้ง = ยกเลิกเพื่อความปลอดภัย · กดยกเลิกได้ทุกเมื่อโดยข้อมูลไม่ถูกแก้',
         '🪪 เก็บกวาดทุกจุดที่เอารหัสผู้ใช้ (uid) ยาว ๆ มาโชว์ให้เห็น — หน้ารายชื่อสมาชิก · การ์ดคำขอสิทธิ์ · รายการคำขอค้าง · โควต้า Firestore · ประวัติการใช้งาน และช่องคำขอสิทธิ์ที่ส่งให้แอดมิน เปลี่ยนเป็นชื่อผู้ใช้/ชื่อที่แสดงเสมอ (ถ้าข้อมูลเก่าไม่มีชื่อเลย จะย่อเป็น “ผู้ใช้ …4 ตัวท้าย” แทนรหัสเต็ม 20 ตัว · ดูรหัสเต็มได้โดยชี้เมาส์ที่ชื่อในหน้าโควต้า)',
         '🏷️ หน้าต่าง “เปลี่ยนรหัสผ่าน” แสดงตัวตนถูกต้องแล้ว: บรรทัดเหลืองเป็นชื่อผู้ใช้ที่ใช้ล็อกอิน (@ชื่อผู้ใช้) ไม่ใช่รหัสเอกสารยาว ๆ และชิปตำแหน่งโชว์บทบาทจริงเป็นภาษาไทยพร้อมสีตามบทบาท (Admin ทอง · Manager ฟ้า · User เงิน) — เดิมโชว์เป็น “User” ตลอดแม้เป็นแอดมิน',
         '🎖️ วงแหวนรูปโปรไฟล์บอกบทบาทกลับมาแบบตั้งใจ: Admin = ทอง-ส้ม · Manager = ฟ้า · User = เงินเทา (ยังเป็นวงเดียวที่กรอบ ไม่ซับกับตัวรูป) — และจำบทบาทไว้ในเครื่อง เปิดแอปครั้งถัดไปได้สีถูกตั้งแต่เฟรมแรก ไม่ต้องรอโหลดข้อมูลจากเซิร์ฟเวอร์',
@@ -8987,7 +9067,7 @@
             currentUserRole = data.role || "User"; myExtraPerms = data.extraPerms || {}; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
             // 🪪 เก็บ "ชื่อผู้ใช้ที่ใช้ล็อกอิน" + บทบาทจริงไว้ให้ UI เรียกใช้ (หน้าต่างเปลี่ยนรหัสผ่าน / คำขอสิทธิ์)
             //    เดิมไม่มีใครตั้งค่า 2 ตัวนี้ → หน้าต่างเปลี่ยนรหัสผ่านโชว์รหัสเอกสาร uid และโชว์ตำแหน่งเป็น "User" ตลอด
-            try { window.myCurrentUsername = data.username || ""; window.myCurrentRole = currentUserRole; } catch (e) {}
+            try { window.myCurrentUsername = data.username || ""; window.myCurrentRole = currentUserRole; window.myCurrentPhoneNumber = data.phoneNumber || ""; } catch (e) {}
             try { window.applyAvatarRingRole(currentUserRole, loggedInUserId); } catch (e) {}
             // ⭐ Default Favorites: ถ้ายังไม่มีใน localStorage → นำเข้าจาก Admin global (settings/appConfig.defaultFavorites) หรือ DEFAULT_ADMIN_FAVORITES ถ้า DB ยังไม่มี
             try {
@@ -9586,6 +9666,8 @@
     window.saveProfileInfo = async () => {
         if(!loggedInUserId) return window.showToast("กรุณาล็อกอินใหม่", true);
         const saveBtn = document.getElementById('saveProfileBtn'); saveBtn.innerText = "กำลังบันทึก..."; saveBtn.disabled = true;
+        // 🔐 จำค่าตั้งต้นไว้เทียบก่อนเขียน — ถ้ามีการแก้ข้อมูลที่เกี่ยวกับตัวตน/การกู้บัญชี จะขอยืนยันรหัสผ่านก่อน
+        const __raBefore = { name: window.myCurrentDisplayName || '', phone: window.myCurrentPhoneNumber || '', company: window.myCurrentCompanyName || '', plate: window.myCurrentPlateNo || '' };
         try {
             const newName = document.getElementById('editDisplayName').value; const newCompany = (document.getElementById('editCompanyName').value || '').trim(); const fileInput = document.getElementById('uploadPicInput'); const qrInput = document.getElementById('uploadQrInput');
             let finalPhotoURL = window.myCurrentPhotoURL || ""; let logDetails = []; let currentPicSrc = document.getElementById('editProfilePic').src;
@@ -9620,6 +9702,17 @@
             if (autoResumeEl) { updatePayload.autoResume = autoResumeEl.checked; window.userAutoResume = autoResumeEl.checked; } // ⚡ เริ่มต่ออัตโนมัติ — ใช้ทันทีโดยไม่ต้องรอล็อกอินใหม่ (ทุกคนตั้งเองได้)
             window.updateAutoFsBadge();
 
+            // 🔐 แก้ข้อมูลสำคัญ (ชื่อที่แสดง · เบอร์โทรที่ใช้กู้รหัสผ่าน · ชื่อบริษัท/สหกรณ์ · ทะเบียนรถ) → ขอยืนยันตัวตนก่อน
+            //    การตั้งค่า/ธีม/การแจ้งเตือนที่แก้บ่อยไม่ต้องยืนยัน (ไม่มีผลต่อความปลอดภัยของบัญชี)
+            const __raChanged = [];
+            if ((newName || '') !== __raBefore.name) __raChanged.push('ชื่อที่แสดง');
+            if (phoneInput !== '' && phoneInput !== __raBefore.phone) __raChanged.push('เบอร์โทรศัพท์ (ใช้กู้รหัสผ่าน)');
+            if (newCompany !== __raBefore.company) __raChanged.push('ชื่อบริษัท/สหกรณ์');
+            if (newPlate !== __raBefore.plate) __raChanged.push('ทะเบียนรถ');
+            if (__raChanged.length) {
+                const okReauth = await window.requireReauth('กำลังจะเปลี่ยน: ' + __raChanged.join(' · ') + ' — กรอกรหัสผ่านของคุณเพื่อยืนยัน');
+                if (!okReauth) return window.showToast('ยกเลิกการบันทึก — ยังไม่ได้ยืนยันตัวตน', true);
+            }
             if(Object.keys(updatePayload).length > 0) { await updateDoc(doc(db, "users", loggedInUserId), updatePayload); }
             if(logDetails.length > 0) { await recordActivityLog(loggedInUserId, "แก้ไขโปรไฟล์", logDetails.join(', '), 'profile'); }
             window.toggleModal('profileModal', false); window.showToast("อัปเดตโปรไฟล์สำเร็จ!");
@@ -9645,7 +9738,11 @@
         if(!window.currentUserPerms().canDelete) return window.showToast("คุณไม่มีสิทธิ์ลบผู้ใช้งาน", true);
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถลบบัญชีตัวเองได้", true);
         let isOk = await window.showCustomConfirm("ลบบัญชีผู้ใช้งาน", `ยืนยันการ 'ลบถาวร' บัญชี ${userName} ใช่หรือไม่?\nข้อมูลจะไม่สามารถกู้คืนได้`, "danger", "ลบข้อมูล");
-        if(isOk) { try { await deleteDoc(doc(db, "users", uid)); window.showToast("ลบบัญชีเรียบร้อย"); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการลบข้อมูล", true); } }
+        if(isOk) {
+            // 🔐 ลบบัญชีถาวรย้อนกลับไม่ได้ → ขอยืนยันตัวตนด้วยรหัสผ่านก่อน (กันเครื่องที่ล็อกอินค้างไว้)
+            if (!(await window.requireReauth('ยืนยันเพื่อ “ลบบัญชี” ' + (userName || '') + ' — กรอกรหัสผ่านของคุณ'))) return window.showToast("ยกเลิกการลบ — ยังไม่ได้ยืนยันตัวตน", true);
+            try { await deleteDoc(doc(db, "users", uid)); window.showToast("ลบบัญชีเรียบร้อย"); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการลบข้อมูล", true); }
+        }
     };
 
     window.handleAdminModalState = (isOpen) => {
@@ -9856,6 +9953,8 @@
     };
 
     window.savePermConfigOrder = async () => {
+        // 🔐 ลำดับ/รายการสิทธิ์ทั้งระบบ (ซิงก์ทุกเครื่อง) → ขอยืนยันรหัสผ่านก่อน
+        if (!(await window.requireReauth('ยืนยันเพื่อ “บันทึกรายการสิทธิ์ + ลำดับเมนูสิทธิ์” — กรอกรหัสผ่านของคุณ'))) return window.showToast('ยกเลิกการบันทึก — ยังไม่ได้ยืนยันตัวตน', true);
         let newOrder = []; document.querySelectorAll('.perm-item').forEach(el => { let id = el.dataset.id; let item = window.currentPermConfig.find(x => x.id === id); if(item) newOrder.push(item); });
         window.currentPermConfig = newOrder; await window.savePermConfigToDB();
     };
@@ -9890,6 +9989,8 @@
 
     window.saveRolePermissions = async () => {
         if(!window.currentUserPerms().canManageRoles) return window.showToast("คุณไม่มีสิทธิ์ตั้งค่าสิทธิ์การใช้งาน", true);
+        // 🔐 ตั้งสิทธิ์ของตำแหน่ง = เปลี่ยนอำนาจทั้งระบบ → ขอยืนยันรหัสผ่านก่อน
+        if (!(await window.requireReauth('ยืนยันเพื่อ “บันทึกสิทธิ์การใช้งาน” ของตำแหน่งนี้ — กรอกรหัสผ่านของคุณ'))) return window.showToast('ยกเลิกการบันทึกสิทธิ์ — ยังไม่ได้ยืนยันตัวตน', true);
         let role = document.getElementById('settingRoleSelect').value; let btn = document.getElementById('saveRolePermBtn'); btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
         let newPerms = {}; window.currentPermConfig.forEach(p => { let prop = p.id.replace('perm_', ''); let el = document.getElementById(p.id); if(el) newPerms[prop] = el.checked; });
         try { await setDoc(doc(db, "settings", "roles"), { [role]: newPerms }, { merge: true }); window.captureRolePermBaseline(); window.showToast(`บันทึกสิทธิ์สำหรับ ${role} สำเร็จ — อยู่หน้าเดิมต่อได้เลย`); } catch(e) { window.showToast("บันทึกล้มเหลว", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์`; window.updateSavePermBtn(); }
@@ -9900,7 +10001,10 @@
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถแบนตัวเองได้", true);
         const msg = isBan ? "ยืนยันการ 'ระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?\nผู้ใช้จะหลุดจากระบบและเข้าไม่ได้อีก" : "ยืนยันการ 'ปลดระงับ' บัญชีผู้ใช้นี้ใช่หรือไม่?";
         let isOk = await window.showCustomConfirm(isBan ? "ระงับการใช้งาน" : "ปลดระงับการใช้งาน", msg, isBan ? "danger" : "warning");
-        if(isOk) { try { await updateDoc(doc(db, "users", uid), { isBanned: isBan }); await recordActivityLog(uid, isBan ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`, 'security'); window.showToast(isBan ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); window.toggleModal('adminEditUserModal', false); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); } }
+        if(isOk) {
+            // 🔐 ระงับ/ปลดระงับบัญชี = ตัดหรือคืนการเข้าถึงของคนอื่น → ขอยืนยันรหัสผ่านก่อน
+            if (!(await window.requireReauth((isBan ? 'ยืนยันเพื่อ “ระงับบัญชี” ' : 'ยืนยันเพื่อ “ปลดระงับบัญชี” ') + (userName || '') + ' — กรอกรหัสผ่านของคุณ'))) return window.showToast('ยกเลิก — ยังไม่ได้ยืนยันตัวตน', true);
+            try { await updateDoc(doc(db, "users", uid), { isBanned: isBan }); await recordActivityLog(uid, isBan ? "ระงับบัญชี (Ban)" : "ปลดระงับบัญชี (Unban)", `โดย ${document.getElementById('displayUserName').innerText}`, 'security'); window.showToast(isBan ? "ระงับบัญชีเรียบร้อย" : "ปลดระงับบัญชีเรียบร้อย"); window.toggleModal('adminEditUserModal', false); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ", true); } }
     }
 
     let currentEditUid = "";
@@ -9946,6 +10050,11 @@
         const uid = document.getElementById('adminEditUid').value;
         const svPerms = window.currentUserPerms(); const isNewUser = (uid === "");
         if((isNewUser && !svPerms.canAdd) || (!isNewUser && !(svPerms.canEdit || svPerms.canChangeUserRole || svPerms.canSetStaffPrefs || svPerms.canViewPassword))) return window.showToast("คุณไม่มีสิทธิ์บันทึกข้อมูลนี้", true); const newUsername = document.getElementById('adminEditUsername').value.trim(); const newName = document.getElementById('adminEditName').value; const newCompany = (document.getElementById('adminEditCompanyName').value || '').trim(); const newPhone = document.getElementById('adminEditPhone').value.trim(); const newRole = document.getElementById('adminEditRole').value; const newPassword = document.getElementById('adminEditPassword').value; const fileInput = document.getElementById('adminUploadPicInput'); const qrInput = document.getElementById('adminUploadQrInput'); const btn = document.getElementById('saveAdminUserBtn'); btn.innerText = "กำลังบันทึก..."; btn.disabled = true;
+        // 🔐 เพิ่ม/แก้บัญชีสมาชิก (รวมเปลี่ยนตำแหน่งและรหัสผ่านของคนอื่น) → ขอยืนยันรหัสผ่านของผู้ทำรายการก่อน
+        const __raWho = isNewUser
+            ? ('เพิ่มสมาชิกใหม่ “' + ((document.getElementById('adminEditUsername') || {}).value || '') + '”')
+            : ('แก้ไขบัญชี “' + ((document.getElementById('adminEditName') || {}).value || '') + '”');
+        if (!(await window.requireReauth(__raWho + ' — กรอกรหัสผ่านของคุณเพื่อยืนยัน'))) return window.showToast('ยกเลิกการบันทึก — ยังไม่ได้ยืนยันตัวตน', true);
         try {
             let photoUpdate = document.getElementById('adminEditPic').src; if(photoUpdate === window.DEFAULT_AVATAR) photoUpdate = ""; let qrUpdate = document.getElementById('adminEditQrPic').src; if(qrUpdate === window.DEFAULT_QR) qrUpdate = "";
             if(uid === "") {
