@@ -1,0 +1,139 @@
+rules_version = '2';
+
+// ════════════════════════════════════════════════════════════════════════════
+// 🔒 Taxi Meter 2026 — กติกา Firestore ฉบับ "ปิดจริง" (ใช้หลังทำ Firebase Auth เสร็จ)
+//
+// ⚠️ ใช้ไฟล์นี้ "เฉพาะเมื่อ" ตั้ง Firebase Authentication เรียบร้อยแล้วเท่านั้น
+//    (ดูขั้นตอนครบใน FIREBASE-AUTH.md — แนวทาง C: Custom Token ผ่าน Cloud Functions)
+//
+// หลักคิดสำคัญของไฟล์นี้:
+//   • uid ของ Firebase Auth = docId ของผู้ใช้ในคอลเลกชัน users  (ตั้งตอน createCustomToken(docId))
+//     → จึงเทียบเจ้าของได้ตรง ๆ ด้วย  request.auth.uid == uid  ไม่ต้องมีตารางจับคู่
+//   • อ่าน/เขียนเอกสารของตัวเองเท่านั้น · แอดมินเห็นของคนอื่นได้ (ตรวจจาก doc ของตัวเอง)
+//   • ประวัติเที่ยวห้ามลบ · ร่องรอยการใช้งานเขียนเพิ่มอย่างเดียว (เหมือนไฟล์ firestore.rules)
+//
+// ⚠️ ก่อนวางไฟล์นี้: รัน tests/security-check.ps1 ให้ขึ้น OPEN ทั้ง 7 ข้อ (ของเดิม)
+//    แล้วหลังวาง: ต้องขึ้น LOCKED ทั้ง 7 ข้อ — ถ้าแอปเข้าไม่ได้ ให้ Restore กติกาเดิมทันที
+// ════════════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─────────────────────────── ตัวช่วย ───────────────────────────
+    function signedIn() { return request.auth != null; }
+
+    // doc ของผู้ใช้ที่ล็อกอินอยู่ (ใช้ uid เป็น docId ตามแนวทาง C)
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isAdmin()   { return signedIn() && me().role == 'Admin'; }
+    function isManager() { return signedIn() && me().role == 'Manager'; }
+    function isStaff()   { return isAdmin() || isManager(); }
+
+    function maxKeys(n) { return request.resource.data.keys().size() <= n; }
+    function strLe(f, n) { return !(f in request.resource.data) || (request.resource.data[f] is string && request.resource.data[f].size() <= n); }
+    function numBetween(f, lo, hi) { return !(f in request.resource.data) || (request.resource.data[f] is number && request.resource.data[f] >= lo && request.resource.data[f] <= hi); }
+    function listLe(f, n) { return !(f in request.resource.data) || (request.resource.data[f] is list && request.resource.data[f].size() <= n); }
+    function mapLe(f, n) { return !(f in request.resource.data) || (request.resource.data[f] is map && request.resource.data[f].keys().size() <= n); }
+    function okImages() { return strLe('photoURL', 900000) && strLe('qrCodeURL', 900000) && strLe('profilePic', 900000) && strLe('qrPic', 900000); }
+
+    // ─────────────────────────── 👤 สมาชิก (users) ───────────────────────────
+    // อ่านเอกสารเดียว: เจ้าของ หรือแอดมิน/ผู้จัดการ (หน้า "จัดการผู้ใช้งาน")
+    // คิวรีทั้งคอลเลกชัน (list): เฉพาะแอดมิน/ผู้จัดการ — คนขับไม่เห็นแฮชรหัสผ่านของคนอื่น
+    match /users/{uid} {
+      allow get:    if signedIn() && (request.auth.uid == uid || isStaff());
+      allow list:   if isStaff();
+      allow create: if signedIn() && uid == request.auth.uid && maxKeys(60) && okImages();  // ปกติสมัครผ่าน Cloud Function (ข้ามกติกาได้)
+      allow update: if signedIn() && (request.auth.uid == uid || isStaff()) &&
+                    maxKeys(60) && okImages() &&
+                    strLe('username', 60) && strLe('displayName', 80) && strLe('companyName', 80) &&
+                    strLe('phoneNumber', 20) && strLe('plateNo', 20) && strLe('role', 30) &&
+                    strLe('password', 300) && strLe('sessionId', 100) &&
+                    strLe('themeMode', 20) && strLe('taxiType', 20) && strLe('tollwayMode', 20) &&
+                    mapLe('extraPerms', 80);
+      allow delete: if isAdmin();   // ลบบัญชี = แอดมินเท่านั้น (ย้อนกลับไม่ได้)
+
+      // 📒 ประวัติเที่ยว — เจ้าของเท่านั้น (แอดมินอ่านได้เพื่อช่วยตรวจ) · ห้ามลบจากฝั่งเว็บ
+      match /trips/{tripId} {
+        allow read:   if signedIn() && (request.auth.uid == uid || isStaff());
+        allow create, update: if signedIn() && request.auth.uid == uid &&
+          request.resource.data.keys().hasOnly(['startTime', 'endTime', 'destName', 'km', 'trafficSec', 'baseFare', 'surcharges', 'pauses', 'catchUps', 'fare', 'driverUid', 'createdAt']) &&
+          numBetween('startTime', 1000000000000, 9999999999999) &&
+          numBetween('endTime', 1000000000000, 9999999999999) &&
+          numBetween('km', 0, 5000) &&
+          numBetween('trafficSec', 0, 200000) &&
+          numBetween('baseFare', 0, 1000) &&
+          numBetween('fare', 0, 200000) &&
+          numBetween('createdAt', 1000000000000, 9999999999999) &&
+          strLe('destName', 200) && strLe('driverUid', 60) &&
+          listLe('surcharges', 200) && listLe('pauses', 200) && listLe('catchUps', 200);
+        allow delete: if false;   // 🛡️ ห้ามลบประวัติรายได้
+      }
+
+      // 🧾 ประวัติการใช้งานรายคน — เจ้าของ/แอดมินเขียนเพิ่ม · ลบไม่ได้
+      match /logs/{logId} {
+        allow read:   if signedIn() && (request.auth.uid == uid || isStaff());
+        allow create: if signedIn() && (request.auth.uid == uid || isStaff()) &&
+          request.resource.data.keys().hasOnly(['action', 'detail', 'timestamp', 'byUid', 'byName', 'targetUid']) &&
+          strLe('action', 200) && strLe('detail', 1000) && strLe('byName', 80) &&
+          strLe('byUid', 60) && strLe('targetUid', 60) &&
+          numBetween('timestamp', 1000000000000, 9999999999999);
+        allow update, delete: if false;
+      }
+    }
+
+    // ─────────────────────── 📜 ประวัติการใช้งานรวมทั้งระบบ ───────────────────────
+    match /global_logs/{logId} {
+      allow read:   if isStaff();
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly(['action', 'detail', 'timestamp', 'byUid', 'byName', 'targetUid']) &&
+        strLe('action', 200) && strLe('detail', 1000) && strLe('byName', 80) &&
+        strLe('byUid', 60) && strLe('targetUid', 60);
+      allow update, delete: if false;
+    }
+
+    // ─────────────────────── 🙋 คำขอสิทธิ์เพิ่ม / แจ้งผลคำขอ ───────────────────────
+    match /perm_requests/{uid} {
+      allow read:  if signedIn() && (request.auth.uid == uid || isStaff());
+      allow write: if signedIn() && (request.auth.uid == uid || isStaff()) &&
+                   maxKeys(40) && strLe('username', 60) && strLe('displayName', 80) &&
+                   listLe('perms', 80) && mapLe('extraPerms', 80);
+    }
+    match /perm_notices/{uid} {
+      allow read:  if signedIn() && (request.auth.uid == uid || isStaff());
+      allow write: if signedIn() && (request.auth.uid == uid || isStaff()) &&
+                   maxKeys(40) && listLe('items', 80);
+    }
+
+    // ─────────────────────── 📊 โควตาการใช้งาน (ตัวนับรายวัน) ───────────────────────
+    match /quota_usage/{uid} {
+      allow read:   if signedIn() && (request.auth.uid == uid || isStaff());
+      allow create, update: if signedIn() && request.auth.uid == uid &&
+        maxKeys(30) &&
+        numBetween('reads', 0, 100000000) && numBetween('writes', 0, 100000000) && numBetween('deletes', 0, 100000000);
+      allow delete: if false;
+    }
+
+    // ─────────────────────────── ⚙️ เอกสารตั้งค่าระบบ ───────────────────────────
+    // อ่านได้ทุกคนที่ล็อกอิน (แอปต้องใช้เรท/สิทธิ์/เมนู) · เขียนได้เฉพาะแอดมิน/ผู้จัดการ
+    // ยกเว้น settings/changelog → ทุกคนช่วยอัปเดตได้ (แอปเขียนเองหลังล็อกอินทุกครั้ง)
+    match /settings/{docId} {
+      allow read: if signedIn();
+      allow create, update: if
+        docId in ['roles', 'changelog', 'toast_messages', 'app_config', 'appConfig', 'permission_config', 'menuOrder'] &&
+        maxKeys(60) && listLe('entries', 600) && (
+          isStaff() ||
+          (docId == 'changelog' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['entries', 'syncedHash']))
+        );
+      allow delete: if false;
+    }
+    match /system/{docId} {
+      allow read: if signedIn();
+      allow create, update: if isStaff() && docId == 'service_data' && maxKeys(40);
+      allow delete: if false;
+    }
+
+    // ─────────────────────────── 🚫 ที่เหลือทั้งหมด: ปฏิเสธ ───────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

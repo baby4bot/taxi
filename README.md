@@ -212,7 +212,9 @@ receipt.html            ← หน้าใบเสร็จสำหรับ�
 sw.js                   ← Service Worker สำหรับ PWA (โหลดไฟล์ใหม่จากเน็ตทุกครั้ง)
 taxi-car.png            ← รูปรถที่ใช้ในแอป
 firestore.rules         ← 🔐 กติกาความปลอดภัย Firestore (คัดลอกไปวางใน Firebase Console)
+firestore-auth.rules    ← 🔐 กติกาฉบับ "ปิดจริง" — ใช้หลังทำ Firebase Auth เสร็จแล้ว (เจ้าของเท่านั้น)
 SECURITY.md             ← 📚 คู่มือความปลอดภัย: วิธีปิดช่องอ่าน/เขียนโดยไม่ล็อกอินทีละขั้น + App Check
+FIREBASE-AUTH.md        ← 🔑 สอนทำ Firebase Authentication ให้สมบูรณ์ (3 แนวทาง + โค้ดจริง + วิธีทดสอบ)
 tests/
   ├── catchup-regression.html  ← ชุดทดสอบอัตโนมัติ: เที่ยวค้าง/ปิด-เปิดแอป/เบิกคืนเวลา (15 สถานการณ์)
   ├── security-check.ps1       ← 🔎 ตรวจสดว่าฐานข้อมูลยังเปิดให้คนนอกรึเปล่า (7 ข้อ · ไม่ต้องล็อกอิน)
@@ -266,6 +268,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/security-check.ps1
 | บทบาทล่าสุดที่จำไว้ (`taxi_role_cache_<uid>`) | **ในเครื่อง** | ใช้ตั้งสีวงแหวนตั้งแต่เฟรมแรก แล้วเขียนทับด้วยค่าจริงจาก Firestore ทุกครั้งที่โหลดโปรไฟล์ |
 | เที่ยวที่จบแต่ยังส่งไม่สำเร็จ (คิวรอซิงก์) | **ในเครื่อง** (`taxi_pending_trips_v1`) | ส่งขึ้น Firestore ให้เองเมื่อเน็ตกลับมา/กลับเข้าแอป |
 | ประวัติเที่ยวที่จบแล้ว (ใช้ในหน้าประวัติเที่ยว / รายได้) | **Firestore** (`users/<uid>/trips`) | อ่านจากเซิร์ฟเวอร์ก่อนเสมอ (ไม่ใช่แคช) — SDK ติดก็มีเส้นทาง REST สำรอง |
+| กติกาความปลอดภัย + สถานะการปิดช่องโหว่ | **ไฟล์ในเรโป** (`firestore.rules` · `firestore-auth.rules`) | ต้องวางใน Firebase Console เอง — ตรวจผลด้วย `tests/security-check.ps1` |
 
 ---
 
@@ -296,11 +299,13 @@ RESULT: 7 of 7 checks are OPEN — ฐานข้อมูลอ่าน/เ�
 
 ### ✅ วิธีปิด (รายละเอียดใน [`SECURITY.md`](SECURITY.md))
 
-1. คัดลอก [``firestore.rules`](firestore.rules) → Firebase Console → Firestore Database → Rules → **Publish**
+1. คัดลอก [`firestore.rules`](firestore.rules) → Firebase Console → Firestore Database → Rules → **Publish**
 2. รัน `tests/security-check.ps1` ซ้ำ → ต้องขึ้น **LOCKED ทั้ง 7 ข้อ**
 3. ถ้าต้องการปิดระดับ "ใครอ่านได้" ด้วย เปิด **App Check (reCAPTCHA v3)**:
    Firebase Console → App Check → ลงทะเบียนเว็บแอป แล้วใส่ site key ที่ `APP_CHECK_SITE_KEY` ใน `index.html`
    → กด Enforce ที่ Firestore (ค่าเริ่มต้นคือ **ปิด** — ไม่กระทบพฤติกรรมเดิมของแอป)
+4. **ปิดให้สนิทจริง** → ดู [`FIREBASE-AUTH.md`](FIREBASE-AUTH.md) (Firebase Auth + Custom Token ผ่าน Cloud Functions)
+   แล้วใช้ [`firestore-auth.rules`](firestore-auth.rules) แทนไฟล์แรก — กติกาจะเช็ก "เจ้าของบัญชี" ได้จริง
 
 ### 🧭 ข้อจำกัดที่ต้องรู้
 
