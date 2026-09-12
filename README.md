@@ -4,7 +4,7 @@
 
 **มิเตอร์แท็กซี่ดิจิทัล • คำนวณค่าโดยสาร • นำทางด้วย Google Maps • ใบเสร็จให้ผู้โดยสาร**
 
-![Version](https://img.shields.io/badge/version-v1.2.12-ffd600?style=flat-square)
+![Version](https://img.shields.io/badge/version-v1.2.13-ffd600?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-installable-4caf50?style=flat-square)
 ![Firebase](https://img.shields.io/badge/Firebase-Firestore-ffca28?style=flat-square)
 ![Build](https://img.shields.io/badge/build-none-9aa3b5?style=flat-square)
@@ -275,8 +275,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/security-check.ps1
 ## 🗓️ ประวัติเวอร์ชัน
 
 ประวัติเวอร์ชันแยกเป็น **วันละ 1 การ์ด** (1 วันที่มีการแก้ไข = 1 เวอร์ชัน) ดูได้ในแอป
-ที่ **ป้ายเวอร์ชันมุมขวาล่าง** — ปัจจุบัน **v1.2.12 (12 กันยายน 2569)**
+ที่ **ป้ายเวอร์ชันมุมขวาล่าง** — ปัจจุบัน **v1.2.13 (13 กันยายน 2569)**
+(ล่าสุด ณ 13 ก.ย. 2569 มี 9 การ์ด: 13 12 11 10 9 8 7 6 5 กันยายน)
 ระบบเก็บทั้งใน Firestore และสำรองในโค้ด เพื่อไม่ให้ประวัติวันเก่าหายแม้เซิร์ฟเวอร์ขัดข้อง
+
+> 🗓️ **วันใหม่ = การ์ดใหม่ = เลขเวอร์ชันใหม่ อัตโนมัติ** — ระบบจำ "วันที่ bullet แต่ละข้อปรากฏครั้งแรก"
+> ไว้ในเครื่อง (`taxi_chg_note_days_v1`) แล้วสร้างการ์ดตามวันนั้นเอง ไม่ต้องย้ายข้อความวันเก่าด้วยมืออีก
+> (เคยเป็นต้นเหตุที่ bullet ของวันที่ 11 หายไปรวมกับวันที่ 12)
 
 ---
 

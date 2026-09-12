@@ -60,18 +60,23 @@ allow read, write: if request.auth != null && request.auth.uid == uid;
 แนวคิด: แนบ **โทเคนที่พิสูจน์ว่า "คำขอนี้มาจากเบราว์เซอร์ที่รันโดเมนของเรา"** ไปกับทุกคำขอ
 คนนอกที่ยิง `curl` / สคริปต์ Python ใส่ Firestore จะไม่มีโทเคนนี้ → โดนปฏิเสธ
 
-### ขั้นที่ 1 — ขอ site key ของ reCAPTCHA v3 (ฟรี)
+### ขั้นที่ 1 — ขอคีย์ของ reCAPTCHA v3 (ฟรี) — ต้องได้ **2 คีย์**
 
 1. เปิด <https://www.google.com/recaptcha/admin/create>
 2. Label: `taxi-meter` · reCAPTCHA type: **v3** · Domains: `baby4bot.github.io` (และ `127.0.0.1` ถ้าทดสอบในเครื่อง)
-3. กด Submit → คัดลอก **Site key** (ขึ้นต้นด้วย `6L...`)
+3. กด Submit → ได้ 2 ค่า ซึ่งใช้คนละที่:
+   • **Site key** (ขึ้นต้น `6L...`) → ใส่ใน **โค้ดแอป** (คีย์สาธารณะ)
+   • **Secret key** → ใส่ใน **Firebase Console** (ห้ามอยู่ในโค้ด)
 
 > reCAPTCHA v3 ให้ประเมินฟรี **1,000,000 ครั้ง/เดือน** — เกินพอสำหรับแอปคนขับไม่กี่สิบคน
+> (ถ้าภายหลังอยากใช้ reCAPTCHA Enterprise ที่ Firebase แนะนำ มีโควตาฟรี 10,000 ครั้ง/เดือน)
 
 ### ขั้นที่ 2 — ลงทะเบียนกับ Firebase
 
 1. <https://console.firebase.google.com> → โปรเจกต์ `mytalkie-3955a` → **App Check**
-2. แท็บ **Apps** → เลือกเว็บแอป (`...:web:02e2...`) → ติ๊ก **reCAPTCHA v3** → วาง site key → **Save**
+2. แท็บ **Apps** → เลือกเว็บแอป (`...:web:02e2...`) → ติ๊ก **reCAPTCHA v3** → วาง **secret key** → **Save**
+
+> ⚠️ คนลืมบ่อยที่สุดคือขั้นนี้: ใส่ **secret key** ที่คอนโซล (ไม่ใช่ site key) — ถ้าใส่ผิด แอปจะขอโทเคนไม่ผ่าน
 
 ### ขั้นที่ 3 — เปิดในแอป (แก้ 1 บรรทัด)
 
@@ -86,20 +91,37 @@ const APP_CHECK_SITE_KEY = "6Lxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; // ← วาง 
 
 ### ขั้นที่ 4 — ดูผลก่อนบังคับใช้ (สำคัญมาก ⚠️)
 
-1. Firebase Console → App Check → **APIs** → **Cloud Firestore** → ยัง **อย่ากด Enforce**
-2. เปิดแอปจริง 1-2 วัน → ดูแถบ **Metrics** ว่าคำขอที่ "verified" ต้องขึ้นเกือบ 100%
-3. ถ้า verified ครบแล้ว → กด **Enforce**
+มี **เข็มทิศอยู่ในแอปแล้ว** — เปิดแอป → F12 → คอนโซล:
+
+```js
+await appCheckSelfTest()
+```
+
+ได้ตารางบอกสถานะทันที:
+
+| withoutToken | withToken | ความหมาย | ต้องทำต่อ |
+|---|---|---|---|
+| 200 | 200 | ยังไม่บังคับใช้ | 1) Console → App Check → **APIs** → Cloud Firestore → ยัง **อย่ากด Enforce** → 2) เปิดแอปจริง 1–2 วัน → Metrics ต้องขึ้น **Verified ≈ 100%** → 3) ค่อยกด **Enforce** |
+| **403** | **200** | ✅ **สมบูรณ์** | จบขั้นตอน A |
+| 403 | 403 | ⛔ **อันตราย** | กด **Unenforced** กลับก่อนทันที แล้วตรวจ site key/โดเมน/debug token |
+| 0 | — | ขอโทเคนไม่ได้ | ตรวจ site key · โดเมนใน reCAPTCHA · ลงทะเบียนแอปในคอนโซล |
+
+> ทดสอบในเครื่อง (`127.0.0.1`): SDK จะพิมพ์ **debug token** ในคอนโซล
+> → เอาไปลงที่ App Check → Apps → จัดการ → **Debug tokens** (ใช้ได้เฉพาะเครื่องนั้น ห้ามแจก)
 
 > ⚠️ กด Enforce ก่อนที่แอปจะส่งโทเคนได้ = **แอปอ่าน/เขียน Firestore ไม่ได้เลย** ทุกคนใช้งานไม่ได้
 > ถ้าพลาดแล้ว ให้กลับไปเป็น Unenforced (ย้อนได้ทันที)
 
-### ขั้นที่ 5 — พิสูจน์
+### ขั้นที่ 5 — พิสูจน์จากนอกแอป
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/security-check.ps1
 ```
 
-สคริปต์นี้ยิง REST ตรงแบบไม่ผ่านเบราว์เซอร์ → หลัง Enforce ต้องขึ้น **LOCKED ทั้ง 7 ข้อ**
+สคริปต์นี้ยิง REST ตรงแบบไม่ผ่านเบราว์เซอร์ (ไม่มีโทเคน) → หลัง Enforce ต้องขึ้น **LOCKED ทั้ง 7 ข้อ**
+
+> 💡 `X-Firebase-AppCheck` คือหัวข้อที่ถูกต้องสำหรับคำขอ REST (§ยืนยันจากเอกสารทางการของ Firebase แล้ว)
+> แอปนี้แนบให้อัตโนมัติในทุกคำขอผ่าน `window.__fsHeaders()`
 
 ### 😬 สิ่งที่ A ยังปิดไม่ได้
 

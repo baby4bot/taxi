@@ -2927,15 +2927,61 @@
     //    ⚠️ ต้องเปิด enforcement ใน Firebase Console "หลัง" ยืนยันว่าแอปจริงส่ง token ได้แล้ว (โหมด Monitor ก่อน)
     //       ไม่งั้นแอปจะอ่าน/เขียนไม่ได้เลย — และต้องมีค่า site key ตรงกับโดเมนที่ให้บริการ
     const APP_CHECK_SITE_KEY = ""; // ← วาง reCAPTCHA v3 site key ที่นี่เพื่อเปิดใช้ (เว้นว่าง = ปิด ไม่กระทบพฤติกรรมเดิม)
-    let appCheckReady = false;
+    let appCheckReady = false, appCheckError = null;
+    // 🧪 ทดสอบในเครื่อง (127.0.0.1 / localhost): ให้ SDK พิมพ์ "debug token" ในคอนโซล
+    //    → เอาไปลงทะเบียนที่ Firebase Console → App Check → Apps → จัดการ → Debug tokens
+    //    (โทเคนนี้ใช้ได้เฉพาะเครื่องที่สร้าง — ห้ามแจกจ่าย)
+    if (APP_CHECK_SITE_KEY && (location.hostname === '127.0.0.1' || location.hostname === 'localhost')) {
+        try { self.FIREBASE_APPCHECK_DEBUG_TOKEN = true; } catch (e) {}
+    }
     if (APP_CHECK_SITE_KEY) {
         try {
             const ac = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app-check.js");
             const appCheck = ac.initializeAppCheck(app, { provider: new ac.ReCaptchaV3Provider(APP_CHECK_SITE_KEY), isTokenAutoRefreshEnabled: true });
             window.__appCheckGetToken = () => ac.getToken(appCheck);
             appCheckReady = true;
-        } catch (e) { try { console.warn('App Check เปิดใช้ไม่สำเร็จ:', e); } catch (e2) {} }
+            try { console.info('[App Check] เปิดใช้แล้ว — site key ลงท้าย …' + APP_CHECK_SITE_KEY.slice(-6)); } catch (e2) {}
+        } catch (e) { appCheckError = String(e && e.message || e); try { console.warn('App Check เปิดใช้ไม่สำเร็จ:', e); } catch (e2) {} }
     }
+    // 🔎 ตรวจว่าตอนนี้ "แอปของเราส่งโทเคนได้จริงไหม" + "คนนอกที่ไม่มีโทเคนยังเข้าได้อยู่ไหม"
+    //    ใช้ตัดสินใจก่อน/หลังกด Enforce — เรียกในคอนโซล: await appCheckSelfTest()
+    window.appCheckSelfTest = async () => {
+        const probe = async (withToken) => {
+            const h = {};
+            if (withToken) {
+                try { const t = await window.__appCheckGetToken(); if (t && t.token) h['X-Firebase-AppCheck'] = t.token; else return { http: 0, note: 'ขอโทเคนไม่ได้' }; }
+                catch (e) { return { http: 0, note: 'ขอโทเคนไม่ได้: ' + (e && e.message) }; }
+            }
+            try { const r = await fetch(`${__fsBase}/settings/changelog?key=${__FS_KEY}`, { headers: h, cache: 'no-store' }); return { http: r.status }; }
+            catch (e) { return { http: 0, note: String(e && e.message || e) }; }
+        };
+        const noTok = await probe(false);
+        const withTok = APP_CHECK_SITE_KEY ? await probe(true) : { http: 0, note: 'ยังไม่ได้วาง site key' };
+        let verdict;
+        if (!APP_CHECK_SITE_KEY) verdict = '⚪ ยังไม่เปิดใช้ App Check — ค่าด้านล่างคือสถานะปัจจุบัน (ฐานข้อมูลยังเปิดให้คนนอกรั่ว ดู SECURITY.md)';
+        else if (withTok.http === 403) verdict = '⛔ อันตราย: บังคับใช้อยู่ แต่แอปนี้ส่งโทเคนไม่ผ่าน — ให้กลับเป็น Unenforced ก่อน แล้วตรวจ site key/โดเมน';
+        else if (withTok.http === 200 && noTok.http === 403) verdict = '✅ สมบูรณ์: Enforce ทำงานแล้ว และแอปจริงส่งโทเคนผ่านครบ';
+        else if (withTok.http === 200 && noTok.http === 200) verdict = '⏳ ยังไม่ถูกบังคับใช้ (ทั้ง 2 ทางเข้าได้) — ดู Metrics ให้ verified ครบก่อน ค่อยกด Enforce';
+        else if (withTok.http === 0) verdict = '❓ ขอโทเคนไม่ได้ — ตรวจ site key / โดเมนใน reCAPTCHA / debug token ในคอนโซล';
+        else verdict = '❓ ผลไม่ชัดเจน — ดูค่าดิบด้านล่าง';
+        const short = !APP_CHECK_SITE_KEY ? 'ยังไม่เปิด App Check — ฐานข้อมูลยังเปิด'
+            : (withTok.http === 200 && noTok.http === 403) ? 'App Check สมบูรณ์: คนนอกจากนอกแอปโดนบล็อกแล้ว'
+            : (withTok.http === 403) ? 'อันตราย: แอปจริงส่งโทเคนไม่ผ่าน — ให้กลับเป็น Unenforced'
+            : (withTok.http === 200) ? 'ผ่าน: โทเคนใช้ได้ (ยังไม่ถูกบังคับใช้)'
+            : 'ขอโทเคนไม่ได้ — ตรวจ site key / โดเมน';
+        const out = { configured: !!APP_CHECK_SITE_KEY, ready: appCheckReady, error: appCheckError, withoutToken: noTok, withToken: withTok, verdict, short };
+        try { console.table ? (console.info(verdict), console.table({ withoutToken: noTok, withToken: withTok })) : console.log(out); } catch (e) {}
+        try { if (window.showToast) window.showToast('App Check — ' + short, !!(APP_CHECK_SITE_KEY && withTok.http !== 200)); } catch (e) {}
+        return out;
+    };
+    // 📋 ดูสถานะเร็ว ๆ: configured / ready / token ที่ได้ (ไม่ยิงเครือข่าย)
+    window.appCheckStatus = async () => {
+        const out = { configured: !!APP_CHECK_SITE_KEY, ready: appCheckReady, error: appCheckError, token: null };
+        if (!APP_CHECK_SITE_KEY) { out.error = 'ยังไม่ได้วาง site key (APP_CHECK_SITE_KEY ว่าง)'; return out; }
+        try { const t = await window.__appCheckGetToken(); out.token = (t && t.token) ? t.token.slice(0, 14) + '…' : null; }
+        catch (e) { out.error = String(e && e.message || e); }
+        return out;
+    };
     // แนบ token ให้ทุกคำขอ REST ตรง (สำรองเมื่อ SDK ค้าง) — คืน {} เมื่อปิดอยู่ จึงไม่กระทบพฤติกรรมเดิมเลย
     window.__fsHeaders = async (extra) => {
         const h = Object.assign({}, extra || {});
@@ -8998,8 +9044,11 @@
     const chgTodayBuildStamp = () => chgTodayStr() + chgBuildSuffix();
     // ✅ อัปเดต APP_BUILD หลังจากฟังก์ชันถูกประกาศเสร็จ (แก้ Temporal Dead Zone — อ้างก่อนประกาศ)
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
-    const APP_RELEASE_DATE = '2026-09-12'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
+    const APP_RELEASE_DATE = '2026-09-13'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
+    //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
+    //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
     const APP_RELEASE_NOTES = [
+        '🛡️ เครื่องมือตรวจ App Check อยู่ในแอปแล้ว: appCheckSelfTest() ยิงคำขอจริง 2 ครั้ง (ไม่มีโทเคน เทียบกับ มีโทเคน) แล้วบอกเป็นตารางว่าต้องทำอะไรต่อ — ใช้ตัดสินใจก่อน/หลังกด Enforce โดยไม่ต้องเดา (403+200 = สมบูรณ์ · 403+403 = อันตราย ต้องกลับเป็น Unenforced ทันที) · appCheckStatus() ดูสถานะเร็ว ๆ · โหมดทดสอบในเครื่องจะพิมพ์ debug token ให้เอาไปลงทะเบียนในคอนโซลเอง · พร้อมใช้ทันทีเมื่อวาง site key 1 บรรทัด',
         '🔑 คู่มือ "ทำ Firebase Authentication ให้สมบูรณ์" (FIREBASE-AUTH.md) — สอนตั้งแต่ต้นว่าทำไมกติกาฐานข้อมูลถึงยังปิดช่องไม่สนิท พร้อม 3 แนวทางเลือก (App Check → กันสคริปต์/บอตใน 10 นาที · อีเมลจริง · Custom Token ผ่าน Cloud Functions = ปิดจริง 100%) มีโค้ดฟังก์ชันตรวจรหัสผ่านให้ตรงกับแฮช PBKDF2 ของแอป กติกาฉบับเจ้าของเท่านั้น (firestore-auth.rules) วิธีทดสอบ 7 ข้อ วิธีย้อนกลับ และตาราง error ที่เจอบ่อย',
         '🔐 ชุดกติกาความปลอดภัย Firestore พร้อมใช้ (ไฟล์ firestore.rules): จำกัดว่าเขียนอะไรได้/ไม่ได้ · ห้ามลบเที่ยวในประวัติรายได้ · ประวัติการใช้งานเป็นแบบ "เขียนเพิ่มอย่างเดียว" (ลบร่องรอยไม่ได้) · ห้ามลบทั้งเอกสารตั้งค่า และปิดไม่ให้ใช้โปรเจกต์เป็นที่ฝากไฟล์ — วิธีวาง: Firebase Console → Firestore Database → Rules → วางทั้งไฟล์ → Publish (รายละเอียดในคู่มือ SECURITY.md)',
         '📚 คู่มือความปลอดภัย SECURITY.md + สคริปต์ตรวจช่องโหว่ tests/security-check.ps1: รันครั้งเดียวรู้ทันทีว่าฐานข้อมูลยังเปิดให้คนนอกอ่าน/เขียนอยู่ไหมโดยไม่ต้องล็อกอิน — ตรวจ 7 ข้อ (อ่านเอกสารสมาชิก · อ่านเอกสารตั้งค่า · คิวรีรายชื่อ · เขียนเที่ยว · ลบเที่ยว · เขียนคอลเลกชันแปลกปลอม · ลบร่องรอย) รายงานผลเป็นตารางสี พร้อมบอกขั้นตอนปิดทีละข้อ (ต้องรันจากเครื่องก่อน/หลังวางกติกา)',
