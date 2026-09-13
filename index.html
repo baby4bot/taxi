@@ -3882,6 +3882,27 @@
         const t = window.currentTollInfo;
         return !!(t && t.hasTolls && (t.total || 0) > 0);
     };
+    // 🔀 สรุป “ผลต่าง” ระหว่างเส้นใหม่กับเส้นเดิม (ระยะ/เวลา/ค่าทางด่วน) — ใช้ตอนสลับเลี่ยง/ขึ้นทางด่วน
+    //    คืนข้อความสั้น ๆ สำหรับเป็นบรรทัดที่ 2 ของ toast ('' = เทียบไม่ได้ เพราะไม่มีค่าเดิม)
+    window.buildRouteDiffSub = (prevKm, prevSec, prevToll, nextKm, nextSec, nextToll) => {
+        const parts = [];
+        if (typeof prevKm === 'number' && prevKm > 0.05 && typeof nextKm === 'number' && nextKm > 0.05) {
+            const d = nextKm - prevKm;
+            if (d >= 0.1) parts.push('ไกลกว่าเดิม ' + d.toFixed(1) + ' กม.');
+            else if (d <= -0.1) parts.push('สั้นลง ' + Math.abs(d).toFixed(1) + ' กม.');
+            else parts.push('ระยะทางเท่าเดิม');
+        }
+        if (typeof prevSec === 'number' && prevSec > 30 && typeof nextSec === 'number' && nextSec > 30) {
+            const dm = Math.round((nextSec - prevSec) / 60);
+            if (dm >= 1) parts.push('ช้าลง ' + dm + ' น.');
+            else if (dm <= -1) parts.push('เร็วขึ้น ' + Math.abs(dm) + ' น.');
+            else parts.push('เวลาใกล้เคียงเดิม');
+        }
+        const pt = Number(prevToll) || 0, nt = Number(nextToll) || 0;
+        if (nt > pt) parts.push('ค่าทางด่วน +' + (nt - pt) + '฿');
+        else if (nt < pt) parts.push('ประหยัดค่าทางด่วน ' + (pt - nt) + '฿');
+        return parts.join(' · ');
+    };
     // 🚦 กันไอคอน/ปุ่ม "ขึ้นทางด่วน" ค้างทั้งที่เส้นทางนี้ไม่มีทางด่วนจริง:
     // ถ้าโหมดเป็น "ขึ้นทางด่วน" แต่เส้นทางปัจจุบันไม่มีทางด่วน → ดีดกลับเป็น "เลี่ยงทางด่วน" เฉพาะเส้นทางนี้
     // (ค่าเริ่มต้นต่อบัญชียังเป็น "ขึ้นทางด่วน" ไว้ — เส้นทางที่มีทางด่วนจริงรอบหน้าจะยังขึ้นเหมือนเดิม)
@@ -3953,10 +3974,16 @@
             return;
         }
 
+        // 🔀 จดค่าเดิมไว้เทียบ “ผลต่าง” หลังขอเส้นทางใหม่ (ต้องจดก่อนเปลี่ยนโหมด — getRouteTollTotal ใช้โหมดปัจจุบัน)
+        const prevKm = (typeof currentTrueRemainKm === 'number' && currentTrueRemainKm > 0) ? currentTrueRemainKm : null;
+        const prevSec = (typeof currentTrueRemainSec === 'number' && currentTrueRemainSec > 0) ? currentTrueRemainSec : null;
+        const prevToll = (typeof window.getRouteTollTotal === 'function') ? (window.getRouteTollTotal() || 0) : 0;
+
         applyTollModeState(isToll, true); // บันทึกทั้ง localStorage และ Firestore (ต่อบัญชี)
 
-        // Show toast
-        window.showToast(isToll ? '🛣️ ขึ้นทางด่วน' : '🚗 เลี่ยงทางด่วน');
+        // 💬 toast เดียว: รอผลเส้นทางจริงก่อน แล้วค่อยสรุปผลต่างให้เห็นในครั้งเดียว
+        const plainMsg = isToll ? '🛣️ ขึ้นทางด่วน' : '🚗 เลี่ยงทางด่วน';
+        let toldDiff = false;
         
         if(destLoc) {
             let startLat, startLon;
@@ -3966,6 +3993,9 @@
             } else if (navLastPosition) {
                 startLat = navLastPosition.lat;
                 startLon = navLastPosition.lng;
+            } else if (window.__testUserPos && typeof window.__testUserPos.lat === 'number') {
+                // 🧪 test hook — preview/เทสต์ที่ GPS ถูกบล็อก (ตั้ง window.__testUserPos แทน fix สด)
+                startLat = window.__testUserPos.lat; startLon = window.__testUserPos.lon;
             }
             
             if (startLat && startLon) {
@@ -3989,15 +4019,21 @@
                     window.updateTollDisplay();
                     window.updateNavTollDisplay();
                     
+                    // 🔀 สรุปผลต่างของเส้นใหม่ทันที (ไกลกว่า/สั้นลง · เร็วขึ้น/ช้าลง · ค่าทางด่วนเพิ่ม/ประหยัด)
+                    const diffSub = window.buildRouteDiffSub(prevKm, prevSec, prevToll, route.km, route.sec, (route.tolls && route.tolls.total) ? route.tolls.total : 0);
                     // แจ้งข้อมูลทางด่วนจริงของเส้นทาง
                     if (isToll) {
                         if (route.tolls && route.tolls.hasTolls) {
-                            window.showToast(`🛣️ ทางด่วน ${route.tolls.booths.length} ช่วง รวม ${route.tolls.total}฿`, false);
+                            window.showToast(`🛣️ ขึ้นทางด่วน · ทางด่วน ${route.tolls.booths.length} ช่วง ${route.tolls.total}฿`, false, null, false, null, diffSub || null);
+                            toldDiff = true;
                         } else {
                             // ขึ้นทางด่วนแล้วเส้นทางนี้ไม่มีทางด่วนจริง → บอกว่าไม่มี + ดีดกลับเป็น "เลี่ยงทางด่วน" (เฉพาะเส้นทางนี้)
                             window.showNoTollToast();
                             window.enforceTollModeVsRoute(false);
                         }
+                    } else if (diffSub) {
+                        window.showToast('🚗 เลี่ยงทางด่วน', false, null, false, null, diffSub);
+                        toldDiff = true;
                     }
                     
                     // Redraw route on map if navigation is active
@@ -4020,6 +4056,8 @@
                 }
             }
         }
+        // ไม่มีจุดหมาย/ขอเส้นทางไม่ได้ → แจ้งแบบสั้นเหมือนเดิม (ไม่มีตัวเลขให้เทียบ)
+        if (!toldDiff) { window.showToast(plainMsg); }
     };
     
     window.updateTollDisplay = () => {
@@ -7100,8 +7138,13 @@
         const p = window.__pendingRouteStart;
         if (!p) return;
         if (window.isTollwayMode === toll) { window.refreshRoutePreview(); return; }
+        // 🔀 จดค่าเดิมไว้เทียบ “ผลต่าง” ของเส้นใหม่ (ต้องจดก่อนเปลี่ยนโหมด)
+        const prevKm = (typeof currentTrueRemainKm === 'number' && currentTrueRemainKm > 0) ? currentTrueRemainKm : null;
+        const prevSec = (typeof currentTrueRemainSec === 'number' && currentTrueRemainSec > 0) ? currentTrueRemainSec : null;
+        const prevToll = (typeof window.getRouteTollTotal === 'function') ? (window.getRouteTollTotal() || 0) : 0;
         applyTollModeState(toll, true); // บันทึกทั้ง localStorage + Firestore (ต่อบัญชี) เหมือนปุ่มโหมดอื่น ๆ
-        window.showToast(toll ? '🛣️ ขึ้นทางด่วน' : '🚗 เลี่ยงทางด่วน');
+        const plainMsg = toll ? '🛣️ ขึ้นทางด่วน' : '🚗 เลี่ยงทางด่วน';
+        let toldDiff = false;
         if (p.dLat && p.dLon && p.sLat && p.sLon) {
             const route = await window.fetchRouteFromTomTom(p.dLat, p.dLon, p.sLat, p.sLon);
             if (route) {
@@ -7111,12 +7154,17 @@
                 $('kmInput').value = route.km.toFixed(2);
                 window.updateFareEstimation(route.km);
                 window.updateTollDisplay();
+                // 🔀 สรุปผลต่างให้เห็นทันทีว่าเปลี่ยนเส้นแล้วได้/เสียอะไร
+                const diffSub = window.buildRouteDiffSub(prevKm, prevSec, prevToll, route.km, route.sec, (route.tolls && route.tolls.total) ? route.tolls.total : 0);
+                if (diffSub) { window.showToast(plainMsg, false, null, false, null, diffSub); toldDiff = true; }
                 // เลือก "ขึ้นทางด่วน" ในหน้าสรุปแล้วเส้นทางไม่มีทางด่วนจริง → แจ้งว่าไม่มี + ดีดกลับเป็น "เลี่ยงทางด่วน"
                 if (toll) window.enforceTollModeVsRoute(true);
             } else {
                 window.showToast('คำนวณเส้นทางใหม่ไม่ได้ (โควตา/เน็ต) — ยังใช้เส้นทางเดิม', true);
+                toldDiff = true;
             }
         }
+        if (!toldDiff) { window.showToast(plainMsg); }
         window.refreshRoutePreview();
     };
     
@@ -9127,6 +9175,7 @@
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
     const APP_RELEASE_NOTES = [
+        '🔀 สลับเลี่ยง/ขึ้นทางด่วนแล้วบอกผลต่างทันที: “สั้นลง 3.1 กม. · เร็วขึ้น 14 น. · ค่าทางด่วน +100฿” — รู้เลยว่าเปลี่ยนเส้นแล้วได้อะไร เสียอะไร ไม่ต้องเดาจากตัวเลขที่เปลี่ยนวูบ (ใช้ได้ทั้งหน้าสรุปและตอนนำทาง)',
         '🛣️ แก้ “ขึ้นทางด่วนไม่ลิงก์กัน” ระหว่างหน้าสรุปกับตอนนำทาง: เดิมหน้าสรุปบอกมีทางด่วน (เช่น 130฿) แต่พอกดสลับเป็นขึ้นทางด่วนในจอนำทางกลับขึ้นว่า “เส้นทางนี้ไม่มีทางด่วน ใช้ถนนปกติ” — ตอนนี้สลับได้จริง ระบบจะขอเส้นทางขึ้นด่วนใหม่ให้ทันที',
         '🔎 สาเหตุคือ ค่าทางด่วนที่ได้ตอนโหมด “เลี่ยงทางด่วน” ถูกระบบตั้งเป็น “ไม่มีทางด่วน” ไว้เอง (เพราะสั่งหลบทางด่วนไปแล้ว) แล้วกลับถูกนำมาตัดสินว่าสลับเป็นขึ้นทางด่วนไม่ได้ — ตอนนี้ติดธงว่าเป็นค่าที่ยังไม่รู้จริง และจะตัดสินก็เฉพาะข้อมูลจากเส้นทางโหมดขึ้นทางด่วนเท่านั้น (สรุปกับจอนำทางจึงตรงกัน)',
         '🧭 สลับโหมดกลางเที่ยวแล้วข้อมูลตรงกันหมด: เส้นทางบนแผนที่ย่อถูกวาดใหม่ตามเส้นใหม่ · ป้ายค่าทางด่วนในช่องราคา + แบนเนอร์ค่าทางด่วน และตัวเลขเหลือ กม./เวลา อัปเดตทันที',
