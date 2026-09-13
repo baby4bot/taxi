@@ -3068,6 +3068,34 @@
             gainNode.gain.exponentialRampToValueAtTime(0.45, now + 0.22);
             gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
             osc.start(now); osc.stop(now + 0.36);
+        } else if (type === 'turnFar') {
+            // 🧭 เตือนล่วงหน้าก่อนถึงจุดเลี้ยว (ไกล ~300 ม.) — 2 จังหวะนุ่ม ๆ ไม่ตกใจ
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(740, now);
+            osc.frequency.setValueAtTime(988, now + 0.16);
+            gainNode.gain.setValueAtTime(0.001, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.30, now + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            gainNode.gain.setValueAtTime(0.001, now + 0.16);
+            gainNode.gain.exponentialRampToValueAtTime(0.28, now + 0.18);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+            osc.start(now); osc.stop(now + 0.36);
+        } else if (type === 'turnNear') {
+            // 🧭 เตือนใกล้ถึงจุดเลี้ยว (~80 ม.) — 3 จังหวะถี่และคมกว่า ให้คนขับเตรียมตัว
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.setValueAtTime(1174, now + 0.13);
+            osc.frequency.setValueAtTime(880, now + 0.26);
+            gainNode.gain.setValueAtTime(0.001, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.22, now + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+            gainNode.gain.setValueAtTime(0.001, now + 0.13);
+            gainNode.gain.exponentialRampToValueAtTime(0.22, now + 0.15);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            gainNode.gain.setValueAtTime(0.001, now + 0.26);
+            gainNode.gain.exponentialRampToValueAtTime(0.22, now + 0.28);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+            osc.start(now); osc.stop(now + 0.44);
         }
     };
 
@@ -9089,6 +9117,8 @@
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
     const APP_RELEASE_NOTES = [
+        '🔔 เตือนล่วงหน้าก่อนถึงจุดเลี้ยว: มีเสียง + สั่นเตือน 2 จังหวะ — ไกล ~300 ม. (2 เสียงนุ่ม ๆ) และใกล้ ~80 ม. (3 เสียงถี่กว่า) ให้คนขับเตรียมตัวโดยไม่ต้องละสายตาจ้องแผนที่ · เตือนระดับละ “ครั้งเดียวต่อจุดเลี้ยว” — จอดติดไฟแดงตรงจุดเลี้ยวก็ไม่ดังซ้ำรบกวน',
+        '🔇 เคารพสวิตช์ในหน้าโปรไฟล์: ปิดเสียงแจ้งเตือนแล้วเงียบ · ปิดการสั่นแล้วไม่สั่น · และถ้าซ่อน Mini Map อยู่ จะไม่เตือนเลย (เปิดแผนที่กลับมาถึงเริ่มเตือนตามปกติ)',
         '🧭 บอกจุดเลี้ยวถัดไปใน Mini Map: ไอคอนลูกศรบอกทิศ (เลี้ยวซ้าย/ขวา · หัก · ชิด · กลับรถ) พร้อมระยะถึงจุดเลี้ยว (เช่น "อีก 320 ม.") และมาร์กจุดเลี้ยวถัดไปเป็นจุดสีน้าเงินบนเส้นทางให้เห็นล่วงหน้า — เมื่อผ่านจุดเลี้ยวทั้งหมดแล้ว จะเปลี่ยนเป็น "ตรงไปจนถึงจุดหมาย" พร้อมระยะที่เหลือ',
         '🧮 จุดเลี้ยวคำนวณจากรูปทรงของเส้นทางที่ดึงมาเอง (เทียบทิศก่อน–หลังจุดที่ระยะด้านละ ~30 ม. แล้วหักมุมเกิน 30°) — ไม่ต้องพึ่งข้อมูลเลี้ยวจากผู้ให้บริการ จึงใช้ได้กับเที่ยวที่กู้คืนมาจากเครื่องด้วย',
         '🗺️ แผนที่นำทางขนาดย่อ (Mini Map) ลอยอยู่บนจอตลอดเวลาที่นำทาง: เห็นว่ารถอยู่ตรงไหนของเส้นทาง วิ่งผ่านอะไรมาแล้ว และเหลืออีกไกลแค่ไหน แบบเดียวกับที่เห็นใน Google Maps — เส้นทางเป็นสีน้ำเงิน (ช่วงที่วิ่งผ่านแล้วเป็นสีจาง) จุดหมายเป็นหมุดแดง หัวรถเป็นลูกศรหมุนตามทิศที่วิ่งจริง และตัวแผนที่เลื่อนตามรถเองอัตโนมัติ · ข้างล่างบอกระยะทางที่เหลือกับเวลาถึงโดยประมาณ พร้อมแถบความคืบหน้าของเที่ยว',
@@ -11106,6 +11136,39 @@
         return nextTurn;
     }
 
+    // ---------- 🔔 เตือนก่อนถึงจุดเลี้ยว (เสียง + สั่น) ----------
+    //    เตือน 2 ระดับ: ไกล (~300 ม.) และ ใกล้ (~80 ม.) · ระดับละครั้งต่อจุดเท่านั้น (ไม่เตือนซ้ำ)
+    //    เคารพสวิตช์ในหน้าโปรไฟล์: เสียง (userToastSound) และ สั่น (userVibrateGold) · ซ่อน Mini Map = เงียบ
+    var ALERT_FAR_M = 300, ALERT_NEAR_M = 80;
+    var alertKey = '', alertDoneFar = false, alertDoneNear = false, alertLog = [];
+    // ตั้งเส้นทางใหม่ = เริ่มนับการเตือนใหม่ทั้งชุด
+    //   (ไม่รีเซ็ต = ค้นจุดหมายเดิมอีกรอบแล้วคีย์จุดเลี้ยวซ้ำกัน จะไม่เตือนเลย)
+    function resetTurnAlerts() { alertKey = ''; alertDoneFar = false; alertDoneNear = false; }
+    function checkTurnAlert(nt, meta, fromKm) {
+        var key = nt.i + '@' + Math.round(nt.km * 1000);
+        if (alertKey !== key) { alertKey = key; alertDoneFar = false; alertDoneNear = false; } // จุดใหม่ → เริ่มเตือนใหม่
+        var distM = (nt.km - fromKm) * 1000;
+        if (!(distM > 0)) { return; }
+        var kind = '';
+        if (!alertDoneNear && distM <= ALERT_NEAR_M) { kind = 'near'; alertDoneNear = true; alertDoneFar = true; }
+        else if (!alertDoneFar && distM <= ALERT_FAR_M) { kind = 'far'; alertDoneFar = true; }
+        if (!kind) { return; }
+        try {
+            alertLog.push({ at: Date.now(), kind: kind, dir: meta.text, ico: meta.icon, m: Math.round(distM) });
+            if (alertLog.length > 8) { alertLog.shift(); }
+        } catch (e) {}
+        try {
+            if (window.userToastSound !== false && typeof window.playSound === 'function') {
+                window.playSound(kind === 'near' ? 'turnNear' : 'turnFar');
+            }
+        } catch (e) {}
+        try {
+            if (navigator.vibrate && window.userVibrateGold !== false) {
+                navigator.vibrate(kind === 'near' ? [150, 80, 150] : 110);
+            }
+        } catch (e) {}
+    }
+
     // ---------- กระเบื้องแผนที่ ----------
     // ใช้กระเบื้อง OpenStreetMap แล้ว "กลับสี" เป็นโหมดมืดด้วย canvas filter
     // (กระเบื้อง CARTO ต้องมี API key — ถ้าไม่มีจะขึ้นลายน้ำ “API KEY REQUIRED” ทับทั้งแผนที่)
@@ -11279,6 +11342,7 @@
                 turnDist.textContent = 'อีก ' + fmtShort(nt.km - carKm);
                 turnDir.textContent = tm.text;
                 turnRow.classList.remove('none');
+                checkTurnAlert(nt, tm, carKm);
             } else {
                 var leftKm = (carKm !== null) ? (routeKm - carKm) : null;
                 turnIco.textContent = 'straight';
@@ -11319,6 +11383,7 @@
             window.navMiniRouteSaved = route.map(function (p) { return [Math.round(p[0] * 1e5) / 1e5, Math.round(p[1] * 1e5) / 1e5]; });
         } catch (e) {}
         buildTurns();
+        resetTurnAlerts();
         follow = true; panCenter = null; btnFollow.classList.add('on');
         request(); chrome();
     };
@@ -11377,6 +11442,7 @@
             car: car ? { lat: car.lat, lng: car.lng } : null,
             bearing: Math.round(bearing), speedKmh: speedKmh,
             turns: turns.length,
+            alerts: alertLog.slice(-4),
             nextTurn: nextTurn ? { km: Math.round(nextTurn.km * 1000) / 1000, delta: Math.round(nextTurn.delta), dir: turnMeta(nextTurn.delta).text } : null,
             zoom: (userZoom !== null) ? userZoom : autoZoom(speedKmh),
             tiles: tileKeys.length, tileOk: anyTileOk, filterOK: filterOK
