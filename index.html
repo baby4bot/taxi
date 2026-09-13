@@ -9113,7 +9113,7 @@
     const chgTodayBuildStamp = () => chgTodayStr() + chgBuildSuffix();
     // ✅ อัปเดต APP_BUILD หลังจากฟังก์ชันถูกประกาศเสร็จ (แก้ Temporal Dead Zone — อ้างก่อนประกาศ)
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
-    const APP_RELEASE_DATE = '2026-09-13'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
+    const APP_RELEASE_DATE = '2026-09-14'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
     const APP_RELEASE_NOTES = [
