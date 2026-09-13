@@ -3968,6 +3968,8 @@
                     }
                     
                     // Redraw route on map if navigation is active
+                    // 🗺️ เส้นทางถูกคำนวณใหม่กลางเที่ยว (สลับเลี่ยง/ขึ้นทางด่วน) → อัปเดตเส้นบน Mini Map ด้วย
+                    if (window.navMiniSetRoute && route.coords && route.coords.length > 1) { try { window.navMiniSetRoute(route.coords); } catch(e) {} }
                     if (navMap && navRouteCoords && navRouteCoords.length > 0) {
                         try {
                             if (navRoute) navMap.removeLayer(navRoute);
@@ -6819,6 +6821,8 @@
             taxiMap.setView([lat, lon], 17);
             window.updateCarDirection(lat, lon);
         }
+        // 🗺️ Mini Map นำทาง (canvas) — อัปเดตตำแหน่งรถ/ทิศ/ความเร็ว ทุกครั้งที่ได้ fix GPS
+        if (window.navMiniUpdate) { try { window.navMiniUpdate(lat, lon, currentSpeedKmh); } catch(e) {} }
         // Update full-screen navigation map
         if (navMap && navCarMarker) {
             window.updateNavPosition(lat, lon, currentSpeedKmh / 3.6);
@@ -7371,6 +7375,7 @@
             remainKm: currentTrueRemainKm, remainSec: currentTrueRemainSec,
             lastPos: lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null, // เซฟตำแหน่งล่าสุดไว้ เบิกคืนตอนแอปถูกคิลแล้วเปิดใหม่
             lastPath: lastPath.slice(), // พิกัดเส้นทาง 2-3 จุดล่าสุด ไว้ประมาณระยะที่วิ่งช่วงแอปปิด (แทนเส้นตรงเส้นเดียว)
+            routeCoords: (window.navMiniRouteSaved && window.navMiniRouteSaved.length > 1) ? window.navMiniRouteSaved : null, // 🗺️ เส้นทางเต็ม ไว้กู้ Mini Map หลังแอปปิด/รีเฟรช
             dest: destLoc ? { lat: destLoc.lat, lon: destLoc.lon } : null,
             destName: destLoc ? $('destInput').value.trim() : '',
             surcharges: window.surchargeList.slice(),
@@ -7872,6 +7877,8 @@
             $('kmInput').value = actualDrivenKm.toFixed(2);
             window.updateFareEstimation(actualDrivenKm);
             window.estimateFareAmt = seed.estimateFare || window.estimateFareAmt || 0; // คงราคาประเมินเดิมของเที่ยวไว้ (ไม่ให้ถูกแทนด้วยค่าตาม กม. ที่วิ่งแล้ว)
+            // 🗺️ เที่ยวที่กู้คืนมีจุดหมาย → เปิด Mini Map นำทางกลับมาแสดงตำแหน่งรถต่อทันที
+            if (window.navMiniResume && (seed.dest || seed.routeCoords)) { try { window.navMiniResume(seed); } catch(e) {} }
             window.updateSurchargeUI();
         } else {
             actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; trafficCharging = true; lastFixSpeedKmh = null;
@@ -8421,6 +8428,7 @@
     // หน้าสรุปโชว์ช่วง "หยุด/เริ่มต่อ" ระหว่างเที่ยว (แอปปิด/สลับหน้าจอ) ให้ผู้โดยสารเห็นอย่างโปร่งใส
     window.finishTripWithSummary = () => {
         window.hideCatchUpStatus(); // จบเที่ยวแล้ว ไม่ต้องตรวจสอบ GPS ต่อ
+        if (window.navMiniHide) { try { window.navMiniHide(true); } catch(e) {} } // 🗺️ จบเที่ยว = ปิด Mini Map นำทาง
         window.playSound('stop');
         if (typeof window.advanceMeterTime === 'function') window.advanceMeterTime(Date.now()); // ให้วินาทีสุดท้ายครบก่อนสรุป
         if (pauseOpenAt !== null) closePauseManual(Date.now()); // ปิดรายการ "หยุดมิเตอร์ชั่วคราว" ที่ค้างอยู่ ให้ขึ้นในสรุปเป็นรายการหยุด-เริ่มต่อ
@@ -9081,6 +9089,9 @@
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
     const APP_RELEASE_NOTES = [
+        '🗺️ แผนที่นำทางขนาดย่อ (Mini Map) ลอยอยู่บนจอตลอดเวลาที่นำทาง: เห็นว่ารถอยู่ตรงไหนของเส้นทาง วิ่งผ่านอะไรมาแล้ว และเหลืออีกไกลแค่ไหน แบบเดียวกับที่เห็นใน Google Maps — เส้นทางเป็นสีน้ำเงิน (ช่วงที่วิ่งผ่านแล้วเป็นสีจาง) จุดหมายเป็นหมุดแดง หัวรถเป็นลูกศรหมุนตามทิศที่วิ่งจริง และตัวแผนที่เลื่อนตามรถเองอัตโนมัติ · ข้างล่างบอกระยะทางที่เหลือกับเวลาถึงโดยประมาณ พร้อมแถบความคืบหน้าของเที่ยว',
+        '🖐️ Mini Map ลากย้ายไปวางตรงไหนของจอก็ได้ (จับที่แถบหัว) และจำตำแหน่ง/ขนาดไว้ให้ครั้งต่อไป · ย่อ/ขยายได้ 2 ขนาด · ลากแผนที่เองหรือหุบนิ้วเพื่อดูบริเวณข้างเคียง แล้วกด ◎ เพื่อกลับมาที่รถ · ปุ่ม ✕ ซ่อนได้ — เปิดกลับมาเองทุกครั้งที่เริ่มเที่ยวใหม่หรือกดเริ่มต่อเที่ยวค้าง และปิดเองเมื่อจบเที่ยว',
+        '🎨 เปลี่ยนแหล่งแผนที่มาใช้ OpenStreetMap แล้วปรับเป็นโหมดมืดในตัว ให้อ่านง่ายบนจอตอนกลางคืน (เดิมใช้กระเบื้อง CARTO ซึ่งตอนนี้ต้องมีคีย์ จึงขึ้นลายน้ำ “API KEY REQUIRED” ทับทั้งแผนที่)',
         '💾 สำรองโค้ดอัตโนมัติโดยไม่ต้องรอปล่อยเวอร์ชัน: ระบบตรวจเองทุก 10 นาที (และทุกครั้งที่เปิดเครื่อง) — ถ้าโค้ดถูกแก้ จะเก็บสำรองเลขใหม่ให้ทันที · ไฟล์เก่าที่เกิน 30 รุ่นล่าสุดถูกย้ายรวมเข้า backups-archive.zip เป็นไฟล์เดียว (แตกกลับได้เสมอ) โฟลเดอร์โปรแกรมจึงไม่บวมขึ้นเรื่อย ๆ',
         '💾 ระบบสำรองโค้ดอัตโนมัติ (index - NNN): ทุกครั้งที่ปล่อยเวอร์ชันใหม่ ระบบจะคัดลอกโค้ดเก็บไว้ในโฟลเดอร์โปรแกรมเอง ชื่อต่อท้ายด้วยเลขรันและคำอธิบายว่าแก้อะไร (ดึงจากหัวข้อที่ปล่อยงาน) — ย้อนดูหรือกู้คืนเวอร์ชันเก่าได้ตลอด พร้อมสมุดประวัติรวม (วันที่ · เลข · คำอธิบาย · ขนาด) โดยไม่ต้องคัดลอกไฟล์เองอีก · ถ้าเนื้อหาไม่เปลี่ยน จะไม่สร้างไฟล์ซ้ำ',
         '📖 README อธิบายระบบสำรองโค้ด + วิธีย้อนกลับไปเวอร์ชันก่อนไว้ครบแล้ว (หัวข้อ “การสำรองไฟล์อัตโนมัติ”)',
@@ -10888,6 +10899,491 @@
         window.closeNavigation();
         window.stopTracking();
     };
+</script>
+
+<!-- ==================== 🗺️ Mini Map นำทาง — ลอยอยู่หน้าจอ ลากย้ายได้ ==================== -->
+<style>
+    #navMini { position: fixed; top: 118px; right: 12px; width: 168px; z-index: 99995;
+        border-radius: 16px; overflow: hidden; background: var(--card-glass, #1a1a1a);
+        border: 1px solid var(--border-glass, #333); box-shadow: 0 12px 30px rgba(0,0,0,.55);
+        opacity: 0; transform: scale(.94) translateY(-4px); pointer-events: none;
+        transition: opacity .18s ease, transform .18s ease; -webkit-tap-highlight-color: transparent; }
+    #navMini.show { opacity: 1; transform: none; pointer-events: auto; }
+    #navMini.blocked { visibility: hidden; }
+    #navMini.big { width: 252px; }
+    #navMini .nm-head { display: flex; align-items: center; gap: 6px; padding: 6px 8px; cursor: grab;
+        background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0)); touch-action: none; }
+    #navMini .nm-head.grabbing { cursor: grabbing; }
+    #navMini .nm-title { flex: 1 1 auto; min-width: 0; font-size: 11px; font-weight: 700; color: var(--text-main, #e0e0e0);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #navMini .nm-btn { flex: 0 0 auto; width: 24px; height: 24px; padding: 0; border-radius: 8px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1;
+        color: var(--text-main, #e0e0e0); background: rgba(255,255,255,.07); border: 1px solid var(--border-glass, #333); }
+    #navMini .nm-btn:active { transform: scale(.93); }
+    #navMini .nm-btn.on { background: #2196f3; border-color: #2196f3; color: #fff; }
+    #navMini .nm-wrap { position: relative; width: 100%; height: 168px; background: #0b0f16; }
+    #navMini.big .nm-wrap { height: 250px; }
+    #navMini canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    #navMini .nm-attr { position: absolute; right: 4px; bottom: 3px; font-size: 8px; letter-spacing: .2px;
+        color: rgba(255,255,255,.42); pointer-events: none; }
+    #navMini .nm-off { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+        padding: 10px; text-align: center; font-size: 10px; color: #93a0b4; background: rgba(6,10,16,.52); }
+    #navMini.nomap .nm-off { display: flex; }
+    #navMini .nm-foot { display: flex; align-items: center; gap: 7px; padding: 6px 9px 8px; }
+    #navMini .nm-remain { font-size: 10px; color: var(--text-dim, #888); white-space: nowrap; }
+    #navMini .nm-bar { flex: 1 1 auto; height: 4px; border-radius: 99px; background: rgba(255,255,255,.14); overflow: hidden; }
+    #navMini .nm-bar > i { display: block; height: 100%; width: 0%; border-radius: 99px; background: #2196f3; transition: width .4s ease; }
+</style>
+
+<div id="navMini" aria-label="แผนที่นำทางขนาดย่อ">
+    <div class="nm-head" id="navMiniHead">
+        <span class="nm-title" id="navMiniTitle">📍 กำลังนำทาง</span>
+        <button class="nm-btn" id="navMiniFollow" title="กลับไปที่รถ" aria-label="กลับไปที่รถ">◎</button>
+        <button class="nm-btn" id="navMiniSize" title="ย่อ/ขยายแผนที่" aria-label="ย่อ/ขยาย">⤢</button>
+        <button class="nm-btn" id="navMiniHide" title="ซ่อนแผนที่" aria-label="ซ่อน">✕</button>
+    </div>
+    <div class="nm-wrap">
+        <canvas id="navMiniCanvas"></canvas>
+        <div class="nm-attr">© OpenStreetMap</div>
+        <div class="nm-off">ไม่มีการเชื่อมต่อ — แสดงเส้นทางและตำแหน่งรถให้อยู่</div>
+    </div>
+    <div class="nm-foot">
+        <span class="nm-remain" id="navMiniRemain">เหลือ —</span>
+        <div class="nm-bar"><i id="navMiniBarFill"></i></div>
+    </div>
+</div>
+
+<script>
+/* ==================== 🗺️ Mini Map นำทาง (canvas) ====================
+   - กระเบื้องแผนที่ + เส้นทาง + รถ (หมุนตามทิศ) — ตามรถอัตโนมัติเหมือน Google Maps
+   - ลากแผนที่เอง / หยิกนิ้ว·ลูกกลิ้ง = ซูม · ปุ่ม ◎ = กลับมาที่รถ
+   - ตัวแผนที่ทั้งก้อนลากย้ายได้จากแถบหัว (จำตำแหน่ง/ขนาด/ซ่อนไว้ใน localStorage)
+   ==================================================================== */
+(function () {
+    'use strict';
+    var LS_KEY = 'taxi_navmini_v2';
+    var el = document.getElementById('navMini');
+    var canvas = document.getElementById('navMiniCanvas');
+    if (!el || !canvas) return;
+    var ctx = canvas.getContext('2d');
+    var head = document.getElementById('navMiniHead');
+    var titleEl = document.getElementById('navMiniTitle');
+    var remainEl = document.getElementById('navMiniRemain');
+    var barFill = document.getElementById('navMiniBarFill');
+    var btnFollow = document.getElementById('navMiniFollow');
+    var btnSize = document.getElementById('navMiniSize');
+    var btnHide = document.getElementById('navMiniHide');
+
+    // ---------- ค่าที่ผู้ใช้ตั้งไว้ ----------
+    var pref = { x: null, y: null, big: false, hidden: false };
+    try {
+        var raw = localStorage.getItem(LS_KEY);
+        if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') { for (var k in pref) { if (k in o) pref[k] = o[k]; } } }
+    } catch (e) {}
+    var savePref = function () { try { localStorage.setItem(LS_KEY, JSON.stringify(pref)); } catch (e) {} };
+
+    // ---------- สถานะแผนที่ ----------
+    var route = [];
+    var routeKm = 0;
+    var car = null;
+    var bearing = 0;
+    var speedKmh = 0;
+    var destLabel = '';
+    var visible = false;
+    var follow = true;
+    var panCenter = null;
+    var userZoom = null;
+    var tiles = Object.create(null);
+    var tileKeys = [];
+    var anyTileOk = false;
+    var rafId = 0;
+
+    // ---------- คณิตแผนที่ ----------
+    function proj(lat, lng, z) {
+        var sc = 256 * Math.pow(2, z);
+        var s = Math.sin(lat * Math.PI / 180);
+        if (s > 0.9999) { s = 0.9999; }
+        if (s < -0.9999) { s = -0.9999; }
+        return { x: (lng + 180) / 360 * sc, y: (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * sc };
+    }
+    function unproj(px, py, z) {
+        var sc = 256 * Math.pow(2, z);
+        var lng = px / sc * 360 - 180;
+        var n = Math.PI - 2 * Math.PI * py / sc;
+        return { lat: 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))), lng: lng };
+    }
+    function kmBetween(a, b) {
+        var R = 6371, dLat = (b.lat - a.lat) * Math.PI / 180, dLng = (b.lng - a.lng) * Math.PI / 180;
+        var la1 = a.lat * Math.PI / 180, la2 = b.lat * Math.PI / 180;
+        var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+    function bearingTo(a, b) {
+        var la1 = a.lat * Math.PI / 180, la2 = b.lat * Math.PI / 180, dL = (b.lng - a.lng) * Math.PI / 180;
+        var y = Math.sin(dL) * Math.cos(la2);
+        var x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dL);
+        return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+    function autoZoom(kmh) { if (kmh < 12) { return 18; } if (kmh < 32) { return 17; } if (kmh < 65) { return 16; } return 15; }
+    function dist2(a, b) { return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)); }
+
+    // ---------- กระเบื้องแผนที่ ----------
+    // ใช้กระเบื้อง OpenStreetMap แล้ว "กลับสี" เป็นโหมดมืดด้วย canvas filter
+    // (กระเบื้อง CARTO ต้องมี API key — ถ้าไม่มีจะขึ้นลายน้ำ “API KEY REQUIRED” ทับทั้งแผนที่)
+    var TILE_FILTER = 'invert(1) hue-rotate(180deg) saturate(0.45) brightness(0.92) contrast(1.05)';
+    var filterOK = (function () {
+        try { var c = document.createElement('canvas').getContext('2d'); c.filter = 'invert(1)'; return c.filter === 'invert(1)'; } catch (e) { return false; }
+    })();
+    function tile(z, x, y) {
+        var key = z + '/' + x + '/' + y;
+        var rec = tiles[key];
+        if (rec) { return rec; }
+        if (tileKeys.length > 90) { for (var i = 0; i < 40; i++) { delete tiles[tileKeys.shift()]; } }
+        rec = { img: new Image(), ok: false, dark: null };
+        rec.img.onload = function () {
+            rec.ok = true; anyTileOk = true;
+            if (filterOK) {
+                try {
+                    var oc = document.createElement('canvas'); oc.width = 256; oc.height = 256;
+                    var o = oc.getContext('2d');
+                    o.filter = TILE_FILTER;
+                    o.drawImage(rec.img, 0, 0, 256, 256);
+                    rec.dark = oc; // แผนที่โหมดมืด (วาดจาก OSM)
+                } catch (e) { rec.dark = null; }
+            }
+            request();
+        };
+        rec.img.onerror = function () { rec.err = true; };
+        rec.img.src = 'https://tile.openstreetmap.org/' + z + '/' + x + '/' + y + '.png';
+        tiles[key] = rec; tileKeys.push(key);
+        return rec;
+    }
+    function drawLine(points, color, width, ox, oy, z, W, H) {
+        if (!points || points.length < 2) { return; }
+        ctx.save();
+        ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+        ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        ctx.beginPath();
+        for (var i = 0; i < points.length; i++) {
+            var p = proj(points[i][0], points[i][1], z);
+            if (i === 0) { ctx.moveTo(p.x + ox, p.y + oy); } else { ctx.lineTo(p.x + ox, p.y + oy); }
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+    function nearestIndex(pos) {
+        if (!pos || route.length < 2) { return 0; }
+        var best = 0, bestD = Infinity;
+        for (var i = 0; i < route.length; i++) {
+            var d = Math.abs(route[i][0] - pos.lat) + Math.abs(route[i][1] - pos.lng);
+            if (d < bestD) { bestD = d; best = i; }
+        }
+        return best;
+    }
+
+    // ---------- วาด ----------
+    function render() {
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var W = canvas.clientWidth || 168, H = canvas.clientHeight || 168;
+        if (!W || !H) { return; }
+        if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
+            canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = '#0b0f16'; ctx.fillRect(0, 0, W, H);
+
+        var z = (userZoom !== null) ? userZoom : autoZoom(speedKmh);
+        var center = (!follow && panCenter) ? panCenter : (car || (route.length ? { lat: route[0][0], lng: route[0][1] } : null));
+        // กันพิกัดเสีย (เช่น ค่าที่ยังไม่มา/เป็นข้อความ) → แผนที่จะได้ไม่หายทั้งบาน
+        if (!center || !isFinite(center.lat) || !isFinite(center.lng)) { center = route.length ? { lat: route[0][0], lng: route[0][1] } : null; }
+        if (!center) { return; }
+        var c = proj(center.lat, center.lng, z);
+        var ox = W / 2 - c.x, oy = H / 2 - c.y;
+
+        // กระเบื้องแผนที่
+        var n = Math.pow(2, z), missing = false;
+        var x0 = Math.floor((c.x - W / 2) / 256), x1 = Math.floor((c.x + W / 2) / 256);
+        var y0 = Math.floor((c.y - H / 2) / 256), y1 = Math.floor((c.y + H / 2) / 256);
+        for (var tx = x0; tx <= x1; tx++) {
+            for (var ty = y0; ty <= y1; ty++) {
+                if (ty < 0 || ty >= n) { continue; }
+                var rec = tile(z, ((tx % n) + n) % n, ty);
+                if (rec.ok) { ctx.drawImage(rec.dark || rec.img, Math.round(tx * 256 + ox), Math.round(ty * 256 + oy), 256, 256); }
+                else { missing = true; }
+            }
+        }
+        el.classList.toggle('nomap', missing && !anyTileOk);
+
+        // เส้นทาง: วิ่งแล้ว (เทา) + ที่เหลือ (น้ำเงิน ขอบขาว)
+        if (route.length > 1) {
+            var idx = nearestIndex(car);
+            drawLine(route.slice(0, idx + 1), 'rgba(255,255,255,.30)', 4.5, ox, oy, z, W, H);
+            var tail = route.slice(idx);
+            drawLine(tail, 'rgba(255,255,255,.92)', 7, ox, oy, z, W, H);
+            drawLine(tail, '#2196f3', 4, ox, oy, z, W, H);
+            var d = proj(route[route.length - 1][0], route[route.length - 1][1], z);
+            var dx = d.x + ox, dy = d.y + oy;
+            if (dx > -20 && dx < W + 20 && dy > -20 && dy < H + 20) {
+                ctx.beginPath(); ctx.arc(dx, dy, 7, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+                ctx.beginPath(); ctx.arc(dx, dy, 4.6, 0, Math.PI * 2); ctx.fillStyle = '#ef4444'; ctx.fill();
+            }
+        }
+
+        // รถ (ลูกศรชี้ทิศ)
+        if (car) {
+            var p = proj(car.lat, car.lng, z);
+            ctx.save();
+            ctx.translate(p.x + ox, p.y + oy);
+            ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fillStyle = 'rgba(33,150,243,.22)'; ctx.fill();
+            ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+            ctx.beginPath(); ctx.arc(0, 0, 6.1, 0, Math.PI * 2); ctx.fillStyle = '#2196f3'; ctx.fill();
+            ctx.rotate(bearing * Math.PI / 180);
+            ctx.beginPath(); ctx.moveTo(0, -17); ctx.lineTo(6.2, -6.5); ctx.lineTo(0, -9.6); ctx.lineTo(-6.2, -6.5); ctx.closePath();
+            ctx.fillStyle = '#ffffff'; ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1; ctx.fill(); ctx.stroke();
+            ctx.restore();
+        }
+    }
+    function request() {
+        if (rafId) { return; }
+        rafId = requestAnimationFrame(function () { rafId = 0; try { render(); } catch (e) {} });
+    }
+
+    // ---------- ข้อความเหลือระยะ/เวลา ----------
+    function chrome() {
+        var remainKm = null, remainSec = null;
+        try { if (typeof currentTrueRemainKm === 'number') { remainKm = currentTrueRemainKm; } } catch (e) {}
+        try { if (typeof currentTrueRemainSec === 'number') { remainSec = currentTrueRemainSec; } } catch (e) {}
+        // ถ้าแอปไม่ได้ให้ค่า "เหลือ" มา (เช่น ยังดึงข้อมูลเส้นทางไม่ได้) → คิดเองจากเส้นทางที่วาดอยู่
+        if ((remainKm === null || !(remainKm > 0)) && route.length > 1 && car) {
+            var idx = nearestIndex(car), ran = 0;
+            for (var q = 1; q <= idx; q++) {
+                ran += kmBetween({ lat: route[q - 1][0], lng: route[q - 1][1] }, { lat: route[q][0], lng: route[q][1] });
+            }
+            remainKm = Math.max(0, routeKm - ran);
+        }
+        if ((remainSec === null || !(remainSec > 0)) && remainKm !== null && remainKm > 0.05) {
+            remainSec = remainKm / (speedKmh > 8 ? speedKmh : 30) * 3600;
+        }
+        titleEl.textContent = destLabel ? ('📍 ' + destLabel) : '📍 กำลังนำทาง';
+        var t = [];
+        if (remainKm !== null && remainKm > 0) { t.push('เหลือ ' + remainKm.toFixed(remainKm < 10 ? 2 : 1) + ' กม.'); }
+        if (remainSec !== null && remainSec > 0) {
+            var mins = Math.round(remainSec / 60);
+            var arr = new Date(Date.now() + remainSec * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            t.push((mins >= 60 ? (Math.floor(mins / 60) + ' ชม. ' + (mins % 60) + ' น.') : (mins + ' น.')) + ' · ถึง ' + arr);
+        }
+        remainEl.textContent = t.length ? t.join(' · ') : 'กำลังนำทาง';
+        var pct = 0;
+        if (routeKm > 0 && remainKm !== null) { pct = Math.max(0, Math.min(100, (routeKm - remainKm) / routeKm * 100)); }
+        barFill.style.width = pct.toFixed(1) + '%';
+    }
+
+    // ---------- แสดง/ซ่อน/วางตำแหน่ง ----------
+    function place() {
+        var w = el.offsetWidth || 168, h = el.offsetHeight || 240;
+        var x = (pref.x === null) ? (window.innerWidth - w - 12) : pref.x;
+        var y = (pref.y === null) ? 118 : pref.y;
+        el.style.left = Math.max(4, Math.min(x, window.innerWidth - w - 4)) + 'px';
+        el.style.top = Math.max(4, Math.min(y, window.innerHeight - h - 4)) + 'px';
+        el.style.right = 'auto';
+    }
+    el.classList.toggle('big', !!pref.big);
+    function show() { if (pref.hidden) { return; } el.classList.add('show'); visible = true; place(); request(); chrome(); }
+    function hideNow() { visible = false; el.classList.remove('show'); }
+
+    // ---------- API ----------
+    window.navMiniSetRoute = function (coords, label) {
+        if (label) { destLabel = String(label).slice(0, 40); }
+        if (!coords || coords.length < 2) { return; }
+        route = []; routeKm = 0;
+        for (var i = 0; i < coords.length; i++) {
+            var la = Number(coords[i][0]), ln = Number(coords[i][1]);
+            if (!isFinite(la) || !isFinite(ln)) { continue; }
+            if (route.length) { routeKm += kmBetween({ lat: route[route.length - 1][0], lng: route[route.length - 1][1] }, { lat: la, lng: ln }); }
+            route.push([la, ln]);
+        }
+        try {
+            window.navMiniRouteSaved = route.map(function (p) { return [Math.round(p[0] * 1e5) / 1e5, Math.round(p[1] * 1e5) / 1e5]; });
+        } catch (e) {}
+        follow = true; panCenter = null; btnFollow.classList.add('on');
+        request(); chrome();
+    };
+    window.navMiniUpdate = function (lat, lon, kmh) {
+        if (typeof lat !== 'number' || typeof lon !== 'number' || !isFinite(lat) || !isFinite(lon)) { return; }
+        if (typeof kmh === 'number' && kmh >= 0) { speedKmh = kmh; }
+        var prev = (car && isFinite(car.lat) && isFinite(car.lng)) ? car : null;
+        car = { lat: lat, lng: lon };
+        if (prev) {
+            var d = kmBetween(prev, car);
+            if (d > 0.012) {
+                var nb = bearingTo(prev, car);
+                var diff = ((nb - bearing + 540) % 360) - 180;
+                bearing = (bearing + diff * 0.5 + 360) % 360;
+            }
+        }
+        if (!visible || pref.hidden) { return; }
+        chrome(); request();
+    };
+    // รับพิกัดได้ทั้งแบบ {lat, lon} / {lat, lng} / [lat, lon] — กันได้ค่าเสีย (ทำให้แผนที่ขาว/ลอยผิดที่)
+    function posOf(v) {
+        if (!v) { return null; }
+        var la, ln;
+        if (Array.isArray(v)) { la = Number(v[0]); ln = Number(v[1]); }
+        else { la = Number(v.lat); ln = Number(v.lon !== undefined ? v.lon : v.lng); }
+        return (isFinite(la) && isFinite(ln) && (la !== 0 || ln !== 0)) ? { lat: la, lng: ln } : null;
+    }
+    window.navMiniResume = function (seed) {
+        try {
+            if (!seed) { return; }
+            var label = seed.destName || (seed.dest && seed.dest.name) || '';
+            var dp = posOf(seed.dest);
+            var lp = posOf(seed.lastPos) || posOf(seed.lastPath && seed.lastPath.length ? seed.lastPath[seed.lastPath.length - 1] : null);
+            if (seed.routeCoords && seed.routeCoords.length > 1) { window.navMiniSetRoute(seed.routeCoords, label); }
+            else if (dp && lp) { window.navMiniSetRoute([[lp.lat, lp.lng], [dp.lat, dp.lng]], label); }
+            if (lp) {
+                car = lp;
+                // หันหัวรถตามทิศที่วิ่งมาจริง (จากพิกัดก่อนหน้าล่าสุด)
+                var lp0 = posOf(seed.lastPath && seed.lastPath.length > 1 ? seed.lastPath[seed.lastPath.length - 2] : null);
+                if (lp0 && (Math.abs(lp0.lat - lp.lat) > 1e-6 || Math.abs(lp0.lng - lp.lng) > 1e-6)) { bearing = bearingTo(lp0, lp); }
+            }
+            pref.hidden = false; savePref();
+            show();
+        } catch (e) {}
+    };
+    window.navMiniHide = function (remember) {
+        if (remember) { pref.hidden = true; savePref(); }
+        hideNow();
+    };
+    window.navMiniIsVisible = function () { return visible; };
+    // ตัวช่วยตรวจสอบสถานะ Mini Map (ใช้ตอนทดสอบ/แก้ปัญหา)
+    window.navMiniDebug = function () {
+        return {
+            visible: visible, follow: follow, hidden: !!pref.hidden, big: !!pref.big,
+            hasRoute: route.length, routeKm: Math.round(routeKm * 1000) / 1000,
+            car: car ? { lat: car.lat, lng: car.lng } : null,
+            bearing: Math.round(bearing), speedKmh: speedKmh,
+            zoom: (userZoom !== null) ? userZoom : autoZoom(speedKmh),
+            tiles: tileKeys.length, tileOk: anyTileOk, filterOK: filterOK
+        };
+    };
+    // จุดเริ่มเที่ยวเดิมเรียกฟังก์ชันนี้ — ตอนนี้เปิด Mini Map ให้ทำงานแทนแผนที่ใหญ่
+    window.startNavigationMap = function (sLat, sLon, dLat, dLon, destName, km, coords) {
+        try {
+            // ไม่มีเส้นทางและไม่มีพิกัดต้น-ปลาย (เช่น เริ่มมิเตอร์ธรรมดา) → ไม่ต้องเปิดแผนที่ว่าง
+            var hasLine = (coords && coords.length > 1) || (sLat && sLon && dLat && dLon);
+            if (!hasLine) { hideNow(); return; }
+            pref.hidden = false; savePref();
+            destLabel = destName ? String(destName).slice(0, 40) : '';
+            if (coords && coords.length > 1) { window.navMiniSetRoute(coords, destLabel); }
+            else if (sLat && sLon && dLat && dLon) { window.navMiniSetRoute([[sLat, sLon], [dLat, dLon]], destLabel); }
+            if (sLat && sLon) { car = { lat: sLat, lng: sLon }; }
+            follow = true; panCenter = null;
+            show(); request();
+        } catch (e) {}
+    };
+
+    // ---------- ลากย้ายตัวแผนที่ทั้งก้อน (จากแถบหัว) ----------
+    var drag = null;
+    head.addEventListener('pointerdown', function (e) {
+        if (e.target && e.target.closest && e.target.closest('.nm-btn')) { return; }
+        var r = el.getBoundingClientRect();
+        drag = { id: e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top };
+        head.classList.add('grabbing');
+        try { head.setPointerCapture(e.pointerId); } catch (err) {}
+        e.preventDefault(); e.stopPropagation();
+    });
+    head.addEventListener('pointermove', function (e) {
+        if (!drag || e.pointerId !== drag.id) { return; }
+        var w = el.offsetWidth, h = el.offsetHeight;
+        var x = Math.max(4, Math.min(e.clientX - drag.dx, window.innerWidth - w - 4));
+        var y = Math.max(4, Math.min(e.clientY - drag.dy, window.innerHeight - h - 4));
+        el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.right = 'auto';
+        pref.x = Math.round(x); pref.y = Math.round(y);
+        e.preventDefault();
+    });
+    function endDrag(e) {
+        if (!drag || (e && e.pointerId !== drag.id)) { return; }
+        drag = null; head.classList.remove('grabbing'); savePref(); place();
+    }
+    head.addEventListener('pointerup', endDrag);
+    head.addEventListener('pointercancel', endDrag);
+
+    // ---------- ลาก/ซูมบนแผนที่ ----------
+    var ptrs = Object.create(null), ptrCount = 0, pinch = null;
+    canvas.addEventListener('pointerdown', function (e) {
+        ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; ptrCount++;
+        try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+        if (ptrCount === 2) {
+            var ids = Object.keys(ptrs);
+            pinch = { d: dist2(ptrs[ids[0]], ptrs[ids[1]]), z: (userZoom !== null ? userZoom : autoZoom(speedKmh)) };
+        }
+        e.preventDefault();
+    });
+    canvas.addEventListener('pointermove', function (e) {
+        var p = ptrs[e.pointerId]; if (!p) { return; }
+        var dx = e.clientX - p.x, dy = e.clientY - p.y;
+        p.x = e.clientX; p.y = e.clientY;
+        var z = (userZoom !== null) ? userZoom : autoZoom(speedKmh);
+        if (ptrCount >= 2 && pinch) {
+            var ids = Object.keys(ptrs);
+            if (ids.length >= 2) {
+                var ratio = dist2(ptrs[ids[0]], ptrs[ids[1]]) / (pinch.d || 1);
+                if (ratio > 1.35) { userZoom = Math.min(19, pinch.z + 1); pinch.d *= 1.9; request(); }
+                else if (ratio < 0.74) { userZoom = Math.max(14, pinch.z - 1); pinch.d *= 0.53; request(); }
+            }
+            e.preventDefault(); return;
+        }
+        var base = (!follow && panCenter) ? panCenter : (car || (route.length ? { lat: route[0][0], lng: route[0][1] } : null));
+        if (!base) { return; }
+        var c = proj(base.lat, base.lng, z);
+        panCenter = unproj(c.x - dx, c.y - dy, z);
+        follow = false; btnFollow.classList.remove('on');
+        request();
+        e.preventDefault();
+    });
+    function release(e) {
+        if (ptrs[e.pointerId]) { delete ptrs[e.pointerId]; ptrCount = Math.max(0, ptrCount - 1); }
+        if (ptrCount < 2) { pinch = null; }
+    }
+    canvas.addEventListener('pointerup', release);
+    canvas.addEventListener('pointercancel', release);
+    canvas.addEventListener('wheel', function (e) {
+        var z = (userZoom !== null) ? userZoom : autoZoom(speedKmh);
+        userZoom = Math.max(14, Math.min(19, z + (e.deltaY < 0 ? 1 : -1)));
+        request(); e.preventDefault();
+    }, { passive: false });
+
+    // ---------- ปุ่ม ----------
+    btnFollow.addEventListener('click', function (e) {
+        e.stopPropagation();
+        follow = true; panCenter = null; userZoom = null;
+        btnFollow.classList.add('on'); request();
+    });
+    btnSize.addEventListener('click', function (e) {
+        e.stopPropagation();
+        pref.big = !pref.big; el.classList.toggle('big', pref.big); savePref();
+        place(); request();
+    });
+    btnHide.addEventListener('click', function (e) { e.stopPropagation(); window.navMiniHide(true); });
+    btnFollow.classList.add('on');
+
+    // ---------- ซ่อนชั่วคราวเมื่อมีหน้าต่างอื่นเปิดทับ (ยกเว้นจอมิเตอร์ใหญ่) ----------
+    function blocked() {
+        var ov = document.querySelectorAll('.modal-overlay');
+        for (var i = 0; i < ov.length; i++) {
+            if (ov[i].id === 'trackerZoomOverlay') { continue; }
+            if (ov[i].style.display && ov[i].style.display !== 'none') { return true; }
+        }
+        return false;
+    }
+    setInterval(function () {
+        if (!visible) { return; }
+        el.classList.toggle('blocked', blocked());
+        chrome(); request();
+    }, 1500);
+    window.addEventListener('resize', function () { if (visible) { place(); request(); } });
+})();
 </script>
 </body>
 </html>
