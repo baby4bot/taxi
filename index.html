@@ -1551,6 +1551,13 @@
         /* กัน double-tap zoom ตอนแตะฟิลด์/ปุ่มบนมือถือ */
         input, button, select, textarea { touch-action: manipulation; }
 
+        /* ===== 🔒 ล็อกการเลื่อนหน้าหลัง ขณะลิสต์ค้นหาเปิด (แก้ 14 ก.ย.) =====
+           ปิดการเลื่อนของ document เท่านั้น (ลิสต์ที่เปิดอยู่ยังเลื่อนได้ตามปกติ)
+           เดิมหน้าเว็บด้านหลังยังเลื่อนได้ → สองตัวแย่งกัน → ลากแล้วติด ไม่ลื่น */
+        html.locked-scroll, html.locked-scroll body { overflow: hidden !important; }
+        /* iOS: ต้องตรึง body ไว้ที่ตำแหน่งเดิม ไม่งั้นล็อกแล้วหน้าเด้งขึ้นบนสุด */
+        html.locked-scroll body { position: fixed; left: 0; right: 0; width: 100%; top: var(--locked-scroll-top, 0px); }
+
         /* ===== 📜 ลื่นขึ้นบนมือถือ — กล่องที่เลื่อนได้ (แก้ 14 ก.ย.) =====
            อาการเดิม: ลิสต์โปรด/ประวัติ/ผลค้นหา “ลากแล้วติด ต้องรอสักพัก”
            สาเหตุ: backdrop-filter (blur) บนตัวที่กำลังเลื่อน → ต้องเบลอใหม่ทุกเฟรม GPU ตามไม่ทัน
@@ -5180,6 +5187,49 @@
         ['touchend', 'touchcancel'].forEach(function (ev) {
             document.addEventListener(ev, function () { startY = null; targetEl = null; scrollable = null; skipGesture = false; }, { passive: true });
         });
+    })();
+
+    /* ===== 🔒 ล็อกหน้ารอหลังตอนลิสต์ค้นหาเปิดอยู่ (แก้ 14 ก.ย.) =====
+       อาการเดิม: ตอนลิสต์โปรด/ประวัติ/ผลค้นหาเปิดอยู่ หน้าเว็บด้านหลังก็ยังเลื่อนได้
+       → มี 2 ตัวแย่งการเลื่อนกัน → ลากแล้วรู้สึกติด ไม่ลื่น
+       วิธี: ปิดการเลื่อนของ document (ตัวนอกสุด) เท่านั้น — ลิสต์เองยังเลื่อนได้ปกติ
+       สำคัญสำหรับ iOS: ถ้าหน้าจอเลื่อนอยู่แล้วล็อกด้วย overflow อย่างเดียวจะเด้งขึ้นบนสุด
+       → ใช้ position:fixed + ค่า top ติดลบเท่ากับระยะที่เลื่อนไป แล้วคืนต่ำแหน่งเมื่อปลดล็อก */
+    (function lockPageWhileDropdownOpen() {
+        const DROPDOWNS = ['historyList', 'suggestionList'];
+        const visible = (el) => !!el && el.style.display !== 'none' && el.children.length > 0;
+        const anyOpen = () => DROPDOWNS.some((id) => visible(document.getElementById(id)));
+        let lockY = 0;
+        let watchdog = null;
+        window.__pageScrollLocked = false;
+        window.syncPageScrollLock = () => {
+            const need = anyOpen();
+            if (need === window.__pageScrollLocked) return;
+            const html = document.documentElement;
+            if (need) {
+                lockY = window.scrollY || document.scrollingElement.scrollTop || 0;
+                if (lockY > 0) html.style.setProperty('--locked-scroll-top', (-lockY) + 'px');
+                else html.style.removeProperty('--locked-scroll-top');
+                html.classList.add('locked-scroll');
+                window.__pageScrollLocked = true;
+                // กันล็อกค้าง: ถ้ามีเส้นทางอื่นที่ปิดลิสต์โดยไม่ผ่านจุดที่เรารู้ → ตรวจทุก 0.8 วิ (เฉพาะตอนล็อก)
+                if (!watchdog) watchdog = setInterval(() => { if (window.__pageScrollLocked && !anyOpen()) window.syncPageScrollLock(); }, 800);
+            } else {
+                html.classList.remove('locked-scroll');
+                html.style.removeProperty('--locked-scroll-top');
+                window.__pageScrollLocked = false;
+                if (watchdog) { clearInterval(watchdog); watchdog = null; }
+                if (lockY > 0) { window.scrollTo(0, lockY); lockY = 0; }
+            }
+        };
+        // ลิสต์ถูกเปิด/ปิดด้วยการเซ็ต style.display ตรง ๆ หลายจุด → เฝ้าด้วย MutationObserver จุดเดียว
+        DROPDOWNS.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el && window.MutationObserver) new MutationObserver(() => window.syncPageScrollLock()).observe(el, { attributes: true, attributeFilter: ['style'] });
+        });
+        // เคลียร์เมื่อกลับมาจากพื้นหลัง/สลับแอป (กันล็อกค้างเมื่อระบบปิดลิสต์ระหว่างที่แอปอยู่ข้างหลัง)
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') window.syncPageScrollLock(); });
+        window.syncPageScrollLock();
     })();
 
     /* ===== 📱 แบนเนอร์แนะนำติดตั้งแอปเต็มจอ (PWA) =====
@@ -9629,6 +9679,7 @@
         ['2026-09-14', '🐞 แก้ช่วงทางด่วนซ้อนสลับไปมา (/9 ↔ /7) ให้รวมเป็นช่วงเดียว ไม่ขึ้นซ้ำ 4 ช่วง'],
         ['2026-09-14', '📜 มือถือ: ลิสต์โปรด/ประวัติ/ผลค้นหาลื่นขึ้น — ตัด blur ในกล่องที่เลื่อน'],
         ['2026-09-14', '🐞 ต้นเหตุกระตุก: หัวข้อ sticky ที่มี blur + ตัวดักดึงรีเฟรชแบบรอ JS ทุกเฟรม'],
+        ['2026-09-14', '🔒 ล็อกหน้าเว็บด้านหลังขณะลิสต์ค้นหาเปิด — เลิกมี 2 ตัวแย่งการเลื่อนกัน'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {

@@ -228,6 +228,20 @@ TomTom **ไม่ให้ชื่อด่านและไม่ให้�
 - ขั้นตอน `shouldBlockPull(clientY)`: ลากขึ้น/นิ่ง → `false` · ลิสต์ยังเลื่อนขึ้นได้ (`scrollTop > 1`) → `false` · อยู่หัวสุดหน้าแล้วลากลง → `true`
 - PTR หลักจริง ๆ คือ CSS `html, body { overscroll-behavior: none }` — ตัว JS เป็นเพียงตัวหนุนของ iOS < 16
 
+**🔒 ล็อกหน้าเว็บด้านหลัง ขณะลิสต์เปิดอยู่ (เพิ่มต่อจากรอบเดียวกัน):**
+
+เดิมลิสต์เปิดอยู่แต่หน้าเว็บด้านหลังก็ยังเลื่อนได้ = **มี 2 ตัวแย่งการเลื่อนกัน** — อีกสาเหตุที่ทำให้นิ้วลากแล้วรู้สึกติด
+
+- ล็อกเฉพาะ **document ตัวนอกสุด** เท่านั้น — ตัวลิสต์เองยังเลื่อนได้ปกติ
+- CSS: `html.locked-scroll, html.locked-scroll body { overflow: hidden !important }`
+- **iOS ต้องใช้ `position: fixed` ด้วย** ไม่งั้นล็อกแล้วหน้าเด้งขึ้นบนสุด → คำนวณ `--locked-scroll-top: -ระยะที่เลื่อนไป`
+  แล้วคืนต่ำแหน่งด้วย `window.scrollTo(0, lockY)` ตอนปลดล็อก
+- ปลดล็อกอัตโนมัติเมื่อปิดลิสต์/เลือกสถานที่ — เฝ้าด้วย **`MutationObserver` ที่ `style` ของ `#historyList`/`#suggestionList`**
+  (โค้ดเดิมเซ็ต `style.display` ตรง ๆ หลายจุด → จุดเดียวจบ)
+- มี **watchdog 0.8 วินาที** สร้างเฉพาะตอนล็อก → กันล็อกค้างถ้ามีเส้นทางอื่นที่ปิดลิสต์
+  + ปลดล็อกเมื่อกลับมาจากพื้นหลัง (`visibilitychange`)
+- ตรวจว่าไม่ค้าง: `window.__pageScrollLocked` · `html.locked-scroll` · `getComputedStyle(document.body).overflowY`
+
 **เพิ่มเติมที่กล่องรายการ:** `-webkit-overflow-scrolling: touch` (โมเมนตัมแบบ iOS เก่า) · `overscroll-behavior: contain` (ลากจนสุดลิสต์แล้วไม่ลากหน้าเว็บต่อ)
 · `transform: translateZ(0)` (ยกเป็นเลเยอร์ของตัวเอง → เลื่อนแล้วไม่ต้อง repaint พื้นหลัง)
 
