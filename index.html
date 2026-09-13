@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8" />
@@ -936,6 +936,13 @@
             box-shadow: 0 6px 18px rgba(76,110,245,0.35) !important;
             padding: 7px 18px !important;
         }
+        /* 🛣️ กล่องค่าทางด่วนระหว่างนำทาง (จอมิเตอร์ปกติ + จอใหญ่) */
+        #navTollInfo, #navTollInfoZoom {
+            margin: 8px 0 2px 0; padding: 8px 12px; border-radius: 12px;
+            background: rgba(255, 152, 0, 0.12); border: 1px solid rgba(255, 152, 0, 0.45);
+            color: #ffb74d; font-size: 12px; font-weight: 500;
+        }
+
         #routeTollInfo {
             background: linear-gradient(165deg, rgba(255,181,46,0.18), rgba(255,138,0,0.06)) !important;
             border: 1px solid rgba(255,181,46,0.5) !important;
@@ -1733,7 +1740,7 @@
 
 <div id="tollModal" class="custom-confirm-overlay" style="display: none;">
     <div class="custom-confirm-box" style="padding: 25px 20px;">
-        <h3 class="custom-confirm-title" style="margin-bottom: var(--space-field);">เพิ่มค่าทางด่วน</h3>
+        <h3 id="tollModalTitle" class="custom-confirm-title" style="margin-bottom: var(--space-field);">ค่าทางด่วน</h3>
         <div style="position:relative; width:100%; margin-bottom: var(--space-field);">
             <input type="text" inputmode="numeric" pattern="[0-9]*" id="tollInput" placeholder="ระบุจำนวนเงิน (บาท)" style="width: 100%; padding: 15px; border-radius: 15px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; text-align: center; font-size: 18px; box-sizing: border-box; outline:none;" autocomplete="off">
             <div style="position:absolute; top:50%; right:7px; transform:translateY(-50%); display:flex; gap:6px; z-index:2;">
@@ -1743,7 +1750,7 @@
         </div>
         <div class="custom-confirm-actions">
             <button onclick="window.toggleModal('tollModal', false)" class="btn-cc-cancel">ยกเลิก</button>
-            <button onclick="window.confirmToll()" class="btn-cc-ok">เพิ่มเงิน</button>
+            <button id="tollModalOk" onclick="window.confirmToll()" class="btn-cc-ok">บวกเข้าค่าโดยสาร</button>
         </div>
     </div>
 </div>
@@ -1983,6 +1990,12 @@
                 <button id="btnLiveMap" class="small-toll-btn is-hidden" style="width: 32px; height: 32px; border-radius: 8px;" onclick="event.stopPropagation(); window.navMiniReopen()" title="เปิดแผนที่นำทางกลับมา" aria-label="เปิดแผนที่นำทาง"><span class="material-symbols-outlined" style="font-size: 16px;">map</span></button>
                 <button id="btnTollToggleLive" class="small-toll-btn active" style="width: 32px; height: 32px; border-radius: 8px;" onclick="event.stopPropagation(); window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)"><span class="material-symbols-outlined" style="font-size: 16px;">route</span></button>
             </div>
+        </div>
+
+        <!-- 🛣️ ค่าทางด่วนระหว่างนำทาง — 1 บรรทัดต่อ 1 ช่วง (แตะราคาเพื่อแก้ยอดได้) -->
+        <div id="navTollInfo" style="display:none;">
+            <div style="display:flex; align-items:center; gap:6px; font-weight:700;"><span class="material-symbols-outlined" style="font-size:15px;">toll</span> ค่าทางด่วน<span id="navTollTotal" style="margin-left:auto; font-weight:800;">0 ฿</span></div>
+            <div id="navTollBooths"></div>
         </div>
 
         <div class="tracker-stats" id="ltDistRow">
@@ -2716,6 +2729,12 @@
             <button id="btnTollToggleZoom" class="small-toll-btn toll-pop-in active" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;" onclick="event.stopPropagation(); window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)"><span class="material-symbols-outlined" style="font-size: 18px;">route</span></button>
         </div>
         
+        <!-- 🛣️ ค่าทางด่วนบนจอมิเตอร์ใหญ่ — แตะราคาเพื่อแก้ยอดได้ -->
+        <div id="navTollInfoZoom" style="display:none;">
+            <div style="display:flex; align-items:center; gap:6px; font-weight:700;"><span class="material-symbols-outlined" style="font-size:15px;">toll</span> ค่าทางด่วน<span id="navTollTotalZoom" style="margin-left:auto; font-weight:800;">0 ฿</span></div>
+            <div id="navTollBoothsZoom"></div>
+        </div>
+
         <div class="tz-header">
             <div class="tz-start-time">เริ่ม: <span id="tzStartTime">--:--</span> น.</div>
             <div id="tzElapsedTime" class="tz-elapsed-time">0 ว.</div>
@@ -4068,13 +4087,18 @@
     };
 
     // แสดงแบนเนอร์ค่าทางด่วนของเส้นทาง (เฉพาะเมื่อขึ้นทางด่วน)
+    // แบนเนอร์ค่าทางด่วนของเส้นทาง — แยกเป็นรายระบบ (ทางด่วน / Tollway / มอเตอร์เวย์) ตามอัตราจริง
     window.updateRouteTollInfo = () => {
         const el = document.getElementById('routeTollInfo');
         if (!el) return;
         const t = window.currentTollInfo;
         if (t && t.hasTolls && t.booths && t.booths.length > 0) {
             el.style.display = 'block';
-            el.innerHTML = `🛣️ ค่าทางด่วน (โดยประมาณ) ${t.booths.length} ช่วง: ${t.booths.map(b => `${b.price}฿`).join(' + ')} = <b>${t.total} ฿</b>`;
+            const parts = t.booths.map(b => {
+                const route = [b.from, b.to].filter(Boolean).join(' → ');
+                return window.tollSysLabel(b) + ': ' + (route ? route + ' ' : '') + b.price + '฿';
+            });
+            el.innerHTML = '🛣️ ' + t.booths.length + ' ช่วง — ' + parts.join(' + ') + ' = <b>' + t.total + ' ฿</b>';
         } else {
             el.style.display = 'none';
         }
@@ -4088,33 +4112,43 @@
     };
 
     // แสดงยอดรวมทางด่วนจริงบนปุ่ม "+ ค่าทางด่วน" ในช่องประเมินราคา (เช่น "ทางด่วน 155฿") เมื่อเส้นทางมีทางด่วน
+    // ปุ่ม "+ ค่าทางด่วน" — โชว์ยอดจริงที่คำนวณได้จากอัตราทางด่วน/Tollway (ไม่ใช่การเดาจากระยะทาง)
     window.updateFareTollBtnText = () => {
         const btn = document.getElementById('fareTollBtn');
         if (!btn) return;
+        const t = window.currentTollInfo;
         const total = window.getRouteTollTotal();
-        if (total > 0) {
-            btn.innerHTML = `<span class="material-symbols-outlined">toll</span> ทางด่วน ${total}฿`;
-            btn.title = `เส้นทางนี้มีค่าทางด่วนโดยประมาณรวม ${total}฿ — แตะเพื่อเพิ่มเข้ากับค่าโดยสาร`;
+        if (total > 0 && t && t.booths) {
+            const names = t.booths.map(b => window.tollSysLabel(b) + (b.from ? ' · ' + b.from : '')).join(' + ');
+            btn.innerHTML = '<span class="material-symbols-outlined">toll</span> ' + total + '฿';
+            btn.title = 'ค่าทางด่วนตามอัตราจริง (' + names + ') รวม ' + total + '฿ — แตะเพื่อบวกเข้ากับค่าโดยสาร';
         } else {
-            btn.innerHTML = `<span class="material-symbols-outlined">toll</span> + ค่าทางด่วน`;
+            btn.innerHTML = '<span class="material-symbols-outlined">toll</span> + ค่าทางด่วน';
             btn.title = 'เพิ่มค่าทางด่วน (บวกเพิ่มจากมิเตอร์)';
         }
     };
     
+    // รายการค่าทางด่วนตอนนำทาง — 1 บรรทัดต่อ 1 ช่วง แตะราคาเพื่อแก้ยอดได้
     window.updateNavTollDisplay = () => {
-        let navTollInfo = document.getElementById('navTollInfo');
-        let navTollTotal = document.getElementById('navTollTotal');
-        let navTollBooths = document.getElementById('navTollBooths');
-        
-        if (navTollInfo) {
-            if (window.currentTollInfo && window.currentTollInfo.booths && window.currentTollInfo.booths.length > 0) {
-                navTollInfo.style.display = 'block';
-                navTollTotal.innerText = window.currentTollInfo.total + ' ฿';
-                navTollBooths.innerHTML = window.currentTollInfo.booths.map(b => `${b.name}: ${b.price}฿`).join(' → ');
+        const navTollInfo = document.getElementById('navTollInfo');
+        const navTollTotal = document.getElementById('navTollTotal');
+        const navTollBooths = document.getElementById('navTollBooths');
+        if (!navTollInfo) return;
+        const t = window.currentTollInfo;
+        const show = !!(t && t.booths && t.booths.length > 0);
+        // แสดงทั้ง 2 จอ: จอมิเตอร์ปกติ (#navTollInfo) และจอมิเตอร์ใหญ่ (#navTollInfoZoom)
+        [['navTollInfo', 'navTollTotal', 'navTollBooths'], ['navTollInfoZoom', 'navTollTotalZoom', 'navTollBoothsZoom']].forEach(ids => {
+            const box = document.getElementById(ids[0]);
+            if (!box) return;
+            if (show) {
+                box.style.display = 'block';
+                const tot = document.getElementById(ids[1]); if (tot) tot.innerText = t.total + ' ฿';
+                const booths = document.getElementById(ids[2]);
+                if (booths) booths.innerHTML = t.booths.map(function (b, i) { return window.tollSegLine(b, i); }).join('');
             } else {
-                navTollInfo.style.display = 'none';
+                box.style.display = 'none';
             }
-        }
+        });
     };
 
     // Decode polyline (Google/TomTom รูปแบบเดียวกัน)
@@ -4136,40 +4170,218 @@
         return poly;
     };
 
-    // คำนวณค่าทางด่วนจากโซนทางด่วนจริงในเส้นทาง (TomTom sectionType=TOLL)
-    // นับระยะทางที่วิ่งบนทางด่วนจริง (รวมตามเส้นโค้งของถนน) แล้วประมาณราคาตามอัตราทางด่วนไทย
-    // หมายเหตุ: TomTom คืนแค่ช่วงทางด่วน (จุดเริ่ม-จุดจบ) ไม่มีราคาต่อด่านจริง จึงแสดงเป็น "โดยประมาณ"
-    window.calcTollsFromSections = (route, coords) => {
-        const dist = (a, b) => { const R = 6371000; const toRad = x => x * Math.PI / 180; const dLat = toRad(b[0] - a[0]); const dLon = toRad(b[1] - a[1]); const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLon / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
-        // ระยะทางจริงบนทางด่วน = รวมระยะห่างระหว่างจุดพิกัดทุกจุดในช่วงนั้น (ไม่ใช่เส้นตรงระหว่างปลาย 2 ข้าง)
-        const pathKm = (si, ei) => {
-            if (!coords || !coords.length) return 0;
-            if (!coords[si] || !coords[ei]) return 0;
-            let total = 0;
-            const end = Math.min(ei, coords.length - 1);
-            for (let i = si; i < end; i++) {
-                if (coords[i] && coords[i + 1]) total += dist(coords[i], coords[i + 1]);
-            }
-            return Math.round(total / 100) / 10;
-        };
-        // อัตราโดยประมาณของทางด่วนไทย (บาทต่อช่วงทางด่วน ตามระยะทางจริง) — ปรับให้ใกล้เคียงค่าโทลล์เวย์จริง
-        const tollPrice = (km) => { if (km < 3) return 25; if (km < 6) return 30; if (km < 10) return 40; if (km < 14) return 50; if (km < 18) return 60; if (km < 22) return 70; if (km < 26) return 85; if (km < 31) return 100; if (km < 38) return 115; return 130; };
-        
-        let sections = (route.sections || []).filter(s => s.sectionType === 'TOLL');
-        if (!sections.length) return { hasTolls: false, booths: [], total: 0 };
-        
-        let booths = [];
-        let totalCost = 0;
-        sections.forEach((s, i) => {
-            let segKm = pathKm(s.startPointIndex, s.endPointIndex);
-            let price = tollPrice(segKm);
-            booths.push({ name: `ทางด่วนช่วงที่ ${i + 1} (${segKm} กม.)`, price, km: segKm });
-            totalCost += price;
-        });
-        return { hasTolls: true, booths, total: totalCost };
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🛣️ ค่าทางด่วนจริง — แยก 3 ระบบ แล้วคิดตามอัตราที่ประกาศจริง (รถ 4 ล้อ)
+    //    · ทางด่วน กทพ. (ระบบเปิด: เหมาจ่ายที่ด่านขึ้น) — เฉลิมมหานคร/ศรีรัช/ประจิมรัถยา 50฿
+    //      ฉลองรัช 40฿ · อุดรรัถยา/บูรพาวิถี/กาญจนาภิเษก คิดตามระยะ
+    //    · Tollway (ทางยกระดับอุตราภิมุข ดอนเมือง) — คิดตาม "ด่านขึ้น + ทิศทาง" 90/40/130฿
+    //    · มอเตอร์เวย์ กรมทางหลวง (ระบบปิด: คิดตามระยะทางจริง) — M7 1฿/กม. · M6 10+1.25/กม. · M81 10+1.5/กม.
+    //    ที่มา: TomTom ไม่ให้ชื่อด่านและไม่ให้ราคา → ใช้ "ชื่อทาง" ในคำแนะนำการขับแยกว่าเป็นระบบไหน
+    //          แล้วคิดราคาด้วยตารางอัตราจริงในโค้ดนี้ (แก้ตัวเลขได้ที่ตารางด้านล่าง)
+    // ═══════════════════════════════════════════════════════════════════════════
+    const TOLLWAY_RE = /อุตราภิมุข|โทลล์เวย์|tollway/i;
+
+    // ด่านทางยกระดับอุตราภิมุข — dirs: N = ขาออก (มุ่งหน้าเหนือ), S = ขาเข้า (มุ่งหน้าใต้)
+    const TOLLWAY_GATES = [
+        { name: 'ดินแดง',      lat: 13.7565, dirs: ['N'] },
+        { name: 'สุทธิสาร',    lat: 13.7680, dirs: ['N'] },
+        { name: 'รัชดาภิเษก',  lat: 13.7770, dirs: ['N'] },
+        { name: 'ลาดพร้าว',    lat: 13.7960, dirs: ['N', 'S'] },
+        { name: 'บางเขน',      lat: 13.8260, dirs: ['N'] },
+        { name: 'หลักสี่',      lat: 13.8845, dirs: ['N', 'S'] },
+        { name: 'แจ้งวัฒนะ',   lat: 13.8940, dirs: ['S'] },
+        { name: 'ดอนเมือง',    lat: 13.9250, dirs: ['S'] },
+        { name: 'อนุสรณ์สถาน', lat: 13.9600, dirs: ['N'] },
+    ];
+    // อัตรารถ 4 ล้อ ตามประกาศทางยกระดับดอนเมือง (22 ธ.ค. 2567 – 21 ธ.ค. 2572)
+    //   ขาออก (เหนือ): ขึ้นที่ดินแดง/สุทธิสาร/ลาดพร้าว/รัชดาภิเษก/บางเขน = 90 · ขึ้นที่หลักสี่/อนุสรณ์สถาน = 40
+    //   ขาเข้า (ใต้):    ขึ้นที่ดอนเมือง = 130 (รวมช่วงอนุสรณ์สถาน-ดอนเมือง) · ขึ้นที่หลักสี่/แจ้งวัฒนะ/ลาดพร้าว = 90
+    window.tollwayFare = (dir, entryLat) => {
+        if (dir === 'N') return (entryLat >= 13.878) ? 40 : 90;
+        return (entryLat >= 13.905) ? 130 : 90;
     };
-    
-    // เวลาคำนวณจาก TomTom Routing API แบบรถติดสด (traffic=true) แล้ว ไม่ต้องใช้ตัวคูณประมาณอีกต่อไป
+
+    // ทางด่วน กทพ./BEM — entry = เหมาจ่ายต่อด่าน (บาท) · bands = คิดตามระยะบนสายนั้น [[กม.ขั้นต่ำ, ราคา]]
+    const EXPRESSWAY_SYS = [
+        // ระบบปิดของ กทพ. — อัตราจริงคิดตามระยะ/ด่าน (4 ล้อที่ด่านจริง 10/15/25/50/60฿ · ตลอดสายสูงสุด 130฿)
+        //   ยิ่งวิ่งบนสายนั้นยาว (ข้ามหลายด่าน) ยิ่งแพงขึ้นเป็นขั้น — ไม่ใช่เหมาจ่าย 50฿ ทุกกรณี
+        { re: /เฉลิมมหานคร/, name: 'เฉลิมมหานคร', bands: [[0, 25], [7, 50], [20, 65], [35, 90], [55, 130]] },
+        { re: /ศรีรัช/,      name: 'ศรีรัช',      bands: [[0, 25], [8, 50], [22, 65], [40, 90], [60, 130]] },
+        { re: /ประจิมรัถยา/, name: 'ประจิมรัถยา', bands: [[0, 15], [8, 30], [18, 50], [30, 65]] },
+        { re: /ฉลองรัช/,     name: 'ฉลองรัช',     bands: [[0, 25], [8, 40], [20, 55], [35, 75]] },
+        { re: /อุดรรัถยา/,   name: 'อุดรรัถยา',   bands: [[0, 45], [30, 55]] },
+        { re: /บูรพาวิถี/,   name: 'บูรพาวิถี',   bands: [[0, 20], [10, 35], [25, 55]] },
+        { re: /กาญจนาภิเษก/, name: 'กาญจนาภิเษก', bands: [[0, 15], [8, 30], [16, 45]] },
+    ];
+    // มอเตอร์เวย์ กรมทางหลวง (ระบบปิด) — base = ค่าแรกเข้า · perKm = บาท/กม. · cap = สูงสุด · gate = ด่านละ (M9)
+    const MOTORWAY_SYS = [
+        { re: /(สาย\s*)?กรุงเทพ\s*[-–]\s*ชลบุรี|\/7\b/, name: 'สาย 7 (กทม.–ชลบุรี)', base: 0,  perKm: 1.00, cap: 105 },
+        { re: /\/9\b|วงแหวน/,                            name: 'สาย 9 (วงแหวน)',      base: 0,  perKm: 0,    cap: 60, gate: 30 },
+        { re: /\/6\b|นครราชสีมา/,                        name: 'สาย 6 (โคราช)',       base: 10, perKm: 1.25, cap: 240 },
+        { re: /\/81\b|กาญจนบุรี/,                        name: 'สาย 81 (กาญจนบุรี)',  base: 10, perKm: 1.50, cap: 150 },
+    ];
+
+    // หาระบบจากข้อความคำแนะนำการขับ (ชื่อทาง) — คืน null ถ้าไม่เกี่ยวกับทางเก็บเงิน
+    const tollSysOf = (txt) => {
+        const s = String(txt || '');
+        if (!s) return null;
+        if (TOLLWAY_RE.test(s)) return { system: 'tollway', name: 'ดอนเมือง' };
+        for (let i = 0; i < MOTORWAY_SYS.length; i++) { if (MOTORWAY_SYS[i].re.test(s)) return { system: 'motorway', name: MOTORWAY_SYS[i].name, def: MOTORWAY_SYS[i] }; }
+        for (let i = 0; i < EXPRESSWAY_SYS.length; i++) { if (EXPRESSWAY_SYS[i].re.test(s)) return { system: 'expressway', name: EXPRESSWAY_SYS[i].name, def: EXPRESSWAY_SYS[i] }; }
+        if (/ทางหลวงพิเศษ|มอเตอร์เวย์/.test(s)) return { system: 'motorway', name: '' };
+        if (/ทางพิเศษ|ทางด่วน/.test(s)) return { system: 'expressway', name: '' };
+        return null;
+    };
+
+    // คำนวณค่าทางด่วนจากเส้นทางจริง (TomTom sectionType=TOLL + ชื่อทางในคำแนะนำการขับ)
+    window.calcTollsFromSections = (route, coords) => {
+        const hav = (a, b) => { const R = 6371000, toRad = x => x * Math.PI / 180; const dLat = toRad(b[0] - a[0]), dLon = toRad(b[1] - a[1]); const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLon / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+        const secs = (route.sections || []).filter(s => s.sectionType === 'TOLL');
+        if (!secs.length || !coords || coords.length < 2) return { hasTolls: false, booths: [], total: 0 };
+
+        // ระยะสะสมตามเส้นทาง (เมตร) — ใช้แปลงตำแหน่ง (routeOffsetInMeters) ของคำแนะนำเป็นพิกัด
+        const cum = [0];
+        for (let i = 1; i < coords.length; i++) cum.push(cum[i - 1] + hav(coords[i - 1], coords[i]));
+        const idxAt = (m) => { if (m <= 0) return 0; const last = cum.length - 1; if (m >= cum[last]) return last; let lo = 0, hi = last; while (lo < hi) { const mid = (lo + hi) >> 1; if (cum[mid] < m) lo = mid + 1; else hi = mid; } return lo; };
+        const ins = (route.guidance && route.guidance.instructions) ? route.guidance.instructions : [];
+        const hasMotorwaySection = (route.sections || []).some(s => s.sectionType === 'MOTORWAY');
+
+        // ช่วง TOLL ทั้งหมดของเส้นทาง (แปลง index ของจุด → เมตร ตามระยะจริงบนเส้นทาง)
+        const clampIdx = (n) => Math.min(Math.max(n, 0), cum.length - 1);
+        const ranges = secs.map(sec => [cum[clampIdx(sec.startPointIndex)], cum[clampIdx(sec.endPointIndex)]]).sort((a, b) => a[0] - b[0]);
+        const inRanges = (m) => ranges.some(r => m >= r[0] - 700 && m <= r[1] + 400);
+        const isPlainStreet = (msg) => { const s = String(msg || ''); return /ถนน|ซอย|ถ\.|ทางออก/.test(s) && !tollSysOf(s); };
+
+        // “เหตุการณ์ชื่อทางเก็บเงิน” ที่เจาะจง (Tollway / ชื่อสายทางด่วน / มอเตอร์เวย์) ภายในช่วง TOLL
+        //   - คำกว้าง ๆ อย่าง “ใช้ทางด่วน” ไม่นับเป็นเหตุการณ์ (กันช่วงปลอมโผล่มาเพิ่มราคา)
+        const events = [];
+        ins.forEach((i) => {
+            if (typeof i.routeOffsetInMeters !== 'number' || !inRanges(i.routeOffsetInMeters)) return;
+            const info = tollSysOf(i.message) || tollSysOf(i.street);
+            if (!info) return;
+            if (info.system !== 'tollway' && !info.def) return;
+            events.push({ off: i.routeOffsetInMeters, info: info });
+        });
+        // จัดกลุ่มเหตุการณ์ที่ติดกันเป็นช่วงย่อย (ระบบ + ชื่อเดียวกัน = ช่วงเดียว)
+        const groups = [];
+        events.forEach((e) => {
+            const last = groups[groups.length - 1];
+            if (last && last.system === e.info.system && last.name === e.info.name) { last.lastOff = e.off; return; }
+            groups.push({ system: e.info.system, name: e.info.name, def: e.info.def || null, startM: e.off, lastOff: e.off });
+        });
+        // จุดสิ้นสุดของแต่ละช่วง = ช่วงถัดไป → หรือจุดที่ออกสู่ถนนปกติ (ใช้ทางออก/ชื่อถนน) → หรือปลายช่วง TOLL
+        const lastRangeEnd = ranges.length ? ranges[ranges.length - 1][1] : 0;
+        groups.forEach((g, k) => {
+            let endM = (k + 1 < groups.length) ? groups[k + 1].startM : Infinity;
+            if (!isFinite(endM)) {
+                const plain = ins.find(i => typeof i.routeOffsetInMeters === 'number' && i.routeOffsetInMeters > g.lastOff && inRanges(i.routeOffsetInMeters) && isPlainStreet(i.message));
+                const rangeEnd = ranges.reduce((mx, r) => (g.lastOff >= r[0] - 700 && g.lastOff <= r[1] + 400) ? Math.max(mx, r[1]) : mx, g.lastOff);
+                endM = Math.min(plain ? plain.routeOffsetInMeters : Infinity, Math.max(rangeEnd, g.lastOff + 1));
+            }
+            g.endM = Math.max(g.startM + 1, Math.min(isFinite(endM) ? endM : lastRangeEnd, lastRangeEnd + 400));
+        });
+        if (!groups.length) {
+            const r = ranges[0] || [0, 0];
+            groups.push({ system: hasMotorwaySection ? 'motorway' : 'expressway', name: '', def: null, startM: r[0], endM: r[1] });
+        }
+        const segs = groups;
+
+        // รวมช่วงย่อยที่เป็น “ระบบเดียวกัน” ให้เป็นช่วงเดียว (TomTom สลับชื่อทางไปมา เช่น /9 ↔ /7 → ตอนนี้จะไม่ขึ้นเป็น 4 ช่วงซ้ำ)
+        const merged = [];
+        const segKm = (s) => Math.max(0.1, Math.round((s.endM - s.startM) / 100) / 10);
+        segs.forEach((s) => {
+            const iA = idxAt(s.startM), iB = idxAt(s.endM);
+            if (!coords[iA] || !coords[iB]) return;
+            const last = merged[merged.length - 1];
+            const part = { name: s.name, def: s.def || null, km: segKm(s) };
+            if (last && last.system === s.system) { last.parts.push(part); last.endM = s.endM; last.iA = iA; last.iB = iB; return; }
+            merged.push({ system: s.system, startM: s.startM, endM: s.endM, iA: iA, iB: iB, parts: [part] });
+        });
+
+        // คิดราคา 1 ช่วงที่รวมแล้ว — คิดค่าผ่านทางทีละสายภายในช่วง แล้วบวกกัน
+        const segPrice = (system, part) => {
+            const def = part.def, km = part.km;
+            if (system === 'motorway') {
+                if (def && def.gate) return def.gate * (km > 25 ? 2 : 1);            // มอเตอร์เวย์ 9 = ด่านละ 30 (ธัญบุรี/ทับช้าง)
+                if (def) return Math.min(def.cap, Math.round((def.base + def.perKm * km) / 5) * 5);
+                return Math.min(105, Math.round(km));                                  // M7 ≈ 1฿/กม.
+            }
+            if (def && def.bands) { let p = def.bands[0][1]; def.bands.forEach(b => { if (km >= b[0]) p = b[1]; }); return p; }
+            if (def && def.entry) return def.entry;
+            return 50;
+        };
+
+        const booths = [];
+        let total = 0;
+        merged.forEach((s, k) => {
+            const parts = s.parts;
+            // รวมระยะของ “สายเดียวกัน” ก่อนคิดเงิน (กันเก็บค่าด่านซ้ำเมื่อชื่อทางสลับไปมาในลูป)
+            const lines = [];
+            parts.forEach(p => {
+                const key = p.def || (p.name ? 'n:' + p.name : '?');
+                const found = lines.filter(x => x.key === key)[0];
+                if (found) { found.km = Math.round((found.km + p.km) * 10) / 10; if (!found.name) found.name = p.name; }
+                else lines.push({ key: key, def: p.def, name: p.name, km: p.km });
+            });
+            // ชื่อที่แสดง: สายที่วิ่งยาวสุดก่อน แล้วต่อด้วยสายอื่นในระบบเดียวกัน (ไม่ซ้ำชื่อ)
+            const names = lines.slice().sort((a, b) => b.km - a.km).map(p => p.name).filter(Boolean);
+            const nameList = names.filter((n, i) => names.indexOf(n) === i).join(' + ');
+            const km = Math.max(0.1, Math.round((s.endM - s.startM) / 100) / 10);
+            let price = 0;
+            if (s.system === 'motorway' || s.system === 'expressway') {
+                price = lines.reduce((sum, p) => sum + segPrice(s.system, p), 0);
+            }
+            let from = nameList, to = '';
+            if (s.system === 'tollway') {
+                // Tollway = คิดตาม “ด่านขึ้น + ทิศทาง” จริง (ด่านขึ้น/ด่านลง ระบุได้จากพิกัดบนเส้นทาง)
+                const latA = coords[s.iA][0], latB = coords[s.iB][0];
+                const dir = (latB >= latA) ? 'N' : 'S';
+                const entryLat = latA;
+                price = window.tollwayFare(dir, entryLat);
+                const pick = (lat, dirs) => TOLLWAY_GATES.filter(g => !dirs || g.dirs.indexOf(dir) >= 0).reduce((best, g) => Math.abs(g.lat - lat) < Math.abs(best.lat - lat) ? g : best, TOLLWAY_GATES[0]);
+                const gIn = pick(entryLat, dir), gOut = pick(latB, null);
+                from = 'ด่าน' + gIn.name + (dir === 'N' ? ' (ขาออก)' : ' (ขาเข้า)');
+                to = (gOut.name === gIn.name) ? '' : 'ลงด่าน' + gOut.name;
+            }
+            booths.push({ system: s.system, name: nameList, from: from, to: to, km: km, price: price, price0: price, edited: false, seq: k + 1 });
+            total += price;
+        });
+        if (!booths.length) return { hasTolls: false, booths: [], total: 0 };
+        return { hasTolls: true, booths: booths, total: total };
+    };
+
+    // ป้ายกำกับระบบ (ใช้ทั้งหน้าจอและปุ่ม)
+    window.tollSysLabel = (b) => (b.system === 'tollway' ? 'Tollway' : (b.system === 'motorway' ? 'มอเตอร์เวย์' : 'ทางด่วน'));
+
+    // บรรทัดค่าทางด่วน 1 ช่วง (แตะปุ่มราคา = แก้ยอดได้ ถ้าไม่ตรงกับที่จ่ายจริง)
+    window.tollSegLine = (b, i) => {
+        const route = [b.from, b.to].filter(Boolean).join(' → ');
+        const km = b.km ? ' · ' + b.km.toFixed(1) + ' กม.' : '';
+        return '<div style="display:flex; align-items:center; gap:6px; margin-top:5px;">'
+            + '<span style="flex:1; text-align:left;">🛣️ ' + window.tollSysLabel(b) + (route ? ' · ' + route : '') + km + '</span>'
+            + '<button onclick="window.tollSegEdit(' + i + ')" style="flex-shrink:0; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.28); color:inherit; border-radius:10px; padding:3px 8px; font-size:12px; font-weight:700;">'
+            + b.price + '฿' + (b.edited ? ' ✏️' : '') + '</button></div>';
+    };
+
+    // แก้ยอดค่าทางด่วนของช่วงที่ i (เช่น จ่ายจริงไม่ตรงกับตาราง — รถ 4 ล้อ/Easy Pass)
+    window.__tollEditIdx = -1;
+    window.tollSegEdit = (i) => {
+        const t = window.currentTollInfo;
+        if (!t || !t.booths || !t.booths[i]) return;
+        window.__tollEditIdx = i;
+        const inp = document.getElementById('tollInput');
+        const title = document.getElementById('tollModalTitle');
+        const ok = document.getElementById('tollModalOk');
+        const b = t.booths[i];
+        // ตั้งข้อความเองในนี้ (ไม่เรียก helper ของอีกสโคป) กันสโคปไม่ตรงกัน
+        if (title) title.innerText = 'แก้ค่าทางด่วน: ' + window.tollSysLabel(b) + (b.from ? ' · ' + b.from : '');
+        if (ok) ok.innerText = 'บันทึกยอด';
+        if (inp) { inp.value = String(b.price || ''); }
+        window.toggleModal('tollModal', true);
+        setTimeout(() => { if (inp) inp.focus(); }, 250);
+    };
+
+
 
     window.fetchRouteFromTomTom = async (dLat, dLon, startLat, startLon) => {
         try {
@@ -4178,7 +4390,7 @@
             // โหมดขึ้นด่วน: fastest + ให้ใช้ทางด่วนได้ → ระบบเลือกทางด่วนจริง ๆ
             const avoidParam = window.isTollwayMode ? '' : '&avoid=tollRoads';
             const routeType = 'fastest';
-            const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=${routeType}&routeRepresentation=polyline&language=th-TH&sectionType=toll${avoidParam}`;
+            const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=${routeType}&routeRepresentation=polyline&language=th-TH&sectionType=toll&instructionsType=text${avoidParam}`;
             
             let res = await fetch(url);
             countTomTomCall(); // นับรอบที่ถึงเซิร์ฟเวอร์จริง (สำเร็จหรือโดนจำกัดโควตาก็ใช้สิทธิ์ไปแล้ว)
@@ -6347,14 +6559,34 @@
 
     window.addSurcharge = (amount, name) => { window.surchargeList.push({ name: name, amount: amount, id: Date.now() }); window.updateSurchargeUI(); };
 
-    window.promptToll = () => {
-        const hasDestLocPrompt = destLoc || (typeof window !== 'undefined' && window.destLoc);
-        if (hasDestLocPrompt && typeof window.routeHasToll === 'function' && !window.routeHasToll()) {
-            window.showToast('เส้นทางนี้ไม่มีทางด่วน ไม่ต้องเพิ่มค่าใช้จ่ายทางด่วน', false);
-            return;
+    // สลับโหมดหน้าต่างค่าทางด่วน: add = บวกค่าทางด่วนเข้ากับค่าโดยสาร · edit = แก้ยอดของช่วงที่เลือก
+    const setTollModalMode = (mode, label) => {
+        const title = document.getElementById('tollModalTitle');
+        const ok = document.getElementById('tollModalOk');
+        if (mode === 'edit') {
+            if (title) title.innerText = 'แก้ค่าทางด่วน: ' + (label || '');
+            if (ok) ok.innerText = 'บันทึกยอด';
+        } else {
+            if (title) title.innerText = 'ค่าทางด่วน';
+            if (ok) ok.innerText = 'บวกเข้าค่าโดยสาร';
         }
+    };
+
+    window.promptToll = () => {
+        window.__tollEditIdx = -1;
+        setTollModalMode('add');
         const inp = document.getElementById('tollInput');
-        inp.value = '';
+        const t = window.currentTollInfo;
+        const hasAuto = !!(t && t.hasTolls && t.booths && t.booths.length > 0);
+        if (!hasAuto) {
+            const hasDestLocPrompt = destLoc || (typeof window !== 'undefined' && window.destLoc);
+            if (hasDestLocPrompt && typeof window.routeHasToll === 'function' && !window.routeHasToll()) {
+                window.showToast('เส้นทางนี้ไม่มีทางด่วน ไม่ต้องเพิ่มค่าใช้จ่ายทางด่วน', false);
+                return;
+            }
+        }
+        // มีค่าทางด่วนจากอัตราจริงแล้ว → เตรียมยอดไว้ให้เลย แตะตกลงครั้งเดียวจบ
+        inp.value = hasAuto ? String(t.total) : '';
         window.toggleModal('tollModal', true);
         setTimeout(() => { inp.focus(); }, 250);
     };
@@ -6397,16 +6629,26 @@
     window.kmHoldEnd = () => { window.__kmHoldSilent = false; holdEnd(); };
     
     window.confirmToll = () => {
-        let amt = parseInt(document.getElementById('tollInput').value);
-        if (amt > 0) {
-            try {
-                window.addSurcharge(amt, 'ค่าทางด่วน');
-                try { localStorage.setItem(LAST_TOLL_KEY, String(amt)); } catch(e) {}
-            } finally {
-                window.toggleModal('tollModal', false);
-            }
-        } else {
-            window.showToast('กรุณาระบุจำนวนเงินที่ถูกต้อง', true);
+        let amt = parseInt(document.getElementById('tollInput').value, 10);
+        if (!(amt > 0)) { window.showToast('กรุณาระบุจำนวนเงินที่ถูกต้อง', true); return; }
+        const i = window.__tollEditIdx;
+        const t = window.currentTollInfo;
+        if (i >= 0 && t && t.booths && t.booths[i]) {
+            // โหมดแก้ยอดของช่วงที่เลือก — ใช้ยอดที่จ่ายจริง แล้วคิดยอดรวมใหม่ทันที
+            t.booths[i].price = amt;
+            t.booths[i].edited = true;
+            t.total = t.booths.reduce((sum, b) => sum + (b.price || 0), 0);
+            window.__tollEditIdx = -1;
+            window.toggleModal('tollModal', false);
+            window.updateTollDisplay();
+            window.showToast('✏️ แก้เป็น ' + amt + '฿ — รวม ' + t.total + '฿');
+            return;
+        }
+        try {
+            window.addSurcharge(amt, 'ค่าทางด่วน');
+            try { localStorage.setItem(LAST_TOLL_KEY, String(amt)); } catch (e) {}
+        } finally {
+            window.toggleModal('tollModal', false);
         }
     };
 
@@ -9342,6 +9584,10 @@
         ['2026-09-14', '⬛ เปลี่ยนธีมเป็น \"ดำ OLED\" — ซิงก์ข้ามทุกเครื่องผ่านบัญชี'],
         ['2026-09-14', '📋 ย่อประวัติเวอร์ชันใหม่ทั้งชุด (5–14 ก.ย.): อ่านสั้นจบไว จำนวนหัวข้อและวันเดิมครบ'],
         ['2026-09-14', '🧪 ตัวตรวจก่อนปล่อย: วันหาย · จำนวนหัวข้อต่อวันเปลี่ยน · ข้อความยาวเกิน 90 ตัว'],
+        ['2026-09-14', '🛣️ แยกค่าทางด่วนเป็น 3 ระบบจริง: ทางด่วน กทพ. · Tollway ดอนเมือง · มอเตอร์เวย์'],
+        ['2026-09-14', '💰 คิดราคาตามอัตราจริง: Tollway ตามด่านขึ้น-ลง · ทางด่วนและมอเตอร์เวย์ตามระยะ'],
+        ['2026-09-14', '✏️ แตะราคาแต่ละช่วงบนจอนำทางเพื่อแก้เป็นยอดที่จ่ายจริงได้'],
+        ['2026-09-14', '🐞 แก้ช่วงทางด่วนซ้อนสลับไปมา (/9 ↔ /7) ให้รวมเป็นช่วงเดียว ไม่ขึ้นซ้ำ 4 ช่วง'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {

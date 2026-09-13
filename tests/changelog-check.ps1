@@ -229,10 +229,18 @@ if (-not (Test-Path $baselinePath)) {
   Report 'baseline intact' 'FAIL' "no baseline at $Baseline - create it once with -UpdateBaseline"
 } else {
   $base = Get-Content $baselinePath -Raw | ConvertFrom-Json
-  $lost = @(); $changed = @(); $added = @()
+  $lost = @(); $changed = @(); $added = @(); $grew = @()
   foreach ($b in $base.days) {
     if (-not $days.Contains($b.date)) { $lost += $b.date }
-    elseif ($days[$b.date].Count -ne $b.count) { $changed += "$($b.date): $($b.count) -> $($days[$b.date].Count)" }
+    elseif ($days[$b.date].Count -ne $b.count) {
+      # The CURRENT day (APP_RELEASE_DATE) is allowed to GAIN bullets while work
+      # continues on it; losing bullets is still a failure. Past days never change.
+      if ($b.date -eq $releaseDate -and $days[$b.date].Count -gt $b.count) {
+        $grew += "$($b.date): $($b.count) -> $($days[$b.date].Count)"
+      } else {
+        $changed += "$($b.date): $($b.count) -> $($days[$b.date].Count)"
+      }
+    }
   }
   foreach ($d in $dates) {
     if (-not ($base.days | Where-Object { $_.date -eq $d })) { $added += "$d ($($days[$d].Count) bullets)" }
@@ -246,6 +254,7 @@ if (-not (Test-Path $baselinePath)) {
     Report 'baseline intact' 'FAIL' ($bits -join ' | ')
   } else {
     $note = "$($base.days.Count) baseline days unchanged"
+    if ($grew.Count) { $note += ' | today gained bullets: ' + ($grew -join ', ') + ' (refresh baseline with -UpdateBaseline when the day is done)' }
     if ($added.Count) { $note += ' | new day(s), remember to refresh the baseline: ' + ($added -join ', ') }
     Report 'baseline intact' 'PASS' $note
   }
