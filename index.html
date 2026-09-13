@@ -1981,6 +1981,7 @@
             <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; text-align: left;">📍 ไปที่: <span id="ltDestText" style="color: var(--neon-yellow);"></span></div>
             <div style="display: flex; gap: 5px; flex-shrink: 0;">
                 <button id="btnTollToggleLive" class="small-toll-btn active" style="width: 32px; height: 32px; border-radius: 8px;" onclick="event.stopPropagation(); window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)"><span class="material-symbols-outlined" style="font-size: 16px;">route</span></button>
+                <button id="btnLiveMap" class="small-toll-btn" style="width: 32px; height: 32px; border-radius: 8px; display: none;" onclick="event.stopPropagation(); window.navMiniOpenDocked()" title="สลับไปดูแผนที่นำทางด้านบน"><span class="material-symbols-outlined" style="font-size: 16px;">map</span></button>
             </div>
         </div>
 
@@ -9117,6 +9118,10 @@
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
     const APP_RELEASE_NOTES = [
+        '🧭 แผนที่นำทางขึ้นไปอยู่ “แทน” แถบสรุปเส้นทางเดิมบนสุดแล้ว (ไม่ขึ้นซ้อนกัน 2 อันอีก): พอเริ่มนำทาง กรอบแผนที่จะขยายเต็มความกว่าง แทนที่แถบเดิม (ไป: จุดหมาย · เริ่ม · รูปแท็กซี่ · เส้นคืบหน้า) ทั้งก้อนเลย',
+        '🔁 สลับได้ 2 ทาง: กด ✕ ที่กรอบแผนที่ = ปิดแผนที่ แล้วแถบสรุปเส้นทางเดิมกลับมาแสดงเป็นปกติ (บนแถบเดิมมีปุ่ม 🗺️ ให้กดสลับกลับไปดูแผนที่ได้ทุกเมื่อ) · ที่หัวแผนที่ยังมีปุ่มสลับ “ปักไว้บนสุด ⇱ ↔ แผนที่ลอย ⧉” พร้อมจำค่าไว้ให้ครั้งหน้า',
+        '⬆️ แถบแจ้งจุดเลี้ยว (อีกกี่เมตร · เลี้ยวซ้าย/ขวา) ย้ายขึ้นไปอยู่บนสุดของกรอบแผนที่แล้ว — ขับอยู่เหลือบมองแวบเดียวก็เห็นโดยไม่ต้องกวาดตาลงต่ำ',
+        '📐 จอมิเตอร์ใหญ่ (เต็มจอ): ถ้าเปิดจอใหญ่ทับอยู่ แผนที่จะลอยขึ้นมาให้เห็นเหมือนเดิม ไม่ถูกจอบัง • ปุ่ม ⤢ ยังใช้ขยาย/ย่อความสูงแผนที่ได้ทั้งสองโหมด',
         '🔔 เตือนล่วงหน้าก่อนถึงจุดเลี้ยว: มีเสียง + สั่นเตือน 2 จังหวะ — ไกล ~300 ม. (2 เสียงนุ่ม ๆ) และใกล้ ~80 ม. (3 เสียงถี่กว่า) ให้คนขับเตรียมตัวโดยไม่ต้องละสายตาจ้องแผนที่ · เตือนระดับละ “ครั้งเดียวต่อจุดเลี้ยว” — จอดติดไฟแดงตรงจุดเลี้ยวก็ไม่ดังซ้ำรบกวน',
         '🔇 เคารพสวิตช์ในหน้าโปรไฟล์: ปิดเสียงแจ้งเตือนแล้วเงียบ · ปิดการสั่นแล้วไม่สั่น · และถ้าซ่อน Mini Map อยู่ จะไม่เตือนเลย (เปิดแผนที่กลับมาถึงเริ่มเตือนตามปกติ)',
         '🧭 บอกจุดเลี้ยวถัดไปใน Mini Map: ไอคอนลูกศรบอกทิศ (เลี้ยวซ้าย/ขวา · หัก · ชิด · กลับรถ) พร้อมระยะถึงจุดเลี้ยว (เช่น "อีก 320 ม.") และมาร์กจุดเลี้ยวถัดไปเป็นจุดสีน้าเงินบนเส้นทางให้เห็นล่วงหน้า — เมื่อผ่านจุดเลี้ยวทั้งหมดแล้ว จะเปลี่ยนเป็น "ตรงไปจนถึงจุดหมาย" พร้อมระยะที่เหลือ',
@@ -10971,19 +10976,35 @@
     #navMini .nm-turn-col { display: flex; flex-direction: column; min-width: 0; }
     #navMini .nm-turn-col > b { font-size: 12px; font-weight: 700; color: var(--text-main, #e5e7eb); line-height: 1.25; }
     #navMini .nm-turn-col > i { font-style: normal; font-size: 10px; color: var(--text-dim, #8b93a5); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* ---------- โหมดปักไว้บนสุด: แผนที่ขึ้นไปอยู่แทนแถบสรุปเส้นทางเดิม ---------- */
+    #navMini.docked { position: static; left: auto; right: auto; top: auto; width: 100%; height: auto;
+        margin-top: var(--space-section); border-radius: 22px; opacity: 1; transform: none; pointer-events: auto;
+        box-shadow: none; touch-action: pan-y; }
+    #navMini.docked .nm-head { cursor: default; padding: 8px 10px; }
+    #navMini.docked .nm-btn { width: 28px; height: 28px; font-size: 14px; }
+    #navMini.docked .nm-title { font-size: 12.5px; }
+    #navMini.docked .nm-wrap { height: 200px; }
+    #navMini.docked.big .nm-wrap { height: 285px; } /* ปุ่ม ⤢ ยังใช้ขยาย/ย่อได้ในโหมดปักบนสุด */
+    #navMini.docked .nm-turn { padding: 8px 11px 2px; }
+    #navMini.docked .nm-turn-ico { font-size: 26px; }
+    #navMini.docked .nm-turn-col > b { font-size: 15px; }
+    #navMini.docked .nm-turn-col > i { font-size: 11.5px; }
+    #navMini.docked .nm-foot { padding: 6px 11px 10px; }
+    #navMini.docked .nm-remain { font-size: 11px; }
+    /* ซ่อนแถบสรุปเส้นทางเดิม (ด้วยคลาส ไม่แตะค่า display ที่แอปตั้งไว้ → กลับมาแสดงถูกเสมอ) */
+    #liveTracker.nm-docked-away { display: none !important; }
+    /* เปิดจอมิเตอร์ใหญ่ (overlay) ทับอยู่ → แผนที่ปักบนสุดจะถูกบัง → ลอยขึ้นมาให้เห็นเหมือนเดิม */
+    #navMini.docked.ovfloat { position: fixed; left: auto; right: 12px; top: 118px; width: 236px;
+        margin-top: 0; z-index: 99995; box-shadow: 0 12px 30px rgba(0,0,0,.55); }
 </style>
 
 <div id="navMini" aria-label="แผนที่นำทางขนาดย่อ">
     <div class="nm-head" id="navMiniHead">
         <span class="nm-title" id="navMiniTitle">📍 กำลังนำทาง</span>
+        <button class="nm-btn" id="navMiniDock" title="ปักไว้บนสุด" aria-label="สลับโหมดปักบนสุด/ลอย">⇱</button>
         <button class="nm-btn" id="navMiniFollow" title="กลับไปที่รถ" aria-label="กลับไปที่รถ">◎</button>
         <button class="nm-btn" id="navMiniSize" title="ย่อ/ขยายแผนที่" aria-label="ย่อ/ขยาย">⤢</button>
         <button class="nm-btn" id="navMiniHide" title="ซ่อนแผนที่" aria-label="ซ่อน">✕</button>
-    </div>
-    <div class="nm-wrap">
-        <canvas id="navMiniCanvas"></canvas>
-        <div class="nm-attr">© OpenStreetMap</div>
-        <div class="nm-off">ไม่มีการเชื่อมต่อ — แสดงเส้นทางและตำแหน่งรถให้อยู่</div>
     </div>
     <div class="nm-turn" id="navMiniTurnRow" style="display: none;">
         <span class="material-symbols-outlined nm-turn-ico" id="navMiniTurnIco">straight</span>
@@ -10991,6 +11012,11 @@
             <b id="navMiniTurnDist">—</b>
             <i id="navMiniTurnDir">กำลังหาเส้นทาง…</i>
         </span>
+    </div>
+    <div class="nm-wrap">
+        <canvas id="navMiniCanvas"></canvas>
+        <div class="nm-attr">© OpenStreetMap</div>
+        <div class="nm-off">ไม่มีการเชื่อมต่อ — แสดงเส้นทางและตำแหน่งรถให้อยู่</div>
     </div>
     <div class="nm-foot">
         <span class="nm-remain" id="navMiniRemain">เหลือ —</span>
@@ -11022,14 +11048,43 @@
     var turnIco = document.getElementById('navMiniTurnIco');
     var turnDist = document.getElementById('navMiniTurnDist');
     var turnDir = document.getElementById('navMiniTurnDir');
+    var dockBtn = document.getElementById('navMiniDock');
+    var liveTracker = document.getElementById('liveTracker'); // แถบสรุปเส้นทางเดิม (โหมดเก่า)
+    var dockParent = liveTracker ? liveTracker.parentNode : null;
+    var btnLiveMap = document.getElementById('btnLiveMap');   // ปุ่มบนแถบเดิม ไว้สลับกลับมาดูแผนที่
 
     // ---------- ค่าที่ผู้ใช้ตั้งไว้ ----------
-    var pref = { x: null, y: null, big: false, hidden: false };
+    var pref = { x: null, y: null, big: false, hidden: false, dock: true };
     try {
         var raw = localStorage.getItem(LS_KEY);
         if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') { for (var k in pref) { if (k in o) pref[k] = o[k]; } } }
     } catch (e) {}
     var savePref = function () { try { localStorage.setItem(LS_KEY, JSON.stringify(pref)); } catch (e) {} };
+
+    // ---------- สลับโหมด: “ปักบนสุด” (แทนแถบเดิม) ↔ “แผนที่ลอย” ----------
+    //    ทั้งสองแบบไม่ขึ้นพร้อมกัน — แผนที่อยู่ = ซ่อนแถบเดิม · ซ่อนแผนที่ = แถบเดิมกลับมา
+    function isDocked() { return !!pref.dock && visible; }
+    function showMapSwitchBtn() {
+        if (!btnLiveMap) { return; }
+        var can = !visible && !!(window.navMiniRouteSaved && window.navMiniRouteSaved.length > 1);
+        btnLiveMap.style.display = can ? 'inline-flex' : 'none';
+    }
+    function applyDock() {
+        var d = isDocked();
+        if (dockParent && liveTracker) {
+            if (d && el.parentNode !== dockParent) { dockParent.insertBefore(el, liveTracker); }
+            else if (!d && el.parentNode !== document.body) { document.body.appendChild(el); }
+        }
+        el.classList.toggle('docked', d);
+        if (!d) { el.classList.remove('ovfloat'); }
+        // ซ่อน/คืนแถบเดิมด้วยคลาส (ไม่แตะ style.display ที่แอปเป็นคนตั้ง → กลับมาแสดงถูกสถานะเสมอ)
+        if (liveTracker) { liveTracker.classList.toggle('nm-docked-away', d); }
+        if (dockBtn) {
+            dockBtn.textContent = d ? '⧉' : '⇱';
+            dockBtn.title = d ? 'ย่อเป็นแผนที่ลอย' : 'ปักไว้บนสุด';
+        }
+        showMapSwitchBtn();
+    }
 
     // ---------- สถานะแผนที่ ----------
     var route = [];
@@ -11357,6 +11412,7 @@
 
     // ---------- แสดง/ซ่อน/วางตำแหน่ง ----------
     function place() {
+        if (el.classList.contains('docked')) { return; } // ปักบนสุด = อยู่ในเนื้อหา ไม่ต้องจัดตำแหน่งลอย
         var w = el.offsetWidth || 168, h = el.offsetHeight || 240;
         var x = (pref.x === null) ? (window.innerWidth - w - 12) : pref.x;
         var y = (pref.y === null) ? 118 : pref.y;
@@ -11365,8 +11421,8 @@
         el.style.right = 'auto';
     }
     el.classList.toggle('big', !!pref.big);
-    function show() { if (pref.hidden) { return; } el.classList.add('show'); visible = true; place(); request(); chrome(); }
-    function hideNow() { visible = false; el.classList.remove('show'); }
+    function show() { if (pref.hidden) { return; } visible = true; applyDock(); el.classList.add('show'); place(); request(); chrome(); }
+    function hideNow() { visible = false; el.classList.remove('show'); applyDock(); }
 
     // ---------- API ----------
     window.navMiniSetRoute = function (coords, label) {
@@ -11385,6 +11441,7 @@
         buildTurns();
         resetTurnAlerts();
         follow = true; panCenter = null; btnFollow.classList.add('on');
+        showMapSwitchBtn();
         request(); chrome();
     };
     window.navMiniUpdate = function (lat, lon, kmh) {
@@ -11433,11 +11490,19 @@
         if (remember) { pref.hidden = true; savePref(); }
         hideNow();
     };
+    // สลับกลับมาดูแผนที่ (เรียกจากปุ่มบนแถบสรุปเส้นทางเดิม)
+    window.navMiniOpenDocked = function () {
+        pref.hidden = false; pref.dock = true; savePref(); show();
+    };
     window.navMiniIsVisible = function () { return visible; };
     // ตัวช่วยตรวจสอบสถานะ Mini Map (ใช้ตอนทดสอบ/แก้ปัญหา)
     window.navMiniDebug = function () {
         return {
             visible: visible, follow: follow, hidden: !!pref.hidden, big: !!pref.big,
+            docked: el.classList.contains('docked'), dockPref: !!pref.dock, inFlow: el.parentNode !== document.body,
+            ovFloat: el.classList.contains('ovfloat'),
+            trackerHiddenByMap: !!(liveTracker && liveTracker.classList.contains('nm-docked-away')),
+            switchBtnShown: !!(btnLiveMap && btnLiveMap.style.display !== 'none'),
             hasRoute: route.length, routeKm: Math.round(routeKm * 1000) / 1000,
             car: car ? { lat: car.lat, lng: car.lng } : null,
             bearing: Math.round(bearing), speedKmh: speedKmh,
@@ -11453,7 +11518,9 @@
         try {
             // ไม่มีเส้นทางและไม่มีพิกัดต้น-ปลาย (เช่น เริ่มมิเตอร์ธรรมดา) → ไม่ต้องเปิดแผนที่ว่าง
             var hasLine = (coords && coords.length > 1) || (sLat && sLon && dLat && dLon);
-            if (!hasLine) { hideNow(); return; }
+            // ไม่มีเส้นทาง (เช่น เริ่มมิเตอร์ธรรมดา) → ซ่อนแผนที่ และล้างเส้นเดิมทิ้ง
+            //   ไม่งั้นปุ่ม "ดูแผนที่" บนแถบเดิมจะค้างอยู่ ทั้งที่เที่ยวใหม่ไม่มีเส้นทางให้โชว์
+            if (!hasLine) { window.navMiniRouteSaved = null; hideNow(); return; }
             pref.hidden = false; savePref();
             destLabel = destName ? String(destName).slice(0, 40) : '';
             if (coords && coords.length > 1) { window.navMiniSetRoute(coords, destLabel); }
@@ -11468,6 +11535,7 @@
     var drag = null;
     head.addEventListener('pointerdown', function (e) {
         if (e.target && e.target.closest && e.target.closest('.nm-btn')) { return; }
+        if (el.classList.contains('docked')) { return; } // ปักบนสุด = ห้ามลาก (กันเผลอลากหลุดตอนปัดหน้าจอ)
         var r = el.getBoundingClientRect();
         drag = { id: e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top };
         head.classList.add('grabbing');
@@ -11547,6 +11615,12 @@
         place(); request();
     });
     btnHide.addEventListener('click', function (e) { e.stopPropagation(); window.navMiniHide(true); });
+    if (dockBtn) {
+        dockBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            pref.dock = !pref.dock; savePref(); applyDock(); place(); request();
+        });
+    }
     btnFollow.classList.add('on');
 
     // ---------- ซ่อนชั่วคราวเมื่อมีหน้าต่างอื่นเปิดทับ (ยกเว้นจอมิเตอร์ใหญ่) ----------
@@ -11558,9 +11632,13 @@
         }
         return false;
     }
+    // จอมิเตอร์ใหญ่ (trackerZoomOverlay) เปิดอยู่ไหม — แผนที่ปักอยู่ต้องลอยขึ้นมาให้เห็น
+    var zoomOv = document.getElementById('trackerZoomOverlay');
+    function bigMeterOpen() { return !!(zoomOv && zoomOv.style.display && zoomOv.style.display !== 'none'); }
     setInterval(function () {
         if (!visible) { return; }
         el.classList.toggle('blocked', blocked());
+        if (el.classList.contains('docked')) { el.classList.toggle('ovfloat', bigMeterOpen()); }
         chrome(); request();
     }, 1500);
     window.addEventListener('resize', function () { if (visible) { place(); request(); } });
