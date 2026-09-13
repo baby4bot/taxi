@@ -312,18 +312,18 @@ Taxi-Meter Backup       ← สำรองรุ่นเก่า (อ้า�
 
 ## 💾 การสำรองไฟล์อัตโนมัติ (`index - NNN`)
 
-ทุกครั้งที่ `index.html` ถูกแก้ ระบบจะ**คัดลอกเก็บเป็นไฟล์ถาวรในโฟลเดอร์แท็กซี่**
+ทุกครั้งที่ `index.html` ถูกแก้ **แล้ว commit/push** ระบบจะ**คัดลอกเก็บเป็นไฟล์ถาวรในโฟลเดอร์แท็กซี่**
 ชื่อ `index - NNN <คำอธิบายว่าแก้อะไร>.html` — เลขรันไม่ซ้ำและไม่ย้อนหลัง
 
 | เรื่อง | รายละเอียด |
 |---|---|
-| ทำงานเมื่อไหร่ | **อัตโนมัติทุก 10 นาที + ทุกครั้งที่เปิดเครื่อง** (งานของ Windows ชื่อ `Taxi-AutoBackup-index` — ตรวจว่ามีการแก้ไหม ถ้าแก้จะเก็บให้เอง) |
-| อีกจังหวะหนึ่ง | **หลัง `git commit`** ที่มีการแก้ `index.html` (ผ่าน `taxi-repo/.git/hooks/post-commit`) |
+| ทำงานเมื่อไหร่ | **หลัง `git commit` ที่แตะ `index.html`** เท่านั้น (ผ่าน `taxi-repo/.git/hooks/post-commit`) — จังหวะเดียว |
+| ไม่มีงานพื้นหลัง | ❌ **ไม่มีงานตั้งเวลาแล้ว** — เดิมมีงาน Windows `Taxi-AutoBackup-index` ตรวจทุก 10 นาที ปิดเมื่อ **2026-09-14** เพราะทำให้มีหน้าต่างแว๊บขึ้นเป็นระยะ และเกิดไฟล์สำรองทั้งที่ไม่ได้แก้/push อะไร |
 | อยากสำรองเองเดี๋ยวนี้ | ดับเบิลคลิก `BACKUP-index.bat` หรือ `BACKUP-index.bat -Note "แก้อะไร"` |
 | คำอธิบายมาจากไหน | หัวข้อ commit ล่าสุด · เวลาที่ไฟล์ถูกแก้ · หรือข้อความที่ใส่ใน `-Note` |
 | กันไฟล์ขยะ | เนื้อหาเหมือนไฟล์สำรองล่าสุดเป๊ะ → ข้าม · ไฟล์ยังเซฟไม่จบ (ไม่มี `</html>`) → ข้าม |
 | ประวัติทั้งหมด | [`.freebuff/backup-index-log.md`](.freebuff/backup-index-log.md) — ตาราง วันที่ · เลข · คำอธิบาย · md5 · ขนาด |
-| ระบบกำลังทำงานไหม | [`.freebuff/autobackup-status.txt`](.freebuff/autobackup-status.txt) — ผลครั้งล่าสุดพร้อมเวลา (อัปเดตทุก 10 นาที) |
+| ระบบกำลังทำงานไหม | ดู [`.freebuff/backup-index-log.md`](.freebuff/backup-index-log.md) — ตารางรุ่นทั้งหมด (ไม่มีงานพื้นหลังที่ต้องเฝ้าแล้ว) |
 
 ### 🗜️ จำกัดพื้นที่อัตโนมัติ (`backups-archive.zip`)
 
@@ -335,11 +335,13 @@ Taxi-Meter Backup       ← สำรองรุ่นเก่า (อ้า�
 - รุ่นล่าสุด 30 อัน → หาไฟล์ `index - NNN ...` แล้วคัดลอกเนื้อหามาแทน `index.html`
 - รุ่นเก่ากว่านั้น → คลิกขวา `backups-archive.zip` → **Extract All** → ได้ไฟล์ชื่อเดิมครบทุกรุ่น
 
-**ปิด/เปิดระบบอัตโนมัติ**
+**เครื่องใหม่ / โคลนใหม่ (ไม่มี hook ติดมาด้วย)**
 ```powershell
-schtasks /delete /tn Taxi-AutoBackup-index /f                                                     # ปิด
-powershell -NoProfile -ExecutionPolicy Bypass -File .freebuff\backup-index.ps1 -InstallTask       # เปิด (ต้องรันแบบผู้ดูแลระบบ)
+powershell -NoProfile -ExecutionPolicy Bypass -File .freebuff\backup-index.ps1 -InstallHook     # ติดตั้ง hook สำรองหลัง commit/push (ไม่ต้องเป็นผู้ดูแลระบบ)
+powershell -NoProfile -ExecutionPolicy Bypass -File .freebuff\backup-index.ps1 -RemoveTask     # ถอนงานตั้งเวลาเก่า (ถ้ามีค้าง) — ต้องรันแบบผู้ดูแลระบบ
 ```
+
+> 🔁 กติกา: แก้ `index.html` → `cp index.html taxi-repo/` → `git commit` (hook สร้าง `index - NNN` ให้เอง) → `git push`
 
 > ⚠️ อย่าลบ/เปลี่ยนชื่อ/สลับเลขไฟล์สำรอง และอย่าลบ `backups-archive.zip` — รวมกันแล้วคือประวัติย้อนหลังทั้งหมดของแอป
 
