@@ -1980,6 +1980,7 @@
         <div id="liveTrackerDestName" style="font-size: 15px; font-weight: 500; color: white; margin-bottom: 10px; display: none; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); align-items: center; justify-content: space-between; gap: 10px;">
             <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; text-align: left;">📍 ไปที่: <span id="ltDestText" style="color: var(--neon-yellow);"></span></div>
             <div style="display: flex; gap: 5px; flex-shrink: 0;">
+                <button id="btnLiveMap" class="small-toll-btn is-hidden" style="width: 32px; height: 32px; border-radius: 8px;" onclick="event.stopPropagation(); window.navMiniReopen()" title="เปิดแผนที่นำทางกลับมา" aria-label="เปิดแผนที่นำทาง"><span class="material-symbols-outlined" style="font-size: 16px;">map</span></button>
                 <button id="btnTollToggleLive" class="small-toll-btn active" style="width: 32px; height: 32px; border-radius: 8px;" onclick="event.stopPropagation(); window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)"><span class="material-symbols-outlined" style="font-size: 16px;">route</span></button>
             </div>
         </div>
@@ -2711,6 +2712,7 @@
         
         <div id="tzDestNameBox" style="color: white; font-size: 18px; font-weight: 500; background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 15px; margin-bottom: var(--space-zoom); display: none; border: 1px solid rgba(255,255,255,0.05); align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
             <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">📍 ไปที่: <span id="tzDestText" style="color: var(--neon-yellow);"></span></div>
+            <button id="btnLiveMapZoom" class="small-toll-btn is-hidden" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;" onclick="event.stopPropagation(); window.navMiniReopen()" title="เปิดแผนที่นำทางกลับมา" aria-label="เปิดแผนที่นำทาง"><span class="material-symbols-outlined" style="font-size: 18px;">map</span></button>
             <button id="btnTollToggleZoom" class="small-toll-btn toll-pop-in active" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;" onclick="event.stopPropagation(); window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)"><span class="material-symbols-outlined" style="font-size: 18px;">route</span></button>
         </div>
         
@@ -9175,6 +9177,7 @@
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
     const APP_RELEASE_NOTES = [
+        '🗺️ กด ✕ ปิดแผนที่นำทางแล้วเปิดกลับไม่ได้ — เพิ่มปุ่ม 🗺️ "เปิดแผนที่นำทาง" ในแถบ "ไปที่: จุดหมาย" ทั้งจอมิเตอร์ปกติและจอมิเตอร์ใหญ่ กดแล้วแผนที่กลับมาแสดงเส้นทางกับตำแหน่งรถต่อทันที (ปุ่มจะโชว์เฉพาะตอนที่ซ่อนแผนที่อยู่ และหายเองเมื่อจบเที่ยว)',
         '🔀 สลับเลี่ยง/ขึ้นทางด่วนแล้วบอกผลต่างทันที: “สั้นลง 3.1 กม. · เร็วขึ้น 14 น. · ค่าทางด่วน +100฿” — รู้เลยว่าเปลี่ยนเส้นแล้วได้อะไร เสียอะไร ไม่ต้องเดาจากตัวเลขที่เปลี่ยนวูบ (ใช้ได้ทั้งหน้าสรุปและตอนนำทาง)',
         '🛣️ แก้ “ขึ้นทางด่วนไม่ลิงก์กัน” ระหว่างหน้าสรุปกับตอนนำทาง: เดิมหน้าสรุปบอกมีทางด่วน (เช่น 130฿) แต่พอกดสลับเป็นขึ้นทางด่วนในจอนำทางกลับขึ้นว่า “เส้นทางนี้ไม่มีทางด่วน ใช้ถนนปกติ” — ตอนนี้สลับได้จริง ระบบจะขอเส้นทางขึ้นด่วนใหม่ให้ทันที',
         '🔎 สาเหตุคือ ค่าทางด่วนที่ได้ตอนโหมด “เลี่ยงทางด่วน” ถูกระบบตั้งเป็น “ไม่มีทางด่วน” ไว้เอง (เพราะสั่งหลบทางด่วนไปแล้ว) แล้วกลับถูกนำมาตัดสินว่าสลับเป็นขึ้นทางด่วนไม่ได้ — ตอนนี้ติดธงว่าเป็นค่าที่ยังไม่รู้จริง และจะตัดสินก็เฉพาะข้อมูลจากเส้นทางโหมดขึ้นทางด่วนเท่านั้น (สรุปกับจอนำทางจึงตรงกัน)',
@@ -11428,8 +11431,29 @@
         el.style.right = 'auto';
     }
     el.classList.toggle('big', !!pref.big);
-    function show() { if (pref.hidden) { return; } el.classList.add('show'); visible = true; place(); request(); chrome(); }
-    function hideNow() { visible = false; el.classList.remove('show'); }
+    function show() { if (pref.hidden) { return; } el.classList.add('show'); visible = true; place(); request(); chrome(); syncReopenBtns(); }
+    function hideNow() { visible = false; el.classList.remove('show'); syncReopenBtns(); }
+
+    // ---------- ปุ่ม "เปิดแผนที่กลับมา" (โผล่เมื่อผู้ใช้กด ✕ ซ่อนแผนที่เองระหว่างเที่ยว) ----------
+    //   ทำไมต้องมี: เดิมกด ✕ แล้วแผนที่หายถาวรจนกว่าจะเริ่มเที่ยวใหม่ → ตอนนี้มีปุ่มเปิดคืนในแถบสรุปเส้นทาง
+    var canReopen = false;
+    function syncReopenBtns() {
+        var on = !!(canReopen && !visible && (route.length > 1 || car || destLabel));
+        var ids = ['btnLiveMap', 'btnLiveMapZoom'];
+        for (var i = 0; i < ids.length; i++) {
+            var b = document.getElementById(ids[i]);
+            if (b) { b.classList.toggle('is-hidden', !on); }
+        }
+    }
+    window.navMiniReopen = function () {
+        try {
+            canReopen = false;
+            pref.hidden = false; savePref();
+            show();          // แผนที่กลับมาแสดงเส้นทาง/ตำแหน่งรถที่ค้างอยู่ทันที
+            request(); chrome(); syncReopenBtns();
+        } catch (e) {}
+    };
+    window.navMiniCanReopen = function () { return canReopen; }; // ไว้ตรวจตอนทดสอบ
 
     // ---------- API ----------
     window.navMiniSetRoute = function (coords, label) {
@@ -11448,7 +11472,8 @@
         buildTurns();
         resetTurnAlerts();
         follow = true; panCenter = null; btnFollow.classList.add('on');
-        request(); chrome();
+        if (pref.hidden) { canReopen = true; } // ซ่อนอยู่แต่มีเส้นทางแล้ว → ให้มีปุ่มเปิดคืน
+        request(); chrome(); syncReopenBtns();
     };
     window.navMiniUpdate = function (lat, lon, kmh) {
         if (typeof lat !== 'number' || typeof lon !== 'number' || !isFinite(lat) || !isFinite(lon)) { return; }
@@ -11463,6 +11488,7 @@
                 bearing = (bearing + diff * 0.5 + 360) % 360;
             }
         }
+        syncReopenBtns(); // ตรวจทุกครั้งที่ได้พิกัด (เผื่อแถบสรุปเส้นทางเพิ่งโชว์ขึ้นมาทีหลัง)
         if (!visible || pref.hidden) { return; }
         chrome(); request();
     };
@@ -11493,7 +11519,14 @@
         } catch (e) {}
     };
     window.navMiniHide = function (remember) {
+        canReopen = false; // ปิดโดยระบบ (เช่น จบเที่ยว) — ไม่ต้องมีปุ่มเปิดคืน
         if (remember) { pref.hidden = true; savePref(); }
+        hideNow();
+    };
+    // ผู้ใช้กด ✕ เอง → จำไว้เพื่อโชว์ปุ่มเปิดคืนในแถบสรุปเส้นทาง
+    window.navMiniHideByUser = function () {
+        canReopen = true;
+        pref.hidden = true; savePref();
         hideNow();
     };
     window.navMiniIsVisible = function () { return visible; };
@@ -11609,7 +11642,7 @@
         pref.big = !pref.big; el.classList.toggle('big', pref.big); savePref();
         place(); request();
     });
-    btnHide.addEventListener('click', function (e) { e.stopPropagation(); window.navMiniHide(true); });
+    btnHide.addEventListener('click', function (e) { e.stopPropagation(); window.navMiniHideByUser(); });
     btnFollow.classList.add('on');
 
     // ---------- ซ่อนชั่วคราวเมื่อมีหน้าต่างอื่นเปิดทับ (ยกเว้นจอมิเตอร์ใหญ่) ----------
