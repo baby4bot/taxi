@@ -3671,22 +3671,33 @@
         return straight * factor;
     };
     // ⏱️ ประมาณเวลารถติดช่วงแอปปิด/ซ่อน (มิเตอร์จริงคิดเวลาช้า/ติดต่อเนื่อง ไม่ใช่แค่ระยะทาง)
-    // - มีเวลา "วิ่งโล่ง" ของช่วงปิด (gapNoTrafficSec จาก TomTom noTrafficTravelTimeInSeconds) → เวลาที่เกินจากโล่ง = เวลาที่ติด/จอด
-    // - ไม่มีเส้นทาง (ออฟไลน์/โควตาหมด) → ประมาณจากความเร็วเฉลี่ย: เฉลี่ย ≥ 30 กม./ชม. = วิ่งปกติ (ไม่ติด),
-    //   เฉลี่ย 6-30 = มีช่วงติดตามสัดส่วน (ยิ่งช้ายิ่งติดมาก) — กรณีเฉลี่ย ≤ 6 ถูกจับเป็น "จอดนิ่งทั้งช่วง" แล้วในสาขาเบิกเต็ม
+    //    หลักการเดียวกับมิเตอร์จริง: "เวลารถติด = เวลาทั้งช่วง − เวลาที่ใช้วิ่งถ้าถนนโล่ง"
+    // - มีเวลา "วิ่งโล่ง" ของช่วงปิดจริง (gapNoTrafficSec จาก TomTom noTrafficTravelTimeInSeconds) → ใช้เป็นหลัก (แม่นสุด)
+    // - ไม่มีเส้นทาง (ออฟไลน์/โควตาหมด/เที่ยวไม่มีปลายทาง) → ใช้ "เวลาวิ่งโล่งอ้างอิง" จากระยะที่วิ่งได้
+    //   ด้วย GAP_CATCHUP_FREEFLOW_KMH (ค่าที่เทียบกับมิเตอร์จริงในรถแล้ว): ระยะ 126.2 กม. ใช้เวลารวม 3:35
+    //   แต่มิเตอร์คิดเวลารถติด 1:47:35 → เวลาที่ล้อหมุนจริง ~1:48 = วิ่งเฉลี่ย ~70 กม./ชม. → ใช้ 65 กม./ชม. (เผื่อรถช้าช่วงเข้า/ออกเมือง)
+    // ⚠️ ห้ามกลับไปใช้สูตรเดิม "เฉลี่ย ≥ 30 กม./ชม. = ไม่ติด → คืน 0" — เป็นเหตุให้เวลารถติดช่วงปิดแอปหายทั้งช่วง
+    //    (เคสจริง 13 ก.ย. 69: ไป-กลับอยุธยา 3:35 แอป 0:26 / มิเตอร์จริง 1:47:35 → ค่าโดยสาร 1151 แทนที่จะเป็น 1481)
+    const GAP_CATCHUP_FREEFLOW_KMH = 65;
+    // ช่วงปิดที่รถวิ่งเร็วกว่าอ้างอิง (ทางด่วนโล่ง) ก็ยังมีไฟแดง/ชะลอ/ด่าน อยู่บ้าง → อย่างต่ำ 3% ของช่วง (เฉพาะช่วง ≥ 2 นาที)
+    const GAP_MIN_TRAFFIC_FRAC = 0.03;
     const estimateGapTrafficSec = (gapSec, gapKm, gapNoTrafficSec) => {
-        if (!(gapSec > 0) || !(gapKm > 0)) return 0;
+        if (!(gapSec > 0)) return 0;
+        const floorSec = (gapSec >= 120) ? Math.round(gapSec * GAP_MIN_TRAFFIC_FRAC) : 0;
+        if (!(gapKm > 0)) return floorSec; // รู้แค่เวลาที่ผ่านไป ไม่รู้ระยะ → ใช้ค่าขั้นต่ำ (better than 0)
         if (typeof gapNoTrafficSec === 'number' && gapNoTrafficSec > 0) {
             return Math.max(0, Math.min(gapSec - gapNoTrafficSec, gapSec));
         }
-        const avgKmh = gapKm / (gapSec / 3600);
-        if (avgKmh >= 30) return 0;
-        const trafficFrac = Math.max(0, Math.min(1, (30 - avgKmh) / 24)); // เฉลี่ย 30 → 0% · เฉลี่ย 6 → 100%
-        return Math.round(gapSec * trafficFrac);
+        const freeFlowSec = gapKm / GAP_CATCHUP_FREEFLOW_KMH * 3600;
+        const excess = gapSec - freeFlowSec;
+        if (excess > floorSec) return Math.round(Math.min(excess, gapSec));
+        return floorSec;
     };
     // 📏 tryNoDestRouteKm: เที่ยวไม่มีปลายทาง — เบิกคืนระยะช่วงแอปปิด/ซ่อนด้วยเส้นทางถนนจริง
     // (TomTom route จากจุดก่อนปิด → จุดปัจจุบัน) แทนเส้นตรง×factor ที่ตัดมุมถนน (ระยะจริง > เส้นตรงเสมอ)
-    // ใช้เฉพาะ: ขยับจริง ≥ 0.15 กม. (เส้นตรง) + เว้นอย่างน้อย 4 นาที/ครั้ง กันเผาโควตา 2,500 ครั้ง/วัน
+    // ⭐สำคัญต่อ "เวลารถติด" ด้วย: route คืน noTrafficSec (เวลาวิ่งโล่งของช่วงปิด) → คิดเวลารถติดได้ตรงกว่าการเดาจากความเร็วเฉลี่ย
+    // ใช้เฉพาะ: ขยับจริง ≥ 0.15 กม. (เส้นตรง) + เว้นอย่างน้อย 45 วิ/ครั้ง (เดิม 4 นาที → ช่วงปิดสั้น ๆ ไม่เคยได้ noTrafficSec เลย
+    // เวลารถติดช่วงนั้นจึงถูกประเมินจากความเร็วเฉลี่ยแทน) — โควตา TomTom 2,500 ครั้ง/วัน ยังพอ เหลือเฟือ (เบิกคืนเกิดไม่กี่สิบครั้ง/วัน)
     // กันหลุด: เชื่อ route ก็ต่อเมื่อ ≥ เส้นตรง×1.05 และไม่เกินเส้นตรง×2.5 (กัน snap ผิดถนน/อ้อมแม่น้ำ)
     // คืน null → ให้หลุดไปใช้วิธีเส้นตรง×factor เดิม (ออฟไลน์/โควตาหมด/ระยะสั้นเกินไม่คุ้ม)
     let lastNoDestRouteAt = 0;
@@ -3696,7 +3707,7 @@
             const straight = calcGPS(fromPt.lat, fromPt.lon, toPt.lat, toPt.lon);
             if (!(straight >= 0.15 && straight < 100)) return null; // ขยับน้อยเกินไม่คุ้มโควตา / พิกัดหลุดไกลเกินพิกัด
             const now = Date.now();
-            if (now - lastNoDestRouteAt < 240000) return null; // เว้น 4 นาทีต่อการเรียก (กันขอเส้นทางซ้ำๆ เผาโควตา)
+            if (now - lastNoDestRouteAt < 45000) return null; // เว้น 45 วิต่อการเรียก (กันขอเส้นทางซ้ำ ๆ เผาโควตา แต่ยังทันจับ "เวลารถติด" ของช่วงปิดสั้น ๆ)
             lastNoDestRouteAt = now;
             const route = await window.fetchRouteFromTomTom(toPt.lat, toPt.lon, fromPt.lat, fromPt.lon); // เส้นทางจากจุดก่อนปิด → จุดปัจจุบัน
             if (!route || typeof route.km !== 'number' || !(route.km > 0)) return null;
@@ -7193,7 +7204,10 @@
         // จำกัดไม่เกิน 30 วิ/ครั้งกัน over-bill กรณี GPS หลุดยาวขณะรถวิ่ง (edge case หายาก)
         if (trafficCharging) {
             const evidenceAgeSec = lastStopFixAt ? (now - lastStopFixAt) / 1000 : Infinity;
-            const addSec = Math.min(deltaSec, 30);
+            // ⏱️ หลักฐานสด (fix GPS ยืนยัน "จอด" ภายใน 15 วิ) → เชื่อเวลาจริงเต็มช่วง แม้ตัวจับเวลาถูกเบราว์เซอร์ลดความถี่
+            //    (เดิมจำกัด 30 วิ/ครั้ง → แอปที่ถูกย่อแล้ว tick มาทุก 60 วิ นับเวลาจอดได้แค่ครึ่งเดียว = เวลารถติดหาย)
+            //    หลักฐานเก่า (GPS ตาย) → ยังจำกัด 30 วิ/ครั้ง เพราะเป็นยอด "ยังไม่ยืนยัน" ที่อาจถูกถอนคืน
+            const addSec = (evidenceAgeSec <= STOP_EVIDENCE_GRACE_SEC) ? Math.min(deltaSec, 300) : Math.min(deltaSec, 30);
             if (evidenceAgeSec <= STOP_EVIDENCE_GRACE_SEC) {
                 trafficSeconds += addSec;
             } else {
@@ -7316,9 +7330,12 @@
                 if (kmTarget > actualDrivenKm) actualDrivenKm = kmTarget;
                 // ⏱️ ช่วงซ่อนที่รถ "วิ่งจริง" ไม่ใช่ "จอด": ถอนเวลาจอดที่ ticker นับไว้ผิดช่วงนั้นออก ให้เหลือเท่าที่ประเมินได้
                 //    (เดิมบวกเพิ่มอย่างเดียว → เวลารถติดบวม เช่น จริง 2:15 กลายเป็น 7:31 หลังปิด/ซ่อนแอป)
-                const trafficTarget = (hiddenTrafficBase || 0) + Math.max(0, Math.round(gapEstTraffic));
-                // ⚠️ ลดยอดได้เฉพาะเมื่อ "มีหลักฐานตำแหน่ง" (รู้แน่ว่ารถวิ่งไป) — ถ้าไม่มีข้อมูล GPS เลย อย่าตัดเวลาจอดที่ ticker นับไว้ทิ้ง
-                if (hidePos && trafficSeconds > trafficTarget) trafficSeconds = trafficTarget;
+                // ⏱️ ยอดเป้า = ฐานตอนซ่อน + ค่าที่ "มากกว่า" ระหว่าง (ก) ที่แอปนับได้จริงระหว่างซ่อน กับ (ข) ค่าที่ประเมินจากเส้นทาง/ความเร็ว
+                //    ⚠️ ห้ามตัดยอดที่นับได้จริงทิ้ง (บั๊ก 13 ก.ย. 69: ค่าประเมินเป็น 0 แล้วลบเวลาจอดที่ ticker นับไว้ทั้งช่วง) และห้ามเกินความยาวช่วงซ่อน
+                const observedDuringGap = Math.max(0, Math.min(gapSec, trafficSeconds - (hiddenTrafficBase || 0)));
+                const modelTrafficSec = Math.max(0, Math.round(gapEstTraffic)); // ไม่มีระยะ (hidePos ว่าง) → ฟังก์ชันคืนค่าขั้นต่ำ 3% เอง
+                const trafficTarget = (hiddenTrafficBase || 0) + Math.max(modelTrafficSec, observedDuringGap);
+                trafficSeconds = trafficTarget;
                 caughtTimeSec = trafficSeconds - preTraffic; // ยอดสุทธิของรอบนี้ (ติดลบได้ = ถอนยอดที่นับเกินออก)
             }
             // ✅ จบรอบเบิกคืนช่วงซ่อน: ปิดฐานของรอบนี้ (รอบถัดไปจะจดฐานใหม่ตอนซ่อน) + จดว่าเบิกคืนรอบนี้แล้ว
@@ -7625,9 +7642,12 @@
                 if (kmTargetKill > km) km = kmTargetKill;
                 // ⏱️ ช่วงปิดที่รถ "วิ่งจริง" ไม่ใช่ "จอด": เวลารถติดของช่วงนี้ = ฐาน + เวลาที่เกินกว่าวิ่งโล่ง (จากเส้นทางจริง)
                 //    ตั้งใหม่จากฐาน (ติดลบได้ = ถอนเวลาจอดที่ ticker นับผิดระหว่างซ่อน) — กันเวลารถติดบวมหลังปิด/ซ่อนแอป
-                const trafficTargetKill = baseTraffic + Math.max(0, Math.round(gapEstTraffic));
-                // เพิ่มยอดให้ครบตามหลักฐานได้เสมอ / ลดยอดได้เฉพาะเมื่อมีหลักฐานตำแหน่ง (กันตัดเวลาจอดทิ้งทั้งที่ไม่มีข้อมูล GPS)
-                if (trafficTargetKill > trafficSec || hidePos) { caughtTimeSec += (trafficTargetKill - trafficSec); trafficSec = trafficTargetKill; }
+                // ⏱️ เหมือนสาขาซ่อน: ยอดเป้า = ฐานตอนแอปตาย + ค่าที่ "มากกว่า" ระหว่างที่นับได้จริงก่อนตาย กับค่าที่ประเมินได้
+                //    ห้ามตัดยอดที่นับได้จริงทิ้ง และไม่ให้เกินความยาวช่วงที่ปิดไป (ดูหมายเหตุบั๊ก 13 ก.ย. 69 ที่สาขาซ่อนด้านบน)
+                const observedDuringKill = Math.max(0, Math.min(gapSec, (cur.trafficSec || 0) - baseTraffic));
+                const modelKillSec = Math.max(0, Math.round(gapEstTraffic));
+                const trafficTargetKill = Math.min(baseTraffic + gapSec, baseTraffic + Math.max(modelKillSec, observedDuringKill));
+                if (trafficTargetKill > trafficSec) { caughtTimeSec += (trafficTargetKill - trafficSec); trafficSec = trafficTargetKill; }
             }
             // มีอะไรเปลี่ยนจริงไหม (ยอดอาจ "ลดลง" ได้ = ถอนเวลาจอดที่นับเกิน) → ถ้าไม่เปลี่ยนก็ไม่ต้องทำอะไร
             const gapChanged = Math.abs(trafficSec - (cur.trafficSec || 0)) >= 1 || Math.abs(km - (cur.km || 0)) > 0.02;
@@ -7923,6 +7943,9 @@
         if(watchId) navigator.geolocation.clearWatch(watchId);
         watchId = navigator.geolocation.watchPosition((pos) => { 
             let now = Date.now(); 
+            // ⏱️ เดินเวลามิเตอร์จาก "fix GPS" ด้วย ไม่รอแต่ setInterval — มือถือลดความถี่/พักตัวจับเวลาเมื่อแอปถูกย่อ/สลับ
+            //    แต่ fix GPS ยังไหลมา → เวลารถติด-เวลาจอดยังถูกนับครบแม้แอปอยู่เบื้องหลัง (ยอดอิง Date.now จริง ไม่เพี้ยน)
+            if (typeof window.advanceMeterTime === 'function') window.advanceMeterTime(now);
             if (pos.coords.accuracy > 30) { updateStopStateFromFix(pos, now); return; } // fix หยาบเกินใช้คิดระยะทาง — แต่ยังใช้ตัดสิน "จอด/วิ่ง" ได้ 
 
             const OS_SpeedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
@@ -9058,6 +9081,8 @@
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
     const APP_RELEASE_NOTES = [
+        '🚦 แก้เคสจริง 13 ก.ย. (สำคัญ — มีผลกับค่าโดยสารตรง ๆ): ไป-กลับอยุธยา 3 ชม. 35 น. · มิเตอร์จริง 126.2 กม. / รถติด 1:47:35 / 1,481 บาท แต่แอปคิดรถติดได้แค่ 0:26 → 1,151 บาท เพราะช่วงที่แอปถูกปิด/ย่อ ระบบประเมินเวลารถติดด้วยสูตรเดิม “วิ่งเฉลี่ย ≥ 30 กม./ชม. = ไม่ติด → คืน 0” ทำให้เวลาจอดของช่วงนั้นหายทั้งช่วง — ตอนนี้ใช้หลักการเดียวกับมิเตอร์จริง “เวลารถติด = เวลาทั้งช่วง − เวลาที่ใช้วิ่งถ้าโล่ง” โดยอิงเวลาวิ่งโล่งจริงของเส้นทางก่อน และถ้าขอเส้นทางไม่ได้ก็ยังประเมินจากความเร็ววิ่งโล่งอ้างอิง (ไม่คืน 0 อีกแล้ว)',
+        '⏱️ แอปถูกย่อ/สลับไปแอปอื่นก็ยังนับเวลารถติดต่อเนื่อง: เดินเวลามิเตอร์จาก fix GPS เอง (ไม่รอแต่ตัวจับเวลาที่มือถือชอบพัก) · ยอดที่ “นับได้จริง” จะไม่ถูกลบทิ้งตอนเบิกคืน · ขอข้อมูลเวลาวิ่งโล่งของเส้นทางถี่ขึ้น (45 วิ/ครั้ง) เพื่อให้ช่วงปิดสั้น ๆ ก็คิดเวลารถติดได้ตรง · ช่วงที่รู้แน่ว่ารถวิ่ง ใช้เวลาเกิน “วิ่งโล่ง” เป็นเวลารถติดตามมิเตอร์จริง',
         '🛡️ เครื่องมือตรวจ App Check อยู่ในแอปแล้ว: appCheckSelfTest() ยิงคำขอจริง 2 ครั้ง (ไม่มีโทเคน เทียบกับ มีโทเคน) แล้วบอกเป็นตารางว่าต้องทำอะไรต่อ — ใช้ตัดสินใจก่อน/หลังกด Enforce โดยไม่ต้องเดา (403+200 = สมบูรณ์ · 403+403 = อันตราย ต้องกลับเป็น Unenforced ทันที) · appCheckStatus() ดูสถานะเร็ว ๆ · โหมดทดสอบในเครื่องจะพิมพ์ debug token ให้เอาไปลงทะเบียนในคอนโซลเอง · พร้อมใช้ทันทีเมื่อวาง site key 1 บรรทัด',
         '🔑 คู่มือ "ทำ Firebase Authentication ให้สมบูรณ์" (FIREBASE-AUTH.md) — สอนตั้งแต่ต้นว่าทำไมกติกาฐานข้อมูลถึงยังปิดช่องไม่สนิท พร้อม 3 แนวทางเลือก (App Check → กันสคริปต์/บอตใน 10 นาที · อีเมลจริง · Custom Token ผ่าน Cloud Functions = ปิดจริง 100%) มีโค้ดฟังก์ชันตรวจรหัสผ่านให้ตรงกับแฮช PBKDF2 ของแอป กติกาฉบับเจ้าของเท่านั้น (firestore-auth.rules) วิธีทดสอบ 7 ข้อ วิธีย้อนกลับ และตาราง error ที่เจอบ่อย',
         '🔐 ชุดกติกาความปลอดภัย Firestore พร้อมใช้ (ไฟล์ firestore.rules): จำกัดว่าเขียนอะไรได้/ไม่ได้ · ห้ามลบเที่ยวในประวัติรายได้ · ประวัติการใช้งานเป็นแบบ "เขียนเพิ่มอย่างเดียว" (ลบร่องรอยไม่ได้) · ห้ามลบทั้งเอกสารตั้งค่า และปิดไม่ให้ใช้โปรเจกต์เป็นที่ฝากไฟล์ — วิธีวาง: Firebase Console → Firestore Database → Rules → วางทั้งไฟล์ → Publish (รายละเอียดในคู่มือ SECURITY.md)',

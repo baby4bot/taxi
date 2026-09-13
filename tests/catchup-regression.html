@@ -30,7 +30,7 @@
         <b>วิธีเปิด:</b> ต้องผ่าน HTTP เท่านั้น เช่น <code>https://baby4bot.github.io/taxi/tests/catchup-regression.html</code>
         (เปิดจาก file:// ตรง ๆ ไม่ได้ เพราะ iframe ถูกบล็อก cross-origin) — เปิดแล้วรันอัตโนมัติ หรือกดปุ่มด้านล่างเพื่อรันใหม่
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (15 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (17 สถานการณ์)</button>
     <div id="summary"></div>
     <ol id="results"></ol>
     <!-- ⚠️ ?fsNowrite=1 = ห้ามแอปเขียนเที่ยวลงฐานข้อมูลจริง — ชุดทดสอบนี้เรียก finishTripWithSummary() จริง
@@ -662,6 +662,68 @@
                 assert(sumTxt.includes('กลับจากเบื้องหลัง: เบิกคืนอัตโนมัติ'), 'หน้าสรุปต้องมีหัวข้อเบิกคืน');
                 assert(sumTxt.includes('ปิดแอป') && sumTxt.includes('จอด'), 'สรุปต้องโชว์ช่วงปิดแอป + ยอดจอดที่เบิก');
                 return 'payload catchUpLog=1 · สรุปโชว์ "ปิดแอป … จอด ~1 นาที"';
+            });
+
+            // 16) วิ่งช่วงปิดไกล + ไม่มีข้อมูลเส้นทาง (เที่ยวไม่มีปลายทาง/เน็ตไม่ออก/โควตาหมด)
+            //     เคสจริง 13 ก.ย. 69: ไป-กลับอยุธยา 3:35 · มิเตอร์จริง 126.2 กม. / รถติด 1:47:35 / 1481 บาท
+            //     แต่แอปคิดรถติดได้ 0:26 (ค่าโดยสาร 1151) เพราะสูตรเดิม "เฉลี่ย ≥ 30 กม./ชม. = ไม่ติด → คืน 0"
+            //     → ช่วงปิดที่รถวิ่ง ต้องยังเบิกเวลารถติดจาก "เวลาทั้งช่วง − เวลาวิ่งโล่ง" เสมอ
+            await runScenario('16. วิ่งช่วงปิดไกล ไม่มีข้อมูลเส้นทาง → ต้องยังเบิกเวลารถติด (ห้าม 0)', async () => {
+                if (skipScenario(16)) return;
+                frame.contentWindow.userKillCapMin = 0;      // ไม่จำกัดการเบิกจอด
+                w().fetchRouteFromTomTom = async () => null; // ออฟไลน์/โควตาหมด → ไม่มี noTrafficSec ของเส้นทาง
+                const GAP = 2700;                                 // ปิดแอป 45 นาที
+                const FAR = { lat: P0.lat + 0.36, lon: P0.lon };  // วิ่งไป ~40 กม.
+                const p = makePayload({
+                    savedAt: Date.now() - GAP * 1000, startTime: Date.now() - GAP * 1000 - 3600000,
+                    km: 40, trafficSec: 20, lastPos: P0, lastPath: [P0],
+                    gapAt: Date.now() - GAP * 1000, gapBaseKm: 40, gapBaseTraffic: 20, gapBasePos: P0
+                });
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(1000);
+                releaseFix(5, FAR.lat, FAR.lon, 8, 45); // fix ที่ปลายทาง + speed 45 กม./ชม. = วิ่งจริง (ไม่ใช่จอดนิ่ง)
+                await wait(1600);
+                const pp = JSON.parse(w().localStorage.getItem('taxi_active_trip_v1'));
+                const driftKm = pp.km - 40;                       // ระยะที่ประเมินได้ของช่วงปิด
+                assert(driftKm > 30, 'ต้องเบิกระยะทางของช่วงปิดด้วย (ได้ ' + driftKm.toFixed(1) + ' กม.)');
+                const billed = pp.trafficSec - 20;
+                // คาดหวัง: เวลารถติด ≈ ช่วงปิด − เวลาวิ่งโล่ง (65 กม./ชม.) — ต้องไม่ใช่ 0
+                const expect = GAP - (driftKm / 65 * 3600);
+                assert(billed >= 120, 'ต้องเบิกเวลารถติดของช่วงปิด ไม่ใช่ 0 (ได้ ' + Math.round(billed) + ' วิ) — บั๊ก 13 ก.ย. 69');
+                near(billed, expect, 90, 'เวลารถติดที่เบิก (ช่วงปิด − เวลาวิ่งโล่ง)');
+                return 'ช่วงปิด 45 นาที / วิ่ง ' + driftKm.toFixed(1) + ' กม. → เบิกเวลารถติด ' + Math.round(billed) + ' วิ (คาด ~' + Math.round(expect) + ' · เดิมได้ 0)';
+            });
+
+            // 17) ซ่อนแอปแล้วรถวิ่งต่อ: ระหว่างซ่อน ticker นับเวลาจอดไปแล้วบางส่วน แต่ค่าประเมินของช่วงนั้นเป็น 0
+            //     → ต้อง "ไม่ลบ" เวลาที่นับได้จริงทิ้ง (เดิมตั้งยอดใหม่ = ฐาน + 0 → เวลาที่นับได้หายทั้งช่วง)
+            await runScenario('17. ซ่อนแอปแล้วรถวิ่งต่อ → ต้องไม่ลบเวลารถติดที่นับได้จริงทิ้ง', async () => {
+                if (skipScenario(17)) return;
+                w().fetchRouteFromTomTom = async () => null;
+                const p = makePayload({ lastPos: P0, lastPath: [P0] });
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(400);
+                releaseFix(1, P0.lat, P0.lon, 8, 0); // fix แรก: จอดนิ่ง → เริ่มคิดเวลาจอด
+                await wait(2500);
+                const before = readDisplay().traffic;
+                assert(before >= 11, 'ต้องมีเวลาจอดพื้นฐาน 10 + ticker ก่อนซ่อน (ได้ ' + before + ' วิ)');
+                w().dispatchEvent(new (w().Event)('pagehide'));
+                await wait(11000); // ซ่อน 11 วิ — ticker ยังรัน → นับเวลาจอดไปอีก ~11 วิ
+                const hiddenAdded = readDisplay().traffic - before;
+                assert(hiddenAdded >= 8, 'ticker ต้องนับเวลาจอดระหว่างซ่อน (+' + hiddenAdded.toFixed(1) + ' วิ)');
+                w().dispatchEvent(new (w().Event)('pageshow'));
+                await wait(300);
+                const FAR2 = { lat: P0.lat + 0.0045, lon: P0.lon }; // ขยับ ~0.5 กม. ใน 11 วิ = วิ่งจริง
+                releaseFix(3, FAR2.lat, FAR2.lon, 8, 40);
+                await wait(1800);
+                const after = readDisplay().traffic;
+                assert(after >= before + hiddenAdded - 3, 'ห้ามลบเวลารถติดที่นับได้จริงระหว่างซ่อน (ก่อน ' + before + ' + ซ่อน ' + hiddenAdded.toFixed(1) + ' → ได้ ' + after + ')');
+                return 'นับได้ก่อนซ่อน ' + before + ' วิ + ระหว่างซ่อน ' + hiddenAdded.toFixed(1) + ' วิ → หลังรถวิ่งต่อยังอยู่ที่ ' + after + ' วิ';
             });
 
             window.__testResults = { pass: passCount, fail: failCount, failures: failures, at: new Date().toISOString() };
