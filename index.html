@@ -9089,6 +9089,8 @@
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
     const APP_RELEASE_NOTES = [
+        '🧭 บอกจุดเลี้ยวถัดไปใน Mini Map: ไอคอนลูกศรบอกทิศ (เลี้ยวซ้าย/ขวา · หัก · ชิด · กลับรถ) พร้อมระยะถึงจุดเลี้ยว (เช่น "อีก 320 ม.") และมาร์กจุดเลี้ยวถัดไปเป็นจุดสีน้าเงินบนเส้นทางให้เห็นล่วงหน้า — เมื่อผ่านจุดเลี้ยวทั้งหมดแล้ว จะเปลี่ยนเป็น "ตรงไปจนถึงจุดหมาย" พร้อมระยะที่เหลือ',
+        '🧮 จุดเลี้ยวคำนวณจากรูปทรงของเส้นทางที่ดึงมาเอง (เทียบทิศก่อน–หลังจุดที่ระยะด้านละ ~30 ม. แล้วหักมุมเกิน 30°) — ไม่ต้องพึ่งข้อมูลเลี้ยวจากผู้ให้บริการ จึงใช้ได้กับเที่ยวที่กู้คืนมาจากเครื่องด้วย',
         '🗺️ แผนที่นำทางขนาดย่อ (Mini Map) ลอยอยู่บนจอตลอดเวลาที่นำทาง: เห็นว่ารถอยู่ตรงไหนของเส้นทาง วิ่งผ่านอะไรมาแล้ว และเหลืออีกไกลแค่ไหน แบบเดียวกับที่เห็นใน Google Maps — เส้นทางเป็นสีน้ำเงิน (ช่วงที่วิ่งผ่านแล้วเป็นสีจาง) จุดหมายเป็นหมุดแดง หัวรถเป็นลูกศรหมุนตามทิศที่วิ่งจริง และตัวแผนที่เลื่อนตามรถเองอัตโนมัติ · ข้างล่างบอกระยะทางที่เหลือกับเวลาถึงโดยประมาณ พร้อมแถบความคืบหน้าของเที่ยว',
         '🖐️ Mini Map ลากย้ายไปวางตรงไหนของจอก็ได้ (จับที่แถบหัว) และจำตำแหน่ง/ขนาดไว้ให้ครั้งต่อไป · ย่อ/ขยายได้ 2 ขนาด · ลากแผนที่เองหรือหุบนิ้วเพื่อดูบริเวณข้างเคียง แล้วกด ◎ เพื่อกลับมาที่รถ · ปุ่ม ✕ ซ่อนได้ — เปิดกลับมาเองทุกครั้งที่เริ่มเที่ยวใหม่หรือกดเริ่มต่อเที่ยวค้าง และปิดเองเมื่อจบเที่ยว',
         '🎨 เปลี่ยนแหล่งแผนที่มาใช้ OpenStreetMap แล้วปรับเป็นโหมดมืดในตัว ให้อ่านง่ายบนจอตอนกลางคืน (เดิมใช้กระเบื้อง CARTO ซึ่งตอนนี้ต้องมีคีย์ จึงขึ้นลายน้ำ “API KEY REQUIRED” ทับทั้งแผนที่)',
@@ -10933,6 +10935,12 @@
     #navMini .nm-remain { font-size: 10px; color: var(--text-dim, #888); white-space: nowrap; }
     #navMini .nm-bar { flex: 1 1 auto; height: 4px; border-radius: 99px; background: rgba(255,255,255,.14); overflow: hidden; }
     #navMini .nm-bar > i { display: block; height: 100%; width: 0%; border-radius: 99px; background: #2196f3; transition: width .4s ease; }
+    #navMini .nm-turn { display: flex; align-items: center; gap: 7px; padding: 6px 9px 0; }
+    #navMini .nm-turn-ico { flex: 0 0 auto; font-size: 21px; line-height: 1; color: #2196f3; }
+    #navMini .nm-turn.none .nm-turn-ico { color: var(--text-dim, #888); }
+    #navMini .nm-turn-col { display: flex; flex-direction: column; min-width: 0; }
+    #navMini .nm-turn-col > b { font-size: 12px; font-weight: 700; color: var(--text-main, #e5e7eb); line-height: 1.25; }
+    #navMini .nm-turn-col > i { font-style: normal; font-size: 10px; color: var(--text-dim, #8b93a5); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
 
 <div id="navMini" aria-label="แผนที่นำทางขนาดย่อ">
@@ -10946,6 +10954,13 @@
         <canvas id="navMiniCanvas"></canvas>
         <div class="nm-attr">© OpenStreetMap</div>
         <div class="nm-off">ไม่มีการเชื่อมต่อ — แสดงเส้นทางและตำแหน่งรถให้อยู่</div>
+    </div>
+    <div class="nm-turn" id="navMiniTurnRow" style="display: none;">
+        <span class="material-symbols-outlined nm-turn-ico" id="navMiniTurnIco">straight</span>
+        <span class="nm-turn-col">
+            <b id="navMiniTurnDist">—</b>
+            <i id="navMiniTurnDir">กำลังหาเส้นทาง…</i>
+        </span>
     </div>
     <div class="nm-foot">
         <span class="nm-remain" id="navMiniRemain">เหลือ —</span>
@@ -10973,6 +10988,10 @@
     var btnFollow = document.getElementById('navMiniFollow');
     var btnSize = document.getElementById('navMiniSize');
     var btnHide = document.getElementById('navMiniHide');
+    var turnRow = document.getElementById('navMiniTurnRow');
+    var turnIco = document.getElementById('navMiniTurnIco');
+    var turnDist = document.getElementById('navMiniTurnDist');
+    var turnDir = document.getElementById('navMiniTurnDir');
 
     // ---------- ค่าที่ผู้ใช้ตั้งไว้ ----------
     var pref = { x: null, y: null, big: false, hidden: false };
@@ -10997,6 +11016,9 @@
     var tileKeys = [];
     var anyTileOk = false;
     var rafId = 0;
+    var cum = [];        // ระยะสะสมจากจุดเริ่มถึงจุดที่ i (กม.)
+    var turns = [];      // จุดเลี้ยวที่คำนวณจากรูปทรงเส้นทาง [{ i, km, delta }]
+    var nextTurn = null; // จุดเลี้ยวถัดไปจากตำแหน่งรถ
 
     // ---------- คณิตแผนที่ ----------
     function proj(lat, lng, z) {
@@ -11026,6 +11048,63 @@
     }
     function autoZoom(kmh) { if (kmh < 12) { return 18; } if (kmh < 32) { return 17; } if (kmh < 65) { return 16; } return 15; }
     function dist2(a, b) { return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)); }
+
+    // ---------- ระยะสั้นแบบอ่านง่าย (ม. / กม.) ----------
+    function fmtShort(km) {
+        if (!(km > 0)) { return '0 ม.'; }
+        return km < 1 ? (Math.round(km * 1000) + ' ม.') : (km.toFixed(1) + ' กม.');
+    }
+    // ---------- แปลงมุมหักเลี้ยวเป็นไอคอน + คำบอกทิศ ----------
+    function turnMeta(d) {
+        var a = Math.abs(d), right = d > 0;
+        if (a >= 160) { return { icon: right ? 'u_turn_right' : 'u_turn_left', text: 'กลับรถ' }; }
+        if (a >= 110) { return { icon: right ? 'turn_sharp_right' : 'turn_sharp_left', text: 'หัก' + (right ? 'ขวา' : 'ซ้าย') }; }
+        if (a >= 45) { return { icon: right ? 'turn_right' : 'turn_left', text: 'เลี้ยว' + (right ? 'ขวา' : 'ซ้าย') }; }
+        return { icon: right ? 'turn_slight_right' : 'turn_slight_left', text: 'ชิด' + (right ? 'ขวา' : 'ซ้าย') };
+    }
+    // ---------- หาจุดเลี้ยวจากรูปทรงเส้นทาง (ไม่ต้องพึ่งข้อมูลเลี้ยวจากผู้ให้บริการ) ----------
+    //    เทียบ “ทิศก่อนถึงจุด” กับ “ทิศหลังจุด” ที่ระยะด้านละ ~30 ม. → ทิศนิ่งพอ ไม่หลอนตามจุดหักถี่ ๆ
+    function buildTurns() {
+        turns = [];
+        cum = [];
+        if (route.length < 3) { return; }
+        cum = new Array(route.length); cum[0] = 0;
+        for (var i = 1; i < route.length; i++) {
+            cum[i] = cum[i - 1] + kmBetween({ lat: route[i - 1][0], lng: route[i - 1][1] }, { lat: route[i][0], lng: route[i][1] });
+        }
+        var W = 0.03; // กม. ด้านละ ~30 ม.
+        var lastKm = -9;
+        for (var k = 1; k < route.length - 1; k++) {
+            var a = k; while (a > 0 && cum[k] - cum[a] < W) { a--; }
+            var b = k; while (b < route.length - 1 && cum[b] - cum[k] < W) { b++; }
+            if (cum[k] - cum[a] < W * 0.5 || cum[b] - cum[k] < W * 0.5) { continue; } // ต้น/ท้ายเส้น ข้อมูลไม่พอ
+            var h1 = bearingTo({ lat: route[a][0], lng: route[a][1] }, { lat: route[k][0], lng: route[k][1] });
+            var h2 = bearingTo({ lat: route[k][0], lng: route[k][1] }, { lat: route[b][0], lng: route[b][1] });
+            var delta = ((h2 - h1 + 540) % 360) - 180; // บวก = เลี้ยวขวา · ลบ = เลี้ยวซ้าย
+            if (Math.abs(delta) < 30) { continue; }
+            if (turns.length && (cum[k] - lastKm) < 0.04) { // จุดเลี้ยวติดกัน (แยกไม่ถึง 40 ม.) → เอาจุดที่มุมหักมากสุด
+                var pv = turns[turns.length - 1];
+                if (Math.abs(delta) > Math.abs(pv.delta)) { pv.i = k; pv.km = cum[k]; pv.delta = delta; }
+                lastKm = cum[k];
+                continue;
+            }
+            turns.push({ i: k, km: cum[k], delta: delta });
+            lastKm = cum[k];
+        }
+    }
+    function carAlongKm() {
+        if (!car || route.length < 2 || !cum.length) { return null; }
+        var idx = nearestIndex(car);
+        return (typeof cum[idx] === 'number') ? cum[idx] : null;
+    }
+    function computeNextTurn(fromKm) {
+        nextTurn = null;
+        if (fromKm === null || !turns.length) { return null; }
+        for (var i = 0; i < turns.length; i++) {
+            if (turns[i].km > fromKm + 0.02) { nextTurn = turns[i]; break; }
+        }
+        return nextTurn;
+    }
 
     // ---------- กระเบื้องแผนที่ ----------
     // ใช้กระเบื้อง OpenStreetMap แล้ว "กลับสี" เป็นโหมดมืดด้วย canvas filter
@@ -11130,6 +11209,21 @@
             }
         }
 
+        // จุดเลี้ยวถัดไป (จุดเล็ก ๆ บนเส้นทาง ให้เห็นว่าอีกไม่ไกลจะต้องหัก)
+        if (route.length > 1) {
+            var ntv = nextTurn;
+            if (!ntv) { ntv = computeNextTurn(carAlongKm()); }
+            if (ntv && route[ntv.i]) {
+                var tp = proj(route[ntv.i][0], route[ntv.i][1], z);
+                var tpx = tp.x + ox, tpy = tp.y + oy;
+                if (tpx > -16 && tpx < W + 16 && tpy > -16 && tpy < H + 16) {
+                    ctx.beginPath(); ctx.arc(tpx, tpy, 6.5, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+                    ctx.beginPath(); ctx.arc(tpx, tpy, 4.6, 0, Math.PI * 2); ctx.fillStyle = '#0b0f16'; ctx.fill();
+                    ctx.beginPath(); ctx.arc(tpx, tpy, 3, 0, Math.PI * 2); ctx.fillStyle = '#2196f3'; ctx.fill();
+                }
+            }
+        }
+
         // รถ (ลูกศรชี้ทิศ)
         if (car) {
             var p = proj(car.lat, car.lng, z);
@@ -11154,13 +11248,10 @@
         var remainKm = null, remainSec = null;
         try { if (typeof currentTrueRemainKm === 'number') { remainKm = currentTrueRemainKm; } } catch (e) {}
         try { if (typeof currentTrueRemainSec === 'number') { remainSec = currentTrueRemainSec; } } catch (e) {}
+        var carKm = carAlongKm();
         // ถ้าแอปไม่ได้ให้ค่า "เหลือ" มา (เช่น ยังดึงข้อมูลเส้นทางไม่ได้) → คิดเองจากเส้นทางที่วาดอยู่
-        if ((remainKm === null || !(remainKm > 0)) && route.length > 1 && car) {
-            var idx = nearestIndex(car), ran = 0;
-            for (var q = 1; q <= idx; q++) {
-                ran += kmBetween({ lat: route[q - 1][0], lng: route[q - 1][1] }, { lat: route[q][0], lng: route[q][1] });
-            }
-            remainKm = Math.max(0, routeKm - ran);
+        if ((remainKm === null || !(remainKm > 0)) && carKm !== null) {
+            remainKm = Math.max(0, routeKm - carKm);
         }
         if ((remainSec === null || !(remainSec > 0)) && remainKm !== null && remainKm > 0.05) {
             remainSec = remainKm / (speedKmh > 8 ? speedKmh : 30) * 3600;
@@ -11177,6 +11268,27 @@
         var pct = 0;
         if (routeKm > 0 && remainKm !== null) { pct = Math.max(0, Math.min(100, (routeKm - remainKm) / routeKm * 100)); }
         barFill.style.width = pct.toFixed(1) + '%';
+
+        // ---------- จุดเลี้ยวถัดไป (คำนวณจากรูปทรงเส้นทาง) ----------
+        if (route.length > 1) {
+            turnRow.style.display = '';
+            var nt = computeNextTurn(carKm);
+            if (nt && carKm !== null) {
+                var tm = turnMeta(nt.delta);
+                turnIco.textContent = tm.icon;
+                turnDist.textContent = 'อีก ' + fmtShort(nt.km - carKm);
+                turnDir.textContent = tm.text;
+                turnRow.classList.remove('none');
+            } else {
+                var leftKm = (carKm !== null) ? (routeKm - carKm) : null;
+                turnIco.textContent = 'straight';
+                turnDist.textContent = (leftKm !== null && leftKm > 0.05) ? fmtShort(leftKm) : '—';
+                turnDir.textContent = 'ตรงไปจนถึงจุดหมาย';
+                turnRow.classList.add('none');
+            }
+        } else {
+            turnRow.style.display = 'none';
+        }
     }
 
     // ---------- แสดง/ซ่อน/วางตำแหน่ง ----------
@@ -11206,6 +11318,7 @@
         try {
             window.navMiniRouteSaved = route.map(function (p) { return [Math.round(p[0] * 1e5) / 1e5, Math.round(p[1] * 1e5) / 1e5]; });
         } catch (e) {}
+        buildTurns();
         follow = true; panCenter = null; btnFollow.classList.add('on');
         request(); chrome();
     };
@@ -11263,6 +11376,8 @@
             hasRoute: route.length, routeKm: Math.round(routeKm * 1000) / 1000,
             car: car ? { lat: car.lat, lng: car.lng } : null,
             bearing: Math.round(bearing), speedKmh: speedKmh,
+            turns: turns.length,
+            nextTurn: nextTurn ? { km: Math.round(nextTurn.km * 1000) / 1000, delta: Math.round(nextTurn.delta), dir: turnMeta(nextTurn.delta).text } : null,
             zoom: (userZoom !== null) ? userZoom : autoZoom(speedKmh),
             tiles: tileKeys.length, tileOk: anyTileOk, filterOK: filterOK
         };
