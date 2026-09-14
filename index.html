@@ -2736,6 +2736,11 @@
         html.light .hub-cat-label .hub-cat-btn { color: #8a6a00; }
         html.light .hub-cat-label .hub-cat-btn.danger { color: #b3202f; }
         html.light .hub-drop-empty { border-color: rgba(176,124,0,0.45); color: #8a6a00; background: rgba(176,124,0,0.06); }
+        /* ✏️ ดินสอแก้ข้อความเมนูรายตัว — โผล่ต่อท้ายชื่อเมนูเฉพาะตอนเข้าโหมดลาก (แอดมินเท่านั้น) */
+        .hub-item-edit { background: rgba(255,210,77,0.14); border: 1px solid rgba(255,210,77,0.45); color: var(--neon-yellow); width: 24px; height: 24px; border-radius: 50%; padding: 0; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+        .hub-item-edit:hover { background: rgba(255,210,77,0.28); }
+        html.light .hub-item-edit { background: rgba(176,124,0,0.12); border-color: rgba(176,124,0,0.45); color: #8a6a00; }
+        html.light .hub-item-edit:hover { background: rgba(176,124,0,0.22); }
 
         /* ===== 💰 ระบบคำนวณทอนเงินด่วน (Quick Change Calculator) ===== */
         .qc-bills { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-bottom: 10px; }
@@ -3163,6 +3168,7 @@
 </div></div></div>
 
 <div id="textEditModal" class="modal-overlay" style="z-index: 10045;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('textEditModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>แก้ไขข้อความ / หัวข้อ</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetTextOverrides()" title="รีเซ็ตทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('textEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 8px; line-height:1.65;">แก้ชื่อหัวข้อ ป้าย ปุ่ม และคำอธิบายในแอปได้เอง — <b>ไม่ต้องแก้โค้ด</b> · บันทึกแล้วมีผลกับ <b>ทุกคนที่ใช้แอป</b>ทันที<br>บรรทัดบน = ข้อความต้นฉบับ (แก้ไม่ได้) · ช่องกรอก = ข้อความที่อยากให้แสดง (เว้นว่าง = ใช้ต้นฉบับ) · <b>ข้อความที่เหมือนกันจะเปลี่ยนพร้อมกันทุกจุด</b> — ตัวเลข/เปอร์เซ็นต์ระบบข้ามให้อัตโนมัติ</p><div style="position:relative; margin:0 4px 8px;"><input type="text" id="textEditSearch" placeholder="ค้นหาข้อความ…" oninput="window.renderTextEditList(this.value)" style="width:100%; text-align:left; padding-left:38px;"><span class="material-symbols-outlined" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:19px; color:var(--text-dim);">search</span></div><div id="textEditStats" style="font-size:11.5px; color:var(--text-dim); margin:0 6px 8px; line-height:1.6;"></div><div id="textEditList" style="min-height:200px;"></div></div><div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveTextEditBtn" onclick="window.saveTextOverrides()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color:#fff;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกทั้งหมด</button></div></div></div>
+<div id="itemTextEditModal" class="modal-overlay" style="z-index: 10046;"><div class="modal-box standard-box" data-txt-skip onclick="event.stopPropagation()"><div class="modal-header"><h3 id="itemTextEditTitle">แก้ข้อความเมนู</h3><button class="btn-close-floating" onclick="window.toggleModal('itemTextEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><div id="itemTextEditWho" style="font-size:12.5px; color:var(--neon-yellow); font-weight:700; margin-bottom:10px; word-break:break-word;"></div><label for="itemTextTitle" style="text-align:left;">ชื่อเมนูที่แสดงบนจอ</label><div id="itemTextOrigTitle" style="font-size:11px; color:var(--text-dim); margin:2px 0 6px; word-break:break-word;"></div><input type="text" id="itemTextTitle" maxlength="60" placeholder="เว้นว่าง = ใช้ข้อความต้นฉบับ" style="width:100%; text-align:left; margin-bottom:12px;" onkeydown="if(event.key==='Enter') window.saveHubItemText()"><label for="itemTextDesc" style="text-align:left;">คำอธิบายใต้เมนู</label><div id="itemTextOrigDesc" style="font-size:11px; color:var(--text-dim); margin:2px 0 6px; word-break:break-word;"></div><input type="text" id="itemTextDesc" maxlength="140" placeholder="เว้นว่าง = ใช้ข้อความต้นฉบับ" style="width:100%; text-align:left; margin-bottom:10px;" onkeydown="if(event.key==='Enter') window.saveHubItemText()"><div id="itemTextEditNote" style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:14px;"></div><div style="display:flex; gap:8px;"><button class="manual-timer-btn" style="background:rgba(255,255,255,0.08); color:var(--text-dim); padding:0 12px;" onclick="window.clearHubItemText()" title="ล้างข้อความที่แก้ไว้ของเมนูนี้ (กลับเป็นต้นฉบับ)"><span class="material-symbols-outlined" style="font-size:18px;">restart_alt</span> คืนต้นฉบับ</button><button class="manual-timer-btn" style="background: var(--neon-green); flex:1; justify-content:center; color:#fff;" onclick="window.saveHubItemText()"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div></div>
 <div id="hubCatEditModal" class="modal-overlay" style="z-index: 10040;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="hubCatEditTitle">หัวข้อใหม่</h3><button class="btn-close-floating" onclick="window.toggleModal('hubCatEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><label style="text-align:left;">ชื่อหัวข้อ</label><input type="text" id="hubCatNameInput" maxlength="40" placeholder="เช่น 🚕 งานรถ / 🧾 ใบเสร็จ" style="width: 100%; margin-bottom: 10px; text-align: left;" onkeydown="if(event.key==='Enter') window.saveHubCat()"><div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 14px;">ตั้งชื่อแล้วลากเมนูไปวางในหัวข้อนี้ได้เลย — <b>หัวข้อที่ไม่มีเมนูจะถูกซ่อนเอง</b> (กลับมาเมื่อมีเมนูวางอยู่)<br>ใส่ emoji นำหน้าได้ เช่น 📁 · เก็บในเครื่องนี้ ไม่กินโควตา</div><button class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: #fff;" onclick="window.saveHubCat()"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกหัวข้อ</button></div></div></div>
 
 <div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควตา Firestore</h3><button id="quotaRefreshBtn" onclick="window.refreshQuotaMonitor()" title="ดึงยอดใหม่จากเซิร์ฟเวอร์" style="display:inline-flex; align-items:center; gap:4px; background:rgba(77,163,255,0.15); border:1px solid rgba(77,163,255,0.4); color:#7db8ff; border-radius:99px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s; position:absolute; right:58px; top:50%; transform:translateY(-50%);"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span>รีเฟรช</button><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">จำนวน อ่าน / เขียน / ลบ ที่ทุกบัญชี (ID) ใช้ Firestore วันนี้รวมกันทั้งระบบ <b style="color:#fff;">(ทุกเครื่องส่งยอดขึ้นเซิร์ฟเวอร์ทุก 10 นาที / ตอนปิดแอป</b> — แสดงยอดรวมทุก ID + เหลือเท่าไหร่ และแยกตาม ID ชื่อโปรไฟล์) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ฟีเจอร์ที่ฟังข้อมูลสดแบบเรียลไทม์จะกินโควตาอ่านตามจำนวนเครื่องที่เปิดดูพร้อมกัน)</div></div></div></div>
@@ -5193,6 +5199,8 @@
 
         container.addEventListener('pointerdown', (e) => {
             if (e.pointerType === 'mouse' && e.button !== 0) return;
+            // ✏️ ปุ่มดินสอแก้ข้อความเมนู → ไม่เริ่มลาก/ไม่เข้าโหมดลาก (แอดมินกดแก้ได้ทันที ในโหมดลาก)
+            if (e.target.closest && e.target.closest('.hub-item-edit')) return;
             const it = e.target.closest(itemsSel);
             if (!it) return;
             lastXY = { x: e.clientX, y: e.clientY };
@@ -5294,6 +5302,8 @@
         // คลิกตอนโหมดลาก: เมนูไม่ทำงาน (กันกดพลาด); คลิกที่ว่าง → จบ + บันทึก; ปุ่มปิด/ออก → จบโหมดแต่ปุ่มยังทำงานต่อ
         boxEl.addEventListener('click', (e) => {
             if (!window.__reorder || window.__reorder.boxEl !== boxEl) return;
+            // ✏️ ปุ่มดินสอแก้ข้อความเมนู → ปล่อยให้ปุ่มทำงาน (ต้องเช็คก่อนตัวเมนู ไม่งั้นคลิกจะถูกกลืน)
+            if (e.target.closest('.hub-item-edit')) return;
             const it = e.target.closest(itemsSel);
             if (it) { e.stopPropagation(); e.preventDefault(); return; }
             // 🧩 ปุ่มแก้ชื่อ/ลบหัวข้อ + ช่อง "วางเมนูที่นี่" → ไม่ต้องจบโหมดลาก (ให้ปุ่มทำงานตามปกติ)
@@ -6917,6 +6927,100 @@
             window.renderTextEditList('');
             window.showToast('รีเซ็ตข้อความกลับเป็นต้นฉบับแล้ว');
         } catch (e) { window.showToast('รีเซ็ตไม่สำเร็จ', true); }
+    };
+    // ✏️ ดินสอแก้ข้อความเมนูรายตัว — โผล่ท้ายชื่อเมนูเฉพาะตอนเข้าโหมดลาก (แอดมินเท่านั้น)
+    //    ทำงานบนระบบ override ชุดเดียวกับ “แก้ข้อความ / หัวข้อในแอป” (settings/app_texts · คีย์ = ข้อความต้นฉบับ)
+    //    ⚠️ ข้อความเดียวกันโผล่หลายจุด → แก้แล้วเปลี่ยนพร้อมกันทุกจุด (ตัวเตือนในหน้าต่างบอกจำนวนจุด)
+    window.__hubItemEditTarget = null;
+    window.hubItemTextNode = (el) => {
+        if (!el) return null;
+        const ns = Array.prototype.slice.call(el.childNodes);
+        for (let i = 0; i < ns.length; i++) {
+            const n = ns[i];
+            if (n.nodeType !== 3) continue;
+            const def = window.textOvrClean(window.__txtNodes.has(n) ? window.__txtNodes.get(n) : (n.nodeValue || ''));
+            if (def) return n;
+        }
+        return null;
+    };
+    window.hubItemOrigText = (el) => {
+        const n = window.hubItemTextNode(el); if (!n) return '';
+        return window.textOvrClean(window.__txtNodes.has(n) ? window.__txtNodes.get(n) : (n.nodeValue || ''));
+    };
+    // ฝัง/ถอดปุ่มดินสอให้ตรงกับสถานะจริง — เรียกซ้ำได้เสมอ (idempotent)
+    window.hubWireItemEditors = () => {
+        try {
+            const wrap = window.hubWrap(); if (!wrap) return;
+            const inReorder = !!(window.__reorder && window.__reorder.container === wrap);
+            const allow = inReorder && window.currentUserRole === 'Admin';
+            wrap.querySelectorAll('.hub-item').forEach(el => {
+                const old = el.querySelector('.hub-item-edit');
+                if (!allow) { if (old) old.remove(); return; }
+                if (old) return;
+                const titleEl = el.querySelector('.hub-item-title');
+                if (!titleEl || !window.hubItemTextNode(titleEl)) return;
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'hub-item-edit';
+                b.title = 'แก้ข้อความเมนูนี้';
+                b.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;">edit</span>';
+                // กันโหมดลาก/คลิกเมนูแย่งเหตุการณ์ — ปุ่มต้องทำงานได้ในโหมดลาก
+                b.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+                b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); window.openHubItemTextEditor(el); });
+                titleEl.appendChild(b);
+            });
+        } catch (e) {}
+    };
+    // เปิดหน้าต่างแก้ชื่อ/คำอธิบายของเมนูที่กด
+    window.openHubItemTextEditor = (itemEl) => {
+        if (window.currentUserRole !== 'Admin') return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
+        if (!itemEl || !document.getElementById('itemTextEditModal')) return;
+        try { window.textOvrInit(); window.textCaptureDefaults(document); } catch (e) {}
+        const defTitle = window.hubItemOrigText(itemEl.querySelector('.hub-item-title'));
+        const defDesc = window.hubItemOrigText(itemEl.querySelector('.hub-item-desc'));
+        if (!defTitle) return window.showToast('เมนูนี้แก้ที่นี่ไม่ได้ — ใช้เมนู “แก้ข้อความ / หัวข้อในแอป” แทน', true);
+        window.__hubItemEditTarget = { defTitle: defTitle, defDesc: defDesc };
+        const ovr = window.__textOvr || {};
+        const who = document.getElementById('itemTextEditWho'); if (who) who.textContent = '✏️ ' + defTitle;
+        const ot = document.getElementById('itemTextOrigTitle'); if (ot) ot.textContent = 'ต้นฉบับ: ' + defTitle;
+        const od = document.getElementById('itemTextOrigDesc'); if (od) od.textContent = defDesc ? ('ต้นฉบับ: ' + defDesc) : 'เมนูนี้ไม่มีคำอธิบายใต้ชื่อ';
+        const ti = document.getElementById('itemTextTitle'); if (ti) ti.value = ovr[defTitle] || '';
+        const di = document.getElementById('itemTextDesc'); if (di) { di.value = defDesc ? (ovr[defDesc] || '') : ''; di.disabled = !defDesc; }
+        let cnt = 1;
+        try { const hit = window.textCollect().filter(x => x.def === defTitle)[0]; if (hit) cnt = hit.count; } catch (e) {}
+        const note = document.getElementById('itemTextEditNote');
+        if (note) note.innerHTML = 'ข้อความ “' + window.textEscAttr(defTitle) + '” ปรากฏ <b>' + cnt + ' จุด</b> ในแอป — บันทึกแล้วเปลี่ยนพร้อมกันทุกจุด<br>มีผลกับ <b>ทุกคนที่ใช้แอป</b>ทันที (ต้องยืนยันตัวตนก่อนบันทึก) · ปุ่ม “คืนต้นฉบับ” ล้างช่องให้กลับไปใช้ข้อความเดิม';
+        window.toggleModal('itemTextEditModal', true);
+        setTimeout(() => { try { if (ti) { ti.focus(); ti.select(); } } catch (e) {} }, 120);
+    };
+    // บันทึกข้อความของเมนูนี้ (เขียนลง settings/app_texts ชุดเดียวกับหน้าต่างรวม)
+    window.saveHubItemText = async () => {
+        if (window.currentUserRole !== 'Admin') return window.showToast('เฉพาะแอดมินเท่านั้น', true);
+        const t = window.__hubItemEditTarget; if (!t) return;
+        const ti = document.getElementById('itemTextTitle');
+        const di = document.getElementById('itemTextDesc');
+        const before = window.__textOvr || {};
+        const items = Object.assign({}, before);
+        const put = (def, val) => { if (!def) return; const v = String(val == null ? '' : val).trim(); if (v && v !== def) items[def] = v; else delete items[def]; };
+        put(t.defTitle, ti && ti.value);
+        put(t.defDesc, di && !di.disabled ? di.value : (before[t.defDesc] || ''));
+        const diff = (items[t.defTitle] || '') !== (before[t.defTitle] || '') || (t.defDesc && (items[t.defDesc] || '') !== (before[t.defDesc] || ''));
+        if (!diff) return window.showToast('ข้อความยังเหมือนเดิม — ยังไม่มีอะไรต้องบันทึก', true);
+        if (!(await window.requireReauth('ยืนยันเพื่อบันทึกข้อความเมนู “' + t.defTitle + '” — ทุกคนจะเห็นข้อความใหม่นี้'))) return window.showToast('ยกเลิกการบันทึก — ยังไม่ได้ยืนยันตัวตน', true);
+        try {
+            await window.__fsTimeout(setDoc(doc(db, 'settings', 'app_texts'), { items: items, updatedAt: Date.now(), updatedBy: loggedInUserId }), 8000);
+            window.__textOvr = items; window.textOvrCacheWrite(items);
+            window.applyTextOverrides();
+            try { await recordActivityLog(loggedInUserId, 'แก้ข้อความในแอป', 'แก้ชื่อเมนู “' + t.defTitle + '”', 'security'); } catch (e) {}
+            window.toggleModal('itemTextEditModal', false);
+            window.showToast('บันทึกแล้ว — มีผลกับทุกคนทันที');
+        } catch (e) { window.showToast('บันทึกไม่สำเร็จ — ตรวจสัญญาณเน็ต', true); }
+    };
+    // คืนต้นฉบับ: ล้างช่องของเมนูนี้ (กด “บันทึก” ต่อเพื่อยืนยันการคืนค่า)
+    window.clearHubItemText = () => {
+        const ti = document.getElementById('itemTextTitle'); if (ti) ti.value = '';
+        const di = document.getElementById('itemTextDesc'); if (di) di.value = '';
+        window.showToast('ล้างช่องแล้ว — กด “บันทึก” เพื่อยืนยันกลับเป็นข้อความต้นฉบับ');
     };
 
     window.showCustomConfirm = function(title, desc, type = 'warning', okText = 'ยืนยัน') {
@@ -10736,6 +10840,8 @@
                 }
             });
             wrap.appendChild(frag);
+            // ✏️ โหมดลาก (แอดมิน) → เติมปุ่มดินสอท้ายชื่อเมนูทุกตัว / โหมดปกติ → ถอดออกให้หมด
+            if (typeof window.hubWireItemEditors === 'function') window.hubWireItemEditors();
         } catch (e) {}
     };
     // 💾 บันทึกว่าเมนูไหนอยู่หัวข้อไหน (ตอนจบโหมดลาก)
@@ -11220,6 +11326,7 @@
         // ---------- 15 ก.ย. 2569 · v1.2.15 (วันของ APP_RELEASE_DATE) ----------
         ['2026-09-15', '✏️ แอดมินแก้ข้อความ/หัวข้อในแอปได้เองทุกจุด (ไม่ต้องแก้โค้ด) + ค้นหา/รีเซ็ตได้'],
         ['2026-09-15', '🛡️ ข้อความที่แก้มีผลกับทุกคนทันที — ยืนยันตัวตนก่อนบันทึก และใช้ได้ตอนออฟไลน์'],
+        ['2026-09-15', '✏️ ดินสอท้ายชื่อเมนูในโหมดลาก — กดแก้ชื่อ/คำอธิบายเมนูนั้นได้ทันที ไม่ต้องเปิดลิสต์ยาว'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
