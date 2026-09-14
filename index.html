@@ -3709,6 +3709,15 @@
 
     let loggedInUserId = localStorage.getItem('taxi_user_id');
     let currentUserRole = "User";
+    // 🔐 บทบาทจริงของบัญชีที่ล็อกอินอยู่ — ตัวจริงคือ `currentUserRole` ในสคริปต์นี้ (module scope)
+    //    ⚠️ กับดักที่เจอจริง: `window.currentUserRole` **ไม่มีใครตั้งค่า** (undefined ตลอด) → เมนู/ปุ่มที่เช็คค่านี้
+    //       จะไม่ขึ้นในเครื่องผู้ใช้จริง (เห็นแต่ในพรีวิวที่แอบตั้งค่าทดสอบ) ⇒ ห้ามเช็คสิทธิ์ด้วย window.currentUserRole อีก
+    //       ตัวที่สะท้อนออก window จริงคือ `window.myCurrentRole` (ตั้งตอนโหลดเอกสารผู้ใช้)
+    window.myRoleNow = () => {
+        try { if (typeof currentUserRole === 'string' && currentUserRole) return currentUserRole; } catch (e) {}
+        return (typeof window.myCurrentRole === 'string' && window.myCurrentRole) ? window.myCurrentRole : 'User';
+    };
+    window.isAdminNow = () => window.myRoleNow() === 'Admin';
     let myExtraPerms = {}; // สิทธิ์พิเศษที่แอดมินอนุมัติให้บัญชีนี้โดยเฉพาะ (extraPerms ใน user doc — ไม่เปลี่ยนตำแหน่ง)
     let isBannedState = false;
     let permsUnsub = null, permConfigUnsub = null, myUserUnsub = null, serviceDataUnsub = null, adminSnapshotUnsub = null, permReqUnsub = null;
@@ -6891,7 +6900,7 @@
     };
     window.textEditClearOne = (el) => { const def = el && el.getAttribute('data-def'); if (!def) return; const ovr = Object.assign({}, window.__textOvr || {}); delete ovr[def]; window.__textOvr = ovr; window.applyTextOverrides(); window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : ''); };
     window.openTextEditModal = async () => {
-        if (window.currentUserRole !== 'Admin') return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
+        if (!window.isAdminNow()) return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
         if (!document.getElementById('textEditModal')) return;
         window.textOvrInit();
         window.toggleModal('textEditModal', true);
@@ -6901,7 +6910,7 @@
         window.renderTextEditList('');
     };
     window.saveTextOverrides = async () => {
-        if (window.currentUserRole !== 'Admin') return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
+        if (!window.isAdminNow()) return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
         const items = Object.assign({}, window.__textOvr || {});
         let changed = 0;
         document.querySelectorAll('#textEditList input[data-def]').forEach(inp => {
@@ -6923,7 +6932,7 @@
         finally { if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึกทั้งหมด'; } }
     };
     window.resetTextOverrides = async () => {
-        if (window.currentUserRole !== 'Admin') return window.showToast('เฉพาะแอดมินเท่านั้น', true);
+        if (!window.isAdminNow()) return window.showToast('เฉพาะแอดมินเท่านั้น', true);
         const ok = await window.showCustomConfirm('รีเซ็ตข้อความทั้งหมด?', 'ทุกหัวข้อที่แอดมินแก้ไว้จะกลับเป็นข้อความต้นฉบับของแอป', 'warning', 'รีเซ็ต');
         if (!ok) return;
         if (!(await window.requireReauth('ยืนยันเพื่อรีเซ็ต “ข้อความ/หัวข้อในแอป” ทั้งหมดกลับเป็นต้นฉบับ'))) return window.showToast('ยกเลิกการรีเซ็ต — ยังไม่ได้ยืนยันตัวตน', true);
@@ -6991,7 +7000,7 @@
     window.refreshMenuEditButtons = () => {
         try {
             const rc = window.__reorder;
-            const admin = window.currentUserRole === 'Admin';
+            const admin = window.isAdminNow();
             window.menuEditTargets().forEach(t => {
                 window.wireMenuEditors(t.wrap, t.itemsSel, t.titleSel, !!rc && admin && rc.container === t.wrap);
             });
@@ -7007,7 +7016,7 @@
     window.menuTitleSel = (itemEl) => (itemEl && itemEl.classList && itemEl.classList.contains('side-menu-item')) ? '.side-menu-text' : '.hub-item-title';
     // เปิดหน้าต่างแก้ชื่อ/คำอธิบายของเมนูที่กด
     window.openHubItemTextEditor = (itemEl) => {
-        if (window.currentUserRole !== 'Admin') return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
+        if (!window.isAdminNow()) return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
         if (!itemEl || !document.getElementById('itemTextEditModal')) return;
         try { window.textOvrInit(); window.textCaptureDefaults(document); } catch (e) {}
         const defTitle = window.hubItemOrigText(itemEl.querySelector(window.menuTitleSel(itemEl)));
@@ -7029,7 +7038,7 @@
     };
     // บันทึกข้อความของเมนูนี้ (เขียนลง settings/app_texts ชุดเดียวกับหน้าต่างรวม)
     window.saveHubItemText = async () => {
-        if (window.currentUserRole !== 'Admin') return window.showToast('เฉพาะแอดมินเท่านั้น', true);
+        if (!window.isAdminNow()) return window.showToast('เฉพาะแอดมินเท่านั้น', true);
         const t = window.__hubItemEditTarget; if (!t) return;
         const ti = document.getElementById('itemTextTitle');
         const di = document.getElementById('itemTextDesc');
@@ -10757,7 +10766,7 @@
         if (typeof window.checkTripSyncAlert === 'function') window.checkTripSyncAlert();
         const hubToastItem = document.getElementById('hubToastItem'); if (hubToastItem) hubToastItem.style.display = canToastMenu ? 'flex' : 'none';
         // ✏️ แก้ข้อความ/หัวข้อในแอป — เฉพาะแอดมินเท่านั้น (ผู้ใช้อื่นไม่เห็นเมนูนี้)
-        const hubTextItem = document.getElementById('hubTextItem'); if (hubTextItem) hubTextItem.style.display = (window.currentUserRole === 'Admin') ? 'flex' : 'none';
+        const hubTextItem = document.getElementById('hubTextItem'); if (hubTextItem) hubTextItem.style.display = window.isAdminNow() ? 'flex' : 'none';
         const hubLoadingItem = document.getElementById('hubLoadingItem'); if (hubLoadingItem) hubLoadingItem.style.display = canToastMenu ? 'flex' : 'none';
         const hubRoleItem = document.getElementById('hubRoleItem'); if (hubRoleItem) hubRoleItem.style.display = canRoleMenu ? 'flex' : 'none';
         const hubServiceItem = document.getElementById('hubServiceItem'); if (hubServiceItem) hubServiceItem.style.display = canServiceMenu ? 'flex' : 'none';
@@ -10940,7 +10949,7 @@
     // ==================== 🚀 หน้าจอโหลด (แอดมินตั้งรูป/ข้อความ → ทุกคนเห็นเหมือนกัน) ====================
     window.__lsSaved = { image: '', title: '' };
     window.__lsDraft = { image: null }; // null = ยังไม่แก้รูปในรอบนี้ (ใช้ค่าที่บันทึกไว้)
-    window.lsCanManage = () => (window.currentUserRole === 'Admin' || (window.currentUserPerms && window.currentUserPerms().canManageToastMsg));
+    window.lsCanManage = () => (window.isAdminNow() || (window.currentUserPerms && window.currentUserPerms().canManageToastMsg));
     window.lsCurrentImage = () => (window.__lsDraft.image === null) ? window.__lsSaved.image : window.__lsDraft.image;
 
     window.lsRenderPreview = () => {
@@ -11362,6 +11371,7 @@
         ['2026-09-15', '🛡️ ข้อความที่แก้มีผลกับทุกคนทันที — ยืนยันตัวตนก่อนบันทึก และใช้ได้ตอนออฟไลน์'],
         ['2026-09-15', '✏️ ดินสอท้ายชื่อเมนูในโหมดลาก — กดแก้ชื่อ/คำอธิบายเมนูนั้นได้ทันที ไม่ต้องเปิดลิสต์ยาว'],
         ['2026-09-15', '✏️ ดินสอแก้ชื่อเมนูขึ้นในเมนูแฮมเบอร์เกอร์ด้วย (กดค้างเข้าโหมดลาก)'],
+        ['2026-09-15', '🐞 แก้เมนู/ปุ่มแอดมินไม่โผล่ในเครื่องจริง — เช็คสิทธิ์ผิดตัวแปร (window.currentUserRole)'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -11695,7 +11705,7 @@
             currentUserRole = data.role || "User"; myExtraPerms = data.extraPerms || {}; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); let displayNameVal = data.displayName || data.username; window.myCurrentDisplayName = displayNameVal;
             // 🪪 เก็บ "ชื่อผู้ใช้ที่ใช้ล็อกอิน" + บทบาทจริงไว้ให้ UI เรียกใช้ (หน้าต่างเปลี่ยนรหัสผ่าน / คำขอสิทธิ์)
             //    เดิมไม่มีใครตั้งค่า 2 ตัวนี้ → หน้าต่างเปลี่ยนรหัสผ่านโชว์รหัสเอกสาร uid และโชว์ตำแหน่งเป็น "User" ตลอด
-            try { window.myCurrentUsername = data.username || ""; window.myCurrentRole = currentUserRole; window.myCurrentPhoneNumber = data.phoneNumber || ""; } catch (e) {}
+            try { window.myCurrentUsername = data.username || ""; window.myCurrentRole = currentUserRole; window.currentUserRole = currentUserRole; /* 🔁 สะท้อนบทบาทออก window ด้วย (โค้ดเก่าบางจุดอ่านตัวนี้) */ window.myCurrentPhoneNumber = data.phoneNumber || ""; } catch (e) {}
             try { window.applyAvatarRingRole(currentUserRole, loggedInUserId); } catch (e) {}
             // ⭐ Default Favorites: ถ้ายังไม่มีใน localStorage → นำเข้าจาก Admin global (settings/appConfig.defaultFavorites) หรือ DEFAULT_ADMIN_FAVORITES ถ้า DB ยังไม่มี
             try {
