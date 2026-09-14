@@ -2557,10 +2557,10 @@
         </div>
         <hr class="side-divider">
         <div class="side-menu-items">
-            <div class="side-menu-item" data-ord-key="home" onclick="window.toggleSideMenu(false)"><span class="material-symbols-outlined">home</span><span>หน้าแรก</span></div>
-            <div class="side-menu-item" data-ord-key="profile" onclick="window.toggleSideMenu(false); window.openProfileModal();"><span class="material-symbols-outlined" style="position: relative;">person<span id="menuProfileBadge" class="perm-badge" style="display: none;"></span></span><span>โปรไฟล์</span></div>
-            <div id="tripHistoryMenuItem" class="side-menu-item" data-ord-key="trips" onclick="window.toggleSideMenu(false); setTimeout(function(){ window.openTripHistory(); }, 250);"><span class="material-symbols-outlined">receipt_long</span><span>ประวัติ</span></div>
-            <div id="settingsMenuBtn" class="side-menu-item" data-ord-key="settings" onclick="window.toggleSideMenu(false); setTimeout(() => { window.openSettingsHub(); }, 300);" style="display: none;"><span class="material-symbols-outlined" style="position: relative;">settings<span id="menuSignupBadge" class="perm-badge" style="display: none; background: #22c55e; border-color: #0f1720;"></span><span id="menuNotifBadge" class="perm-badge" style="display: none; top: 11px; right: -6px; background: #ffd24d; border-color: #0f1720; color: #121212;"></span></span><span>ตั้งค่าการใช้งาน</span></div>
+            <div class="side-menu-item" data-ord-key="home" onclick="window.toggleSideMenu(false)"><span class="material-symbols-outlined">home</span><span class="side-menu-text">หน้าแรก</span></div>
+            <div class="side-menu-item" data-ord-key="profile" onclick="window.toggleSideMenu(false); window.openProfileModal();"><span class="material-symbols-outlined" style="position: relative;">person<span id="menuProfileBadge" class="perm-badge" style="display: none;"></span></span><span class="side-menu-text">โปรไฟล์</span></div>
+            <div id="tripHistoryMenuItem" class="side-menu-item" data-ord-key="trips" onclick="window.toggleSideMenu(false); setTimeout(function(){ window.openTripHistory(); }, 250);"><span class="material-symbols-outlined">receipt_long</span><span class="side-menu-text">ประวัติ</span></div>
+            <div id="settingsMenuBtn" class="side-menu-item" data-ord-key="settings" onclick="window.toggleSideMenu(false); setTimeout(() => { window.openSettingsHub(); }, 300);" style="display: none;"><span class="material-symbols-outlined" style="position: relative;">settings<span id="menuSignupBadge" class="perm-badge" style="display: none; background: #22c55e; border-color: #0f1720;"></span><span id="menuNotifBadge" class="perm-badge" style="display: none; top: 11px; right: -6px; background: #ffd24d; border-color: #0f1720; color: #121212;"></span></span><span class="side-menu-text">ตั้งค่าการใช้งาน</span></div>
         </div>
         <hr class="side-divider">
         <div class="side-menu-item logout-item" onclick="window.toggleSideMenu(false); window.logoutApp();"><span class="material-symbols-outlined">logout</span><span>ออกจากระบบ</span></div>
@@ -2736,11 +2736,14 @@
         html.light .hub-cat-label .hub-cat-btn { color: #8a6a00; }
         html.light .hub-cat-label .hub-cat-btn.danger { color: #b3202f; }
         html.light .hub-drop-empty { border-color: rgba(176,124,0,0.45); color: #8a6a00; background: rgba(176,124,0,0.06); }
-        /* ✏️ ดินสอแก้ข้อความเมนูรายตัว — โผล่ต่อท้ายชื่อเมนูเฉพาะตอนเข้าโหมดลาก (แอดมินเท่านั้น) */
-        .hub-item-edit { background: rgba(255,210,77,0.14); border: 1px solid rgba(255,210,77,0.45); color: var(--neon-yellow); width: 24px; height: 24px; border-radius: 50%; padding: 0; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
-        .hub-item-edit:hover { background: rgba(255,210,77,0.28); }
-        html.light .hub-item-edit { background: rgba(176,124,0,0.12); border-color: rgba(176,124,0,0.45); color: #8a6a00; }
-        html.light .hub-item-edit:hover { background: rgba(176,124,0,0.22); }
+        /* ✏️ ดินสอแก้ข้อความเมนูรายตัว — โผล่ต่อท้ายชื่อเมนูเฉพาะตอนเข้าโหมดลาก (แอดมินเท่านั้น)
+           ใช้ร่วมกันทั้งเมนูแฮมเบอร์เกอร์ (.side-menu-item) และตั้งค่าการใช้งาน (.hub-item) */
+        .menu-item-edit { background: rgba(255,210,77,0.14); border: 1px solid rgba(255,210,77,0.45); color: var(--neon-yellow); width: 24px; height: 24px; border-radius: 50%; padding: 0; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+        .menu-item-edit:hover { background: rgba(255,210,77,0.28); }
+        .side-menu-item .menu-item-edit { width: 21px; height: 21px; margin-left: 7px; vertical-align: middle; opacity: 0.9; }
+        html.light .menu-item-edit { background: rgba(176,124,0,0.12); border-color: rgba(176,124,0,0.45); color: #8a6a00; }
+        html.light .menu-item-edit:hover { background: rgba(176,124,0,0.22); }
+        html.light .side-menu-item .menu-item-edit { background: rgba(176,124,0,0.16); color: #7a5c00; }
 
         /* ===== 💰 ระบบคำนวณทอนเงินด่วน (Quick Change Calculator) ===== */
         .qc-bills { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-bottom: 10px; }
@@ -5018,6 +5021,8 @@
         rc.container.querySelectorAll('.reorder-arming').forEach(a => a.classList.remove('reorder-arming'));
         rc.container.querySelectorAll('.reorder-shift').forEach(s => { s.classList.remove('reorder-shift'); s.style.transform = ''; });
         const hint = rc.boxEl.querySelector('.reorder-hint'); if (hint) hint.remove();
+        // ✏️ ออกจากโหมดลาก → ต้องถอดปุ่มดินสอออกทั้งแฮมเบอร์เกอร์และตั้งค่าการใช้งาน
+        try { window.refreshMenuEditButtons(); } catch (e) {}
         if (save) {
             // 🧩 hub: บันทึก “เมนูไหนอยู่หัวข้อไหน” ก่อนซิงก์ขึ้น Firestore
             //    ⚠️ ลำดับนี้สำคัญ — ถ้าซิงก์ก่อน แผนผังหัวข้อที่เพิ่งลากจะไม่ถูกส่งขึ้นไป (เจอจริง: เครื่องอื่นได้ค่าเก่า)
@@ -5061,6 +5066,8 @@
         const header = boxEl.querySelector('.modal-header');
         if (header && header.parentNode) header.after(hint);
         else boxEl.insertBefore(hint, boxEl.firstChild);
+        // ✏️ เติมดินสอแก้ข้อความให้เมนูของที่นี้ (และถอดของที่อื่นให้เกลี้ยง) — ต้องเรียกหลังตั้ง `__reorder` แล้ว
+        try { window.refreshMenuEditButtons(); } catch (e) {}
     };
     window.applySavedMenuOrder = (container, itemsSel, saveKey) => {
         try {
@@ -5200,7 +5207,7 @@
         container.addEventListener('pointerdown', (e) => {
             if (e.pointerType === 'mouse' && e.button !== 0) return;
             // ✏️ ปุ่มดินสอแก้ข้อความเมนู → ไม่เริ่มลาก/ไม่เข้าโหมดลาก (แอดมินกดแก้ได้ทันที ในโหมดลาก)
-            if (e.target.closest && e.target.closest('.hub-item-edit')) return;
+            if (e.target.closest && e.target.closest('.menu-item-edit')) return;
             const it = e.target.closest(itemsSel);
             if (!it) return;
             lastXY = { x: e.clientX, y: e.clientY };
@@ -5303,7 +5310,7 @@
         boxEl.addEventListener('click', (e) => {
             if (!window.__reorder || window.__reorder.boxEl !== boxEl) return;
             // ✏️ ปุ่มดินสอแก้ข้อความเมนู → ปล่อยให้ปุ่มทำงาน (ต้องเช็คก่อนตัวเมนู ไม่งั้นคลิกจะถูกกลืน)
-            if (e.target.closest('.hub-item-edit')) return;
+            if (e.target.closest('.menu-item-edit')) return;
             const it = e.target.closest(itemsSel);
             if (it) { e.stopPropagation(); e.preventDefault(); return; }
             // 🧩 ปุ่มแก้ชื่อ/ลบหัวข้อ + ช่อง "วางเมนูที่นี่" → ไม่ต้องจบโหมดลาก (ให้ปุ่มทำงานตามปกติ)
@@ -6764,7 +6771,7 @@
     //  เก็บที่ Firestore settings/app_texts = { items: { "ข้อความต้นฉบับ": "ข้อความใหม่" } } + แคชในเครื่อง
     //  หลักการ: จำ “ข้อความต้นฉบับ” ของทุก text node ไว้ (Map) แล้วเซ็ตค่าจากต้นฉบับเสมอ ⇒ ลบ override ทีหลังก็กลับเป็นเดิมได้ทันที
     const TEXT_OVR_KEY = 'taxi_text_overrides_v1';
-    const TEXT_SEL = 'h1,h2,h3,h4,h5,label,.hub-item-title,.hub-item-desc,.hub-cat-label,.qr-card-head,.qr-card-sub,.qr-card-badge,.qr-card-hint,.section-title,.admin-user-name,.admin-user-sub,.ls-demo-title,.theme-seg-opt,.taxi-type-option,button.manual-timer-btn,#authTitle,.modal-header h3';
+    const TEXT_SEL = 'h1,h2,h3,h4,h5,label,.side-menu-text,.hub-item-title,.hub-item-desc,.hub-cat-label,.qr-card-head,.qr-card-sub,.qr-card-badge,.qr-card-hint,.section-title,.admin-user-name,.admin-user-sub,.ls-demo-title,.theme-seg-opt,.taxi-type-option,button.manual-timer-btn,#authTitle,.modal-header h3';
     window.__textOvr = {};
     window.__txtNodes = new Map(); // text node → ข้อความต้นฉบับ (จำครั้งเดียวต่อ session)
     window.textOvrCacheRead = () => { try { const m = JSON.parse(localStorage.getItem(TEXT_OVR_KEY) || '{}'); return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {}; } catch (e) { return {}; } };
@@ -6947,41 +6954,68 @@
         const n = window.hubItemTextNode(el); if (!n) return '';
         return window.textOvrClean(window.__txtNodes.has(n) ? window.__txtNodes.get(n) : (n.nodeValue || ''));
     };
+    // ตัวเมนูของแต่ละที่: [ตัวครอบ, ตัวเลือกเมนู, ตัวเลือกชื่อ]
+    window.menuEditTargets = () => {
+        const sideBox = document.getElementById('sideMenuBox');
+        const sideWrap = sideBox ? sideBox.querySelector('.side-menu-items') : null;
+        return [
+            { box: sideBox, wrap: sideWrap, itemsSel: '.side-menu-item', titleSel: '.side-menu-text', where: 'เมนูแฮมเบอร์เกอร์' },
+            { box: document.getElementById('settingsHubModal'), wrap: window.hubWrap(), itemsSel: '.hub-item', titleSel: '.hub-item-title', where: 'ตั้งค่าการใช้งาน' }
+        ].filter(t => t.wrap);
+    };
     // ฝัง/ถอดปุ่มดินสอให้ตรงกับสถานะจริง — เรียกซ้ำได้เสมอ (idempotent)
-    window.hubWireItemEditors = () => {
+    window.wireMenuEditors = (wrap, itemsSel, titleSel, allow) => {
+        if (!wrap) return 0;
+        let n = 0;
+        wrap.querySelectorAll(itemsSel).forEach(el => {
+            const old = el.querySelector('.menu-item-edit');
+            if (!allow) { if (old) old.remove(); return; }
+            if (old) { n++; return; }
+            const titleEl = el.querySelector(titleSel);
+            if (!titleEl || !window.hubItemTextNode(titleEl)) return;
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'menu-item-edit';
+            b.title = 'แก้ข้อความเมนูนี้';
+            b.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;">edit</span>';
+            // กันโหมดลาก/คลิกเมนูแย่งเหตุการณ์ — ปุ่มต้องทำงานได้ในโหมดลาก
+            b.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+            b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); window.openHubItemTextEditor(el); });
+            titleEl.appendChild(b);
+            n++;
+        });
+        return n;
+    };
+    // 🔁 จัดปุ่มดินสอใหม่ทั้งแอปให้ตรงกับโหมดลากปัจจุบัน (แฮมเบอร์เกอร์ + ตั้งค่าการใช้งาน)
+    //    ⚠️ ปุ่มอยู่ในเมนู ⇒ ต้องอยู่เฉพาะโหมดลาก + แอดมิน เท่านั้น (ออกโหมดแล้วต้องเกลี้ยง)
+    window.refreshMenuEditButtons = () => {
         try {
-            const wrap = window.hubWrap(); if (!wrap) return;
-            const inReorder = !!(window.__reorder && window.__reorder.container === wrap);
-            const allow = inReorder && window.currentUserRole === 'Admin';
-            wrap.querySelectorAll('.hub-item').forEach(el => {
-                const old = el.querySelector('.hub-item-edit');
-                if (!allow) { if (old) old.remove(); return; }
-                if (old) return;
-                const titleEl = el.querySelector('.hub-item-title');
-                if (!titleEl || !window.hubItemTextNode(titleEl)) return;
-                const b = document.createElement('button');
-                b.type = 'button';
-                b.className = 'hub-item-edit';
-                b.title = 'แก้ข้อความเมนูนี้';
-                b.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;">edit</span>';
-                // กันโหมดลาก/คลิกเมนูแย่งเหตุการณ์ — ปุ่มต้องทำงานได้ในโหมดลาก
-                b.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
-                b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); window.openHubItemTextEditor(el); });
-                titleEl.appendChild(b);
+            const rc = window.__reorder;
+            const admin = window.currentUserRole === 'Admin';
+            window.menuEditTargets().forEach(t => {
+                window.wireMenuEditors(t.wrap, t.itemsSel, t.titleSel, !!rc && admin && rc.container === t.wrap);
             });
         } catch (e) {}
     };
+    // ชื่อเดิม (เรียกจาก applyHubLayout) — ให้ตัวใหม่จัดการทั้งสองที่
+    window.hubWireItemEditors = () => window.refreshMenuEditButtons();
+    // อยู่ที่ไหน (ไว้บอกในหน้าต่างแก้ข้อความ)
+    window.menuWhereIs = (itemEl) => {
+        try { if (itemEl && itemEl.closest && itemEl.closest('#sideMenuBox')) return 'เมนูแฮมเบอร์เกอร์'; } catch (e) {}
+        return 'ตั้งค่าการใช้งาน';
+    };
+    window.menuTitleSel = (itemEl) => (itemEl && itemEl.classList && itemEl.classList.contains('side-menu-item')) ? '.side-menu-text' : '.hub-item-title';
     // เปิดหน้าต่างแก้ชื่อ/คำอธิบายของเมนูที่กด
     window.openHubItemTextEditor = (itemEl) => {
         if (window.currentUserRole !== 'Admin') return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
         if (!itemEl || !document.getElementById('itemTextEditModal')) return;
         try { window.textOvrInit(); window.textCaptureDefaults(document); } catch (e) {}
-        const defTitle = window.hubItemOrigText(itemEl.querySelector('.hub-item-title'));
+        const defTitle = window.hubItemOrigText(itemEl.querySelector(window.menuTitleSel(itemEl)));
         const defDesc = window.hubItemOrigText(itemEl.querySelector('.hub-item-desc'));
         if (!defTitle) return window.showToast('เมนูนี้แก้ที่นี่ไม่ได้ — ใช้เมนู “แก้ข้อความ / หัวข้อในแอป” แทน', true);
         window.__hubItemEditTarget = { defTitle: defTitle, defDesc: defDesc };
         const ovr = window.__textOvr || {};
-        const who = document.getElementById('itemTextEditWho'); if (who) who.textContent = '✏️ ' + defTitle;
+        const who = document.getElementById('itemTextEditWho'); if (who) who.textContent = '✏️ ' + defTitle + '  ·  ' + window.menuWhereIs(itemEl);
         const ot = document.getElementById('itemTextOrigTitle'); if (ot) ot.textContent = 'ต้นฉบับ: ' + defTitle;
         const od = document.getElementById('itemTextOrigDesc'); if (od) od.textContent = defDesc ? ('ต้นฉบับ: ' + defDesc) : 'เมนูนี้ไม่มีคำอธิบายใต้ชื่อ';
         const ti = document.getElementById('itemTextTitle'); if (ti) ti.value = ovr[defTitle] || '';
@@ -11327,6 +11361,7 @@
         ['2026-09-15', '✏️ แอดมินแก้ข้อความ/หัวข้อในแอปได้เองทุกจุด (ไม่ต้องแก้โค้ด) + ค้นหา/รีเซ็ตได้'],
         ['2026-09-15', '🛡️ ข้อความที่แก้มีผลกับทุกคนทันที — ยืนยันตัวตนก่อนบันทึก และใช้ได้ตอนออฟไลน์'],
         ['2026-09-15', '✏️ ดินสอท้ายชื่อเมนูในโหมดลาก — กดแก้ชื่อ/คำอธิบายเมนูนั้นได้ทันที ไม่ต้องเปิดลิสต์ยาว'],
+        ['2026-09-15', '✏️ ดินสอแก้ชื่อเมนูขึ้นในเมนูแฮมเบอร์เกอร์ด้วย (กดค้างเข้าโหมดลาก)'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {

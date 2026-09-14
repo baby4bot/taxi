@@ -1,7 +1,7 @@
 {
     "note":  "Expected shape of the in-app version history. Regenerate with -UpdateBaseline only when a day legitimately gains bullets.",
     "maxLenLimit":  90,
-    "totalBullets":  190,
+    "totalBullets":  191,
     "days":  [
                  {
                      "date":  "2026-09-05",
@@ -56,7 +56,7 @@
                  {
                      "date":  "2026-09-15",
                      "v":  "today",
-                     "count":  3
+                     "count":  4
                  }
              ]
 }
