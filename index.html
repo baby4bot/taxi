@@ -2204,6 +2204,36 @@
     .th-trip .th-f { color: var(--neon-green); font-weight: 700; width: 62px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
     .th-trip.th-short .th-dest { color: var(--text-dim); font-style: italic; }
     .th-loading { text-align: center; color: var(--text-dim); font-size: 13px; padding: 22px 0; line-height: 1.7; }
+    /* 🎯 ปรับเทียบมิเตอร์จริง (14 ก.ย.) — การ์ดกรอกยอดมิเตอร์ + ผลต่าง % */
+    .th-trip .th-cal { font-size: 10.5px; flex-shrink: 0; font-variant-numeric: tabular-nums; font-weight: 700; }
+    .cal-card { background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.28); border-radius: 16px; padding: 13px 14px; text-align: left; }
+    .cal-hd { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: #38bdf8; }
+    .cal-note { font-size: 11.5px; color: var(--text-dim); line-height: 1.55; margin: 7px 0 9px; }
+    .cal-row { display: flex; gap: 8px; }
+    .cal-field { flex: 1; min-width: 0; }
+    .cal-field label { display: block; font-size: 11px; color: var(--text-dim); font-weight: 700; margin-bottom: 4px; }
+    .cal-in { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.16); border-radius: 11px; padding: 10px 12px; color: #fff; font-size: 17px; font-weight: 700; font-family: inherit; text-align: right; font-variant-numeric: tabular-nums; }
+    .cal-in::placeholder { color: rgba(255,255,255,0.32); font-weight: 600; }
+    .cal-in:focus { outline: none; border-color: #38bdf8; background: rgba(56,189,248,0.10); }
+    .cal-btns { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
+    .cal-btn { flex: 1 1 46%; border: 0; border-radius: 11px; padding: 10px 12px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .cal-btn:active { transform: scale(0.97); }
+    .cal-btn.cal-save { background: linear-gradient(135deg,#38bdf8,#0284c7); color: #fff; }
+    .cal-btn.cal-exact { background: rgba(46,204,113,0.16); color: #2ecc71; }
+    .cal-res { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 12px; padding: 9px 11px; margin-top: 9px; }
+    .cal-val { color: #fff; }
+    .cal-val-app { color: #38bdf8; }
+    .cal-val-fare { color: var(--neon-green); }
+    html.light .cal-val { color: #12203a; }
+    html.light .cal-val-app { color: #0369a1; }
+    html.light .cal-val-fare { color: #0f7a45; }
+    .cal-res-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 4px 0; }
+    .cal-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    html.light .cal-card { background: rgba(2,132,199,0.06); border-color: rgba(2,132,199,0.25); }
+    html.light .cal-hd { color: #0369a1; }
+    html.light .cal-in { background: rgba(18,26,48,0.05); border-color: rgba(18,26,48,0.15); color: #12203a; }
+    html.light .cal-in::placeholder { color: rgba(18,26,48,0.35); }
+    html.light .cal-res { background: rgba(18,26,48,0.04); border-color: rgba(18,26,48,0.09); }
 </style>
 <div id="tripHistoryModal" class="modal-overlay" style="z-index: 10058;">
     <div class="modal-box flex-col-box" onclick="event.stopPropagation()">
@@ -2211,6 +2241,13 @@
 
         <div id="thSummary" style="padding: 12px 14px 0 14px; flex-shrink: 0;"></div>
         <div id="thBody" class="modal-content-scroll" style="padding: 0 14px 16px 14px;"></div>
+    </div>
+</div>
+
+<div id="calibModal" class="modal-overlay" style="z-index: 10062;" onclick="window.toggleModal('calibModal', false)">
+    <div class="modal-box standard-box" onclick="event.stopPropagation()" style="padding: 24px 20px 18px;">
+        <button class="btn-close-floating" style="top: 12px; right: 12px; transform: none;" onclick="window.toggleModal('calibModal', false)" title="ปิด"><span class="material-symbols-outlined">close</span></button>
+        <div id="calibModalBody" style="width:100%; box-sizing:border-box;"></div>
     </div>
 </div>
 
@@ -3171,6 +3208,9 @@
     let trafficCharging = false, lastFixSpeedKmh = null, lastStopFixAt = null; // กำลังคิดค่าเวลาจอด? / ความเร็วจาก GPS ล่าสุด / เวลา fix สุดท้ายที่ยืนยันจอดจริง
     // ⏳ ยอดเวลารถติดที่ "คิดไปก่อน" ตอนไม่มี fix ยืนยันเลย (GPS ตาย/ถูกกรองทั้งหมด) — จะถูกถอนคืนทันทีถ้าหลักฐานใหม่บอกว่ารถวิ่งจริง
     let staleAccruedSec = 0, staleBaseAt = null, staleBasePos = null;
+    // ⚙️ ความเร็ว "ล้อหมุนจริง" ของเที่ยวนี้ (สะสมเฉพาะช่วงที่รถวิ่ง > 6 กม./ชม.) — ใช้เป็นความเร็วอ้างอิง
+    //    ตอนประเมินเวลารถติดของช่วงที่แอปถูกปิด/ซ่อน (เดิมใช้ค่าตายตัว 65 กม./ชม. → เที่ยวในเมืองคิดเกินมหาศาล)
+    let rollingKm = 0, rollingSec = 0;
     let lastPosTime = null, currentSpeedKmh = 0, currentTrueRemainKm = 0, currentTrueRemainSec = 0; 
     let hiddenGapStart = null, hiddenLastPos = null, hiddenTrafficBase = 0; // จดตอนแอปซ่อน/สลับแอป เพื่อเบิกเวลาจอด + ระยะทางที่หายกลับคืนเมื่อกลับมา; hiddenTrafficBase = trafficSeconds ตอนเริ่มซ่อน (อ้างอิงเบิก "exactly-once")
     // ⏸️ บันทึกช่วงที่มิเตอร์ "หยุด" ระหว่างเที่ยว (แอปถูกปิด/ซ่อนหน้าจอ) เพื่อโชว์ในหน้าสรุปหลังจบเที่ยว (ความโปร่งใสกับผู้โดยสาร)
@@ -3654,6 +3694,12 @@
             staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null; // ⏳ ช่วงที่ซ่อน/ปิดมี catch-up บริหารเองแล้ว — ไม่ให้มียอด "คิดไปก่อน" ค้างข้ามรอบ
             // 🧭 จด "ฐานหลักฐาน" ณ วินาทีที่ถูกซ่อน: km + เวลารถติด + ตำแหน่ง → ใช้ยึดยอดตอนเบิกคืน (กันยอดบวม/ยอดหาย)
             hiddenKmBase = actualDrivenKm; gapBasePos = hiddenLastPos; gapHiddenAt = hiddenGapStart;
+            // 🚫 สำคัญ (แก้ 2026-09-14): ตรึงการนับเวลารถติด ณ วินาทีที่ถูกซ่อน/ล็อกจอ
+            //    ถ้ารถ "จอด" ตอนถูกซ่อน แล้วไม่มี fix มาเลย (จอล็อก/แอปถูกพัก) ระบบเดิมนับเวลารถติดต่อเอง
+            //    1 วิ/วิ ตลอดช่วงที่ซ่อน แล้ว catch-up เก็บยอดนั้นไว้ (observedDuringGap) → เวลารถติดบวม
+            //    เคสจริง: ล็อกจอทั้งเที่ยว 10.7 กม. → แอป 18:03 / มิเตอร์จริง 4:54 → 149 บาท แทน 113
+            //    ต่อไป: ไม่มี fix สด = ไม่นับเอง · ให้ catch-up ตัดสินด้วยหลักฐานครั้งถัดไป (fix สดยังนับได้ตามปกติ)
+            trafficCharging = false; lastStopFixAt = null; lastCalcTime = Date.now();
         }
         openPause(Date.now()); // เริ่มจับเวลาช่วงที่มิเตอร์หยุด (แอปซ่อน/ปิดหน้าจอ)
         window.saveActiveTrip(true);
@@ -3730,7 +3776,10 @@
         if (movedKm < 0.1) return true;
         const avgKmh = movedKm / (gapSec / 3600);
         if (avgKmh <= 6) return true;
-        if (avgKmh <= 12 && accM > 40) return true;
+        // 🔧 2026-09-14: เดิม "เฉลี่ย ≤ 12 กม./ชม. + fix หยาบ (> 40 ม.)" = เหมาเป็น "จอดทั้งช่วง"
+        //    → ในเมืองที่รถคลาน 7-12 กม./ชม. แอปเบิกเวลาจอดทั้งช่วง (มิเตอร์จริงไม่คิดเวลารถติดตอนล้อหมุน)
+        //    ตอนนี้ยอมรับเฉพาะเมื่อ "ขยับอยู่ในกรอบความคลาดเคลื่อนของ fix เอง" และไม่เกิน 150 ม.
+        if (avgKmh <= 12 && movedKm * 1000 <= Math.max(150, (accM || 30) * 2)) return true;
         if (speedKmh !== -1 && speedKmh > 6 && avgKmh > 12) return false;
         return stoppedGapKm(movedKm, accM, gapSec);
     };
@@ -3753,24 +3802,38 @@
     //    หลักการเดียวกับมิเตอร์จริง: "เวลารถติด = เวลาทั้งช่วง − เวลาที่ใช้วิ่งถ้าถนนโล่ง"
     // - มีเวลา "วิ่งโล่ง" ของช่วงปิดจริง (gapNoTrafficSec จาก TomTom noTrafficTravelTimeInSeconds) → ใช้เป็นหลัก (แม่นสุด)
     // - ไม่มีเส้นทาง (ออฟไลน์/โควตาหมด/เที่ยวไม่มีปลายทาง) → ใช้ "เวลาวิ่งโล่งอ้างอิง" จากระยะที่วิ่งได้
-    //   ด้วย GAP_CATCHUP_FREEFLOW_KMH (ค่าที่เทียบกับมิเตอร์จริงในรถแล้ว): ระยะ 126.2 กม. ใช้เวลารวม 3:35
-    //   แต่มิเตอร์คิดเวลารถติด 1:47:35 → เวลาที่ล้อหมุนจริง ~1:48 = วิ่งเฉลี่ย ~70 กม./ชม. → ใช้ 65 กม./ชม. (เผื่อรถช้าช่วงเข้า/ออกเมือง)
+    // ⚠️ ห้ามใช้ค่าคงที่ตัวเดียวเป็น "เวลาวิ่งโล่ง" ทุกกรณี (เคสจริง 14 ก.ย. 69: ล็อกจอทั้งเที่ยว 10.7 กม.
+    //    มิเตอร์จริงรถติด 4:54 / แอปขึ้น 18:03 → 149 บาท แทน 113 เพราะค่าคงที่ 65 กม./ชม. สูงกว่า
+    //    ความเร็วจริงในเมืองมาก ทุกวินาทีที่ช้ากว่า 65 จึงถูกนับเป็น "รถติด" ทั้งที่รถกำลังวิ่ง)
+    // - มี 2 ชั้นตามความเชื่อถือ: ① `gapNoTrafficSec` จาก TomTom (รู้ชนิดถนน) → ② ความเร็วล้อหมุนจริงของเที่ยวนี้
+    //   (rollingKm/rollingSec ที่วัดจาก GPS ของผู้ขับคนนี้ในเที่ยวนี้ — ทางด่วนวัดได้ ~70 ในเมืองวัดได้ ~28)
     // ⚠️ ห้ามกลับไปใช้สูตรเดิม "เฉลี่ย ≥ 30 กม./ชม. = ไม่ติด → คืน 0" — เป็นเหตุให้เวลารถติดช่วงปิดแอปหายทั้งช่วง
     //    (เคสจริง 13 ก.ย. 69: ไป-กลับอยุธยา 3:35 แอป 0:26 / มิเตอร์จริง 1:47:35 → ค่าโดยสาร 1151 แทนที่จะเป็น 1481)
-    const GAP_CATCHUP_FREEFLOW_KMH = 65;
+    const GAP_REF_KMH_MIN = 15, GAP_REF_KMH_MAX = 90; // ขอบเขตความเร็วอ้างอิง (กันค่าเพี้ยนจาก GPS ตอนเปิดแอป)
+    // ⚙️ ความเร็ว "ล้อหมุน" ของเที่ยวนี้ (กม./ชม.) — คืน null เมื่อยังมีหลักฐานไม่พอ (ต้องมี ~1 นาที/0.5 กม.)
+    const gapRollingKmh = (opts) => {
+        const rk = (opts && typeof opts.rollKm === 'number') ? opts.rollKm : rollingKm;
+        const rs = (opts && typeof opts.rollSec === 'number') ? opts.rollSec : rollingSec;
+        if (!(rs >= 60 && rk >= 0.5)) return null;
+        return Math.min(GAP_REF_KMH_MAX, Math.max(GAP_REF_KMH_MIN, rk / (rs / 3600)));
+    };
     // ช่วงปิดที่รถวิ่งเร็วกว่าอ้างอิง (ทางด่วนโล่ง) ก็ยังมีไฟแดง/ชะลอ/ด่าน อยู่บ้าง → อย่างต่ำ 3% ของช่วง (เฉพาะช่วง ≥ 2 นาที)
     const GAP_MIN_TRAFFIC_FRAC = 0.03;
-    const estimateGapTrafficSec = (gapSec, gapKm, gapNoTrafficSec) => {
+    // ไม่มีข้อมูลอ้างอิงเลย (เที่ยวตายตั้งแต่ต้น + ออฟไลน์) → สมมติ 1 ใน 4 ของเวลาช่วงที่รถวิ่งเป็นเวลาจอด/คลาน
+    const GAP_UNKNOWN_STOP_FRAC = 0.25;
+    const estimateGapTrafficSec = (gapSec, gapKm, gapNoTrafficSec, refOpts) => {
         if (!(gapSec > 0)) return 0;
         const floorSec = (gapSec >= 120) ? Math.round(gapSec * GAP_MIN_TRAFFIC_FRAC) : 0;
         if (!(gapKm > 0)) return floorSec; // รู้แค่เวลาที่ผ่านไป ไม่รู้ระยะ → ใช้ค่าขั้นต่ำ (better than 0)
+        let est;
         if (typeof gapNoTrafficSec === 'number' && gapNoTrafficSec > 0) {
-            return Math.max(0, Math.min(gapSec - gapNoTrafficSec, gapSec));
+            est = gapSec - gapNoTrafficSec; // ① เวลาวิ่งโล่งจริงของช่วงนั้น (TomTom รู้ชนิดถนน)
+        } else {
+            const rollKmh = gapRollingKmh(refOpts);
+            // ② ความเร็วล้อหมุนจริงของเที่ยวนี้ (ไม่ใช่ค่าคงที่ 65) — เวลาที่เกินเวลาวิ่งโล่ง = เวลาจอด/คลาน
+            est = (rollKmh !== null) ? (gapSec - gapKm / rollKmh * 3600) : (gapSec * GAP_UNKNOWN_STOP_FRAC);
         }
-        const freeFlowSec = gapKm / GAP_CATCHUP_FREEFLOW_KMH * 3600;
-        const excess = gapSec - freeFlowSec;
-        if (excess > floorSec) return Math.round(Math.min(excess, gapSec));
-        return floorSec;
+        return Math.max(floorSec, Math.min(Math.round(est), Math.round(gapSec)));
     };
     // 📏 tryNoDestRouteKm: เที่ยวไม่มีปลายทาง — เบิกคืนระยะช่วงแอปปิด/ซ่อนด้วยเส้นทางถนนจริง
     // (TomTom route จากจุดก่อนปิด → จุดปัจจุบัน) แทนเส้นตรง×factor ที่ตัดมุมถนน (ระยะจริง > เส้นตรงเสมอ)
@@ -7608,7 +7671,19 @@
         evidenceAgeSec: lastStopFixAt ? Math.round((Date.now() - lastStopFixAt) / 1000) : null,
         lastSpeedKmh: (typeof lastFixSpeedKmh !== 'number') ? null : Math.round(lastFixSpeedKmh * 10) / 10,
         staleAccruedSec: Math.round(staleAccruedSec * 10) / 10, // ⏳ ยอดที่คิดไปก่อน ยังไม่ถูกยืนยัน (รอ fix ตัดสิน)
-        staleWindowSec: staleBaseAt ? Math.round((Date.now() - staleBaseAt) / 1000) : null
+        staleWindowSec: staleBaseAt ? Math.round((Date.now() - staleBaseAt) / 1000) : null,
+        hidden: !!document.hidden,
+        rollingKm: Math.round(rollingKm * 100) / 100,
+        rollingSec: Math.round(rollingSec),
+        rollingKmh: (() => { const v = gapRollingKmh(); return v === null ? null : Math.round(v * 10) / 10; })()
+    });
+    // 🔎 อ่านอย่างเดียว (ใช้ตรวจสอบ/เทสต์): โมเดลประเมินเวลารถติดของช่วงที่แอปปิด
+    //    ตัวอย่าง: __gapModelDiag(780, 5, null) → ช่วงปิด 13 นาที วิ่ง 5 กม. เบิกกี่วินาที + ใช้อ้างอิงเท่าไร
+    window.__gapModelDiag = (gapSec, gapKm, gapNoTrafficSec, refOpts) => ({
+        billedSec: estimateGapTrafficSec(gapSec, gapKm, gapNoTrafficSec, refOpts),
+        refKmh: (() => { const v = gapRollingKmh(refOpts); return v === null ? null : Math.round(v * 10) / 10; })(),
+        via: (typeof gapNoTrafficSec === 'number' && gapNoTrafficSec > 0) ? 'tomtom-freeflow' : ((gapRollingKmh(refOpts) !== null) ? 'rolling-speed' : 'unknown-fraction'),
+        minTrafficFrac: GAP_MIN_TRAFFIC_FRAC, unknownStopFrac: GAP_UNKNOWN_STOP_FRAC
     });
     // ⏱️ เดินเวลามิเตอร์จากนาฬิกาจริง (Date.now) ไม่ใช่นับรอบ setInterval
     // => แม้เบราว์เซอร์ลดความถี่ตอนซ่อนหน้าต่าง เวลาก็ยังตรงกับมิเตอร์จริง ไม่เพี้ยน
@@ -7630,10 +7705,16 @@
             // ⏱️ หลักฐานสด (fix GPS ยืนยัน "จอด" ภายใน 15 วิ) → เชื่อเวลาจริงเต็มช่วง แม้ตัวจับเวลาถูกเบราว์เซอร์ลดความถี่
             //    (เดิมจำกัด 30 วิ/ครั้ง → แอปที่ถูกย่อแล้ว tick มาทุก 60 วิ นับเวลาจอดได้แค่ครึ่งเดียว = เวลารถติดหาย)
             //    หลักฐานเก่า (GPS ตาย) → ยังจำกัด 30 วิ/ครั้ง เพราะเป็นยอด "ยังไม่ยืนยัน" ที่อาจถูกถอนคืน
-            const addSec = (evidenceAgeSec <= STOP_EVIDENCE_GRACE_SEC) ? Math.min(deltaSec, 300) : Math.min(deltaSec, 30);
-            if (evidenceAgeSec <= STOP_EVIDENCE_GRACE_SEC) {
-                trafficSeconds += addSec;
+            const freshEvidence = evidenceAgeSec <= STOP_EVIDENCE_GRACE_SEC;
+            // 🚫 ช่วงที่แอปถูกซ่อน/ล็อกจอ: ไม่มี fix สด = "ไม่รู้ว่ารถยังจอดอยู่ไหม" → ห้ามนับไปเอง
+            //    (ยอดที่เดาแบบนี้แหละที่ทำให้แอปขึ้น 18:03 ขณะที่มิเตอร์จริง 4:54) · ปล่อยให้ catch-up
+            //    ตัดสินด้วยหลักฐานครั้งถัดไป (stoppedWholeGap / estimateGapTrafficSec) — fix สดยังนับตามปกติ
+            if (!freshEvidence && (document.hidden || hiddenGapStart !== null)) {
+                // ไม่นับอะไร — รอหลักฐาน (lastCalcTime ถูกตั้งท้ายฟังก์ชันอยู่แล้ว)
+            } else if (freshEvidence) {
+                trafficSeconds += Math.min(deltaSec, 300);
             } else {
+                const addSec = Math.min(deltaSec, 30);
                 if (staleBaseAt === null) { staleBaseAt = now; staleBasePos = lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null; }
                 trafficSeconds += addSec;
                 staleAccruedSec += addSec;
@@ -7791,6 +7872,7 @@
         const payload = {
             v: 1, savedAt: nowT, startTime: startTime,
             km: actualDrivenKm, trafficSec: trafficSeconds,
+            rollingKm: rollingKm, rollingSec: rollingSec, // ⚙️ ความเร็วล้อหมุนสะสม (ไว้ประเมินช่วงที่แอปถูกปิดรอบถัดไป)
             remainKm: currentTrueRemainKm, remainSec: currentTrueRemainSec,
             lastPos: lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null, // เซฟตำแหน่งล่าสุดไว้ เบิกคืนตอนแอปถูกคิลแล้วเปิดใหม่
             lastPath: lastPath.slice(), // พิกัดเส้นทาง 2-3 จุดล่าสุด ไว้ประมาณระยะที่วิ่งช่วงแอปปิด (แทนเส้นตรงเส้นเดียว)
@@ -7978,6 +8060,9 @@
         // เบิกคืนให้แล้วสำหรับรอบการปิดนี้ (ตอนกด "เริ่มต่อ" ระหว่างที่แอปกำลังตรวจสอบ fix) → ข้าม กันนับซ้ำ
         if (window.__liveCaughtUpKey === data.startTime + '|' + (data.pauseOpenAt || data.savedAt || 0)) return;
         window.crashCatchUpBusy = true;
+        // ⚙️ คืนความเร็วล้อหมุนสะสมของเที่ยวนี้จากที่บันทึกไว้ ก่อนประเมินช่วงที่แอปปิด
+        //    (รอบนี้ยังไม่เรียก startMeterAndTracking — ถ้าไม่คืนตรงนี้ จะไม่มีอ้างอิงและใช้ค่าเดาแทน)
+        if (typeof data.rollingKm === 'number' && typeof data.rollingSec === 'number') { rollingKm = data.rollingKm; rollingSec = data.rollingSec; }
         let caughtTimeSec = 0, caughtKm = 0, kmVia = 'straight';
         try {
             const pos = await getBestFix();
@@ -8262,6 +8347,7 @@
             // ⏯️ เริ่มต่อจากเที่ยวที่บันทึกไว้ (แอปปิด/รีเฟรชกระทันหัน): คงเวลาเริ่ม กม. เวลาจอด ค่าทางด่วน เดิมไว้
             actualDrivenKm = seed.km || 0;
             trafficSeconds = seed.trafficSec || 0;
+            rollingKm = seed.rollingKm || 0; rollingSec = seed.rollingSec || 0; // ⚙️ คืนค่าความเร็วล้อหมุนสะสมของเที่ยวนี้
             window.isMeterPaused = !!seed.paused; // คงสถานะ "หยุดมิเตอร์ชั่วคราว" ไว้ ถ้าแอปตายตอนกำลังหยุด
             currentTrueRemainKm = seed.remainKm || 0;
             currentTrueRemainSec = seed.remainSec || 0;
@@ -8301,6 +8387,7 @@
             window.updateSurchargeUI();
         } else {
             actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; trafficCharging = true; lastFixSpeedKmh = null;
+            rollingKm = 0; rollingSec = 0; // ⚙️ เที่ยวใหม่ เริ่มวัดความเร็วล้อหมุนใหม่
             staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null; // เที่ยวใหม่ เริ่มนับยอด "ยังไม่ยืนยัน" ใหม่
             startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime; lastStopFixAt = startTime;
             pauseLog = []; pauseOpenAt = null; window.isMeterPaused = false;
@@ -8429,6 +8516,8 @@
                     const moving = dMoved > 0.003 || speedMoved;
                     if (moving) {
                         actualDrivenKm += segKm;
+                        // ⚙️ สะสมความเร็ว "ล้อหมุน" ของเที่ยวนี้ (ตัดช่วงจอด/คลานออก) → ใช้เป็นอ้างอิงประเมินช่วงที่แอปปิด
+                        if (currentSpeedKmh > TRAFFIC_SPEED_KMH) { rollingKm += segKm; rollingSec += Math.max(0, (now - lastPosTime) / 1000); }
                         currentTrueRemainKm -= segKm;
                         if(currentTrueRemainKm < 0) currentTrueRemainKm = 0; 
                         lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
@@ -8760,8 +8849,22 @@
         const junkBtn = hidden > 0
             ? '<button class="th-btn" onclick="window.__thToggleJunk()"><span class="material-symbols-outlined" style="font-size:16px;">visibility</span> ดูเที่ยวทดสอบที่ซ่อนไว้ ' + hidden + '</button>'
             : (showAll && all.length ? '<button class="th-btn" onclick="window.__thToggleJunk()"><span class="material-symbols-outlined" style="font-size:16px;">visibility_off</span> ซ่อนเที่ยวทดสอบกลับ</button>' : '');
+        // 🎯 ความแม่นยำเทียบมิเตอร์จริง — เฉลี่ยจากเที่ยวที่กรอกยอดมิเตอร์ไว้แล้วเท่านั้น
+        const cs = window.calibStats(trips);
+        const calibBlock = cs
+            ? '<div class="cal-card" style="margin-bottom:8px;">'
+              + '<div class="cal-hd"><span class="material-symbols-outlined" style="font-size:18px;">my_location</span> ความแม่นยำเทียบมิเตอร์จริง'
+              + '<span style="margin-left:auto; font-size:10.5px; font-weight:700; color:var(--text-dim);">' + cs.n + ' เที่ยว</span></div>'
+              + '<div class="cal-res-line"><span>ระยะทาง · แอป ' + calibKmTxt(cs.appKm) + ' / มิเตอร์ ' + calibKmTxt(cs.meterKm) + '</span>'
+              + '<span class="cal-chip" style="background:' + calibVerdictOf(cs.kmPct).c + '22; color:' + calibVerdictOf(cs.kmPct).c + ';">' + calibSigned(cs.kmDiff, 2) + ' กม. · ' + calibPctText(cs.kmPct) + '</span></div>'
+              + '<div class="cal-res-line"><span>ค่าโดยสาร (มิเตอร์) · แอป ' + calibMoney(cs.appFare) + ' / มิเตอร์ ' + calibMoney(cs.meterFare) + '</span>'
+              + '<span class="cal-chip" style="background:' + calibVerdictOf(cs.farePct).c + '22; color:' + calibVerdictOf(cs.farePct).c + ';">' + calibSigned(cs.fareDiff, 0) + ' ฿ · ' + calibPctText(cs.farePct) + '</span></div>'
+              + '<div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-top:5px;">เฉลี่ยต่าง ' + calibMoney(cs.avgAbsFare) + '/เที่ยว · แอปสูงกว่า ' + cs.over + ' · ต่ำกว่า ' + cs.under + ' · ตรงกัน ' + cs.exact + ' เที่ยว<br>เอียงสะสม: ระยะ ' + calibPctText(cs.kmPct) + ' · เงิน ' + calibPctText(cs.farePct) + ' (บวก = แอปคิดมากกว่ามิเตอร์ · ไม่รวมค่าทางด่วน)</div>'
+              + '</div>'
+            : '<div class="th-note">🎯 ยังไม่มีเที่ยวที่เทียบมิเตอร์จริง — จบเที่ยวแล้วกรอก กม.+ราคา หรือแตะเที่ยวในรายการเพื่อกรอกย้อนหลัง</div>'; // เทียบเฉพาะส่วนมิเตอร์ (ตัดค่าทางด่วนออก)
         sumEl.innerHTML =
             '<div class="th-sum-grid">' + card('วันนี้', tToday) + card('7 วันล่าสุด', tWeek) + card('เดือนนี้', tMonth) + '</div>' +
+            calibBlock +
             '<div class="th-actions">' +
                 '<button class="th-btn" onclick="window.__thRefresh()"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span> รีเฟรช</button>' +
                 '<button class="th-btn th-green" onclick="window.exportTripHistoryCsv()"><span class="material-symbols-outlined" style="font-size:16px;">download</span> ส่งออก CSV</button>' +
@@ -8785,11 +8888,13 @@
                 '<span class="th-day-tot">' + thMoney(tot.fare) + ' <span style="color:var(--text-dim); font-weight:600; font-size:11px;">(' + tot.n + ' เที่ยว · ' + tot.km.toFixed(1) + ' กม.)</span></span></div>';
             g.list.forEach((t) => {
                 const dest = String(t.destName || '').trim();
-                html += '<div class="th-trip' + (dest ? '' : ' th-short') + '">' +
+                const cd = window.calibDiffOf(t);
+                html += '<div class="th-trip' + (dest ? '' : ' th-short') + '"' + (t.tripId ? ' onclick="window.openTripCalib(\'' + calibEsc(t.tripId) + '\')" style="cursor:pointer;" title="แตะเพื่อกรอก/ดูผลเทียบมิเตอร์จริง"' : '') + '>' +
                     '<span class="th-t">' + thClock(t.startTime) + '</span>' +
                     '<span class="th-dest">' + (dest ? thEsc(dest) : 'มิเตอร์ (ไม่ระบุจุดหมาย)') +
                         (t.__pending ? ' <span style="color:#ffb347; font-size:10.5px; font-style:normal;">· รอซิงก์</span>' : '') + '</span>' +
                     '<span class="th-km">' + (Number(t.km) || 0).toFixed(2) + ' กม.</span>' +
+                    (cd ? '<span class="th-cal" style="color:' + calibVerdictOf(cd.farePct).c + ';" title="เทียบมิเตอร์จริง: ' + calibSigned(cd.fareDiff, 0) + ' ฿ · ' + calibPctText(cd.farePct) + '">🎯 ' + calibPctText(cd.farePct) + '</span>' : '') +
                     '<span class="th-f">' + thMoney(t.fare) + '</span>' +
                 '</div>';
             });
@@ -8803,9 +8908,10 @@
         const trips = all.filter((t) => window.__thShowAll || !isJunkTrip(t));
         if (!trips.length) { window.showToast('ยังไม่มีเที่ยวให้ส่งออก', true); return; }
         const q = (s) => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
-        const rows = [['วันที่', 'วัน', 'เวลาเริ่ม', 'เวลาจบ', 'จุดหมาย', 'กม.', 'วินาที', 'วินาทีรถติด', 'ค่าโดยสาร (บาท)', 'สถานะ']];
+        const rows = [['วันที่', 'วัน', 'เวลาเริ่ม', 'เวลาจบ', 'จุดหมาย', 'กม.', 'วินาที', 'วินาทีรถติด', 'ค่าโดยสาร (บาท)', 'กม.มิเตอร์จริง', 'ราคามิเตอร์จริง', 'ส่วนต่าง กม.(%)', 'ส่วนต่าง ราคา(%)', 'สถานะ']];
         trips.slice().sort((a, b) => Number(a.startTime) - Number(b.startTime)).forEach((t) => {
             const d = new Date(t.startTime);
+            const cd = window.calibDiffOf(t);
             rows.push([
                 d.getDate() + '/' + (d.getMonth() + 1) + '/' + (d.getFullYear() + 543),
                 'วัน' + TH_DAYS[d.getDay()],
@@ -8816,6 +8922,10 @@
                 Math.max(0, Math.round(((Number(t.endTime) || 0) - (Number(t.startTime) || 0)) / 1000)),
                 Math.max(0, Math.round(Number(t.trafficSec) || 0)),
                 Math.round(Number(t.fare) || 0),
+                cd ? cd.meterKm.toFixed(2) : '',
+                cd ? String(Math.round(cd.meterFare)) : '',
+                cd ? cd.kmPct.toFixed(1) : '',
+                cd ? cd.farePct.toFixed(1) : '',
                 t.__pending ? 'รอซิงก์' : 'ซิงก์แล้ว'
             ]);
         });
@@ -8831,6 +8941,187 @@
             window.showToast('ส่งออก ' + (rows.length - 1) + ' เที่ยวเป็นไฟล์ CSV แล้ว', false, null, true);
         } catch (e) { window.showToast('ส่งออก CSV ไม่สำเร็จ', true); }
     };
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🎯 ปรับเทียบมิเตอร์จริง (14 ก.ย. 2569) — “ตัววัดว่าแอปแม่นแค่ไหน”
+    //    คนขับกรอก กม. + ราคา จาก “มิเตอร์แท็กซี่จริง” ตอนจบเที่ยว (หรือย้อนหลังในหน้าประวัติ)
+    //    → เก็บ calib { meterKm, meterFare, at } ในเที่ยวนั้น แล้วสรุปส่วนต่างเฉลี่ยเป็น %
+    //    ⚠️ ฟีเจอร์นี้ “วัด” อย่างเดียว — ห้ามแก้สูตร/ปรับตัวเลขค่าโดยสารให้เอง (ดู .freebuff/run.md)
+    //    ⚠️ เขียนเฉพาะฟิลด์ calib แบบ merge — ไม่ทับฟิลด์อื่นของเที่ยวที่บันทึกไว้แล้ว
+    // ══════════════════════════════════════════════════════════════════════════
+    const calibEsc = (x) => String(x == null ? '' : x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const calibParse = (v) => { const n = Number(String(v == null ? '' : v).replace(/[,\s฿]/g, '')); return isFinite(n) ? n : NaN; };
+    const calibMoney = (n) => Math.round(Number(n) || 0).toLocaleString('th-TH') + ' ฿';
+    const calibKmTxt = (n) => (Number(n) || 0).toFixed(2) + ' กม.';
+    const calibSigned = (n, digits) => { const v = Number(n) || 0; return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(digits); };
+    const calibPctText = (pct) => (Number(pct) >= 0 ? '+' : '−') + Math.abs(Number(pct) || 0).toFixed(1) + '%';
+    const calibVerdictOf = (pct) => { const a = Math.abs(Number(pct) || 0); if (a <= 2) return { t: 'แม่นมาก', c: '#2ecc71' }; if (a <= 5) return { t: 'พอใช้', c: '#f1c40f' }; return { t: 'คลาดเคลื่อน', c: '#e74c3c' }; };
+    window.calibVerdictOf = calibVerdictOf;
+    // ค่าที่คนขับกรอกจากมิเตอร์จริง (คืน null ถ้ายังไม่กรอก/ค่าไม่สมเหตุสมผล)
+    window.calibOf = (t) => {
+        const c = t && t.calib;
+        if (!c || typeof c !== 'object') return null;
+        const km = Number(c.meterKm), fare = Number(c.meterFare);
+        if (!isFinite(km) || !isFinite(fare) || km <= 0 || fare <= 0) return null;
+        return { meterKm: km, meterFare: fare, at: Number(c.at) || 0 };
+    };
+    // ยอดค่าทางด่วน/ค่าเพิ่มของเที่ยว (บันทึกไว้ใน surcharges ตอนจบเที่ยว)
+    window.calibSurchargeOf = (t) => ((t && t.surcharges) || []).reduce((a, b) => a + (Number(b && b.amount) || 0), 0);
+    // ⚠️ หัวใจของความถูกต้อง: มิเตอร์แท็กซี่ “ไม่รวมค่าทางด่วน” (ผู้โดยสารจ่ายค่าด่านแยก)
+    //    → เทียบเฉพาะ “ส่วนมิเตอร์” (ยอดรวม − ค่าทางด่วน) กับเลขบนมิเตอร์จริง ห้ามเทียบยอดรวมกับมิเตอร์
+    //    ส่วนต่าง: ค่าบวก = แอปคิดได้ “มากกว่า” มิเตอร์จริง · ค่าลบ = แอปคิดได้ “น้อยกว่า”
+    window.calibDiffOf = (t) => {
+        const c = window.calibOf(t);
+        if (!c || !t) return null;
+        const km = Number(t.km) || 0, fareTotal = Number(t.fare) || 0;
+        const surchargeTotal = window.calibSurchargeOf(t);
+        const appMeterFare = Math.max(0, fareTotal - surchargeTotal);
+        return {
+            meterKm: c.meterKm, meterFare: c.meterFare, at: c.at,
+            km, fare: fareTotal, appMeterFare, surchargeTotal,
+            kmDiff: km - c.meterKm,
+            fareDiff: appMeterFare - c.meterFare,
+            kmPct: c.meterKm > 0 ? ((km - c.meterKm) / c.meterKm) * 100 : 0,
+            farePct: c.meterFare > 0 ? ((appMeterFare - c.meterFare) / c.meterFare) * 100 : 0
+        };
+    };
+    // สรุปภาพรวม — เฉลี่ยแบบถ่วงน้ำหนักด้วยยอด “มิเตอร์จริง” (เที่ยวไกล/แพงมีผลมากกว่าเที่ยวใกล้)
+    window.calibStats = (list) => {
+        const rows = (list || []).map((t) => window.calibDiffOf(t)).filter(Boolean);
+        if (!rows.length) return null;
+        let meterKm = 0, appKm = 0, meterFare = 0, appFare = 0, absFare = 0;
+        rows.forEach((r) => { meterKm += r.meterKm; appKm += r.km; meterFare += r.meterFare; appFare += r.appMeterFare; absFare += Math.abs(r.fareDiff); });
+        return {
+            n: rows.length,
+            meterKm, appKm, meterFare, appFare,
+            kmDiff: appKm - meterKm, fareDiff: appFare - meterFare,
+            kmPct: meterKm > 0 ? ((appKm - meterKm) / meterKm) * 100 : 0,
+            farePct: meterFare > 0 ? ((appFare - meterFare) / meterFare) * 100 : 0,
+            avgAbsFare: absFare / rows.length,
+            over: rows.filter((r) => r.fareDiff > 0.5).length,
+            under: rows.filter((r) => r.fareDiff < -0.5).length,
+            exact: rows.filter((r) => Math.abs(r.fareDiff) <= 0.5).length,
+            last: rows[0]
+        };
+    };
+    // การ์ดกรอก/ผลเทียบ — ctx แยก id เพื่อไม่ให้ชนกันเมื่อเปิดพร้อมกัน (สรุปค่าโดยสาร + ป๊อปอัปประวัติ)
+    const calibCardHTML = (t, ctx) => {
+        const appKm = Number(t.km) || 0;
+        const surTotal = window.calibSurchargeOf(t);
+        const appMeterFare = Math.max(0, (Number(t.fare) || 0) - surTotal);
+        const c = window.calibOf(t), d = window.calibDiffOf(t);
+        const vk = d ? calibVerdictOf(d.kmPct) : null, vf = d ? calibVerdictOf(d.farePct) : null;
+        const res = d ? '<div class="cal-res">'
+            + '<div class="cal-res-line"><span>ระยะทาง · แอป <b class="cal-val-app">' + calibKmTxt(d.km) + '</b> / มิเตอร์ <b class="cal-val">' + calibKmTxt(d.meterKm) + '</b></span>'
+            + '<span class="cal-chip" style="background:' + vk.c + '22; color:' + vk.c + ';">' + calibSigned(d.kmDiff, 2) + ' กม. · ' + calibPctText(d.kmPct) + '</span></div>'
+            + '<div class="cal-res-line"><span>ค่าโดยสาร (มิเตอร์) · แอป <b class="cal-val-fare">' + calibMoney(d.appMeterFare) + '</b> / มิเตอร์ <b class="cal-val">' + calibMoney(d.meterFare) + '</b></span>'
+            + '<span class="cal-chip" style="background:' + vf.c + '22; color:' + vf.c + ';">' + calibSigned(d.fareDiff, 0) + ' ฿ · ' + calibPctText(d.farePct) + '</span></div>'
+            + (d.surchargeTotal > 0 ? '<div style="font-size:11px; color:var(--text-dim); margin-top:5px;">ค่าทางด่วน/ค่าเพิ่ม ' + calibMoney(d.surchargeTotal) + ' ไม่รวมในเลขมิเตอร์ — จึงไม่ถูกนำมาเทียบ</div>' : '')
+            + '<div style="font-size:11px; color:var(--text-dim); margin-top:5px; line-height:1.55;">' + (d.at ? 'บันทึกเมื่อ ' + calibEsc(thClock(d.at)) + ' น. · ' : '') + vf.t + ' — ยอดค่าโดยสารบนแอปไม่ถูกแก้จากผลเทียบ</div>'
+            + '</div>' : '';
+        return '<div class="cal-card" id="calibCard-' + ctx + '" data-app-km="' + appKm.toFixed(2) + '" data-app-fare="' + Math.round(appMeterFare) + '">'
+            + '<div class="cal-hd"><span class="material-symbols-outlined" style="font-size:18px;">my_location</span> ปรับเทียบมิเตอร์จริง'
+            + '<span style="margin-left:auto; font-size:10.5px; font-weight:700; color:var(--text-dim);">ไม่บังคับ</span></div>'
+            + '<div class="cal-note">กรอกเลขจาก <b>มิเตอร์แท็กซี่จริง</b> ของเที่ยวนี้ เพื่อวัดว่าแอปคลาดเคลื่อนกี่ % — เก็บเป็นสถิติไว้ดูความแม่นยำ</div>'
+            + '<div class="cal-row">'
+            + '<div class="cal-field"><label>กม. จากมิเตอร์</label><input id="calibKmIn-' + ctx + '" class="cal-in" type="text" inputmode="decimal" placeholder="' + (appKm > 0 ? appKm.toFixed(2) : '0.00') + '" value="' + (c ? c.meterKm.toFixed(2) : '') + '"></div>'
+            + '<div class="cal-field"><label>ราคา จากมิเตอร์ (฿)</label><input id="calibFareIn-' + ctx + '" class="cal-in" type="text" inputmode="numeric" placeholder="' + (appMeterFare > 0 ? String(Math.round(appMeterFare)) : '0') + '" value="' + (c ? String(Math.round(c.meterFare)) : '') + '"></div>'
+            + '</div>'
+            + '<div class="cal-btns">'
+            + '<button class="cal-btn cal-save" onclick="window.__calibSubmit(\'' + ctx + '\')"><span class="material-symbols-outlined" style="font-size:18px;">save</span> บันทึกผลเทียบ</button>'
+            + '<button class="cal-btn cal-exact" onclick="window.__calibSubmit(\'' + ctx + '\', \'exact\')" title="ใช้ค่าที่แอปวัด = เที่ยวนี้ตรงกับมิเตอร์เป๊ะ"><span class="material-symbols-outlined" style="font-size:18px;">check_circle</span> ตรงกันเป๊ะ</button>'
+            + '</div>' + res + '</div>';
+    };
+    window.calibCardHTML = calibCardHTML;
+    // บันทึกผลเทียบของเที่ยว — อัปเดตจอก่อน แล้วค่อยส่งขึ้นเซิร์ฟเวอร์ (ไม่สำเร็จ = เข้าคิวเที่ยว ลองใหม่ให้เอง)
+    window.saveTripCalibration = (tripId, meterKm, meterFare) => {
+        let uid = loggedInUserId;
+        if (!uid) { try { uid = localStorage.getItem('taxi_user_id') || ''; } catch (e) { uid = ''; } }
+        const calib = { meterKm: Math.round(meterKm * 100) / 100, meterFare: Math.round(meterFare), at: Date.now() };
+        (window.__thTrips || []).forEach((t) => { if (t && t.tripId === tripId) t.calib = calib; });
+        const ls = window.__lastTripSummary;
+        if (ls && uid && tripIdOf(ls.startTime, uid) === tripId) ls.calib = calib;
+        if (!uid) { window.showToast('ต้องเข้าสู่ระบบก่อน จึงจะบันทึกผลเทียบได้', true); return false; }
+        // เที่ยวยังค้างในคิว (ยังไม่ขึ้นเซิร์ฟเวอร์) → แปะ calib ในคิวนั้นเลย จะได้ส่งไปพร้อมกัน
+        const q = tripQueueRead();
+        const qi = q.findIndex((e) => e && e.uid === uid && e.tripId === tripId);
+        if (qi >= 0) {
+            q[qi].data = q[qi].data || {}; q[qi].data.calib = calib;
+            if (tripQueueWrite(q)) window.renderTripSyncChip();
+            return true;
+        }
+        if (window.__testNoDbWrites) return true;
+        const putInQueue = () => {
+            const q2 = tripQueueRead();
+            const has = q2.some((e) => e && e.uid === uid && e.tripId === tripId && e.data && e.data.calib);
+            if (!has) { q2.push({ tripId, uid, queuedAt: Date.now(), data: { calib } }); tripQueueWrite(q2.slice(-500)); }
+            window.renderTripSyncChip();
+        };
+        (async () => {
+            let ok = false;
+            if (db) {
+                try { await window.__fsTimeout(setDoc(doc(db, 'users', uid, 'trips', tripId), { calib }, { merge: true }), 8000); ok = true; }
+                catch (e) { ok = false; }
+            }
+            if (!ok) {
+                try {
+                    const res = await window.__fsTimeout(fetch(`${__fsBase}/users/${uid}/trips/${tripId}?key=${__FS_KEY}`, { method: 'PATCH', headers: await window.__fsHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ fields: { calib: toFsValue(calib) } }) }), 8000);
+                    ok = !!(res && res.ok);
+                } catch (e2) { ok = false; }
+            }
+            if (!ok) { putInQueue(); window.showToast('ยังส่งขึ้นเซิร์ฟเวอร์ไม่ได้ — เก็บผลเทียบไว้แล้ว จะส่งให้เองเมื่อเน็ตกลับมา', false, null, true); }
+        })();
+        return true;
+    };
+    window.__calibCommit = (ctx, km, fare, trip) => {
+        const uid = loggedInUserId || (() => { try { return localStorage.getItem('taxi_user_id') || ''; } catch (e) { return ''; } })();
+        const tripId = trip.tripId || tripIdOf(trip.startTime, uid);
+        if (!tripId) { window.showToast('ระบุเที่ยวนี้ไม่ได้ — เปิดประวัติแล้วแตะเที่ยวอีกครั้ง', true); return; }
+        trip.calib = { meterKm: Math.round(km * 100) / 100, meterFare: Math.round(fare), at: Date.now() };
+        window.saveTripCalibration(tripId, km, fare);
+        if (ctx === 'modal') { window.toggleModal('calibModal', false); window.renderTripHistory(); }
+        else { window.renderTripSummary(window.__lastTripSummary); }
+        window.showToast('บันทึกผลเทียบแล้ว — ดูค่าเฉลี่ยได้ที่หน้าประวัติ', false, null, true);
+    };
+    window.__calibSubmit = (ctx, mode) => {
+        const card = document.getElementById('calibCard-' + ctx);
+        const trip = ctx === 'modal'
+            ? (window.__thTrips || []).find((t) => t && t.tripId === window.__calibModalTripId)
+            : window.__lastTripSummary;
+        if (!trip) { window.showToast('ไม่พบข้อมูลเที่ยวนี้ — เปิดประวัติแล้วแตะเที่ยวอีกครั้ง', true); return; }
+        const appKm = Number(card && card.getAttribute('data-app-km')) || 0;
+        const appFare = Number(card && card.getAttribute('data-app-fare')) || 0; // = ส่วน “มิเตอร์” ของแอป (ไม่รวมค่าทางด่วน)
+        if (mode === 'exact') {
+            if (!(appKm > 0) || !(appFare > 0)) { window.showToast('ยังไม่มีตัวเลขของเที่ยวนี้ให้ใช้', true); return; }
+            window.__calibCommit(ctx, appKm, appFare, trip);
+            return;
+        }
+        const kmEl = document.getElementById('calibKmIn-' + ctx), fareEl = document.getElementById('calibFareIn-' + ctx);
+        const km = calibParse(kmEl && kmEl.value), fare = calibParse(fareEl && fareEl.value);
+        if (!(km > 0) || !(fare > 0)) { window.showToast('กรอกระยะทางและราคาจากมิเตอร์ให้ครบก่อนครับ', true); return; }
+        if (km > 3000 || fare > 100000) { window.showToast('ตัวเลขสูงผิดปกติ — ตรวจเลขจากมิเตอร์อีกครั้ง', true); return; }
+        // ต่างจากที่แอปวัดเกิน 60% = น่าจะกรอกผิด → ถามยืนยันก่อน (ยังบันทึกได้ตามที่กรอก)
+        if (appKm > 1 && Math.abs(km - appKm) / appKm > 0.6) {
+            window.showCustomConfirm('ตัวเลขต่างจากที่แอปวัดมาก', 'แอปวัดได้ ' + appKm.toFixed(2) + ' กม. แต่กรอก ' + km.toFixed(2) + ' กม.\nบันทึกตามที่กรอกไหม?', 'warning', 'บันทึกตามนี้')
+                .then((ok) => { if (ok) window.__calibCommit(ctx, km, fare, trip); });
+            return;
+        }
+        window.__calibCommit(ctx, km, fare, trip);
+    };
+    window.__calibModalTripId = null;
+    // ป๊อปอัปเทียบย้อนหลัง — แตะเที่ยวในหน้าประวัติเพื่อกรอก/แก้ยอดมิเตอร์จริง
+    window.openTripCalib = (tripId) => {
+        const t = (window.__thTrips || []).find((x) => x && x.tripId === tripId);
+        if (!t) { window.showToast('ไม่พบเที่ยวนี้ — กดรีเฟรชแล้วลองใหม่', true); return; }
+        window.__calibModalTripId = tripId;
+        const body = document.getElementById('calibModalBody');
+        if (!body) return;
+        body.innerHTML = '<div style="font-size:13px; color:var(--text-dim); text-align:left; margin-bottom:10px; line-height:1.6;">'
+            + '<b style="color:var(--neon-yellow); font-size:15px;">' + calibEsc(String(t.destName || '').trim() || 'มิเตอร์ (ไม่ระบุจุดหมาย)') + '</b><br>'
+            + calibEsc(thShortDate(t.startTime)) + ' · ' + calibEsc(thClock(t.startTime)) + ' น. · ' + calibKmTxt(t.km) + ' · ' + calibMoney(t.fare) + (t.__pending ? ' · รอซิงก์' : '') + '</div>'
+            + calibCardHTML(t, 'modal');
+        window.toggleModal('calibModal', true);
+    };
+
     window.__thToggleJunk = () => { window.__thShowAll = !window.__thShowAll; window.renderTripHistory(); };
     window.__thRefresh = async () => { await window.openTripHistory(); };
     window.openTripHistory = async () => {
@@ -9049,6 +9340,8 @@
                 }).join('')}
             </div>`;
         }
+        // 🎯 ปรับเทียบมิเตอร์จริง — ใช้ยอดที่หน้าจอนี้แสดงอยู่แล้ว (total) เป็นฝั่งแอป ไม่คิดสูตรซ้ำ
+        html += '<div style="margin-bottom:var(--space-card);">' + window.calibCardHTML({ km: s.km, fare: total, surcharges: s.surcharges, calib: s.calib }, 'ts') + '</div>';
         const c = el('tsSummaryContent');
         if (c) c.innerHTML = html;
     };
@@ -9235,7 +9528,7 @@
         try { window.__restoredDestInfo = null; } catch(e) {}
         try { window.__lastDestInfo = null; } catch(e) {}
         try { window.__cachedLatestDest = null; } catch(e) {}
-        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null; hiddenGapStart = null; hiddenLastPos = null; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; lastPath = []; catchUpLog = [];
+        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null; hiddenGapStart = null; hiddenLastPos = null; rollingKm = 0; rollingSec = 0; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; lastPath = []; catchUpLog = [];
         tripCaughtUpAt = null; gapHiddenAt = null; gapBasePos = null; hiddenKmBase = 0; hiddenTrafficBase = 0; // 🧭 จบเที่ยว ล้างฐานหลักฐานช่วงซ่อน/ปิด
         window.isMeterPaused = false;
         window.updatePauseBtnUI();
@@ -9681,6 +9974,12 @@
         ['2026-09-14', '🐞 ต้นเหตุกระตุก: หัวข้อ sticky ที่มี blur + ตัวดักดึงรีเฟรชแบบรอ JS ทุกเฟรม'],
         ['2026-09-14', '🔒 ล็อกหน้าเว็บด้านหลังขณะลิสต์ค้นหาเปิด — เลิกมี 2 ตัวแย่งการเลื่อนกัน'],
         ['2026-09-14', '💾 ปิดสำรองอัตโนมัติทุก 10 นาที — สำรองเฉพาะตอน commit/push (ไม่มีหน้าต่างแว๊บแล้ว)'],
+        ['2026-09-14', '🚫 ล็อกจอ/ปิดแอปแล้วไม่นับเวลารถติดเอง — กันบวมแบบแอป 18:03 แต่มิเตอร์จริง 4:54'],
+        ['2026-09-14', '⚙️ ช่วงแอปปิด: ประเมินรถติดจากความเร็วล้อหมุนจริง ไม่ใช่ค่าคงที่ 65 กม./ชม.'],
+        ['2026-09-14', '🔧 รถคลาน 7-12 กม./ชม. ไม่เหมาเป็น "จอดทั้งช่วง" แล้ว — ลดเวลารถติดที่คิดเกิน'],
+        ['2026-09-14', '🎯 ปรับเทียบมิเตอร์จริง: กรอก กม.+ราคา จากมิเตอร์แท็กซี่ตอนจบเที่ยว'],
+        ['2026-09-14', '📊 ประวัติสรุปความแม่นยำเฉลี่ยเป็น % (ระยะทาง · ค่าโดยสาร) จากเที่ยวที่กรอกไว้'],
+        ['2026-09-14', '✏️ แตะเที่ยวในประวัติเพื่อกรอก/แก้ยอดมิเตอร์ย้อนหลัง + ปุ่ม "ตรงกันเป๊ะ"'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {

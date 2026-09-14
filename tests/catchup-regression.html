@@ -29,8 +29,7 @@
         เวลารถติด/กิโลเมตร/ค่าโดยสาร (fix มาไว / มาเร็ว / ไม่มา) แล้วตรวจตัวเลขมิเตอร์ กัน regression ในอนาคต<br>
         <b>วิธีเปิด:</b> ต้องผ่าน HTTP เท่านั้น เช่น <code>https://baby4bot.github.io/taxi/tests/catchup-regression.html</code>
         (เปิดจาก file:// ตรง ๆ ไม่ได้ เพราะ iframe ถูกบล็อก cross-origin) — เปิดแล้วรันอัตโนมัติ หรือกดปุ่มด้านล่างเพื่อรันใหม่
-    </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (17 สถานการณ์)</button>
+    </p>        <button id="runBtn">🔄 รันการทดสอบใหม่ (18 สถานการณ์)</button>
     <div id="summary"></div>
     <ol id="results"></ol>
     <!-- ⚠️ ?fsNowrite=1 = ห้ามแอปเขียนเที่ยวลงฐานข้อมูลจริง — ชุดทดสอบนี้เรียก finishTripWithSummary() จริง
@@ -517,9 +516,10 @@
                 return d.km.toFixed(2) + ' กม. (คาด ' + (0.5 + routeKm).toFixed(2) + ' = เส้นตรง ' + straightKm.toFixed(2) + ' ×1.45) · via route (วิธีเก่าได้ ' + (0.5 + straightKm * 1.6).toFixed(2) + ')';
             });
 
-            // 12) ซ่อนแอป (pagehide) + ticker ยังรันนับเวลาจอดช่วงซ่อน (เบราว์เซอร์ Android บางตัวไม่หยุด interval)
-            //     → กลับมา (pageshow) catch-up ต้องเบิกแบบ "exactly-once" (base+gap) ไม่บวกทับเต็มช่วงซ่อน (double-bill)
-            await runScenario('12. ซ่อนแอป + ticker ยังรัน → เบิกครั้งเดียวพอดี ไม่เบิกซ้ำ', async () => {
+            // 12) ล็อกจอ/ซ่อนแอป (pagehide) ขณะรถจอด + ไม่มี fix เลยระหว่างนั้น
+            //     → ต้อง "ไม่นับเวลารถติดเอง" (แอปเดิมนับ 1 วิ/วิ ตลอดช่วงล็อกจอ → เคสจริง 14 ก.ย. 69: แอป 18:03 / มิเตอร์จริง 4:54)
+            //     → กลับมา (pageshow) + fix ยืนยันว่ายังจอด → catch-up เบิกช่วงนั้นให้ครบครั้งเดียว (ไม่หาย · ไม่เบิกซ้ำ)
+            await runScenario('12. ล็อกจอ/ซ่อนแอปขณะจอด → ไม่นับเอง แต่กลับมาต้องเบิกคืนครบครั้งเดียว', async () => {
                 if (skipScenario(12)) return;
                 // เริ่มมิเตอร์จริง (hidden path ทำงานเมื่อ isManualRunning)
                 const p = makePayload({ lastPos: P0, lastPath: [P0] });
@@ -537,7 +537,7 @@
                 await wait(12000); // ซ่อน 12 วิ — ticker ยังรัน → นับเวลาจอดเองไปแล้ว ~12 วิ (ตรงกับอาการ double-bill)
                 const d2 = readDisplay();
                 const billedDuringHidden = d2.traffic - d1.traffic;
-                assert(billedDuringHidden >= 9, 'ticker ต้องยังนับเวลาจอดช่วงซ่อนจริง (+' + billedDuringHidden.toFixed(1) + ' วิ) — เงื่อนไขที่จำลอง ticker ยังรัน');
+                assert(billedDuringHidden <= 2, 'ระหว่างซ่อน/ล็อกจอโดยไม่มี fix ต้องไม่นับเวลารถติดเอง (ได้ +' + billedDuringHidden.toFixed(1) + ' วิ)');
                 // กลับมา (pageshow) → resume + catch-up ขอ fix ยืนยัน แล้วเบิก
                 w().dispatchEvent(new (w().Event)('pageshow'));
                 await wait(300);
@@ -545,11 +545,10 @@
                 await wait(1800);
                 const d3 = readDisplay();
                 const addedByCatchUp = d3.traffic - d2.traffic;
-                // ก่อนแก้ (ad6f6db ใช้ trafficSeconds += gapSec): catch-up บวกทับ ~12 วิเต็มอีก → d3-d2 ≈ 12 → fail
-                // หลังแก้: catch-up เบิกเฉพาะส่วนที่ ticker ยังขาด → d3-d2 ≤ ~4 วิ (ticker หลัง fix ใหม่ + timing)
-                assert(addedByCatchUp <= 5, 'catch-up ต้องไม่บวกซ้ำเต็มช่วงซ่อน (ticker นับไปแล้ว +' + billedDuringHidden.toFixed(1) + ' วิ; catch-up เบิกเพิ่ม +' + addedByCatchUp.toFixed(1) + ' วิ ต้อง ≤ 5)');
+                // ระหว่างซ่อนไม่นับเอง → catch-up ต้องเบิกให้ครบช่วง แต่ต้องไม่เกินความยาวช่วงซ่อน (กันเบิกซ้ำ/เกิน)
+                assert(addedByCatchUp <= 13, 'catch-up ต้องไม่เบิกเกินความยาวช่วงซ่อน (เบิกเพิ่ม +' + addedByCatchUp.toFixed(1) + ' วิ)');
                 assert(d3.traffic >= d1.traffic + 9, 'เวลาจอดรวมต้องครบช่วงซ่อน (ได้ ' + d3.traffic + ' วิ ≥ ' + (d1.traffic + 9).toFixed(1) + ' วิ)');
-                return 'ซ่อน 12 วิ: ticker นับ +' + billedDuringHidden.toFixed(1) + ' วิ → catch-up เบิกเพิ่ม +' + addedByCatchUp.toFixed(1) + ' วิ (ไม่ซ้ำ) · รวม ' + d3.traffic + ' วิ';
+                return 'ซ่อน 12 วิ: นับเอง +' + billedDuringHidden.toFixed(1) + ' วิ → catch-up เบิกคืน +' + addedByCatchUp.toFixed(1) + ' วิ · รวม ' + d3.traffic + ' วิ';
             });
 
             // 13) จอดนิ่งทั้งช่วงแต่ GPS ลอย (เปิดใหม่ fix ห่างจากจุดก่อนปิดหลายร้อยเมตร — อย่างเคสจริง: ปิดแอป 10 นาที
@@ -690,16 +689,17 @@
                 const driftKm = pp.km - 40;                       // ระยะที่ประเมินได้ของช่วงปิด
                 assert(driftKm > 30, 'ต้องเบิกระยะทางของช่วงปิดด้วย (ได้ ' + driftKm.toFixed(1) + ' กม.)');
                 const billed = pp.trafficSec - 20;
-                // คาดหวัง: เวลารถติด ≈ ช่วงปิด − เวลาวิ่งโล่ง (65 กม./ชม.) — ต้องไม่ใช่ 0
-                const expect = GAP - (driftKm / 65 * 3600);
+                // ไม่มีข้อมูลเส้นทาง + ไม่มีความเร็วล้อหมุนสะสม → โมเดลใช้สัดส่วนสำรอง (ไม่ใช่ค่าคงที่ 65 กม./ชม. แล้ว)
+                const model = w().__gapModelDiag(GAP, driftKm, null);
+                assert(model.via === 'unknown-fraction', 'ต้องใช้สัดส่วนสำรองเมื่อไม่มีข้อมูลอ้างอิง (ได้ ' + model.via + ')');
                 assert(billed >= 120, 'ต้องเบิกเวลารถติดของช่วงปิด ไม่ใช่ 0 (ได้ ' + Math.round(billed) + ' วิ) — บั๊ก 13 ก.ย. 69');
-                near(billed, expect, 90, 'เวลารถติดที่เบิก (ช่วงปิด − เวลาวิ่งโล่ง)');
-                return 'ช่วงปิด 45 นาที / วิ่ง ' + driftKm.toFixed(1) + ' กม. → เบิกเวลารถติด ' + Math.round(billed) + ' วิ (คาด ~' + Math.round(expect) + ' · เดิมได้ 0)';
+                near(billed, model.billedSec, 90, 'เวลารถติดที่เบิก (ตามโมเดลปัจจุบัน)');
+                return 'ช่วงปิด 45 นาที / วิ่ง ' + driftKm.toFixed(1) + ' กม. → เบิกเวลารถติด ' + Math.round(billed) + ' วิ (โมเดล ' + model.billedSec + ' · สัดส่วนสำรอง 25% · เดิมได้ 0)';
             });
 
-            // 17) ซ่อนแอปแล้วรถวิ่งต่อ: ระหว่างซ่อน ticker นับเวลาจอดไปแล้วบางส่วน แต่ค่าประเมินของช่วงนั้นเป็น 0
-            //     → ต้อง "ไม่ลบ" เวลาที่นับได้จริงทิ้ง (เดิมตั้งยอดใหม่ = ฐาน + 0 → เวลาที่นับได้หายทั้งช่วง)
-            await runScenario('17. ซ่อนแอปแล้วรถวิ่งต่อ → ต้องไม่ลบเวลารถติดที่นับได้จริงทิ้ง', async () => {
+            // 17) ซ่อนแอปแล้วรถ "วิ่งต่อ" (ไม่มี fix ระหว่างซ่อน) → ระหว่างซ่อนต้องไม่นับเวลารถติดเอง
+            //     และกลับมาแล้วต้องไม่เบิกเกินค่าประเมินของช่วงนั้น (แอปเดิมนับ 1 วิ/วิ + คงยอดไว้ → เวลารถติดบวม)
+            await runScenario('17. ซ่อนแอปแล้วรถวิ่งต่อ → ต้องไม่คิดเวลารถติดเกิน (ไม่นับเอง/ไม่คงยอดบวม)', async () => {
                 if (skipScenario(17)) return;
                 w().fetchRouteFromTomTom = async () => null;
                 const p = makePayload({ lastPos: P0, lastPath: [P0] });
@@ -713,17 +713,51 @@
                 const before = readDisplay().traffic;
                 assert(before >= 11, 'ต้องมีเวลาจอดพื้นฐาน 10 + ticker ก่อนซ่อน (ได้ ' + before + ' วิ)');
                 w().dispatchEvent(new (w().Event)('pagehide'));
-                await wait(11000); // ซ่อน 11 วิ — ticker ยังรัน → นับเวลาจอดไปอีก ~11 วิ
+                await wait(11000); // ซ่อน 11 วิ และไม่มี fix เลย → ต้องไม่นับเวลารถติดเอง
                 const hiddenAdded = readDisplay().traffic - before;
-                assert(hiddenAdded >= 8, 'ticker ต้องนับเวลาจอดระหว่างซ่อน (+' + hiddenAdded.toFixed(1) + ' วิ)');
+                assert(hiddenAdded <= 2, 'ระหว่างซ่อนโดยไม่มี fix ต้องไม่นับเวลารถติดเอง (+' + hiddenAdded.toFixed(1) + ' วิ)');
                 w().dispatchEvent(new (w().Event)('pageshow'));
                 await wait(300);
                 const FAR2 = { lat: P0.lat + 0.0045, lon: P0.lon }; // ขยับ ~0.5 กม. ใน 11 วิ = วิ่งจริง
                 releaseFix(3, FAR2.lat, FAR2.lon, 8, 40);
                 await wait(1800);
                 const after = readDisplay().traffic;
-                assert(after >= before + hiddenAdded - 3, 'ห้ามลบเวลารถติดที่นับได้จริงระหว่างซ่อน (ก่อน ' + before + ' + ซ่อน ' + hiddenAdded.toFixed(1) + ' → ได้ ' + after + ')');
-                return 'นับได้ก่อนซ่อน ' + before + ' วิ + ระหว่างซ่อน ' + hiddenAdded.toFixed(1) + ' วิ → หลังรถวิ่งต่อยังอยู่ที่ ' + after + ' วิ';
+                const added = after - before;
+                const model = w().__gapModelDiag(11, 0.53, null); // ประเมินของช่วงซ่อน (11 วิ · ~0.53 กม.)
+                assert(added <= Math.max(3, model.billedSec) + 3, 'ห้ามเบิกเวลารถติดเกินค่าประเมินของช่วงซ่อน (เบิก +' + added.toFixed(1) + ' วิ / ประเมิน ' + model.billedSec + ' วิ)');
+                return 'ก่อนซ่อน ' + before + ' วิ · ระหว่างซ่อน +' + hiddenAdded.toFixed(1) + ' วิ · หลังเบิก +' + added.toFixed(1) + ' วิ (ประเมิน ' + model.billedSec + ' วิ)';
+            });
+
+            // 18) ปิดแอป/ล็อกจอ 13 นาที รถวิ่ง 5 กม. (มีข้อมูลความเร็วล้อหมุนของเที่ยวนี้แล้ว)
+            //     → ต้องประเมินจาก "ความเร็วล้อหมุนจริง" ไม่ใช่ค่าคงที่ 65 กม./ชม.
+            //     เคสจริง 14 ก.ย. 69: 10.7 กม. · มิเตอร์จริงรถติด 4:54 / แอปขึ้น 18:03 → 149 บาท แทน 113
+            await runScenario('18. ปิดแอป 13 นาที + รถวิ่ง 5 กม. → ประเมินจากความเร็วล้อหมุนจริง (ไม่ใช่ 65 กม./ชม.)', async () => {
+                if (skipScenario(18)) return;
+                w().fetchRouteFromTomTom = async () => null; // ออฟไลน์ → ต้องใช้ความเร็วล้อหมุนที่สะสมไว้
+                const GAP = 780;
+                const P1 = { lat: P0.lat + 0.045, lon: P0.lon }; // ~5 กม.
+                const p = makePayload({
+                    savedAt: Date.now() - GAP * 1000, startTime: Date.now() - GAP * 1000 - 900000,
+                    km: 5.44, trafficSec: 293, lastPos: P0, lastPath: [P0],
+                    rollingKm: 5.44, rollingSec: 700, // ≈ 28 กม./ชม. (วิ่งในเมือง)
+                    gapAt: Date.now() - GAP * 1000, gapBaseKm: 5.44, gapBaseTraffic: 293, gapBasePos: P0
+                });
+                w().localStorage.setItem('taxi_active_trip_v1', JSON.stringify(p));
+                w().maybeShowResumeBanner();
+                await wait(300);
+                w().resumeSavedTrip();
+                await wait(1000);
+                releaseFix(5, P1.lat, P1.lon, 8, 30); // fix ที่ปลายทาง → รถวิ่งจริง
+                await wait(1600);
+                const pp = JSON.parse(w().localStorage.getItem('taxi_active_trip_v1'));
+                const billed = Math.round(pp.trafficSec - 293);
+                const model = w().__gapModelDiag(GAP, 5.25, null, { rollKm: 5.44, rollSec: 700 });
+                const oldModel = Math.round(GAP - 5.25 / 65 * 3600);
+                assert(model.via === 'rolling-speed', 'ต้องใช้ความเร็วล้อหมุนของเที่ยวนี้ (ได้ ' + model.via + ')');
+                assert(model.refKmh >= 26 && model.refKmh <= 30, 'ความเร็วอ้างอิงต้อง ≈ 28 กม./ชม. ไม่ใช่ 65 (ได้ ' + model.refKmh + ')');
+                assert(billed <= model.billedSec + 60, 'เบิกต้องไม่เกินค่าประเมินจากความเร็วล้อหมุน (เบิก ' + billed + ' / ประเมิน ' + model.billedSec + ' วิ)');
+                assert(billed < oldModel - 200, 'ต้องเบิกน้อยกว่าโมเดลเดิม 65 กม./ชม. (' + oldModel + ' วิ) อย่างชัดเจน');
+                return 'เบิก ' + billed + ' วิ (ประเมิน ' + model.billedSec + ' วิ · อ้างอิง ' + model.refKmh + ' กม./ชม. · โมเดลเดิม ' + oldModel + ' วิ)';
             });
 
             window.__testResults = { pass: passCount, fail: failCount, failures: failures, at: new Date().toISOString() };
