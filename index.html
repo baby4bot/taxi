@@ -3174,7 +3174,7 @@
 
 <div id="adminEditUserModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="adminEditModalTitle">จัดการผู้ใช้</h3><button class="btn-close-floating" onclick="window.toggleModal('adminEditUserModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll"><div style="display: flex; justify-content: center; gap: 20px; margin-bottom: var(--space-field);"><div style="position: relative; text-align: center;"><img id="adminEditPic" src="" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; cursor: pointer; border: none; background: rgba(0,0,0,0.3); box-shadow: 0 0 0 1px rgba(255,255,255,0.10);" onclick="document.getElementById('adminUploadPicInput').click()"><button id="delAdminProfilePicBtn" onclick="window.removeImage('adminEditPic', true)" class="btn-del-media" style="display: none;" title="ลบรูปโปรไฟล์"><span class="material-symbols-outlined">delete</span></button><div style="font-size: 11px; color: var(--text-dim); margin-top: 5px; cursor: pointer;" onclick="document.getElementById('adminUploadPicInput').click()">แตะเปลี่ยนรูป</div><input type="file" id="adminUploadPicInput" accept="image/*" style="display: none;" onchange="window.previewProfilePic(event, 'adminEditPic')"></div><div style="position: relative; text-align: center;"><img id="adminEditQrPic" src="" style="width: 80px; height: 80px; object-fit: contain; cursor: pointer; border: 2px dashed #3498db; border-radius: 15px; background: rgba(0,0,0,0.5); padding: 5px;" onclick="document.getElementById('adminUploadQrInput').click()"><button id="delAdminQrPicBtn" onclick="window.removeImage('adminEditQrPic', false)" class="btn-del-media" style="display: none;" title="ลบ QR Code"><span class="material-symbols-outlined">delete</span></button><div style="font-size: 11px; color: var(--text-dim); margin-top: 5px; cursor: pointer;" onclick="document.getElementById('adminUploadQrInput').click()">แตะเปลี่ยน QR</div><input type="file" id="adminUploadQrInput" accept="image/*" style="display: none;" onchange="window.previewProfilePic(event, 'adminEditQrPic')"></div></div><input type="hidden" id="adminEditUid"><label id="adminEditUsernameLabel" style="text-align: left; display: none;">Username</label><input type="text" id="adminEditUsername" style="margin-bottom: var(--space-field); text-align: left;" placeholder="เช่น staff" autocomplete="off"><label style="text-align: left;">ชื่อที่แสดง</label><input type="text" id="adminEditName" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="text-align: left;">ชื่อบริษัท/สหกรณ์แท็กซี่ (สำหรับหัวใบเสร็จ)<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400;">ถ้าเว้นไว้ ใบเสร็จจะใช้ชื่อคนขับแทน</span></label><input type="text" id="adminEditCompanyName" maxlength="60" placeholder="เช่น สหกรณ์แท็กซี่นครหลวง จำกัด" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="text-align: left;">เบอร์โทรศัพท์</label>
 <div style="display: flex; gap: 10px; margin-bottom: var(--space-field);"><input type="tel" id="adminEditPhone" style="flex: 1; margin-bottom: 0; text-align: left;" autocomplete="off"><button id="adminCallBtn" onclick="" class="manual-timer-btn" style="background: #2ecc71; width: 50px; flex: none; display: none; justify-content: center; padding: 0; align-items: center;" title="โทรออก"><span class="material-symbols-outlined" style="font-size: 24px;">call</span></button></div>
-<label style="text-align: left;">ทะเบียนรถ <span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400;">เช่น 1มข322</span></label><input type="text" id="adminEditPlateNo" maxlength="15" placeholder="เช่น 1มข322" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="text-align: left;" id="adminEditPasswordLabel">รหัสผ่าน (คลิกรูปตาเพื่อดู)</label><div class="password-wrapper"><input type="password" id="adminEditPassword" style="text-align: left;" placeholder="รหัสผ่าน" autocomplete="new-password"><span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('adminEditPassword', this)">visibility_off</span></div><label style="text-align: left;">สิทธิ์การใช้งาน (Role)</label><select id="adminEditRole" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: var(--space-field); outline: none; font-family: 'Kanit';"><option value="User">ผู้ใช้งานทั่วไป (User)</option><option value="Manager">ผู้จัดการ (Manager)</option><option value="Admin">ผู้ดูแลระบบสูงสุด (Admin)</option></select><div id="adminStaffPrefsWrap"><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">สั่นเมื่อมี toast ทอง<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เช่น กลับจากเบื้องหลัง / ใกล้ถึงปลายทาง (ปิดถ้าไม่อยากให้สั่นตอนขับ)</span></span><input type="checkbox" id="adminEditVibrateGold" checked style="width:22px; height:22px; accent-color:var(--neon-yellow); flex-shrink:0;"></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เต็มจออัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">แตะครั้งแรกหลังเปิดแอปจะขอเต็มจอให้อัตโนมัติ (Android Chrome/Firefox/Edge — iOS ต้องติดตั้งแอป)</span></span><input type="checkbox" id="adminEditAutoFs" checked style="width:22px; height:22px; accent-color:var(--neon-yellow); flex-shrink:0;"></label></div><div style="display: flex; gap: 10px;"><button onclick="window.saveAdminUserEdit()" class="manual-timer-btn" style="flex:1; justify-content: center; background: var(--neon-green);" id="saveAdminUserBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก</button><button onclick="window.deleteAdminUser()" class="manual-timer-btn" style="background: var(--accent-red); flex:1; justify-content: center;" id="deleteUserBtn"><span class="material-symbols-outlined" style="font-size: 20px;">delete</span> ลบ</button></div></div></div></div>
+<label style="text-align: left;">ทะเบียนรถ <span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400;">เช่น 1มข322</span></label><input type="text" id="adminEditPlateNo" maxlength="15" placeholder="เช่น 1มข322" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="text-align: left;" id="adminEditPasswordLabel">รหัสผ่าน (คลิกรูปตาเพื่อดู)</label><div class="password-wrapper"><input type="password" id="adminEditPassword" style="text-align: left;" placeholder="รหัสผ่าน" autocomplete="new-password"><span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('adminEditPassword', this)">visibility_off</span></div><label style="text-align: left;">สิทธิ์การใช้งาน (Role)</label><select id="adminEditRole" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: var(--space-field); outline: none; font-family: 'Kanit';"><option value="User">ผู้ใช้งานทั่วไป (User)</option><option value="Manager">ผู้จัดการ (Manager)</option><option value="Admin">ผู้ดูแลระบบสูงสุด (Admin)</option></select><div id="adminStaffPrefsWrap"><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">สั่นเมื่อมี toast ทอง<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เช่น กลับจากเบื้องหลัง / ใกล้ถึงปลายทาง (ปิดถ้าไม่อยากให้สั่นตอนขับ)</span></span><input type="checkbox" id="adminEditVibrateGold" checked style="width:22px; height:22px; accent-color:var(--neon-yellow); flex-shrink:0;"></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เต็มจออัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">แตะครั้งแรกหลังเปิดแอปจะขอเต็มจอให้อัตโนมัติ (Android Chrome/Firefox/Edge — iOS ต้องติดตั้งแอป)</span></span><input type="checkbox" id="adminEditAutoFs" checked style="width:22px; height:22px; accent-color:var(--neon-yellow); flex-shrink:0;"></label></div><div id="adminSecCard" style="text-align:left; margin: 2px 0 var(--space-field); border:1px solid rgba(56,189,248,0.30); background:rgba(56,189,248,0.06); border-radius:15px; padding:12px 12px 4px;"><div style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:700; color:#7dd3fc;"><span class="material-symbols-outlined" style="font-size:19px;">shield_person</span> ข้อมูลบัญชีของสมาชิกคนนี้</div><div style="font-size:11px; color:var(--text-dim); line-height:1.55; margin:4px 0 2px;">รหัสผ่านและ PIN เก็บเป็น <b>แฮช PBKDF2</b> — ตัวเลขจริงไม่มีอยู่ในระบบให้ดึงมาแสดง หน้านี้จึงรายงานได้แค่ <b>สถานะ</b> และ <b>ตั้งใหม่ให้</b> · อ่านจากข้อมูลที่โหลดมาแล้ว ไม่กินโควตาเพิ่ม</div><div id="adminSecBody"></div></div><div style="display: flex; gap: 10px;"><button onclick="window.saveAdminUserEdit()" class="manual-timer-btn" style="flex:1; justify-content: center; background: var(--neon-green);" id="saveAdminUserBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก</button><button onclick="window.deleteAdminUser()" class="manual-timer-btn" style="background: var(--accent-red); flex:1; justify-content: center;" id="deleteUserBtn"><span class="material-symbols-outlined" style="font-size: 20px;">delete</span> ลบ</button></div></div></div></div>
 
 <div id="activityLogModal" class="modal-overlay" style="z-index: 10010;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.toggleModal('activityLogModal', false)" title="กลับหน้าโปรไฟล์"><span class="material-symbols-outlined">arrow_back</span>กลับ</button><h3 id="logModalTitle">ประวัติการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('activityLogModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="activityLogList" class="modal-content-scroll" style="text-align: left; background: rgba(0,0,0,0.2);"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลด...</div></div></div></div>
 
@@ -11043,6 +11043,7 @@
         ['2026-09-14', '⌨️ PIN เปลี่ยนเป็น 6 หลัก + คีย์แพดเด้งเองบนมือถือ — ไม่มีคีย์บอร์ดระบบบังจอ'],
         ['2026-09-14', '🔓 เพิ่ม “ปลดล็อกด้วยเครื่อง” ใช้ Face ID / ลายนิ้วมือ / PIN เครื่อง แทน PIN ได้'],
         ['2026-09-14', '⚪ คีย์แพด PIN เปลี่ยนเป็นปุ่มวงกลม กดแล้วติดสี (เลขเขียว · ลบแดง)'],
+        ['2026-09-14', '🛡️ หน้าจัดการผู้ใช้โชว์ข้อมูลบัญชีสมาชิก (รหัสผ่าน/PIN/การตั้งค่า) + รีเซ็ต PIN ให้ได้'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -11476,6 +11477,15 @@
                 if (data.tollwayMode === true || data.tollwayMode === false) { window.setUserTollMode(data.tollwayMode); }
                 else { window.applySavedTollMode(); }
             }
+            // 🔁 ซิงก์แคช PIN กับเอกสารจริง (สตรีมนี้มีข้อมูลอยู่แล้ว = ไม่กินโควตาอ่านเพิ่ม)
+            //    แอดมินรีเซ็ต PIN ของสมาชิก ⇒ เอกสาร pinHash ว่าง ⇒ ต้องล้างแคชในเครื่องนี้ด้วย ไม่งั้น PIN เก่ายังใช้ได้
+            try {
+                if (typeof window.pinCacheGet === 'function') {
+                    const cachedPin = window.pinCacheGet(loggedInUserId);
+                    if (data.pinHash) { if (cachedPin !== data.pinHash) window.pinCacheSet(loggedInUserId, data.pinHash); }
+                    else if (cachedPin) { window.pinCacheSet(loggedInUserId, ''); window.showToast('PIN ของบัญชีนี้ถูกรีเซ็ตโดยผู้ดูแลระบบ — ตั้ง PIN ใหม่ได้ที่ตั้งค่าโปรไฟล์', true); }
+                }
+            } catch (e) {}
             if (typeof window.maybeShowResumeBanner === 'function') window.maybeShowResumeBanner();
             if (typeof window.checkPermNotice === 'function') window.checkPermNotice(); // 🔔 แจ้งผลคำขอสิทธิ์ (อนุมัติ/ปฏิเสธ) ตอนเปิดแอป
         } catch (e) { /* render บางส่วนพลาด — snapshot ตัวถัดไปจะ render ซ้ำให้สมบูรณ์ */ }
@@ -13025,6 +13035,96 @@
         setTimeout(() => { const es = document.querySelector('#adminEditUserModal .modal-content-scroll'); if (es) es.scrollTop = 0; }, 0); // เลื่อนขึ้นบนสุดเสมอ
     };
 
+    // ==================== 🛡️ การ์ด "ข้อมูลบัญชีของสมาชิกคนนี้" (หน้าจัดการผู้ใช้) ====================
+    //  อ่านจากเอกสารที่โหลดมาแล้ว (currentAdminUsers) เท่านั้น — ไม่ยิงอ่าน Firestore เพิ่ม ⇒ ไม่กินโควตา
+    //  ⚠️ รหัสผ่าน/PIN เก็บเป็นแฮช PBKDF2 ⇒ แสดงได้แค่ "สถานะ" ไม่มีตัวเลขจริงให้โชว์
+    window.adminSecFmtDT = (ts) => { const n = Number(ts); if (!ts || !isFinite(n) || n <= 0) return '—'; const d = new Date(n); const p = (x) => String(x).padStart(2, '0'); return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())} น.`; };
+    window.adminSecPill = (txt, kind) => {
+        const c = kind === 'on' ? 'rgba(46,204,113,0.16); border-color: rgba(46,204,113,0.45); color:#7bed9f'
+            : kind === 'off' ? 'rgba(239,68,68,0.14); border-color: rgba(239,68,68,0.40); color:#ff8a95'
+            : 'rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.18); color:var(--text-dim)';
+        return '<span style="display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; border:1px solid ' + c + ';">' + txt + '</span>';
+    };
+    // กัน HTML แทรกจากค่าที่สมาชิกตั้งเองได้ (ชื่อที่แสดง/username/uid) — ข้อมูลจาก DB ต้อง escape ก่อนใส่ innerHTML เสมอ
+    window.adminSecEsc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    window.adminSecChip = (label, val) => '<span style="display:inline-block; font-size:11.5px; padding:3px 9px; margin:3px 4px 0 0; border-radius:9px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff;">' + label + ': <b>' + val + '</b></span>';
+    window.adminSecRow = (icon, title, valueHtml, noteHtml) =>
+        '<div style="display:flex; gap:9px; padding:9px 0; border-top:1px solid rgba(255,255,255,0.07);">' +
+        '<span class="material-symbols-outlined" style="font-size:19px; color:#7dd3fc; flex-shrink:0;">' + icon + '</span>' +
+        '<div style="flex:1; min-width:0;">' +
+        '<div style="font-size:13px; font-weight:600; color:#fff;">' + title + '</div>' +
+        '<div style="font-size:12.5px; color:var(--text-dim); margin-top:3px; line-height:1.5;">' + valueHtml + '</div>' +
+        (noteHtml ? '<div style="font-size:11px; color:var(--text-dim); opacity:0.82; margin-top:3px; line-height:1.5;">' + noteHtml + '</div>' : '') +
+        '</div></div>';
+    window.adminSecFill = (u) => {
+        const box = document.getElementById('adminSecBody'); if (!box || !u) return;
+        const isMe = (u.uid === loggedInUserId);
+        const fmt = window.adminSecFmtDT, pill = window.adminSecPill, row = window.adminSecRow, chip = window.adminSecChip;
+        const themeMap = { dark: 'มืด (กรมท่า)', oled: 'ดำ OLED (ประหยัดแบต)', light: 'สว่าง' };
+        const onOff = (v) => (v === false ? 'ปิด' : 'เปิด');   // ไม่ระบุ = ค่าเริ่มต้นของแอป (เปิด)
+        let html = '';
+        // 🔑 รหัสผ่าน
+        html += row('password', 'รหัสผ่านบัญชี',
+            (u.password ? pill('ตั้งไว้แล้ว', 'on') + ' เก็บเป็น PBKDF2-SHA256 100,000 รอบ + salt เฉพาะบัญชี — อ่านตัวรหัสไม่ได้' : pill('ยังไม่มีรหัสผ่าน', 'off') + ' บัญชีนี้ยังไม่ได้ตั้งรหัสผ่าน'),
+            'เข้าใช้ล่าสุด ' + fmt(u.lastLoginAt) + (u.role ? ' · ตำแหน่ง ' + u.role : ''));
+        // 🔢 PIN
+        if (u.pinHash) {
+            let setter = 'สมาชิกตั้งเอง';
+            if (u.pinSetBy && u.pinSetBy !== u.uid) { const by = (window.currentAdminUsers || []).find(x => x.uid === u.pinSetBy); setter = 'ผู้ดูแลระบบตั้งให้' + (by ? ' (' + window.adminSecEsc(by.displayName || by.username) + ')' : ''); }
+            html += row('dialpad', 'PIN ยืนยันรายการสำคัญ',
+                pill('ตั้งไว้แล้ว (6 หลัก)', 'on') + ' ตั้งเมื่อ ' + fmt(u.pinSetAt) + ' · โดย ' + setter,
+                'PIN ถูกเก็บเป็นแฮชเช่นกัน — แสดงเลขไม่ได้ · กด “รีเซ็ต PIN” ด้านล่างแล้วสมาชิกตั้งใหม่เองได้');
+        } else {
+            html += row('dialpad', 'PIN ยืนยันรายการสำคัญ',
+                pill('ยังไม่ได้ตั้ง', 'off') + ' ตอนนี้แก้ข้อมูลสำคัญต้องพิมพ์รหัสผ่านเต็มทุกครั้ง',
+                'ลืม PIN ตั้งใหม่ได้เองที่ตั้งค่าโปรไฟล์ (ยืนยันด้วยรหัสผ่านบัญชี)');
+        }
+        // 🔓 ปลดล็อกด้วยเครื่อง (WebAuthn) — เก็บในเครื่องเท่านั้น
+        const devHas = (typeof window.devUnlockHas === 'function') ? window.devUnlockHas(u.uid) : false;
+        const lockMs = (typeof window.pinLockRemainingMs === 'function') ? window.pinLockRemainingMs(u.uid) : 0;
+        html += row('fingerprint', 'ปลดล็อกด้วยเครื่อง (Face ID / ลายนิ้วมือ / PIN เครื่อง)',
+            isMe ? (devHas ? pill('เครื่องนี้ลงทะเบียนไว้', 'on') : pill('เครื่องนี้ยังไม่ลงทะเบียน', 'idle')) : pill('เก็บในเครื่องของสมาชิก — แอดมินมองไม่เห็น', 'idle'),
+            'กุญแจของเครื่อง (credential) เก็บใน localStorage ของอุปกรณ์นั้น ไม่ขึ้นเซิร์ฟเวอร์ ⇒ ระบบไม่มีข้อมูลนี้ให้แสดงจากส่วนกลาง และรีเซ็ตจากที่นี่ไม่ได้<br>ล็อกจากการเดา PIN: ' + (lockMs > 0 ? '⛔ ถูกล็อกอีก ' + Math.ceil(lockMs / 60000) + ' นาที' : 'ไม่มีล็อกค้าง (ตัวนับอยู่ในเครื่องเช่นกัน)'));
+        // ⚙️ ค่าที่สมาชิกตั้งเองได้ (อ่านจากบัญชีนี้)
+        html += row('tune', 'ค่าที่สมาชิกตั้งเองได้ (อ่านจากบัญชีนี้)',
+            chip('ธีม', themeMap[u.themeMode] || 'มืด (กรมท่า)') +
+            chip('ประเภทรถ', (Number(u.taxiType) === 40 ? 'แวน 40฿' : 'ปกติ 35฿')) +
+            chip('เบิกเวลาจอดหลังปิดแอป', (Number(u.killIdleCapMin) > 0 ? Number(u.killIdleCapMin) + ' นาที' : 'ไม่จำกัด')) +
+            chip('โหมดทางด่วน', onOff(u.tollwayMode === true ? true : false)) +
+            chip('สั่น toast ทอง', onOff(u.vibrateGold)) +
+            chip('เสียงติ๊งแจ้งเตือน', onOff(u.toastSound)) +
+            chip('เริ่มต่อเที่ยวค้างอัตโนมัติ', onOff(u.autoResume)) +
+            chip('เต็มจออัตโนมัติ', onOff(u.autoFullscreen)),
+            'ค่าที่ไม่ระบุ = ใช้ค่าเริ่มต้นของแอป (เปิด) · ปุ่ม “สั่น toast ทอง” กับ “เต็มจออัตโนมัติ” แอดมินล็อกให้ได้จากด้านบน');
+        // 🪪 บัญชี
+        const perms = (window.currentUserPerms ? window.currentUserPerms() : {}) || {};
+        const canReset = (currentUserRole === 'Admin' || perms.canEdit);
+        html += row('badge', 'บัญชี',
+            (u.isBanned ? pill('ถูกระงับการใช้งาน', 'off') : pill('ใช้งานปกติ', 'on')) + ' สมัครเมื่อ ' + fmt(u.createdAt),
+            'รหัสผู้ใช้ (uid): ' + window.adminSecEsc(u.uid));
+        if (u.pinHash && canReset) {
+            html += '<div style="padding:2px 0 10px;"><button onclick="window.adminResetUserPin()" class="manual-timer-btn" style="width:100%; justify-content:center; background:rgba(239,68,68,0.92); color:#fff; font-size:13px;"><span class="material-symbols-outlined" style="font-size:18px;">lock_reset</span> รีเซ็ต PIN ของสมาชิกคนนี้ (ต้องยืนยันตัวตนคุณก่อน)</button></div>';
+        }
+        box.innerHTML = html;
+    };
+    // รีเซ็ต PIN ของสมาชิก — สั่งลบ pinHash ในเอกสารของเขา (ต้องยืนยันรหัสผ่าน/PIN ของแอดมินก่อน)
+    window.adminResetUserPin = async () => {
+        const uid = document.getElementById('adminEditUid').value;
+        const u = (window.currentAdminUsers || []).find(x => x.uid === uid); if (!uid || !u) return;
+        const perms = window.currentUserPerms() || {};
+        if (!(currentUserRole === 'Admin' || perms.canEdit)) return window.showToast('คุณไม่มีสิทธิ์รีเซ็ต PIN ของสมาชิก', true);
+        const who = (u.displayName || u.username || ''); const whoSafe = window.adminSecEsc(who);
+        if (!(await window.requireReauth('รีเซ็ต PIN ของ “' + whoSafe + '” — เขาจะต้องตั้ง PIN ใหม่'))) return window.showToast('ยกเลิก — ยังไม่ได้ยืนยันตัวตน', true);
+        try {
+            await window.__fsTimeout(updateDoc(doc(db, 'users', uid), { pinHash: '', pinResetAt: Date.now(), pinResetBy: loggedInUserId }), 8000);
+            u.pinHash = ''; u.pinSetAt = null; u.pinResetAt = Date.now();
+            if (uid === loggedInUserId && typeof window.pinCacheSet === 'function') window.pinCacheSet(uid, '');
+            window.adminSecFill(u);
+            try { await recordActivityLog(uid, 'ผู้ดูแลระบบรีเซ็ต PIN', 'PIN ถูกยกเลิกโดย ' + (window.myCurrentDisplayName || 'ผู้ดูแลระบบ') + ' — ต้องตั้งใหม่ก่อนใช้ยืนยัน', 'security'); } catch (e) {}
+            window.showToast('รีเซ็ต PIN ของ “' + whoSafe + '” แล้ว — สมาชิกต้องตั้ง PIN ใหม่');
+        } catch (e) { window.showToast('รีเซ็ต PIN ไม่สำเร็จ — ตรวจสัญญาณเน็ต', true); }
+    };
+
     window.openAdminEditUser = (uid) => {
         const opPerms = window.currentUserPerms(); if(!(opPerms.canEdit || opPerms.canChangeUserRole || opPerms.canSetStaffPrefs || opPerms.canViewPassword)) return window.showToast("คุณไม่มีสิทธิ์จัดการข้อมูลพนักงานคนนี้", true);
         let u = window.currentAdminUsers.find(x => x.uid === uid); if(!u) return; currentEditUid = uid; isBannedState = u.isBanned || false;
@@ -13037,6 +13137,7 @@
         // 🔐 รหัสถูกเก็บแบบแฮช — ดูรหัสจริงไม่ได้อีกต่อไป (สิทธิ์นี้ = ดูสถานะ/ตั้งรหัสใหม่ให้ได้)
         document.getElementById('adminEditPassword').value = '';
         document.getElementById('adminEditPasswordLabel').innerText = (myPerms.canViewPassword ? "รหัสผ่าน (เข้ารหัสแล้ว — พิมพ์รหัสใหม่เพื่อตั้งให้ ปล่อยว่าง = ไม่เปลี่ยน)" : "ตั้งรหัสผ่านใหม่ (ปล่อยว่างหากไม่เปลี่ยน)");
+        try { window.adminSecFill(u); } catch (e) {} // 🛡️ การ์ดข้อมูลบัญชี (รหัสผ่าน/PIN/การตั้งค่า) — อ่านจากเอกสารที่โหลดมาแล้ว
         document.getElementById('adminUploadPicInput').value = ''; document.getElementById('adminUploadQrInput').value = ''; document.getElementById('adminEditModalTitle').innerText = "จัดการผู้ใช้";
         
         let callBtn = document.getElementById('adminCallBtn');
