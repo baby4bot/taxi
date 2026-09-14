@@ -3157,10 +3157,12 @@
 <div id="hubToastItem" class="hub-item" data-cat="cat-notify" style="display:none;" onclick="window.openToastMsgModal();"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">notifications</span></div><div class="hub-item-body"><div class="hub-item-title">จัดการข้อความแจ้งเตือน</div><div class="hub-item-desc">แก้ไขข้อความ / รูปไอคอน / ระยะเวลาแสดงผลของ toast ทั้งหมดในแอป</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 <div class="hub-cat-label" data-cat="cat-system">⚙️ บริการ / ระบบ</div>
 <div id="hubLoadingItem" class="hub-item" data-cat="cat-system" style="display:none;" onclick="window.openLoadingScreenModal();"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">wallpaper</span></div><div class="hub-item-body"><div class="hub-item-title">หน้าจอโหลด (Loading Screen)</div><div class="hub-item-desc">เลือกรูป/ข้อความตอนเปิดแอป — อัปโหลดแล้วทุกคนเห็นรูปเดียวกัน</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
+<div id="hubTextItem" class="hub-item" data-cat="cat-system" style="display:none;" onclick="window.openTextEditModal()"><div class="hub-item-icon" style="background:rgba(167,139,250,0.14); color:#c4b5fd;"><span class="material-symbols-outlined" style="font-size:24px;">edit_note</span></div><div class="hub-item-body"><div class="hub-item-title" style="color:#c4b5fd;">แก้ไขข้อความ / หัวข้อในแอป</div><div class="hub-item-desc">เปลี่ยนชื่อหัวข้อ ป้าย ปุ่ม และคำอธิบายทุกจุดได้เอง — ไม่ต้องแก้โค้ด (เฉพาะแอดมิน)</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 <div id="hubServiceItem" class="hub-item" data-cat="cat-system" style="display:none;" onclick="window.openServicePortal(true);"><div class="hub-item-icon" style="background:rgba(0,188,212,0.13); color:#00c2cb;"><span class="material-symbols-outlined" style="font-size:24px;">settings_applications</span></div><div class="hub-item-body"><div class="hub-item-title" style="color:#00c2cb;">จัดการ Portal</div><div class="hub-item-desc">เพิ่ม / ลบ / จัดเรียงหมวดหมู่ รหัส USSD และเบอร์บริการต่าง ๆ</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 <div id="hubQuotaItem" class="hub-item" data-cat="cat-system" style="display:none;" onclick="window.openQuotaMonitor();"><div class="hub-item-icon" style="background:rgba(239,68,68,0.13); color:#ff8a95;"><span class="material-symbols-outlined" style="font-size:24px;">data_usage</span></div><div class="hub-item-body"><div class="hub-item-title" style="color:#ff8a95;">โควต้า Firestore <span style="background:rgba(255,138,149,0.15); border:1px solid rgba(255,138,149,0.35); color:#ff8a95; border-radius:999px; font-size:10.5px; font-weight:700; padding:1px 8px; margin-left:5px; vertical-align:middle;">โควต้า</span> <span id="hubQuotaBadge" class="perm-req-count" style="display:none;"></span></div><div class="hub-item-desc">ดูการใช้ อ่าน/เขียน/ลบ วันนี้แยกตามฟีเจอร์ + ประมาณโควตาที่เหลือ</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 </div></div></div>
 
+<div id="textEditModal" class="modal-overlay" style="z-index: 10045;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('textEditModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>แก้ไขข้อความ / หัวข้อ</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetTextOverrides()" title="รีเซ็ตทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('textEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 8px; line-height:1.65;">แก้ชื่อหัวข้อ ป้าย ปุ่ม และคำอธิบายในแอปได้เอง — <b>ไม่ต้องแก้โค้ด</b> · บันทึกแล้วมีผลกับ <b>ทุกคนที่ใช้แอป</b>ทันที<br>บรรทัดบน = ข้อความต้นฉบับ (แก้ไม่ได้) · ช่องกรอก = ข้อความที่อยากให้แสดง (เว้นว่าง = ใช้ต้นฉบับ) · <b>ข้อความที่เหมือนกันจะเปลี่ยนพร้อมกันทุกจุด</b> — ตัวเลข/เปอร์เซ็นต์ระบบข้ามให้อัตโนมัติ</p><div style="position:relative; margin:0 4px 8px;"><input type="text" id="textEditSearch" placeholder="ค้นหาข้อความ…" oninput="window.renderTextEditList(this.value)" style="width:100%; text-align:left; padding-left:38px;"><span class="material-symbols-outlined" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:19px; color:var(--text-dim);">search</span></div><div id="textEditStats" style="font-size:11.5px; color:var(--text-dim); margin:0 6px 8px; line-height:1.6;"></div><div id="textEditList" style="min-height:200px;"></div></div><div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveTextEditBtn" onclick="window.saveTextOverrides()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color:#fff;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกทั้งหมด</button></div></div></div>
 <div id="hubCatEditModal" class="modal-overlay" style="z-index: 10040;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="hubCatEditTitle">หัวข้อใหม่</h3><button class="btn-close-floating" onclick="window.toggleModal('hubCatEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><label style="text-align:left;">ชื่อหัวข้อ</label><input type="text" id="hubCatNameInput" maxlength="40" placeholder="เช่น 🚕 งานรถ / 🧾 ใบเสร็จ" style="width: 100%; margin-bottom: 10px; text-align: left;" onkeydown="if(event.key==='Enter') window.saveHubCat()"><div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 14px;">ตั้งชื่อแล้วลากเมนูไปวางในหัวข้อนี้ได้เลย — <b>หัวข้อที่ไม่มีเมนูจะถูกซ่อนเอง</b> (กลับมาเมื่อมีเมนูวางอยู่)<br>ใส่ emoji นำหน้าได้ เช่น 📁 · เก็บในเครื่องนี้ ไม่กินโควตา</div><button class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: #fff;" onclick="window.saveHubCat()"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกหัวข้อ</button></div></div></div>
 
 <div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควตา Firestore</h3><button id="quotaRefreshBtn" onclick="window.refreshQuotaMonitor()" title="ดึงยอดใหม่จากเซิร์ฟเวอร์" style="display:inline-flex; align-items:center; gap:4px; background:rgba(77,163,255,0.15); border:1px solid rgba(77,163,255,0.4); color:#7db8ff; border-radius:99px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s; position:absolute; right:58px; top:50%; transform:translateY(-50%);"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span>รีเฟรช</button><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">จำนวน อ่าน / เขียน / ลบ ที่ทุกบัญชี (ID) ใช้ Firestore วันนี้รวมกันทั้งระบบ <b style="color:#fff;">(ทุกเครื่องส่งยอดขึ้นเซิร์ฟเวอร์ทุก 10 นาที / ตอนปิดแอป</b> — แสดงยอดรวมทุก ID + เหลือเท่าไหร่ และแยกตาม ID ชื่อโปรไฟล์) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ฟีเจอร์ที่ฟังข้อมูลสดแบบเรียลไทม์จะกินโควตาอ่านตามจำนวนเครื่องที่เปิดดูพร้อมกัน)</div></div></div></div>
@@ -6746,6 +6748,175 @@
         // 🔐 รีเซ็ตข้อความของทุกคน → ขอยืนยันตัวตนก่อน
         if (!(await window.requireReauth('ยืนยันเพื่อรีเซ็ต “ข้อความแจ้งเตือนทั้งหมด” กลับเป็นต้นฉบับ — กรอกรหัสผ่านของคุณ'))) return window.showToast('ยกเลิกการรีเซ็ต — ยังไม่ได้ยืนยันตัวตน', true);
         try { await setDoc(doc(db, "settings", "toast_messages"), {}); await window.loadToastMsgOverrides(); window.showToast("รีเซ็ตข้อความแจ้งเตือนเรียบร้อย"); window.openToastMsgModal(); } catch(e) { window.showToast("รีเซ็ตไม่สำเร็จ", true); }
+    };
+
+    // ==================== ✏️ แก้ข้อความ / หัวข้อในแอป (แอดมินแก้เองได้ ไม่ต้องแก้โค้ด) ====================
+    //  เก็บที่ Firestore settings/app_texts = { items: { "ข้อความต้นฉบับ": "ข้อความใหม่" } } + แคชในเครื่อง
+    //  หลักการ: จำ “ข้อความต้นฉบับ” ของทุก text node ไว้ (Map) แล้วเซ็ตค่าจากต้นฉบับเสมอ ⇒ ลบ override ทีหลังก็กลับเป็นเดิมได้ทันที
+    const TEXT_OVR_KEY = 'taxi_text_overrides_v1';
+    const TEXT_SEL = 'h1,h2,h3,h4,h5,label,.hub-item-title,.hub-item-desc,.hub-cat-label,.qr-card-head,.qr-card-sub,.qr-card-badge,.qr-card-hint,.section-title,.admin-user-name,.admin-user-sub,.ls-demo-title,.theme-seg-opt,.taxi-type-option,button.manual-timer-btn,#authTitle,.modal-header h3';
+    window.__textOvr = {};
+    window.__txtNodes = new Map(); // text node → ข้อความต้นฉบับ (จำครั้งเดียวต่อ session)
+    window.textOvrCacheRead = () => { try { const m = JSON.parse(localStorage.getItem(TEXT_OVR_KEY) || '{}'); return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {}; } catch (e) { return {}; } };
+    window.textOvrCacheWrite = (m) => { try { localStorage.setItem(TEXT_OVR_KEY, JSON.stringify(m || {})); } catch (e) {} };
+    window.textOvrClean = (t) => { const s = String(t == null ? '' : t).trim(); if (!s) return ''; if (/^[\d\s%.,:\/\-–—+()]+$/.test(s)) return ''; return s; }; // ข้ามตัวเลข/สัญลักษณ์ล้วน (41% · 15:30 · 1,481)
+    window.textOvrSkip = (el) => {
+        if (!el || !el.classList) return true;
+        if (el.classList.contains('material-symbols-outlined')) return true;
+        if (el.closest('#pinPadGrid') || el.closest('.pad-key')) return true; // เลขบนคีย์แพด PIN — ห้ามแตะ
+        if (el.closest('[data-txt-skip]')) return true;
+        if (el.closest('#textEditModal')) return true;                      // หน้าต่างแก้ข้อความเอง
+        return false;
+    };
+    window.textOvrWhere = (el) => { const m = el && el.closest ? el.closest('[id$="Modal"]') : null; if (!m) return 'หน้าหลัก'; return m.id.replace(/Modal$/, ''); };
+    window.textOvrInit = () => { window.__textOvr = window.textOvrCacheRead(); return window.__textOvr; };
+    // โหลดเวอร์ชันล่าสุดจากเซิร์ฟเวอร์ (1 อ่านต่อการเปิดแอป — เหมือนระบบข้อความแจ้งเตือน)
+    window.textOvrLoad = async () => {
+        window.textOvrInit();
+        try {
+            const snap = await window.__fsTimeout(getDoc(doc(db, 'settings', 'app_texts')), 6000);
+            const d = (snap && snap.exists && snap.exists()) ? (snap.data() || {}) : {};
+            const items = d.items || {};
+            const clean = {};
+            Object.keys(items).forEach(k => { const v = items[k]; if (typeof v === 'string' && v.trim() && v.trim() !== k) clean[k] = v.trim(); });
+            window.__textOvr = clean;
+            window.textOvrCacheWrite(clean);
+        } catch (e) { /* ออฟไลน์/ไม่มีสิทธิ์ → ใช้แคชในเครื่องต่อ */ }
+        try { window.applyTextOverrides(); } catch (e) {}
+        return window.__textOvr;
+    };
+    // จำข้อความต้นฉบับของทุก text node ที่เข้าเกณฑ์ (ครั้งเดียว) — ต้องเรียกก่อน apply เสมอ
+    window.textCaptureDefaults = (root) => {
+        try {
+            const scope = (root && root.querySelectorAll) ? root : document;
+            scope.querySelectorAll(TEXT_SEL).forEach(el => {
+                if (window.textOvrSkip(el)) return;
+                Array.prototype.slice.call(el.childNodes).forEach(node => {
+                    if (node.nodeType !== 3) return;
+                    if (!window.__txtNodes.has(node)) window.__txtNodes.set(node, node.nodeValue || '');
+                });
+            });
+        } catch (e) {}
+    };
+    // เซ็ตข้อความจริงบนจอจากต้นฉบับ + override — เซ็ตจากต้นฉบับเสมอ ⇒ ลบ override แล้วกลับเป็นเดิมทันที
+    window.applyTextOverrides = (root) => {
+        try {
+            const scope = (root && root.querySelectorAll) ? root : document;
+            window.textCaptureDefaults(scope);
+            const ovr = window.__textOvr || {};
+            let n = 0;
+            scope.querySelectorAll(TEXT_SEL).forEach(el => {
+                if (window.textOvrSkip(el)) return;
+                Array.prototype.slice.call(el.childNodes).forEach(node => {
+                    if (node.nodeType !== 3) return;
+                    const raw = window.__txtNodes.get(node);
+                    if (raw == null) return;
+                    const t = window.textOvrClean(raw);
+                    if (!t) return;
+                    const nv = ovr[t];
+                    const want = (nv && nv !== t) ? raw.replace(t, nv) : raw;
+                    if (node.nodeValue !== want) { node.nodeValue = want; n++; }
+                });
+            });
+            return n;
+        } catch (e) { return 0; }
+    };
+    // รวม “หัวข้อที่แก้ได้” ทั้งหมดบนจอ (ใช้ต้นฉบับเป็นคีย์ ⇒ ข้อความเดียวกันรวมกันเป็นรายการเดียว)
+    window.textCollect = () => {
+        const map = new Map();
+        const add = (def, el) => {
+            if (!def) return;
+            const e = map.get(def) || { def: def, count: 0, where: new Set() };
+            e.count++; try { e.where.add(window.textOvrWhere(el)); } catch (err) {}
+            map.set(def, e);
+        };
+        try {
+            document.querySelectorAll(TEXT_SEL).forEach(el => {
+                if (window.textOvrSkip(el)) return;
+                let found = false;
+                Array.prototype.slice.call(el.childNodes).forEach(node => {
+                    if (node.nodeType !== 3) return;
+                    const raw = window.__txtNodes.has(node) ? window.__txtNodes.get(node) : (node.nodeValue || '');
+                    const t = window.textOvrClean(raw);
+                    if (t) { add(t, el); found = true; }
+                });
+                if (!found && el.dataset && el.dataset.txtDef) add(el.dataset.txtDef, el);
+            });
+        } catch (e) {}
+        // รายการที่แอดมินเคยตั้งไว้แต่ตอนนี้ไม่ปรากฏบนจอ (เช่น เมนูที่ถูกซ่อน) — ให้แก้/ลบได้
+        Object.keys(window.__textOvr || {}).forEach(k => { if (!map.has(k)) map.set(k, { def: k, count: 0, where: new Set(['(ไม่พบบนจอนี้)']) }); });
+        return Array.from(map.values());
+    };
+    window.textEscAttr = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    window.renderTextEditList = (q) => {
+        const box = document.getElementById('textEditList'); if (!box) return;
+        const all = window.textCollect();
+        const cur = window.__textOvr || {};
+        const qq = String(q || '').trim().toLowerCase();
+        const rows = all.filter(x => !qq || x.def.toLowerCase().indexOf(qq) !== -1 || String(cur[x.def] || '').toLowerCase().indexOf(qq) !== -1);
+        rows.sort((a, b) => (b.count - a.count) || String(a.def).localeCompare(String(b.def), 'th'));
+        const st = document.getElementById('textEditStats');
+        if (st) st.innerHTML = 'พบ <b>' + all.length + '</b> หัวข้อที่แก้ได้ · แก้ไว้แล้ว <b style="color:var(--neon-yellow)">' + Object.keys(cur).length + '</b> รายการ' + (qq ? ' · กรองเหลือ ' + rows.length : '');
+        if (!rows.length) { box.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:24px;">ไม่พบข้อความที่ตรงกับคำค้น</div>'; return; }
+        const cap = 300;
+        box.innerHTML = rows.slice(0, cap).map(r => {
+            const def = window.textEscAttr(r.def);
+            const val = window.textEscAttr(cur[r.def] || '');
+            const chg = !!cur[r.def];
+            const where = Array.from(r.where).slice(0, 3).join(' · ');
+            return '<div style="border:1px solid ' + (chg ? 'rgba(255,210,77,0.45)' : 'rgba(255,255,255,0.09)') + '; background:' + (chg ? 'rgba(255,210,77,0.07)' : 'rgba(255,255,255,0.03)') + '; border-radius:12px; padding:9px 10px; margin-bottom:8px;">' +
+                '<div style="font-size:12.5px; color:#fff; line-height:1.5; word-break:break-word;">' + def + '</div>' +
+                '<div style="font-size:10.5px; color:var(--text-dim); margin:3px 0 6px;">' + r.count + ' จุด · ' + window.textEscAttr(where) + '</div>' +
+                '<input type="text" data-def="' + def + '" value="' + val + '" placeholder="(เว้นว่าง = ใช้ต้นฉบับ)" style="width:100%; text-align:left; font-size:13px;">' +
+                (chg ? '<div style="text-align:right; margin-top:5px;"><span data-def="' + def + '" onclick="window.textEditClearOne(this)" style="font-size:11.5px; color:#ff8a95; cursor:pointer;">↺ ล้างรายการนี้</span></div>' : '') +
+                '</div>';
+        }).join('') + (rows.length > cap ? '<div style="text-align:center; color:var(--text-dim); font-size:11.5px; padding:6px;">แสดง ' + cap + ' จาก ' + rows.length + ' — ใช้ช่องค้นหาเพื่อเจอที่เหลือ</div>' : '');
+    };
+    window.textEditClearOne = (el) => { const def = el && el.getAttribute('data-def'); if (!def) return; const ovr = Object.assign({}, window.__textOvr || {}); delete ovr[def]; window.__textOvr = ovr; window.applyTextOverrides(); window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : ''); };
+    window.openTextEditModal = async () => {
+        if (window.currentUserRole !== 'Admin') return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
+        if (!document.getElementById('textEditModal')) return;
+        window.textOvrInit();
+        window.toggleModal('textEditModal', true);
+        const s = document.getElementById('textEditSearch'); if (s) s.value = '';
+        const box = document.getElementById('textEditList'); if (box) box.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:20px;">กำลังรวบรวมข้อความ…</div>';
+        await new Promise(r => setTimeout(r, 30));
+        window.renderTextEditList('');
+    };
+    window.saveTextOverrides = async () => {
+        if (window.currentUserRole !== 'Admin') return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
+        const items = Object.assign({}, window.__textOvr || {});
+        let changed = 0;
+        document.querySelectorAll('#textEditList input[data-def]').forEach(inp => {
+            const def = inp.getAttribute('data-def'); const v = (inp.value || '').trim();
+            if (v && v !== def) { items[def] = v; changed++; } else { if (items[def] !== undefined) { delete items[def]; changed++; } }
+        });
+        if (!Object.keys(items).length && !Object.keys(window.__textOvr || {}).length) return window.showToast('ยังไม่มีข้อความที่แก้ — พิมพ์ข้อความใหม่ก่อนบันทึก', true);
+        // 🔐 ข้อความมีผลกับทุกคนที่ใช้แอป → ยืนยันตัวตนก่อนบันทึก
+        if (!(await window.requireReauth('ยืนยันเพื่อบันทึก “ข้อความ/หัวข้อในแอป” — ทุกคนจะเห็นข้อความใหม่นี้'))) return window.showToast('ยกเลิกการบันทึก — ยังไม่ได้ยืนยันตัวตน', true);
+        const btn = document.getElementById('saveTextEditBtn'); if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">save</span> กำลังบันทึก...'; }
+        try {
+            await window.__fsTimeout(setDoc(doc(db, 'settings', 'app_texts'), { items: items, updatedAt: Date.now(), updatedBy: loggedInUserId }), 8000);
+            window.__textOvr = items; window.textOvrCacheWrite(items);
+            window.applyTextOverrides();
+            window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : '');
+            try { await recordActivityLog(loggedInUserId, 'แก้ข้อความในแอป', 'แก้ไข ' + Object.keys(items).length + ' รายการ (settings/app_texts)', 'security'); } catch (e) {}
+            window.showToast('บันทึกข้อความแล้ว — มีผลกับทุกคนทันที');
+        } catch (e) { window.showToast('บันทึกไม่สำเร็จ — ตรวจสัญญาณเน็ต', true); }
+        finally { if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึกทั้งหมด'; } }
+    };
+    window.resetTextOverrides = async () => {
+        if (window.currentUserRole !== 'Admin') return window.showToast('เฉพาะแอดมินเท่านั้น', true);
+        const ok = await window.showCustomConfirm('รีเซ็ตข้อความทั้งหมด?', 'ทุกหัวข้อที่แอดมินแก้ไว้จะกลับเป็นข้อความต้นฉบับของแอป', 'warning', 'รีเซ็ต');
+        if (!ok) return;
+        if (!(await window.requireReauth('ยืนยันเพื่อรีเซ็ต “ข้อความ/หัวข้อในแอป” ทั้งหมดกลับเป็นต้นฉบับ'))) return window.showToast('ยกเลิกการรีเซ็ต — ยังไม่ได้ยืนยันตัวตน', true);
+        try {
+            await window.__fsTimeout(setDoc(doc(db, 'settings', 'app_texts'), { items: {}, updatedAt: Date.now(), updatedBy: loggedInUserId }), 8000);
+            window.__textOvr = {}; window.textOvrCacheWrite({});
+            window.applyTextOverrides();
+            window.renderTextEditList('');
+            window.showToast('รีเซ็ตข้อความกลับเป็นต้นฉบับแล้ว');
+        } catch (e) { window.showToast('รีเซ็ตไม่สำเร็จ', true); }
     };
 
     window.showCustomConfirm = function(title, desc, type = 'warning', okText = 'ยืนยัน') {
@@ -10447,6 +10618,8 @@
         // 📵 เที่ยวค้างส่งไม่ขึ้นเกิน 30 นาที → เตือนบนหน้าจอหลักหลังล็อกอิน/โหลดข้อมูลผู้ใช้เสร็จ
         if (typeof window.checkTripSyncAlert === 'function') window.checkTripSyncAlert();
         const hubToastItem = document.getElementById('hubToastItem'); if (hubToastItem) hubToastItem.style.display = canToastMenu ? 'flex' : 'none';
+        // ✏️ แก้ข้อความ/หัวข้อในแอป — เฉพาะแอดมินเท่านั้น (ผู้ใช้อื่นไม่เห็นเมนูนี้)
+        const hubTextItem = document.getElementById('hubTextItem'); if (hubTextItem) hubTextItem.style.display = (window.currentUserRole === 'Admin') ? 'flex' : 'none';
         const hubLoadingItem = document.getElementById('hubLoadingItem'); if (hubLoadingItem) hubLoadingItem.style.display = canToastMenu ? 'flex' : 'none';
         const hubRoleItem = document.getElementById('hubRoleItem'); if (hubRoleItem) hubRoleItem.style.display = canRoleMenu ? 'flex' : 'none';
         const hubServiceItem = document.getElementById('hubServiceItem'); if (hubServiceItem) hubServiceItem.style.display = canServiceMenu ? 'flex' : 'none';
@@ -10840,7 +11013,7 @@
     const chgTodayBuildStamp = () => chgTodayStr() + chgBuildSuffix();
     // ✅ อัปเดต APP_BUILD หลังจากฟังก์ชันถูกประกาศเสร็จ (แก้ Temporal Dead Zone — อ้างก่อนประกาศ)
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
-    const APP_RELEASE_DATE = '2026-09-14'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
+    const APP_RELEASE_DATE = '2026-09-15'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
     // 📋 ตารางประวัติเวอร์ชัน — ต้นทางเดียวของข้อความทุกหัวข้อ: [วันที่, ข้อความสรุปสั้น]
@@ -10999,7 +11172,7 @@
         ['2026-09-13', '🚦 แก้เคสจริง 13 ก.ย.: เวลารถติดช่วงแอปถูกปิดหายทั้งช่วง (แอป 1,151฿ / มิเตอร์จริง 1,481฿)'],
         ['2026-09-13', '⏱️ แอปถูกย่อ/สลับแอปก็ยังนับเวลารถติดต่อเนื่อง (เดินเวลาจาก fix GPS เอง)'],
         ['2026-09-13', '🛡️ เครื่องมือตรวจ App Check ในแอป: appCheckSelfTest() บอกว่าต้องทำอะไรต่อ'],
-        // ---------- 14 ก.ย. 2569 · v1.2.14 (วันของ APP_RELEASE_DATE) ----------
+        // ---------- 14 ก.ย. 2569 · v1.2.14 (วันเก่า — ย้ายเข้าตารางถาวรแล้ว ดู CHG_SEED_META) ----------
         ['2026-09-14', '🗺️ เพิ่มปุ่มเปิดแผนที่นำทางกลับหลังกด ✕ ซ่อน (ทั้งจอมิเตอร์ปกติและจอมิเตอร์ใหญ่)'],
         ['2026-09-14', '🔀 สลับเลี่ยง/ขึ้นทางด่วนแล้วบอกผลต่างทันที (กม. · นาที · ค่าทางด่วน)'],
         ['2026-09-14', '🛣️ แก้ \"ขึ้นทางด่วนไม่ลิงก์กัน\" ระหว่างหน้าสรุปกับตอนนำทาง'],
@@ -11044,6 +11217,9 @@
         ['2026-09-14', '🔓 เพิ่ม “ปลดล็อกด้วยเครื่อง” ใช้ Face ID / ลายนิ้วมือ / PIN เครื่อง แทน PIN ได้'],
         ['2026-09-14', '⚪ คีย์แพด PIN เปลี่ยนเป็นปุ่มวงกลม กดแล้วติดสี (เลขเขียว · ลบแดง)'],
         ['2026-09-14', '🛡️ หน้าจัดการผู้ใช้โชว์ข้อมูลบัญชีสมาชิก (รหัสผ่าน/PIN/การตั้งค่า) + รีเซ็ต PIN ให้ได้'],
+        // ---------- 15 ก.ย. 2569 · v1.2.15 (วันของ APP_RELEASE_DATE) ----------
+        ['2026-09-15', '✏️ แอดมินแก้ข้อความ/หัวข้อในแอปได้เองทุกจุด (ไม่ต้องแก้โค้ด) + ค้นหา/รีเซ็ตได้'],
+        ['2026-09-15', '🛡️ ข้อความที่แก้มีผลกับทุกคนทันที — ยืนยันตัวตนก่อนบันทึก และใช้ได้ตอนออฟไลน์'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -11056,6 +11232,7 @@
         '2026-09-11': { v: '1.2.11', color: 1 },
         '2026-09-12': { v: '1.2.12', color: 0 },
         '2026-09-13': { v: '1.2.13', color: 0 },
+        '2026-09-14': { v: '1.2.14', color: 0 },
     };
     const chgShort = (t) => String(t == null ? '' : t).trim();
     const CHANGELOG_SEED = Object.keys(CHG_SEED_META).sort().map((d) => ({
@@ -11675,6 +11852,22 @@
     }
     // 🔧 โหลดข้อความแจ้งเตือนที่แอดมินแก้ไว้ (Firestore) — ใช้ได้ทุกหน้าแม้ยังไม่ล็อกอิน
     if (typeof window.loadToastMsgOverrides === 'function') window.loadToastMsgOverrides();
+    // ✏️ ข้อความ/หัวข้อในแอปที่แอดมินแก้ไว้ — แคชในเครื่อง + ซิงก์จากเซิร์ฟเวอร์ (1 อ่าน/เปิดแอป) แล้วทาใช้ทั้งจอ
+    if (typeof window.textOvrInit === 'function') {
+        try {
+            window.textOvrInit();
+            window.applyTextOverrides();
+            setTimeout(() => { try { window.applyTextOverrides(); } catch (e) {} }, 600);
+            if (typeof window.textOvrLoad === 'function') window.textOvrLoad();
+        } catch (e) {}
+    }
+    // 🔁 ทาซ้ำอัตโนมัติเมื่อ DOM เปลี่ยน (เปิดโมดัล/เรนเดอร์ลิสต์ใหม่) — ดู childList เท่านั้น ⇒ งานเขียนข้อความเองไม่วนลูป
+    try {
+        if (typeof MutationObserver === 'function') {
+            const __txtMO = new MutationObserver(() => { clearTimeout(window.__txtMoT); window.__txtMoT = setTimeout(() => { try { window.applyTextOverrides(); } catch (e) {} }, 180); });
+            __txtMO.observe(document.body, { childList: true, subtree: true });
+        }
+    } catch (e) {}
     // 🏷️ โหลด/ซิงก์ประวัติเวอร์ชัน (อ่านได้ทุกคน; ถ้าโค้ดปล่อยเวอร์ชันใหม่ ระบบจะรันเวอร์ชันให้อัตโนมัติ)
     if (typeof window.ensureChangelog === 'function') window.ensureChangelog();
 
