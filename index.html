@@ -11909,6 +11909,7 @@
         ['2026-09-15', '🗺️ มินิแมพเริ่มปิดทุกเที่ยว — เลิกจำ “เปิดเองครั้งก่อน” ต้องกดเปิดเองทุกครั้ง'],
         ['2026-09-15', '🚦 Mini Map โชว์สภาพจราจรจริง (เขียว = โล่ง · ส้ม/แดง = ช้า/รถติด) + ปุ่มเปิดปิด'],
         ['2026-09-15', '🔊 ย้ายปุ่มเสียงของ Mini Map ไปมุมล่างขวาแบบปุ่มกลมโปร่งใส (เดิมอยู่บนหัว)'],
+        ['2026-09-15', '🔍 Mini Map ซูมเข้าเองก่อนถึงทางแยก/จุดเลี้ยว แล้วถอยออกหลังผ่าน — เหมือน Google Maps'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -14602,6 +14603,7 @@
     var follow = true;
     var panCenter = null;
     var userZoom = null;
+    var smoothZoom = null; // 🔍 ค่า zoom แบบต่อเนื่อง (ทศนิยม) สำหรับ “ซูมเข้าใกล้ทางแยก” ให้เนียนเหมือน Google Maps
     var tiles = Object.create(null);
     var tileKeys = [];
     var anyTileOk = false;
@@ -14693,6 +14695,12 @@
         if (fromKm === null || !turns.length) { return null; }
         for (var i = 0; i < turns.length; i++) {
             if (turns[i].km > fromKm + 0.02) { nextTurn = turns[i]; break; }
+        }
+        // ⚠️ ใกล้แยกมาก (น้อยกว่าครึ่งช่วงห่างของจุดในเส้นทาง) การ snap อาจเลยจุดเลี้ยวไปแล้ว → หัวแถบ “อีก X ม.”
+        //    จะหายก่อนถึงแยก · ถ้ารถยังอยู่ห่างจุดเลี้ยวสุดท้าย ≤ 30 ม. (ระยะตรง) ให้ใช้จุดนั้นต่อ
+        if (!nextTurn && car) {
+            var last = turns[turns.length - 1];
+            if (last && route[last.i] && kmBetween(car, { lat: route[last.i][0], lng: route[last.i][1] }) <= 0.03) { nextTurn = last; }
         }
         return nextTurn;
     }
@@ -14984,6 +14992,35 @@
     // จอดหรือคลานช้า (< 6 กม./ชม. = เกณฑ์ “รถติด” ของแอป) → GPS บอกทิศไม่ไหว ใช้ทิศเส้นทางแทน
     function shouldUseRouteHeading() { return (speedKmh < 6) && route.length > 1; }
 
+    // 🔍 ซูมเข้าเองเมื่อเข้าใกล้ทางแยก/จุดเลี้ยว แล้วถอยออกเองหลังผ่าน (แบบ Google Maps)
+    //    ใช้ “ระยะถึงจุดเลี้ยวถัดไป” ที่คำนวณไว้แล้ว (ไม่เรียก API เพิ่ม · ไม่กินโควตา)
+    //    ⚠️ ใช้เฉพาะตอนโหมด auto — ถ้าผู้ใช้หมุนล้อ/หุบนิ้วซูมเอง ระบบจะไม่แย่ง (userZoom ชนะเสมอ)
+    function turnZoomBoost() {
+        if (!car || route.length < 2 || !turns.length) { return 0; }
+        var carKm = carAlongKm();
+        if (carKm === null) { return 0; }
+        // จุดเลี้ยวที่ “ยังไม่ผ่าน” (เผื่อการ snap ของ carAlongKm ที่อาจเลยจุดไป ≤ 40 ม. ตอนเข้าใกล้แยก)
+        var t = null;
+        for (var i = 0; i < turns.length; i++) { if (turns[i].km > carKm - 0.04) { t = turns[i]; break; } }
+        if (!t) { return 0; }
+        var alongM = (t.km - carKm) * 1000; // เมตรถึงจุดเลี้ยว (ตามเส้นทาง)
+        var d = alongM;
+        if (d < 420) {
+            var tp = route[t.i];
+            if (tp) {
+                var sm = kmBetween(car, { lat: tp[0], lng: tp[1] }) * 1000;
+                // alongM ≤ 0 = carAlongKm snap เลยจุดไปแล้ว (ช่วงห่างจุดละ ~10 ม.) → ใช้ระยะตรงแทน
+                //   ผลคือ “ค้างซูมไว้ที่แยก” จนรถออกห่างเกิน 60 ม. แล้วค่อยถอยออก (เหมือน Google Maps)
+                d = (alongM <= 0) ? Math.max(sm, 25) : Math.min(alongM, sm * 1.05);
+            }
+        }
+        if (!(d > 0)) { return 0; }
+        if (d <= 60) { return 1; }     // ใกล้มาก → ซูมสุด
+        if (d <= 200) { return 0.6; }  // กำลังเข้าแยก → ซูมครึ่งระดับ
+        if (d <= 320) { return 0.25; } // เริ่มเห็นแยกข้างหน้า → เร่งนิดเดียว
+        return 0;                      // ไกลจากแยก → ซูมตามความเร็วความสูงสุด
+    }
+
     // ---------- วาด ----------
     function render() {
         var dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -14996,7 +15033,16 @@
         ctx.clearRect(0, 0, W, H);
         ctx.fillStyle = '#0b0f16'; ctx.fillRect(0, 0, W, H);
 
-        var z = (userZoom !== null) ? userZoom : autoZoom(speedKmh);
+        // 🔍 Zoom = ตามความเร็ว (หรือค่าที่ผู้ใช้ตั้งเอง) + “ซูมเข้าเมื่อใกล้ทางแยก”
+        var baseZ = autoZoom(speedKmh);
+        var zTarget = (userZoom !== null) ? userZoom : Math.min(19, baseZ + turnZoomBoost());
+        if (smoothZoom === null || userZoom !== null) { smoothZoom = zTarget; } // ผู้ใช้ซูมเอง = ตามนิ้วทันที (ไม่หน่วง)
+        else {
+            smoothZoom += (zTarget - smoothZoom) * 0.14;
+            if (Math.abs(zTarget - smoothZoom) < 0.015) { smoothZoom = zTarget; }
+        }
+        var z = Math.round(smoothZoom);            // ดึงกระเบื้องที่ “ระดับเต็มเลข” → แคชคงที่ ไม่ยิงถี่
+        var zScale = Math.pow(2, smoothZoom - z);  // ขยายต่อเนื่องให้การซูมเนียน (ไม่กระโดดเป็นขั้น)
         var center = (!follow && panCenter) ? panCenter : (car || (route.length ? { lat: route[0][0], lng: route[0][1] } : null));
         // กันพิกัดเสีย (เช่น ค่าที่ยังไม่มา/เป็นข้อความ) → แผนที่จะได้ไม่หายทั้งบาน
         if (!center || !isFinite(center.lat) || !isFinite(center.lng)) { center = route.length ? { lat: route[0][0], lng: route[0][1] } : null; }
@@ -15009,14 +15055,16 @@
         //    เผื่อกระเบื้องเป็นแนวทแยง (rotPad) ไม่งั้นจะเห็นมุมดำหลังหมุน
         var rotRad = ((bearing || 0) * Math.PI) / 180;
         var rotPad = (Math.SQRT2 - 1) * Math.max(W, H) / 2 + 12;
-        CLIP_PAD = rotPad;
+        CLIP_PAD = rotPad / zScale; // เผื่อตัดเส้นทางให้พอดีกับพื้นที่ที่มองเห็นตอนซูมอยู่
         ctx.save();
-        ctx.translate(W / 2, H / 2); ctx.rotate(-rotRad); ctx.translate(-W / 2, -H / 2);
+        // หมุน (heading-up) + ย่อ/ขยายต่อเนื่องรอบกลางจอ → ซูมเนียนโดยไม่ต้องโหลดกระเบื้องระดับใหม่ให้เบลอ
+        ctx.translate(W / 2, H / 2); ctx.rotate(-rotRad); ctx.scale(zScale, zScale); ctx.translate(-W / 2, -H / 2);
 
         // กระเบื้องแผนที่
         var n = Math.pow(2, z), missing = false;
-        var x0 = Math.floor((c.x - W / 2 - rotPad) / 256), x1 = Math.floor((c.x + W / 2 + rotPad) / 256);
-        var y0 = Math.floor((c.y - H / 2 - rotPad) / 256), y1 = Math.floor((c.y + H / 2 + rotPad) / 256);
+        var spanX = (W / 2) / zScale + rotPad, spanY = (H / 2) / zScale + rotPad;
+        var x0 = Math.floor((c.x - spanX) / 256), x1 = Math.floor((c.x + spanX) / 256);
+        var y0 = Math.floor((c.y - spanY) / 256), y1 = Math.floor((c.y + spanY) / 256);
         for (var tx = x0; tx <= x1; tx++) {
             for (var ty = y0; ty <= y1; ty++) {
                 if (ty < 0 || ty >= n) { continue; }
@@ -15043,18 +15091,21 @@
             ctx.globalAlpha = 1;
         }
 
+        // 📐 ทุกอย่างในฉากถูกย่อ/ขยายตาม zScale → ขนาดเส้น/หมุด/ลูกศรหาร zScale เพื่อให้ “ขนาดบนจอคงที่”
+        var k = 1 / zScale;
+
         // เส้นทาง: วิ่งแล้ว (เทา) + ที่เหลือ (น้ำเงิน ขอบขาว)
         if (route.length > 1) {
             var idx = nearestIndex(car);
-            drawLine(route.slice(0, idx + 1), 'rgba(255,255,255,.30)', 4.5, ox, oy, z, W, H);
+            drawLine(route.slice(0, idx + 1), 'rgba(255,255,255,.30)', 4.5 * k, ox, oy, z, W, H);
             var tail = route.slice(idx);
-            drawLine(tail, 'rgba(255,255,255,.92)', 7, ox, oy, z, W, H);
-            drawLine(tail, '#2196f3', 4, ox, oy, z, W, H);
+            drawLine(tail, 'rgba(255,255,255,.92)', 7 * k, ox, oy, z, W, H);
+            drawLine(tail, '#2196f3', 4 * k, ox, oy, z, W, H);
             var d = proj(route[route.length - 1][0], route[route.length - 1][1], z);
             var dx = d.x + ox, dy = d.y + oy;
             if (dx > -20 && dx < W + 20 && dy > -20 && dy < H + 20) {
-                ctx.beginPath(); ctx.arc(dx, dy, 7, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
-                ctx.beginPath(); ctx.arc(dx, dy, 4.6, 0, Math.PI * 2); ctx.fillStyle = '#ef4444'; ctx.fill();
+                ctx.beginPath(); ctx.arc(dx, dy, 7 * k, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+                ctx.beginPath(); ctx.arc(dx, dy, 4.6 * k, 0, Math.PI * 2); ctx.fillStyle = '#ef4444'; ctx.fill();
             }
         }
 
@@ -15066,9 +15117,9 @@
                 var tp = proj(route[ntv.i][0], route[ntv.i][1], z);
                 var tpx = tp.x + ox, tpy = tp.y + oy;
                 if (tpx > -16 && tpx < W + 16 && tpy > -16 && tpy < H + 16) {
-                    ctx.beginPath(); ctx.arc(tpx, tpy, 6.5, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
-                    ctx.beginPath(); ctx.arc(tpx, tpy, 4.6, 0, Math.PI * 2); ctx.fillStyle = '#0b0f16'; ctx.fill();
-                    ctx.beginPath(); ctx.arc(tpx, tpy, 3, 0, Math.PI * 2); ctx.fillStyle = '#2196f3'; ctx.fill();
+                    ctx.beginPath(); ctx.arc(tpx, tpy, 6.5 * k, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+                    ctx.beginPath(); ctx.arc(tpx, tpy, 4.6 * k, 0, Math.PI * 2); ctx.fillStyle = '#0b0f16'; ctx.fill();
+                    ctx.beginPath(); ctx.arc(tpx, tpy, 3 * k, 0, Math.PI * 2); ctx.fillStyle = '#2196f3'; ctx.fill();
                 }
             }
         }
@@ -15078,6 +15129,7 @@
             var p = proj(car.lat, car.lng, z);
             ctx.save();
             ctx.translate(p.x + ox, p.y + oy);
+            ctx.scale(k, k); // ลูกศรขนาดคงที่บนจอ ไม่บวมตอนซูมเข้า
             ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fillStyle = 'rgba(33,150,243,.22)'; ctx.fill();
             ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
             ctx.beginPath(); ctx.arc(0, 0, 6.1, 0, Math.PI * 2); ctx.fillStyle = '#2196f3'; ctx.fill();
@@ -15087,6 +15139,9 @@
             ctx.restore();
         }
         ctx.restore(); // 🧭 จบการหมุนฉาก (heading-up) — ลูกศรรถหมุน +bearing อยู่แล้ว จึงชี้ขึ้นบนเสมอ
+
+        // 🎞️ ยังไม่ถึงระดับที่ต้องการ → วาดเฟรมถัดไปต่อทันที (ทำให้การซูมเข้าออกเนียน ไม่กระโดด)
+        if (visible && smoothZoom !== zTarget) { request(); }
     }
     function request() {
         if (rafId) { return; }
@@ -15290,7 +15345,12 @@
             turns: turns.length,
             alerts: alertLog.slice(-4),
             nextTurn: nextTurn ? { km: Math.round(nextTurn.km * 1000) / 1000, delta: Math.round(nextTurn.delta), dir: turnMeta(nextTurn.delta).text } : null,
-            zoom: (userZoom !== null) ? userZoom : autoZoom(speedKmh),
+            zoom: (smoothZoom === null ? null : Math.round(smoothZoom * 100) / 100),
+            zoomTarget: (function () {
+                var t = (userZoom !== null) ? userZoom : Math.min(19, autoZoom(speedKmh) + turnZoomBoost());
+                return Math.round(t * 100) / 100;
+            })(),
+            zoomAuto: autoZoom(speedKmh), turnZoomBoost: turnZoomBoost(), manualZoom: userZoom,
             tiles: tileKeys.length, tileOk: anyTileOk, filterOK: filterOK
         };
     };
