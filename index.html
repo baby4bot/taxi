@@ -1583,7 +1583,10 @@
             border-radius: 18px; overflow: hidden; background: #05070c;
             border: 1px solid rgba(255,255,255,0.14);
         }
-        .ls-demo-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .ls-demo-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; }
+        /* ↔️ รูปแนวกว้าง: ลากบนพรีวิวซ้าย–ขวาเพื่อเลือกมุมมอง (pan-y = ยังปัดหน้าจอขึ้นลงได้ปกติ) */
+        .ls-demo-wrap.ls-pannable { cursor: grab; touch-action: pan-y; }
+        .ls-demo-wrap.ls-pannable:active { cursor: grabbing; }
         .ls-demo-empty {
             position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
             text-align: center; padding: 20px; font-size: 12.5px; line-height: 1.6; color: rgba(255,255,255,0.55);
@@ -2068,7 +2071,10 @@
     var el = function(id){ return document.getElementById(id); };
 
     window.__LDS_KEY = KEY;
-    window.__ldsCfg = { image: '', title: '' };
+    window.__ldsCfg = { image: '', title: '', focusX: 50 };
+    // ↔️ ตำแหน่งรูปซ้าย–ขวา (0 = ซ้ายสุด, 50 = กลาง, 100 = ขวาสุด) — ใช้กับรูปแนวกว้างที่ "เกินกรอบ"
+    //    เก็บเป็นค่าร่วมใน settings/loading_screen → ทุกเครื่องเห็นมุมมองเดียวกัน (ไม่ใช่ตั้งในเครื่องใครเครื่องมัน)
+    window.__ldsFocusClamp = function(v){ var n = Math.round(Number(v)); return isFinite(n) ? Math.max(0, Math.min(100, n)) : 50; };
 
     function paint(){
         var f = el('ldsFill'), p = el('ldsPct');
@@ -2086,6 +2092,7 @@
         if (cfg) {
             if (typeof cfg.title === 'string' && cfg.title.trim()) window.__ldsCfg.title = cfg.title.trim();
             if (typeof cfg.image === 'string') window.__ldsCfg.image = cfg.image;
+            if (typeof cfg.focusX === 'number' && isFinite(cfg.focusX)) window.__ldsCfg.focusX = window.__ldsFocusClamp(cfg.focusX);
         }
         var src = window.__ldsCfg.image || '';
         try {
@@ -2097,6 +2104,8 @@
         if (ph) {
             if (src.length > 20) {
                 if (ph.getAttribute('src') !== src) ph.setAttribute('src', src);
+                // รูปแนวกว้างถูก object-fit:cover ครอปแนวนอน → เลือกได้ว่าจะโชว์ส่วนไหน (ค่าเริ่มต้น = กลาง)
+                ph.style.objectPosition = (typeof window.__ldsCfg.focusX === 'number' ? window.__ldsCfg.focusX : 50) + '% 50%';
                 ph.style.display = 'block';
                 window.__ldsImgAt = Date.now(); // จดเวลา "รูปขึ้นจริง" — ใช้หน่วงการปิดจอโหลดให้เห็นรูปสักครู่
             } else {
@@ -2124,6 +2133,8 @@
             return {
                 image: (f.image && typeof f.image.stringValue === 'string') ? f.image.stringValue : '',
                 title: (f.title && typeof f.title.stringValue === 'string') ? f.title.stringValue : '',
+                focusX: (f.focusX && typeof f.focusX.integerValue === 'string') ? window.__ldsFocusClamp(parseInt(f.focusX.integerValue, 10))
+                      : ((f.focusX && typeof f.focusX.doubleValue === 'number') ? window.__ldsFocusClamp(f.focusX.doubleValue) : undefined),
                 updatedAt: (f.updatedAt && f.updatedAt.stringValue) || ''
             };
         } catch (e) { return null; }
@@ -2136,8 +2147,9 @@
             window.__ldsRemote = cfg;
             if (cfg.image) window.__ldsCfg.image = cfg.image;
             if (cfg.title) window.__ldsCfg.title = cfg.title;
+            if (typeof cfg.focusX === 'number' && isFinite(cfg.focusX)) window.__ldsCfg.focusX = window.__ldsFocusClamp(cfg.focusX);
             if (cfg.image) window.__ldsCfgSource = 'remote';
-            try { localStorage.setItem(KEY, JSON.stringify({ image: window.__ldsCfg.image, title: window.__ldsCfg.title })); window.__ldsCacheErr = ''; } catch (e) {}
+            try { localStorage.setItem(KEY, JSON.stringify({ image: window.__ldsCfg.image, title: window.__ldsCfg.title, focusX: window.__ldsCfg.focusX })); window.__ldsCacheErr = ''; } catch (e) {}
             if (!applyWhenReady()) setTimeout(applyWhenReady, 15);
         } catch (e) {}
     });
@@ -2290,6 +2302,7 @@
             source: window.__ldsCfg.image ? (window.__ldsCfgSource || 'set') : 'none',
             imageKb: window.__ldsCfg.image ? Math.round(window.__ldsCfg.image.length * 0.75 / 1024) : 0,
             title: window.__ldsCfg.title,
+            focusX: (typeof window.__ldsCfg.focusX === 'number') ? window.__ldsCfg.focusX : 50,
             photoShown: !!ph && ph.style.display !== 'none',
             photoDecoded: !!ph && !!ph.complete && ph.naturalWidth > 0,
             photoSize: ph && ph.naturalWidth ? (ph.naturalWidth + 'x' + ph.naturalHeight) : '',
@@ -3379,7 +3392,7 @@
 
 <div id="permRequestsModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.toggleModal('permRequestsModal', false)" title="กลับ"><span class="material-symbols-outlined">arrow_back</span>กลับ</button><h3 style="color: var(--neon-yellow);">คำขอสิทธิ์เพิ่ม</h3><button class="btn-close-floating" onclick="window.toggleModal('permRequestsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">รายชื่อสมาชิกที่ขอสิทธิ์เพิ่ม — กด <b style="color:#4ade80;">อนุมัติสิทธิ์</b> เพื่อให้สิทธิ์ที่ขอกับสมาชิกทันที (ไม่เปลี่ยนตำแหน่ง — ผู้ขอจะเห็นแจ้งเตือนตอนเปิดแอป) หรือกด <b style="color:#ff8a95;">ปฏิเสธ</b> เพื่อไม่ให้สิทธิ์</p><div id="permReqListBody" style="min-height: 150px;"></div></div></div></div>
 
-<div id="toastMsgModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('toastMsgModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>จัดการข้อความแจ้งเตือน</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetToastMsgOverrides()" title="รีเซ็ตข้อความทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('toastMsgModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">แก้ไขข้อความ/ไอคอน/เวลาของป๊อปอัปแจ้งเตือนทุกแบบ — บันทึกแล้วมีผลกับทุกคนทันที (ทั้งผู้ใช้และแอดมินเห็นเหมือนกัน)<br>แตะปุ่มรูปไอคอนสีเหลืองข้างช่องเพื่อเลือกรูปจากกริด หรือพิมพ์ชื่อไอคอน material (เช่น <b>sync</b>, <b>toll</b>) / อีโมจิเองก็ได้ · ช่อง <b>วินาที</b> ตั้งเวลาที่ toast อยู่บนจอ (default <b>1.5 วิ</b> — เว้นว่าง = 1.5)</p><div id="toastMsgList" style="min-height: 200px;"></div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveToastMsgsBtn" onclick="window.saveToastMsgOverrides()" class="manual-timer-btn" disabled style="background: #3a3f4b; width: 100%; justify-content: center; opacity: 0.55; cursor: not-allowed;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก</button></div></div></div><div id="loadingScreenModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('loadingScreenModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>หน้าจอโหลด</h3><button class="btn-close-floating" onclick="window.toggleModal('loadingScreenModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12.5px; color:var(--text-dim); margin:2px 4px 12px; line-height:1.6;">เลือกรูปพื้นของ <b>หน้าจอโหลด</b> (ตอนเปิดแอป / หลังล็อกอิน) — บันทึกแล้ว <b>ทุกคนที่ใช้แอปจะเห็นรูปนี้เหมือนกัน</b><br>แนะนำรูปแนวตั้ง 9:16 — ระบบจะย่อเป็น 720×1280 ให้เองก่อนบันทึก (รูปใหญ่เกิน 5 MB จะช้า)</p><div class="ls-demo-wrap"><img id="lsPreviewImg" src="" alt="" style="display:none;"><div id="lsPreviewEmpty" class="ls-demo-empty">ยังไม่มีรูป — ใช้พื้นสำเร็จรูปของแอป<br>(แตะ “อัปโหลดรูป” ด้านล่าง)</div><div class="ls-demo-scrim"></div><div class="ls-demo-bottom"><div class="ls-demo-title" id="lsPreviewTitle">กำลังโหลดข้อมูล...</div><div class="ls-demo-bar"><div class="ls-demo-fill"></div></div><div class="ls-demo-pct">41%</div></div></div><div id="lsSizeHint" style="font-size:11.5px; color:var(--text-dim); text-align:center; margin:-4px 0 8px; min-height:16px;"></div>
+<div id="toastMsgModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('toastMsgModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>จัดการข้อความแจ้งเตือน</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetToastMsgOverrides()" title="รีเซ็ตข้อความทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('toastMsgModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">แก้ไขข้อความ/ไอคอน/เวลาของป๊อปอัปแจ้งเตือนทุกแบบ — บันทึกแล้วมีผลกับทุกคนทันที (ทั้งผู้ใช้และแอดมินเห็นเหมือนกัน)<br>แตะปุ่มรูปไอคอนสีเหลืองข้างช่องเพื่อเลือกรูปจากกริด หรือพิมพ์ชื่อไอคอน material (เช่น <b>sync</b>, <b>toll</b>) / อีโมจิเองก็ได้ · ช่อง <b>วินาที</b> ตั้งเวลาที่ toast อยู่บนจอ (default <b>1.5 วิ</b> — เว้นว่าง = 1.5)</p><div id="toastMsgList" style="min-height: 200px;"></div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveToastMsgsBtn" onclick="window.saveToastMsgOverrides()" class="manual-timer-btn" disabled style="background: #3a3f4b; width: 100%; justify-content: center; opacity: 0.55; cursor: not-allowed;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก</button></div></div></div><div id="loadingScreenModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('loadingScreenModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>หน้าจอโหลด</h3><button class="btn-close-floating" onclick="window.toggleModal('loadingScreenModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12.5px; color:var(--text-dim); margin:2px 4px 12px; line-height:1.6;">เลือกรูปพื้นของ <b>หน้าจอโหลด</b> (ตอนเปิดแอป / หลังล็อกอิน) — บันทึกแล้ว <b>ทุกคนที่ใช้แอปจะเห็นรูปนี้เหมือนกัน</b><br>แนะนำรูปแนวตั้ง 9:16 — ระบบจะย่อเป็น 720×1280 ให้เองก่อนบันทึก (รูปใหญ่เกิน 5 MB จะช้า)</p><div class="ls-demo-wrap" id="lsDemoWrap"><img id="lsPreviewImg" src="" alt="" style="display:none; object-position:50% 50%;"><div id="lsPreviewEmpty" class="ls-demo-empty">ยังไม่มีรูป — ใช้พื้นสำเร็จรูปของแอป<br>(แตะ “อัปโหลดรูป” ด้านล่าง)</div><div class="ls-demo-scrim"></div><div class="ls-demo-bottom"><div class="ls-demo-title" id="lsPreviewTitle">กำลังโหลดข้อมูล...</div><div class="ls-demo-bar"><div class="ls-demo-fill"></div></div><div class="ls-demo-pct">41%</div></div></div><div id="lsSizeHint" style="font-size:11.5px; color:var(--text-dim); text-align:center; margin:-4px 0 8px; min-height:16px;"></div><div id="lsPanBlock" style="display:none; margin-bottom:var(--space-field);"><div style="display:flex; justify-content:space-between; font-size:13px; color:#fff;"><span>ตำแหน่งรูป (ซ้าย ↔ ขวา)</span><span id="lsPanVal" style="color:var(--neon-yellow); font-weight:600;">กลาง (50%)</span></div><input type="range" id="lsPanRange" min="0" max="100" step="1" value="50" oninput="window.lsSetFocus(this.value)" style="width:100%; margin-top:6px; accent-color: var(--neon-yellow);"><div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px;"><div id="lsPanHint" style="font-size:11px; color:var(--text-dim); line-height:1.6; flex:1;">ลากบนรูปพรีวิวซ้าย–ขวาเพื่อเลื่อนก็ได้</div><button onclick="window.lsSetFocus(50)" class="manual-timer-btn" style="flex:0 0 auto; padding:6px 12px; font-size:12px; background:#5b6472; color:#fff; white-space:nowrap;"><span class="material-symbols-outlined" style="font-size:17px;">filter_center_focus</span> กลาง</button></div></div>
 <div id="lsDiag" style="font-size:11px; color:var(--text-dim); text-align:left; line-height:1.7; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:8px 12px; margin-bottom:var(--space-field);"></div><label style="text-align:left;">ข้อความบนหน้าจอโหลด</label><input type="text" id="lsTitleInput" maxlength="60" placeholder="กำลังโหลดข้อมูล..." style="margin-bottom:6px; text-align:left;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:var(--space-field);">เว้นว่าง = ใช้คำว่า “กำลังโหลดข้อมูล...”</div><div style="display:flex; gap:8px;"><button onclick="document.getElementById('lsFileInput').click()" class="manual-timer-btn" style="flex:1; justify-content:center;"><span class="material-symbols-outlined" style="font-size:20px;">upload</span> อัปโหลดรูป</button><button onclick="window.lsDownload()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#1f6feb; color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">download</span> ดาวน์โหลดรูป</button></div><div style="display:flex; gap:8px; margin-top:8px;"><button onclick="window.lsPreviewLive()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#5b6472; color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">play_circle</span> ทดลองดู</button><button onclick="window.lsClearImage()" class="manual-timer-btn" style="flex:1; justify-content:center; background:rgba(239,68,68,0.92); color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">hide_image</span> ลบรูป</button></div><input type="file" id="lsFileInput" accept="image/*" style="display:none;" onchange="window.lsPickImage(event)"></div><div style="padding:14px 16px; border-top:1px solid rgba(255,255,255,0.05);"><button id="lsSaveBtn" onclick="window.lsSave()" class="manual-timer-btn" style="background:var(--neon-green); width:100%; justify-content:center; color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div><div id="searchScrollbarModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('searchScrollbarModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>แถบเลื่อนในลิสต์ค้นหา</h3><button class="btn-close-floating" onclick="window.toggleModal('searchScrollbarModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12.5px; color:var(--text-dim); margin:2px 4px 12px; line-height:1.6;">คุมแถบเลื่อนของ <b>ลิสต์ ที่โปรด / ประวัติ / ผลค้นหา</b> · <b>หน้าต่างทุกบาน</b> (ตั้งค่าโปรไฟล์ ฯลฯ) · <b>เมนูแฮมเบอร์เกอร์</b> · <b>แถบหมวดไอคอน</b><br>เดิมซ่อนไว้ทุกจอ → บนคอมเลื่อนได้ด้วยล้อเมาส์เท่านั้น · ตั้งค่านี้เพื่อ <b>โชว์แถบเลื่อนบนจอคอม</b> พร้อมเลือกความหนา/ความจาง — <b>บันทึกแล้วทุกคนเห็นเหมือนกัน</b> (มือถือปัดนิ้วเหมือนเดิม ไม่มีแถบโผล่)</p><div style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px;"><div style="flex:1;"><div style="font-weight:600; color:#fff; font-size:14px;">โชว์แถบเลื่อนบนจอคอม</div><div style="font-size:11.5px; color:var(--text-dim); margin-top:2px;">ปิด = กลับไปดีไซน์เดิม (ซ่อนแถบ ใช้ล้อเมาส์เท่านั้น)</div></div><label class="app-switch"><input type="checkbox" id="sbOnToggle" onchange="window.sbSetOn(this.checked)"><span class="app-slider"></span></label></div><div id="sbWidthBlock" style="margin-top:14px;"><div style="display:flex; justify-content:space-between; font-size:13px; color:#fff;"><span>ความหนาของแถบ</span><span id="sbWidthVal" style="color:var(--neon-yellow); font-weight:600;">10 px</span></div><input type="range" id="sbWidthRange" min="6" max="18" step="1" oninput="window.sbSetWidth(this.value)" style="width:100%; margin-top:6px; accent-color: var(--neon-yellow);"></div><div id="sbAlphaBlock" style="margin-top:12px;"><div style="display:flex; justify-content:space-between; font-size:13px; color:#fff;"><span>ความจาง (ความทึบ)</span><span id="sbAlphaVal" style="color:var(--neon-yellow); font-weight:600;">ทึบ 50%</span></div><input type="range" id="sbAlphaRange" min="10" max="100" step="5" oninput="window.sbSetAlpha(this.value)" style="width:100%; margin-top:6px; accent-color: var(--neon-yellow);"></div><div style="font-size:11.5px; color:var(--text-dim); margin:14px 0 6px;">ตัวอย่างจริง — เลื่อนในกล่องนี้ได้เลย (สี/ความหนาเปลี่ยนตามค่าที่ตั้งทันที)</div><div class="dropdown-box" id="sbDemo" style="min-height:90px;"></div><div id="sbNote" style="font-size:11.5px; color:var(--text-dim); margin-top:10px; line-height:1.7;"></div></div><div style="padding:14px 16px; border-top:1px solid rgba(255,255,255,0.05); display:flex; gap:8px;"><button onclick="window.sbResetDefaults()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#5b6472; color:#fff; white-space:nowrap; font-size:13px;"><span class="material-symbols-outlined" style="font-size:19px;">restart_alt</span> คืนค่าเดิม</button><button id="sbSaveBtn" onclick="window.sbSave()" class="manual-timer-btn" style="flex:1.4; justify-content:center; background:var(--neon-green); color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div><div id="iconPickerModal" class="modal-overlay" style="z-index: 10010;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="font-size:18px;">เลือกรูปไอคอน</h3><button class="btn-close-floating" onclick="window.toggleModal('iconPickerModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><div style="font-size:12px; color:var(--text-dim); margin-bottom:8px;">🅰️ ไอคอน Material — เลือกหมวดหมู่</div><div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;"><input id="iconPickerSearch" type="text" placeholder="ค้นหาไอคอน (พิมพ์ชื่อ เช่น taxi, bell, เงิน)…" oninput="window.setIconMatSearch(this.value)" style="flex:1; min-width:0; padding:10px 12px; border-radius:14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:white; font-family:'Kanit'; font-size:13px; outline:none;"><span id="iconPickerSearchClear" onclick="window.clearIconMatSearch()" style="display:none; cursor:pointer; color:var(--neon-yellow); flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:22px;">close</span></span></div><div id="iconPickerSearchHint" style="display:none; font-size:12px; color:var(--neon-yellow); margin-bottom:8px;"></div><div id="iconPickerMatTabs" style="display:flex; gap:6px; overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch; padding:2px 2px 6px; margin-bottom:8px;"></div><div id="iconPickerMat" style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px;"></div><div style="font-size:12px; color:var(--text-dim); margin-bottom:8px;">🔤 อีโมจิ</div><div id="iconPickerEmoji" style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px;"></div></div></div></div>
 
 <div id="adminEditUserModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="adminEditModalTitle">จัดการผู้ใช้</h3><button class="btn-close-floating" onclick="window.toggleModal('adminEditUserModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll"><div style="display: flex; justify-content: center; gap: 20px; margin-bottom: var(--space-field);"><div style="position: relative; text-align: center;"><img id="adminEditPic" src="" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; cursor: pointer; border: none; background: rgba(0,0,0,0.3); box-shadow: 0 0 0 1px rgba(255,255,255,0.10);" onclick="document.getElementById('adminUploadPicInput').click()"><button id="delAdminProfilePicBtn" onclick="window.removeImage('adminEditPic', true)" class="btn-del-media" style="display: none;" title="ลบรูปโปรไฟล์"><span class="material-symbols-outlined">delete</span></button><div style="font-size: 11px; color: var(--text-dim); margin-top: 5px; cursor: pointer;" onclick="document.getElementById('adminUploadPicInput').click()">แตะเปลี่ยนรูป</div><input type="file" id="adminUploadPicInput" accept="image/*" style="display: none;" onchange="window.previewProfilePic(event, 'adminEditPic')"></div><div style="position: relative; text-align: center;"><img id="adminEditQrPic" src="" style="width: 80px; height: 80px; object-fit: contain; cursor: pointer; border: 2px dashed #3498db; border-radius: 15px; background: rgba(0,0,0,0.5); padding: 5px;" onclick="document.getElementById('adminUploadQrInput').click()"><button id="delAdminQrPicBtn" onclick="window.removeImage('adminEditQrPic', false)" class="btn-del-media" style="display: none;" title="ลบ QR Code"><span class="material-symbols-outlined">delete</span></button><div style="font-size: 11px; color: var(--text-dim); margin-top: 5px; cursor: pointer;" onclick="document.getElementById('adminUploadQrInput').click()">แตะเปลี่ยน QR</div><input type="file" id="adminUploadQrInput" accept="image/*" style="display: none;" onchange="window.previewProfilePic(event, 'adminEditQrPic')"></div></div><input type="hidden" id="adminEditUid"><label id="adminEditUsernameLabel" style="text-align: left; display: none;">Username</label><input type="text" id="adminEditUsername" style="margin-bottom: var(--space-field); text-align: left;" placeholder="เช่น staff" autocomplete="off"><label style="text-align: left;">ชื่อที่แสดง</label><input type="text" id="adminEditName" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="text-align: left;">ชื่อบริษัท/สหกรณ์แท็กซี่ (สำหรับหัวใบเสร็จ)<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400;">ถ้าเว้นไว้ ใบเสร็จจะใช้ชื่อคนขับแทน</span></label><input type="text" id="adminEditCompanyName" maxlength="60" placeholder="เช่น สหกรณ์แท็กซี่นครหลวง จำกัด" style="margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="text-align: left;">เบอร์โทรศัพท์</label>
@@ -3730,9 +3743,10 @@
             const out = {
                 image: (typeof raw.image === 'string') ? raw.image : (prev.image || ''),
                 title: (typeof raw.title === 'string') ? raw.title : (prev.title || ''),
+                focusX: (typeof raw.focusX === 'number' && isFinite(raw.focusX)) ? window.__ldsFocusClamp(raw.focusX) : ((typeof prev.focusX === 'number') ? prev.focusX : 50),
                 updatedAt: raw.updatedAt || ''
             };
-            try { localStorage.setItem(LS_KEY, JSON.stringify({ image: out.image, title: out.title })); window.__ldsCacheErr = ''; }
+            try { localStorage.setItem(LS_KEY, JSON.stringify({ image: out.image, title: out.title, focusX: out.focusX })); window.__ldsCacheErr = ''; }
             catch (e) { window.__ldsCacheErr = 'เขียนแคชไม่ได้ (' + ((e && e.name) || 'error') + ')'; }
             try { if (window.__ldsApply) window.__ldsApply(out); } catch (e) {}
             window.__ldsCfgSource = 'remote';
@@ -11990,10 +12004,74 @@
     window.refreshHubCatLabels = () => { window.applyHubLayout(); };
 
     // ==================== 🚀 หน้าจอโหลด (แอดมินตั้งรูป/ข้อความ → ทุกคนเห็นเหมือนกัน) ====================
-    window.__lsSaved = { image: '', title: '' };
+    window.__lsSaved = { image: '', title: '', focusX: 50 };
     window.__lsDraft = { image: null }; // null = ยังไม่แก้รูปในรอบนี้ (ใช้ค่าที่บันทึกไว้)
+    window.__lsFocus = 50;              // ↔️ ตำแหน่งรูปซ้าย–ขวาที่กำลังเลือกอยู่ (0 = ซ้ายสุด · 50 = กลาง · 100 = ขวาสุด)
     window.lsCanManage = () => (window.isAdminNow() || (window.currentUserPerms && window.currentUserPerms().canManageToastMsg));
     window.lsCurrentImage = () => (window.__lsDraft.image === null) ? window.__lsSaved.image : window.__lsDraft.image;
+
+    /* ↔️ เลื่อนรูปซ้าย–ขวา — รูปแนวกว้างถูกครอปด้วย object-fit:cover จึงเลือกได้ว่าจะโชว์ส่วนไหน
+       ค่านี้อยู่ในคอนฟิกร่วม (settings/loading_screen) → บันทึกแล้วทุกคนเห็นมุมมองเดียวกัน */
+    window.lsFocusClamp = window.lsFocusClamp || ((v) => Math.round(Math.max(0, Math.min(100, Number(v) || 0))));
+    window.lsFocusLabel = (v) => {
+        const n = window.lsFocusClamp(v);
+        const t = n <= 2 ? 'ซ้ายสุด' : (n >= 98 ? 'ขวาสุด' : (Math.abs(n - 50) <= 2 ? 'กลาง' : (n < 50 ? 'ค่อนไปทางซ้าย' : 'ค่อนไปทางขวา')));
+        return t + ' (' + n + '%)';
+    };
+    // 📐 รูปเกินกรอบแนวนอนกี่ px — 0 = ความกว้างพอดีกรอบอยู่แล้ว → แนวนอนไม่ต้องเลื่อน
+    window.lsPanOverflow = () => {
+        const wrap = document.getElementById('lsDemoWrap'), img = document.getElementById('lsPreviewImg');
+        if (!wrap || !img || !img.naturalWidth) return 0;
+        const fw = wrap.clientWidth, fh = wrap.clientHeight;
+        if (!fw || !fh) return 0;
+        const s = Math.max(fw / img.naturalWidth, fh / img.naturalHeight);
+        const over = img.naturalWidth * s - fw;
+        return over > 1 ? over : 0;
+    };
+    window.lsApplyFocus = () => {
+        const v = window.lsFocusClamp(window.__lsFocus);
+        window.__lsFocus = v;
+        const img = document.getElementById('lsPreviewImg');
+        const hasImg = !!(img && img.getAttribute('src') && img.getAttribute('src').length > 20);
+        if (img) img.style.objectPosition = v + '% 50%';
+        const rng = document.getElementById('lsPanRange');
+        if (rng && String(rng.value) !== String(v)) rng.value = String(v);
+        const val = document.getElementById('lsPanVal'); if (val) val.textContent = window.lsFocusLabel(v);
+        const block = document.getElementById('lsPanBlock'); if (block) block.style.display = hasImg ? 'block' : 'none';
+        const over = hasImg ? window.lsPanOverflow() : 0;
+        const wrap = document.getElementById('lsDemoWrap');
+        if (wrap) wrap.classList.toggle('ls-pannable', !!hasImg && over > 0);
+        const hint = document.getElementById('lsPanHint');
+        if (hint) hint.textContent = !hasImg ? 'ลากบนรูปพรีวิวซ้าย–ขวาเพื่อเลื่อนก็ได้'
+            : (over > 0
+                ? 'ลากบนรูปพรีวิวซ้าย–ขวาเพื่อเลื่อนได้ · รูปนี้เกินกรอบ ' + Math.round(over) + 'px → เลือกได้ว่าจะโชว์ส่วนไหน'
+                : 'รูปนี้ความกว้างพอดีกรอบอยู่แล้ว — แนวนอนไม่ต้องเลื่อน (รูปที่ควรเลื่อนคือรูปแนวนอน/รูปยาว)');
+    };
+    window.lsSetFocus = (v) => { window.__lsFocus = window.lsFocusClamp(v); window.lsApplyFocus(); };
+    // 🖱️ ลากบนพรีวิว = เลื่อนรูป (อัตราส่วน 1:1 กับระยะที่รูปเกินกรอบจริง)
+    window.lsInitPan = () => {
+        const wrap = document.getElementById('lsDemoWrap');
+        if (!wrap || wrap.__lsPanHooked) return;
+        wrap.__lsPanHooked = 1;
+        let drag = null;
+        wrap.addEventListener('pointerdown', (ev) => {
+            const over = window.lsPanOverflow();
+            if (!over) return;
+            drag = { x: ev.clientX, start: window.lsFocusClamp(window.__lsFocus), over: over };
+            try { wrap.setPointerCapture(ev.pointerId); } catch (e) {}
+            ev.preventDefault();
+        });
+        wrap.addEventListener('pointermove', (ev) => {
+            if (!drag) return;
+            const dx = ev.clientX - drag.x;
+            window.__lsFocus = window.lsFocusClamp(drag.start - (dx / drag.over) * 100);
+            window.lsApplyFocus();
+            ev.preventDefault();
+        });
+        const stop = (ev) => { if (!drag) return; drag = null; try { wrap.releasePointerCapture(ev.pointerId); } catch (e) {} };
+        wrap.addEventListener('pointerup', stop);
+        wrap.addEventListener('pointercancel', stop);
+    };
 
     window.lsRenderPreview = () => {
         const img = window.lsCurrentImage();
@@ -12001,32 +12079,43 @@
         const ti = document.getElementById('lsTitleInput');
         const pt = document.getElementById('lsPreviewTitle');
         if (pt) pt.textContent = (ti && ti.value.trim()) ? ti.value.trim() : 'กำลังโหลดข้อมูล...';
+        // รอรูปถอดรหัสเสร็จก่อนวัด "รูปเกินกรอบกี่ px" (ยังไม่โหลด = วัดไม่ได้)
+        if (el && !el.__lsFocusHooked) { el.__lsFocusHooked = 1; el.addEventListener('load', () => { try { window.lsApplyFocus(); } catch (e) {} }); }
         if (img && img.length > 20) { if (el) { el.src = img; el.style.display = 'block'; } if (empty) empty.style.display = 'none'; }
         else { if (el) { el.removeAttribute('src'); el.style.display = 'none'; } if (empty) empty.style.display = 'flex'; }
         const hint = document.getElementById('lsSizeHint');
         if (hint) {
             if (img && img.length > 20) {
                 const kb = Math.round(img.length * 0.75 / 1024);
-                hint.textContent = 'รูปปัจจุบัน ' + kb.toLocaleString() + ' KB (ย่อเป็น 720×1280 ให้อัตโนมัติ)';
+                hint.textContent = 'รูปปัจจุบัน ' + kb.toLocaleString() + ' KB (ระบบย่อให้พอดีกรอบอัตโนมัติ)';
             } else { hint.textContent = 'ยังไม่มีรูปที่บันทึกไว้ — ใช้พื้นสำเร็จรูปของแอป'; }
         }
+        try { window.lsApplyFocus(); } catch (e) {}
         try { if (window.lsRenderDiag) setTimeout(window.lsRenderDiag, 60); } catch (e) {}
     };
 
     window.openLoadingScreenModal = async () => {
         if (!window.lsCanManage()) return window.showToast('คุณไม่มีสิทธิ์ตั้งค่าหน้าจอโหลด', true);
         window.__lsDraft = { image: null };
+        const fxOf = (s) => (s && typeof s.focusX === 'number' && isFinite(s.focusX)) ? window.lsFocusClamp(s.focusX) : 50;
         try {
             const s = JSON.parse(localStorage.getItem(window.__LDS_KEY || 'taxi_loading_screen_v1') || '{}');
-            window.__lsSaved = { image: s.image || '', title: s.title || '' };
-        } catch (e) { window.__lsSaved = { image: '', title: '' }; }
+            window.__lsSaved = { image: s.image || '', title: s.title || '', focusX: fxOf(s) };
+        } catch (e) { window.__lsSaved = { image: '', title: '', focusX: 50 }; }
+        window.__lsFocus = window.__lsSaved.focusX;
         const ti = document.getElementById('lsTitleInput'); if (ti) ti.value = window.__lsSaved.title || '';
         const fi = document.getElementById('lsFileInput'); if (fi) fi.value = '';
         window.lsRenderPreview();
+        window.lsInitPan();
         window.toggleModal('loadingScreenModal', true);
         try {
             const r = await window.loadLoadingScreenConfig();
-            if (r) { window.__lsSaved = { image: r.image || '', title: r.title || '' }; if (ti) ti.value = window.__lsSaved.title || ''; window.lsRenderPreview(); }
+            if (r) {
+                window.__lsSaved = { image: r.image || '', title: r.title || '', focusX: fxOf(r) };
+                window.__lsFocus = window.__lsSaved.focusX;
+                if (ti) ti.value = window.__lsSaved.title || '';
+                window.lsRenderPreview();
+            }
         } catch (e) {}
     };
 
@@ -12038,7 +12127,10 @@
             const img = new Image();
             img.onerror = () => reject(new Error('ไฟล์นี้ไม่ใช่รูปที่เบราว์เซอร์อ่านได้ (เช่น HEIC) — แปลงเป็น JPG ก่อนครับ'));
             img.onload = () => {
-                const MAXW = 720, MAXH = 1280, MAXBYTES = 320 * 1024;
+                // ⚠️ เดิม MAXW = 720 → รูปแนวนอน (เช่น 1920×1080) ถูกย่อเหลือ 720×405 แล้วถูกขยาย 3.2 เท่าตอนครอป
+                //    → เลื่อนซ้าย–ขวาแล้วได้ภาพเบลอ · เพิ่มเป็น 1280×1280 ทำให้รูปแนวนอนได้ 1280×720 (พอดีกับกรอบ 9:16 มากกว่า)
+                //    รูปแนวตั้ง (9:16) ได้ผลเท่าเดิมเป๊ะ (720×1280) เพราะติดเพดานความสูง · เพดาน 320 KB ยังกันเอกสารใหญ่เกินอยู่
+                const MAXW = 1280, MAXH = 1280, MAXBYTES = 320 * 1024;
                 let scale = Math.min(1, MAXW / img.width, MAXH / img.height);
                 let q = 0.72, out = '';
                 for (let i = 0; i < 7; i++) {
@@ -12094,7 +12186,7 @@
     // 👀 ทดลองดู = โชว์จอโหลดจริง วิ่งถึง 100% แล้ว "ค้างไว้" จนกว่าจะแตะปิด (ไม่เด้งออกไปหน้าตั้งค่าเอง)
     window.lsPreviewLive = () => {
         const ti = document.getElementById('lsTitleInput');
-        const cfg = { image: window.lsCurrentImage() || '', title: (ti && ti.value.trim()) ? ti.value.trim() : 'กำลังโหลดข้อมูล...' };
+        const cfg = { image: window.lsCurrentImage() || '', title: (ti && ti.value.trim()) ? ti.value.trim() : 'กำลังโหลดข้อมูล...', focusX: window.lsFocusClamp(window.__lsFocus) };
         window.toggleModal('loadingScreenModal', false);
         if (window.__lds && window.__lds.preview) {
             window.__lds.preview(cfg, {
@@ -12140,6 +12232,7 @@
         lines.push('ลำดับชั้นของรูป: ' + paintMsg);
         lines.push('จอโหลดเปิดอยู่ตอนนี้: ' + (st.photoShown && document.getElementById('appLoader').style.display === 'none' ? 'ไม่ (กด "ทดลองดู" เพื่อดูของจริง)' : (st.previewing ? 'ใช่ — แตะเพื่อปิด' : '—')));
         lines.push('พรีวิวถอดรหัสได้จริง: ' + (pvOk ? '✅ ' + pv.naturalWidth + '×' + pv.naturalHeight : '⏳ รอสักครู่'));
+        lines.push('ตำแหน่งรูป (ซ้าย–ขวา): ' + (document.getElementById('lsPanVal') ? document.getElementById('lsPanVal').textContent : (st.focusX + '%')) + (window.lsPanOverflow() > 0 ? ' · เลื่อนได้ ' + Math.round(window.lsPanOverflow()) + 'px' : ' · รูปไม่เกินกรอบแนวนอน'));
         d.innerHTML = lines.map(t => '<div>• ' + t + '</div>').join('');
     };
 
@@ -12150,7 +12243,7 @@
         if (!okRa) return window.showToast('ยกเลิกการบันทึก — ยังไม่ได้ยืนยันตัวตน', true);
         const btn = document.getElementById('lsSaveBtn');
         const ti = document.getElementById('lsTitleInput');
-        const cfg = { image: window.lsCurrentImage() || '', title: (ti && ti.value.trim()) ? ti.value.trim() : '', updatedAt: new Date().toISOString() };
+        const cfg = { image: window.lsCurrentImage() || '', title: (ti && ti.value.trim()) ? ti.value.trim() : '', focusX: window.lsFocusClamp(window.__lsFocus), updatedAt: new Date().toISOString() };
         try { cfg.updatedBy = (typeof loggedInUserId !== 'undefined' && loggedInUserId) ? loggedInUserId : ''; } catch (e) { cfg.updatedBy = ''; }
         if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
         let ok = false;
@@ -12160,12 +12253,12 @@
         if (!ok) return window.showToast('บันทึกไม่สำเร็จ — ตรวจการเชื่อมต่อแล้วลองใหม่', true);
         let cacheErr = '';
         try {
-            localStorage.setItem(window.__LDS_KEY || 'taxi_loading_screen_v1', JSON.stringify({ image: cfg.image, title: cfg.title }));
+            localStorage.setItem(window.__LDS_KEY || 'taxi_loading_screen_v1', JSON.stringify({ image: cfg.image, title: cfg.title, focusX: cfg.focusX }));
             window.__ldsCacheErr = '';
         } catch (e) { cacheErr = 'เขียนแคชในเครื่องไม่ได้ (' + ((e && e.name) || 'error') + ')'; window.__ldsCacheErr = cacheErr; }
         try { if (window.__ldsApply) window.__ldsApply(cfg); } catch (e) {}
         window.__ldsCfgSource = 'cache';
-        window.__lsSaved = { image: cfg.image, title: cfg.title };
+        window.__lsSaved = { image: cfg.image, title: cfg.title, focusX: cfg.focusX };
         window.__lsDraft = { image: null };
         window.lsRenderPreview();
         window.showToast(cacheErr ? ('บันทึกขึ้นเซิร์ฟเวอร์แล้ว แต่ ' + cacheErr + ' — เครื่องนี้จะยังไม่เห็นรูปตอนเปิดแอป') : 'บันทึกหน้าจอโหลดแล้ว — ทุกคนจะเห็นรูปนี้ตอนเปิดแอป', !!cacheErr);
@@ -12543,6 +12636,7 @@
         ['2026-09-15', '✍️ แก้ข้อความจากหน้าที่กำลังดูอยู่ได้เลย — พิมพ์แล้วเห็นผลทันที มีล้างค่า/จุดถัดไป'],
         ['2026-09-15', '🏷 หน้าแก้ข้อความ: ป้าย ✏️ แก้แล้ว / 🕒 ยังไม่บันทึก · ดูต้นฉบับ–คืนค่ารายตัว'],
         ['2026-09-15', '↺ คืนค่าข้อความต้นฉบับทั้งชุดได้ในคลิกเดียว — ติ๊กเลือกรายการที่จะคืนได้'],
+        ['2026-09-15', '↔️ หน้าจอโหลด: เลื่อนรูปซ้าย–ขวาเลือกมุมมองได้ (ลากบนพรีวิว/สไลเดอร์) ทุกคนเห็นตรงกัน'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
