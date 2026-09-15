@@ -11901,6 +11901,8 @@
         ['2026-09-15', '🚫 ตัดบรรทัด “ที่มาของยอด” ใต้ป้ายประเมินออก — ซ้ำกับยอดที่โชว์อยู่แล้ว'],
         ['2026-09-15', '🔊 เสียงนำทางพูดไทยบอกจุดเลี้ยว “อีก 300 เมตร เลี้ยวซ้าย” คู่กับเสียงติ๊ง/สั่นเดิม'],
         ['2026-09-15', '🔊 เปิด/ปิดเสียงนำทางพูดได้เองในหน้าโปรไฟล์ — จำค่าต่อบัญชี ใช้ทุกเครื่อง'],
+        ['2026-09-15', '🔇 ปุ่มปิดเสียงนำทางบน Mini Map — เงียบทั้งคำพูดและติ๊ง แต่ยังสั่นเตือน'],
+        ['2026-09-15', '⬆️ ย้ายแถบคำบอกเลี้ยวขึ้นบนสุดของ Mini Map — เห็นคำสั่งก่อนแผนที่'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -14476,6 +14478,9 @@
         color: var(--text-main, #e0e0e0); background: rgba(255,255,255,.07); border: 1px solid var(--border-glass, #333); }
     #navMini .nm-btn:active { transform: scale(.93); }
     #navMini .nm-btn.on { background: #2196f3; border-color: #2196f3; color: #fff; }
+    #navMini .nm-btn .material-symbols-outlined { font-size: 15px; }
+    /* 🔇 ปุ่มปิดเสียงบนแผนที่ — ติดแดงเมื่อปิดเสียงอยู่ (เห็นปุ๊บรู้เลยว่าเงียบ) */
+    #navMini .nm-btn.muted { background: rgba(239,68,68,.92); border-color: rgba(220,38,38,.95); color: #fff; }
     #navMini .nm-wrap { position: relative; width: 100%; height: 168px; background: #0b0f16; }
     #navMini.big .nm-wrap { height: 250px; }
     #navMini canvas { display: block; width: 100%; height: 100%; touch-action: none; }
@@ -14488,7 +14493,9 @@
     #navMini .nm-remain { font-size: 10px; color: var(--text-dim, #888); white-space: nowrap; }
     #navMini .nm-bar { flex: 1 1 auto; height: 4px; border-radius: 99px; background: rgba(255,255,255,.14); overflow: hidden; }
     #navMini .nm-bar > i { display: block; height: 100%; width: 0%; border-radius: 99px; background: #2196f3; transition: width .4s ease; }
-    #navMini .nm-turn { display: flex; align-items: center; gap: 7px; padding: 6px 9px 0; }
+    /* แถบคำสั่งเลี้ยว — ย้ายมาอยู่ “บนสุดใต้หัวแผนที่” (15 ก.ย.) เพื่อให้ตรงกับที่คนขับมองคำสั่ง (ก่อนหน้านี้อยู่ล่างแผนที่) */
+    #navMini .nm-turn { display: flex; align-items: center; gap: 7px; padding: 7px 9px 7px;
+        border-bottom: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.03); }
     #navMini .nm-turn-ico { flex: 0 0 auto; font-size: 21px; line-height: 1; color: #2196f3; }
     #navMini .nm-turn.none .nm-turn-ico { color: var(--text-dim, #888); }
     #navMini .nm-turn-col { display: flex; flex-direction: column; min-width: 0; }
@@ -14499,14 +14506,10 @@
 <div id="navMini" aria-label="แผนที่นำทางขนาดย่อ">
     <div class="nm-head" id="navMiniHead">
         <span class="nm-title" id="navMiniTitle">📍 กำลังนำทาง</span>
+        <button class="nm-btn" id="navMiniMute" title="ปิดเสียงนำทาง" aria-label="ปิด/เปิดเสียงนำทาง"><span class="material-symbols-outlined">volume_up</span></button>
         <button class="nm-btn" id="navMiniFollow" title="กลับไปที่รถ" aria-label="กลับไปที่รถ">◎</button>
         <button class="nm-btn" id="navMiniSize" title="ย่อ/ขยายแผนที่" aria-label="ย่อ/ขยาย">⤢</button>
         <button class="nm-btn" id="navMiniHide" title="ซ่อนแผนที่" aria-label="ซ่อน">✕</button>
-    </div>
-    <div class="nm-wrap">
-        <canvas id="navMiniCanvas"></canvas>
-        <div class="nm-attr">© OpenStreetMap</div>
-        <div class="nm-off">ไม่มีการเชื่อมต่อ — แสดงเส้นทางและตำแหน่งรถให้อยู่</div>
     </div>
     <div class="nm-turn" id="navMiniTurnRow" style="display: none;">
         <span class="material-symbols-outlined nm-turn-ico" id="navMiniTurnIco">straight</span>
@@ -14514,6 +14517,11 @@
             <b id="navMiniTurnDist">—</b>
             <i id="navMiniTurnDir">กำลังหาเส้นทาง…</i>
         </span>
+    </div>
+    <div class="nm-wrap">
+        <canvas id="navMiniCanvas"></canvas>
+        <div class="nm-attr">© OpenStreetMap</div>
+        <div class="nm-off">ไม่มีการเชื่อมต่อ — แสดงเส้นทางและตำแหน่งรถให้อยู่</div>
     </div>
     <div class="nm-foot">
         <span class="nm-remain" id="navMiniRemain">เหลือ —</span>
@@ -14541,6 +14549,7 @@
     var btnFollow = document.getElementById('navMiniFollow');
     var btnSize = document.getElementById('navMiniSize');
     var btnHide = document.getElementById('navMiniHide');
+    var btnMute = document.getElementById('navMiniMute');
     var turnRow = document.getElementById('navMiniTurnRow');
     var turnIco = document.getElementById('navMiniTurnIco');
     var turnDist = document.getElementById('navMiniTurnDist');
@@ -14549,7 +14558,7 @@
     // ---------- ค่าที่ผู้ใช้ตั้งไว้ ----------
     //   autoOpen = ผู้ใช้ “เปิดแผนที่เอง” ครั้งล่าสุดหรือไม่ → ใช้ตัดสินตอนเริ่มนำทางครั้งถัดไป
     //   ค่าเริ่มต้น false = เริ่มนำทางแล้ว “ยังไม่โชว์แผนที่” และโชว์เมื่อกดปุ่มเท่านั้น (ตามที่คนขับขอ)
-    var pref = { x: null, y: null, big: false, hidden: false, autoOpen: false };
+    var pref = { x: null, y: null, big: false, hidden: false, autoOpen: false, muted: false };
     try {
         var raw = localStorage.getItem(LS_KEY);
         if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') { for (var k in pref) { if (k in o) pref[k] = o[k]; } } }
@@ -14688,7 +14697,8 @@
             if (alertLog.length > 8) { alertLog.shift(); }
         } catch (e) {}
         try {
-            if (window.userToastSound !== false && typeof window.playSound === 'function') {
+            // 🔇 ปุ่มปิดเสียงบนแผนที่ = ปิดติ๊งเตือนจุดเลี้ยวด้วย (สั่นยังทำงาน)
+            if (window.userToastSound !== false && typeof window.playSound === 'function' && !navSoundMuted()) {
                 window.playSound(kind === 'near' ? 'turnNear' : 'turnFar');
             }
         } catch (e) {}
@@ -14743,9 +14753,31 @@
         // ใกล้ถึงแล้ว → พูดชื่อท่าเดียว (สั้น ฟังรู้เรื่องตอนต้องตัดสินใจ)
         return (kind === 'near') ? text : (voiceDistText(distM) + ' ' + text);
     }
+    // 🔇 ปุ่มปิดเสียงบนแผนที่ — ปิด “เสียงนำทาง” (คำพูด + ติ๊งเตือนจุดเลี้ยว) · ยังสั่นเตือนเหมือนเดิม
+    //    เก็บในเครื่อง (`taxi_navmini_v2.muted`) = ปุ่มลัดตอนขับ · ส่วนค่าประจำบัญชีอยู่ในหน้าโปรไฟล์
+    function navSoundMuted() { return !!pref.muted; }
+    function syncMuteBtn() {
+        if (!btnMute) { return; }
+        var m = navSoundMuted();
+        btnMute.classList.toggle('muted', m);
+        var ic = btnMute.querySelector('.material-symbols-outlined');
+        if (ic) { ic.textContent = m ? 'volume_off' : 'volume_up'; }
+        btnMute.title = m ? 'เปิดเสียงนำทาง (ตอนนี้เงียบ — แต่ยังสั่นเตือนอยู่)'
+                          : 'ปิดเสียงนำทาง (คำพูด + ติ๊งเตือนจุดเลี้ยว) — ยังสั่นเตือนอยู่';
+        btnMute.setAttribute('aria-pressed', m ? 'true' : 'false');
+    }
+    window.navMiniMuteToggle = function (force) {
+        pref.muted = (typeof force === 'boolean') ? force : !pref.muted;
+        savePref(); syncMuteBtn();
+        if (pref.muted) { try { window.speechSynthesis.cancel(); } catch (e) {} } // เงียบ = ตัดคำที่ค้างพูดอยู่ทันที
+        try { if (navigator.vibrate) { navigator.vibrate(10); } } catch (e) {}   // สั่นสั้น ๆ ให้รู้ว่ากดติด
+        return pref.muted;
+    };
+    window.navMiniIsMuted = function () { return navSoundMuted(); };
     function navVoiceReady() {
         if (!voiceSupported) { voiceBlockedMsg = 'เบราว์เซอร์นี้ไม่รองรับเสียงพูด'; return false; }
         if (window.userNavVoice === false) { voiceBlockedMsg = 'ปิดอยู่ในหน้าโปรไฟล์'; return false; }
+        if (navSoundMuted()) { voiceBlockedMsg = 'ปิดเสียงอยู่ (ปุ่มบนแผนที่)'; return false; }
         if (document.hidden) { voiceBlockedMsg = 'แอปอยู่เบื้องหลัง'; return false; }
         voiceBlockedMsg = '';
         return true;
@@ -15159,6 +15191,7 @@
             hasRoute: route.length, routeKm: Math.round(routeKm * 1000) / 1000,
             car: car ? { lat: car.lat, lng: car.lng } : null,
             bearing: Math.round(bearing), speedKmh: speedKmh,
+            muted: navSoundMuted(),
             voice: (typeof window.navVoiceDebug === 'function') ? window.navVoiceDebug() : null,
             routeHeading: (function () { var h = routeHeadingAt(nearestIndex(car)); return h === null ? null : Math.round(h); })(),
             headingFromRoute: shouldUseRouteHeading(),
@@ -15280,7 +15313,9 @@
         place(); request();
     });
     btnHide.addEventListener('click', function (e) { e.stopPropagation(); window.navMiniHideByUser(); });
+    btnMute.addEventListener('click', function (e) { e.stopPropagation(); window.navMiniMuteToggle(); });
     btnFollow.classList.add('on');
+    syncMuteBtn(); // 🔇 คืนสภาพปุ่มเสียงตามที่จำไว้ในเครื่อง
 
     // ---------- ซ่อนชั่วคราวเมื่อมีหน้าต่างอื่นเปิดทับ (ยกเว้นจอมิเตอร์ใหญ่) ----------
     function blocked() {
