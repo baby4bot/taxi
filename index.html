@@ -293,6 +293,10 @@
         .hist-del-btn { background: none; border: none; color: rgba(255,255,255,0.35); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px; flex-shrink: 0; -webkit-tap-highlight-color: transparent; transition: color 0.2s, transform 0.15s; }
         .hist-del-btn:hover { color: var(--accent-red); }
         .hist-del-btn:active { transform: scale(0.88); }
+        /* 📏 บรรทัดบอกผู้ใช้: ลิสต์นี้เรียงตามระยะใกล้สุด (จัดอันดับด้วยระยะตรง) */
+        .near-note { display: flex; align-items: center; gap: 6px; padding: 8px 15px; font-size: 11px; line-height: 1.5; color: var(--text-dim); background: rgba(56,189,248,0.07); border-bottom: 1px solid rgba(56,189,248,0.16); text-align: left; }
+        .near-note .material-symbols-outlined { font-size: 15px !important; color: #7dd3fc; }
+        .near-note b { color: #7dd3fc; font-weight: 700; }
         .list-item { padding: 16px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); text-align: left; font-size: 14px; display: flex; align-items: center; gap: 12px; transition: background-color 0.15s ease; }
         .list-item:hover { background: rgba(255,255,255,0.05); }
         .item-icon { font-size: 20px !important; color: var(--neon-green); text-shadow: 0 0 10px rgba(46, 204, 113, 0.4); flex-shrink: 0; }
@@ -8741,11 +8745,16 @@
     
     // 🏠 แตะช่องค้นหา (ยังไม่พิมพ์) → dropdown รวม: ตำแหน่งปัจจุบัน + ที่โปรด + ประวัติล่าสุด (Bolt/Grab UX — เห็นทุกอย่างพร้อมกัน)
     window.showHistory = () => {
-        let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        // ⚠️ เก็บลำดับเดิมไว้ใน __i (ตัวลบประวัติใช้ลำดับจาก “ที่เก็บจริง” ไม่ใช่ลำดับที่เรียงใหม่ — ไม่งั้นกดลบแล้วลบผิดรายการ)
+        let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]').map((it, i) => Object.assign({ __i: i }, it));
         let favs = window.getFavorites();
         // 📏 ตำแหน่งอ้างอิงสำหรับป้ายระยะทาง — ใช้ค่าที่มีอยู่แล้วในเครื่อง (ไม่รอ GPS ไม่กินโควตา) แล้วค่อยอัปเดตด้วยตำแหน่งจริงด้านล่าง
         const ref0 = freshLastPos() || window.__lastUpos || window.getUserPosManual() || null;
+        // 📏 เรียงใกล้สุดก่อน — ใช้ “ระยะตรง” คิดจากตำแหน่งอ้างอิง (ไม่ยิง routing เลย = ไม่กินโควตา)
+        let sortedByDist = false;
+        if (ref0) { favs = window.sortByNear(favs, ref0); h = window.sortByNear(h, ref0); sortedByDist = true; }
         let html = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ปลายทาง</span></div>`;
+        if (sortedByDist) html += `<div class="near-note"><span class="material-symbols-outlined">near_me</span><span>เรียงตามระยะใกล้สุดจากตำแหน่งของคุณ — จัดอันดับด้วย <b>ระยะตรง</b> (ตัวเลขบนป้ายยังเป็นระยะเส้นทางจริง)</span></div>`;
         // ❌ ไม่แสดงแถว “ตั้งตำแหน่งของฉัน” ในลิสต์ค้นหาอีก (ผู้ใช้สั่ง 15 ก.ย.) — การนำทางเริ่มจากตำแหน่งล่าสุดจริงอยู่แล้ว
         //    ตัวโค้ดเดิม (getUserPosManual / enterSetPosMode) ยังอยู่ → ค่าที่เคยตั้งไว้ยังใช้ได้เหมือนเดิม แค่ไม่มีปุ่มให้ตั้งจากตรงนี้
         if (!h.length && !favs.length) {
@@ -8762,14 +8771,24 @@
         }
         if (h.length) {
             html += `<div class="history-header" style="color:var(--neon-green);"><span><span class="material-symbols-outlined">history</span> ประวัติล่าสุด</span></div>`;
-            html += h.map((i, idx) => renderLocRow('location_on', i.name, 'แตะเพื่อไปต่อ', `window.selectLocation('${i.name.replace(/'/g, "\\'")}', ${i.lat}, ${i.lon})`, `<div style="display:flex; align-items:center; gap:4px; flex-shrink:0;"><button class="star-toggle-btn ${window.isFavorite(i.name)? '' : 'off'}" onclick="event.stopPropagation(); window.toggleFavorite('${i.name.replace(/'/g, "\\'")}', ${i.lat}, ${i.lon}); window.showHistory();" title="${window.isFavorite(i.name)? 'ลบออกจากโปรด' : 'บันทึกเป็นโปรด'}">★</button><button class="hist-del-btn" onclick="event.stopPropagation(); window.removeSearchHistoryItem(${idx})" title="ลบรายการนี้"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span></button></div>`, i.lat, i.lon, ref0)).join('');
+            html += h.map((i, idx) => renderLocRow('location_on', i.name, 'แตะเพื่อไปต่อ', `window.selectLocation('${i.name.replace(/'/g, "\\'")}', ${i.lat}, ${i.lon})`, `<div style="display:flex; align-items:center; gap:4px; flex-shrink:0;"><button class="star-toggle-btn ${window.isFavorite(i.name)? '' : 'off'}" onclick="event.stopPropagation(); window.toggleFavorite('${i.name.replace(/'/g, "\\'")}', ${i.lat}, ${i.lon}); window.showHistory();" title="${window.isFavorite(i.name)? 'ลบออกจากโปรด' : 'บันทึกเป็นโปรด'}">★</button><button class="hist-del-btn" onclick="event.stopPropagation(); window.removeSearchHistoryItem(${i.__i})" title="ลบรายการนี้"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span></button></div>`, i.lat, i.lon, ref0)).join('');
         }
         $('historyList').innerHTML = html;
         $('suggestionList').style.display = 'none';
         $('historyList').style.display = 'block';
         window.updateClearDestBtn();
         // 📏 ตำแหน่งจริง (แคช 2 นาที — ไม่ยิง GPS ซ้ำถ้าเพิ่งได้) → อัปเดตป้ายระยะตรงก่อน แล้วยกระดับเป็นระยะเส้นทางจริงเฉพาะ 6 แถวแรก
-        try { getUserPos().then((u) => { if (u) window.__refreshLocRowDistances(u, 'historyList'); }).catch(() => {}); } catch (e) {}
+        //    ถ้าตอนวาดครั้งนี้ยังไม่มีตำแหน่งเลย (เลยยังไม่เรียง) → เรียงใหม่ให้ครั้งเดียวเมื่อได้ตำแหน่งจริง
+        try {
+            getUserPos().then((u) => {
+                if (!u) return;
+                if (!ref0) {
+                    const k = u.lat.toFixed(3) + '|' + u.lon.toFixed(3);
+                    if (window.__histReSortedWith !== k) { window.__histReSortedWith = k; window.__lastUpos = u; window.showHistory(); return; }
+                }
+                window.__refreshLocRowDistances(u, 'historyList');
+            }).catch(() => {});
+        } catch (e) {}
     };
     window.showFavorites = () => { window.showHistory(); }; // 🔁 รวมเข้าด้วยกันแล้ว (ประวัติ + ที่โปรด + ตำแหน่งในรายการเดียว)
     window.onDestFocus = () => {
@@ -8880,6 +8899,16 @@
     const freshLastPos = () => (lastPos && lastPosTime && (Date.now() - lastPosTime) < 180000) ? { lat: lastPos.lat, lon: lastPos.lon, at: Date.now() } : null;
     const distKm = (a, b) => { const R = 6371; const dLat = (b.lat - a.lat) * Math.PI / 180; const dLon = (b.lon - a.lon) * Math.PI / 180; const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2; return 2 * R * Math.asin(Math.sqrt(h)); };
     const fmtDist = (km) => km < 1 ? Math.round(km * 1000) + ' ม.' : km.toFixed(1) + ' กม.';
+    // 📏 เรียงรายการตามระยะใกล้สุดจากตำแหน่งอ้างอิง — ใช้ “ระยะตรง” (haversine) เท่านั้น = ฟรี ไม่กินโควตา routing
+    //    รายการที่ไม่มีพิกัด (lat/lon ไม่ใช่ตัวเลข) ไปท้ายสุดเสมอ เหมือนเดิมเวลาเทียบ
+    window.sortByNear = (arr, upos) => {
+        if (!upos || !Array.isArray(arr) || arr.length < 2) return arr;
+        const d = (it) => (it && typeof it.lat === 'number' && typeof it.lon === 'number') ? distKm(upos, { lat: it.lat, lon: it.lon }) : Infinity;
+        return arr.map((it, i) => ({ it, i })).sort((a, b) => {
+            const da = d(a.it), db = d(b.it);
+            return (da === db) ? (a.i - b.i) : (da - db); // ระยะเท่ากัน → คงลำดับเดิมไว้ (stable)
+        }).map(x => x.it);
+    };
     // 💾 แคชระยะทางเส้นทางจริง (TomTom routing) — ใช้ป้าย กม. ในช่องค้นหาให้ตรงกับหน้าสรุปเส้นทาง
     //    (เดิมใช้เส้นตรง = ต่างกันหลายกม. เช่น ไปเซ็นทรัลเวสต์เกต badge 9.8 แต่เส้นทางจริง 15.15)
     //    key = จุดเริ่ม|ปลาย (ปัด 3 ตำแหน่ง ~100 ม.) + โหมดทางด่วน → ค่าซ้ำไม่ต้องยิง TomTom ซ้ำ (กันเผาโควตา)
@@ -8932,16 +8961,26 @@
         const approx = !real;
         return '<span class="dist-badge' + (approx ? ' approx' : '') + '" title="' + (approx ? 'ระยะตรง (ประมาณ) — กำลังเปลี่ยนเป็นระยะเส้นทางจริง' : 'ระยะทางเส้นทางจริง (ผ่านถนน) จากตำแหน่งคุณ') + '" style="flex-shrink:0; font-size:10.5px; color:' + (approx ? '#94a3b8' : '#38bdf8') + '; background:' + (approx ? 'rgba(148,163,184,0.10)' : 'rgba(56,189,248,0.12)') + '; border:1px solid ' + (approx ? 'rgba(148,163,184,0.25)' : 'rgba(56,189,248,0.25)') + '; padding:2px 7px; border-radius:99px; white-space:nowrap; margin-right:6px;">' + (approx ? '≈' : '') + txt + '</span>';
     };
+    // ⏱️ บันทึกว่า “ลิสต์นี้ + ตำแหน่งนี้” ถูกยกระดับระยะทางไปแล้วเมื่อไร (กันยิง routing ซ้ำใน 90 วิ)
+    window.__distUpgradeLog = {};
     // ♻️ อัปเดตป้ายระยะของลิสต์ “ที่โปรด/ประวัติ” ด้วยตำแหน่งจริงที่เพิ่งได้มา (ระยะตรงก่อน → เส้นทางจริงทีหลัง)
     window.__refreshLocRowDistances = async (upos, boxId) => {
         try {
             const box = document.getElementById(boxId || 'historyList');
             if (!box || !upos) return;
-            box.querySelectorAll('.list-item[data-dlat]').forEach(row => {
+            const rows = box.querySelectorAll('.list-item[data-dlat]');
+            // 1) ระยะตรง — ฟรี อัปเดตได้ทุกครั้งที่มีตำแหน่งใหม่
+            rows.forEach(row => {
                 const b = row.querySelector('.dist-badge'); if (!b) return;
                 const km = distKm(upos, { lat: parseFloat(row.dataset.dlat), lon: parseFloat(row.dataset.dlon) });
                 b.textContent = '≈' + fmtDist(km);
             });
+            // 2) ยกระดับเป็นระยะเส้นทางจริง — จำกัด 6 แถวแรก “และ” ไม่ยิงซ้ำสำหรับตำแหน่งเดิมภายใน 90 วิ
+            //    เหตุผล: กดสลับโปรด/เปิดลิสต์ซ้ำ จะวาดลิสต์ใหม่ทุกครั้ง — ถ้าไม่กันไว้จะยิง routing ซ้ำโดยไม่จำเป็น
+            const ukey = (boxId || 'historyList') + '|' + upos.lat.toFixed(3) + '|' + upos.lon.toFixed(3) + '|' + rows.length;
+            const last = window.__distUpgradeLog[ukey] || 0;
+            if (Date.now() - last < 90000) return;
+            window.__distUpgradeLog[ukey] = Date.now();
             await window.__upgradeDistBadges(upos, box, 6); // ⛔ จำกัด 6 แถว = กันโควตา routing บวม
         } catch (e) {}
     };
@@ -12808,6 +12847,9 @@
         ['2026-09-15', '🔐 ตั้งค่าสิทธิ์การใช้งาน = แอดมินเท่านั้น (ผู้จัดการเปิดเมนูไม่ได้)'],
         ['2026-09-15', '📏 ที่โปรด/ประวัติล่าสุด: โชว์ระยะทางถึงปลายทาง (≈ระยะตรง → อัปเดตเป็นเส้นทางจริง)'],
         ['2026-09-15', '⛔ จำกัดยิงเส้นทางจริงแค่ 6 แถวแรกในลิสต์โปรด/ประวัติ กันโควตาบวม'],
+        ['2026-09-15', '📏 ที่โปรด/ประวัติล่าสุด เรียงใกล้สุดก่อน (จัดอันดับด้วยระยะตรง มีบรรทัดบอกผู้ใช้)'],
+        ['2026-09-15', '⏱️ กันยิงเส้นทางซ้ำ: ตำแหน่งเดิมใน 90 วินาที ไม่ยิง routing อีก'],
+        ['2026-09-15', '🐞 แก้ปุ่มลบในประวัติให้ลบถูกตัวหลังเรียงใหม่ (ส่งลำดับที่เก็บจริง)'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
