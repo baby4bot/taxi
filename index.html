@@ -1756,6 +1756,31 @@
         .txt-prev-btn:active { transform: scale(0.9); }
         .txt-prev-btn .material-symbols-outlined { font-size: 20px; }
         html.light .txt-prev-btn { border-color: rgba(31,111,235,0.45); background: rgba(31,111,235,0.12); color: #1f6feb; }
+        /* 🏷 ป้ายบอกว่าข้อความนี้ถูกแอดมินแก้ไปแล้ว (ไม่ใช่ต้นฉบับ) / ยังไม่บันทึก */
+        .txt-edit-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 800; color: #ffd24d; background: rgba(255,210,77,0.14); border: 1px solid rgba(255,210,77,0.45); border-radius: 999px; padding: 2px 7px; margin-left: 5px; white-space: nowrap; vertical-align: middle; }
+        .txt-edit-badge.pending { color: #8cc4ff; background: rgba(77,163,255,0.14); border-color: rgba(77,163,255,0.5); }
+        html.light .txt-edit-badge { color: #8a5a00; background: rgba(255,196,0,0.24); border-color: rgba(150,100,0,0.45); }
+        html.light .txt-edit-badge.pending { color: #1f6feb; background: rgba(31,111,235,0.14); border-color: rgba(31,111,235,0.4); }
+        /* 👁 แผงเทียบ “ต้นฉบับ / ที่ใช้อยู่” (กดดูรายตัว · ไม่ต้องเดา) */
+        .txt-orig-panel { margin-top: 6px; font-size: 11.5px; line-height: 1.7; color: var(--text-dim); background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); border-radius: 10px; padding: 7px 9px; word-break: break-word; }
+        .txt-orig-panel b { color: var(--neon-yellow); }
+        .txt-orig-panel .num { opacity: 0.65; font-size: 10.5px; }
+        html.light .txt-orig-panel { background: rgba(0,0,0,0.035); border-color: rgba(0,0,0,0.18); }
+        html.light .txt-orig-panel b { color: #8a5a00; }
+        /* ปุ่มเล็กท้ายแถว (ดูต้นฉบับ / คืนค่าต้นฉบับ) */
+        .txt-row-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 5px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); color: var(--text-dim); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: 0.15s; }
+        .txt-row-btn:hover { color: #fff; border-color: rgba(255,255,255,0.28); }
+        .txt-row-btn.on { color: #ffd24d; border-color: rgba(255,210,77,0.5); background: rgba(255,210,77,0.12); }
+        .txt-row-btn.danger { color: #ff8a95; background: rgba(255,90,110,0.08); border-color: rgba(255,90,110,0.35); }
+        .txt-row-btn.danger:hover { color: #fff; background: rgba(255,90,110,0.2); border-color: rgba(255,90,110,0.6); }
+        html.light .txt-row-btn { color: #445268; border-color: rgba(0,0,0,0.16); background: rgba(0,0,0,0.04); }
+        html.light .txt-row-btn.on { color: #8a5a00; border-color: rgba(150,100,0,0.45); background: rgba(255,196,0,0.2); }
+        html.light .txt-row-btn.danger { color: #b3202f; background: rgba(190,30,50,0.07); border-color: rgba(190,30,50,0.3); }
+        /* กรองเฉพาะข้อความที่แก้ไว้ */
+        .txt-onlyedited { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,210,77,0.35); background: rgba(255,210,77,0.07); color: var(--neon-yellow); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: 0.15s; }
+        .txt-onlyedited.on { background: rgba(255,210,77,0.22); border-color: rgba(255,210,77,0.75); }
+        .txt-onlyedited .n { font-weight: 800; }
+        html.light .txt-onlyedited { color: #8a5a00; border-color: rgba(150,100,0,0.4); background: rgba(255,196,0,0.18); }
         /* ไฮไลต์ทองกะพริบ 4 จังหวะ บนข้อความที่กำลังดูตัวอย่าง (เห็นชัดว่าอันไหน) */
         /* 🔆 ไฮไลต์ค้าง (ไม่กะพริบแล้วหาย) — เต้นเบา ๆ ให้สังเกตเห็นง่าย แต่ไม่รบกวนการอ่าน */
         /* ⚠️ ห้ามใส่ background ทับ! — ข้อความหัวเรื่องใช้ background-clip:text (ตัวอักษรโปร่งใส) ใส่พื้นทับ = ข้อความหาย
@@ -3334,7 +3359,7 @@
 <div id="hubQuotaItem" class="hub-item" data-cat="cat-system" style="display:none;" onclick="window.openQuotaMonitor();"><div class="hub-item-icon" style="background:rgba(239,68,68,0.13); color:#ff8a95;"><span class="material-symbols-outlined" style="font-size:24px;">data_usage</span></div><div class="hub-item-body"><div class="hub-item-title" style="color:#ff8a95;">โควต้าการใช้งาน <span style="background:rgba(255,138,149,0.15); border:1px solid rgba(255,138,149,0.35); color:#ff8a95; border-radius:999px; font-size:10.5px; font-weight:700; padding:1px 8px; margin-left:5px; vertical-align:middle;">โควต้า</span> <span id="hubQuotaBadge" class="perm-req-count" style="display:none;"></span></div><div class="hub-item-desc">โควตาธอมธอม (เส้นทาง/ค้นหา) + Firestore อ่าน/เขียน/ลบ ของวันนี้ พร้อมยอดที่เหลือ</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 </div></div></div>
 
-<div id="textEditModal" class="modal-overlay" style="z-index: 10045;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('textEditModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>แก้ไขข้อความ / หัวข้อ</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetTextOverrides()" title="รีเซ็ตทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('textEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 8px; line-height:1.65;">แก้ชื่อหัวข้อ ป้าย ปุ่ม และคำอธิบายในแอปได้เอง — <b>ไม่ต้องแก้โค้ด</b> · บันทึกแล้วมีผลกับ <b>ทุกคนที่ใช้แอป</b>ทันที<br>บรรทัดบน = ข้อความต้นฉบับ (แก้ไม่ได้) · ช่องกรอก = ข้อความที่อยากให้แสดง (เว้นว่าง = ใช้ต้นฉบับ) · <b>ข้อความที่เหมือนกันจะเปลี่ยนพร้อมกันทุกจุด</b> — ตัวเลข/เปอร์เซ็นต์ระบบข้ามให้อัตโนมัติ</p><div style="position:relative; margin:0 4px 8px;"><input type="text" id="textEditSearch" placeholder="ค้นหาข้อความ…" oninput="window.renderTextEditList(this.value)" style="width:100%; text-align:left; padding-left:38px;"><span class="material-symbols-outlined" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:19px; color:var(--text-dim);">search</span></div><div style="margin:0 4px 8px;"><select id="textEditScreenFilter" class="txt-screen-sel" onchange="window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : '')" title="เลือกดูเฉพาะข้อความที่อยู่ในหน้าจอนั้น"><option value="">ทุกหน้าจอ</option></select></div><div id="textEditStats" style="font-size:11.5px; color:var(--text-dim); margin:0 6px 8px; line-height:1.6;"></div><div id="textEditList" style="min-height:200px;"></div></div><div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveTextEditBtn" onclick="window.saveTextOverrides()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color:#fff;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกทั้งหมด</button></div></div></div>
+<div id="textEditModal" class="modal-overlay" style="z-index: 10045;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('textEditModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>แก้ไขข้อความ / หัวข้อ</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetTextOverrides()" title="รีเซ็ตทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('textEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 8px; line-height:1.65;">แก้ชื่อหัวข้อ ป้าย ปุ่ม และคำอธิบายในแอปได้เอง — <b>ไม่ต้องแก้โค้ด</b> · บันทึกแล้วมีผลกับ <b>ทุกคนที่ใช้แอป</b>ทันที<br>บรรทัดบน = ข้อความต้นฉบับ (แก้ไม่ได้) · ช่องกรอก = ข้อความที่อยากให้แสดง (เว้นว่าง = ใช้ต้นฉบับ) · <b>ข้อความที่เหมือนกันจะเปลี่ยนพร้อมกันทุกจุด</b> — ตัวเลข/เปอร์เซ็นต์ระบบข้ามให้อัตโนมัติ</p><div style="position:relative; margin:0 4px 8px;"><input type="text" id="textEditSearch" placeholder="ค้นหาข้อความ…" oninput="window.renderTextEditList(this.value)" style="width:100%; text-align:left; padding-left:38px;"><span class="material-symbols-outlined" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:19px; color:var(--text-dim);">search</span></div><div style="margin:0 4px 8px;"><select id="textEditScreenFilter" class="txt-screen-sel" onchange="window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : '')" title="เลือกดูเฉพาะข้อความที่อยู่ในหน้าจอนั้น"><option value="">ทุกหน้าจอ</option></select></div><div style="margin:0 4px 10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><button type="button" id="textEditOnlyEdited" class="txt-onlyedited" onclick="window.textEditToggleOnlyEdited()" title="แสดงเฉพาะข้อความที่แอดมินแก้ไว้ — ไม่ใช่ต้นฉบับ">✏️ ดูเฉพาะที่แก้ไว้ <span class="n" id="textEditOnlyEditedN">0</span></button><span style="font-size:11px; color:var(--text-dim);">แถวที่มีป้าย ✏️ = ไม่ใช่ต้นฉบับ · 🕒 = ยังไม่บันทึก</span></div><div id="textEditStats" style="font-size:11.5px; color:var(--text-dim); margin:0 6px 8px; line-height:1.6;"></div><div id="textEditList" style="min-height:200px;"></div></div><div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveTextEditBtn" onclick="window.saveTextOverrides()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color:#fff;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกทั้งหมด</button></div></div></div>
 <div id="itemTextEditModal" class="modal-overlay" style="z-index: 10046;"><div class="modal-box standard-box" data-txt-skip onclick="event.stopPropagation()"><div class="modal-header"><h3 id="itemTextEditTitle">แก้ข้อความเมนู</h3><button class="btn-close-floating" onclick="window.toggleModal('itemTextEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><div id="itemTextEditWho" style="font-size:12.5px; color:var(--neon-yellow); font-weight:700; margin-bottom:10px; word-break:break-word;"></div><label for="itemTextTitle" style="text-align:left;">ชื่อเมนูที่แสดงบนจอ</label><div id="itemTextOrigTitle" style="font-size:11px; color:var(--text-dim); margin:2px 0 6px; word-break:break-word;"></div><input type="text" id="itemTextTitle" maxlength="60" placeholder="เว้นว่าง = ใช้ข้อความต้นฉบับ" style="width:100%; text-align:left; margin-bottom:12px;" onkeydown="if(event.key==='Enter') window.saveHubItemText()"><label for="itemTextDesc" style="text-align:left;">คำอธิบายใต้เมนู</label><div id="itemTextOrigDesc" style="font-size:11px; color:var(--text-dim); margin:2px 0 6px; word-break:break-word;"></div><input type="text" id="itemTextDesc" maxlength="140" placeholder="เว้นว่าง = ใช้ข้อความต้นฉบับ" style="width:100%; text-align:left; margin-bottom:10px;" onkeydown="if(event.key==='Enter') window.saveHubItemText()"><div id="itemTextEditNote" style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:14px;"></div><div style="display:flex; gap:8px;"><button class="manual-timer-btn" style="background:rgba(255,255,255,0.08); color:var(--text-dim); padding:0 12px;" onclick="window.clearHubItemText()" title="ล้างข้อความที่แก้ไว้ของเมนูนี้ (กลับเป็นต้นฉบับ)"><span class="material-symbols-outlined" style="font-size:18px;">restart_alt</span> คืนต้นฉบับ</button><button class="manual-timer-btn" style="background: var(--neon-green); flex:1; justify-content:center; color:#fff;" onclick="window.saveHubItemText()"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div></div>
 <div id="hubCatEditModal" class="modal-overlay" style="z-index: 10040;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="hubCatEditTitle">หัวข้อใหม่</h3><button class="btn-close-floating" onclick="window.toggleModal('hubCatEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><label style="text-align:left;">ชื่อหัวข้อ</label><input type="text" id="hubCatNameInput" maxlength="40" placeholder="เช่น 🚕 งานรถ / 🧾 ใบเสร็จ" style="width: 100%; margin-bottom: 10px; text-align: left;" onkeydown="if(event.key==='Enter') window.saveHubCat()"><div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 14px;">ตั้งชื่อแล้วลากเมนูไปวางในหัวข้อนี้ได้เลย — <b>หัวข้อที่ไม่มีเมนูจะถูกซ่อนเอง</b> (กลับมาเมื่อมีเมนูวางอยู่)<br>ใส่ emoji นำหน้าได้ เช่น 📁 · เก็บในเครื่องนี้ ไม่กินโควตา</div><button class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: #fff;" onclick="window.saveHubCat()"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกหัวข้อ</button></div></div></div>
 
@@ -7496,31 +7521,82 @@
         const inScreen = want ? all.filter(x => x.screens.has(want)) : all;
         const screenLabel = want ? ((inScreen[0] && Array.from(inScreen[0].labels)[0]) || want) : '';
         const qq = String(q || '').trim().toLowerCase();
-        const rows = inScreen.filter(x => !qq || x.def.toLowerCase().indexOf(qq) !== -1 || String(cur[x.def] || '').toLowerCase().indexOf(qq) !== -1);
+        // 🏷 เทียบ “ที่ใช้อยู่” กับ “ที่บันทึกล่าสุด” (แคชในเครื่อง = ค่าที่ทุกคนเห็น) → รู้ว่ารายการไหนยังไม่บันทึก
+        //    แคชถูกเขียนทุกครั้งที่โหลดจากเซิร์ฟเวอร์/กดบันทึก ⇒ ต่างกัน = พิมพ์ค้างไว้ ยังไม่ถึงคนอื่น
+        const savedMap = window.textOvrCacheRead();
+        const editedKeys = Object.keys(cur);
+        let pendN = 0;
+        editedKeys.forEach(k => { if (savedMap[k] !== cur[k]) pendN++; });
+        const onlyEd = !!window.__txtOnlyEdited;
+        let rows = inScreen.filter(x => !qq || x.def.toLowerCase().indexOf(qq) !== -1 || String(cur[x.def] || '').toLowerCase().indexOf(qq) !== -1);
+        if (onlyEd) rows = rows.filter(x => !!cur[x.def]);   // ✏️ เฉพาะที่แอดมินแก้ไว้ (ไม่ใช่ต้นฉบับ)
         rows.sort((a, b) => (b.count - a.count) || String(a.def).localeCompare(String(b.def), 'th'));
         const st = document.getElementById('textEditStats');
-        if (st) st.innerHTML = 'พบ <b>' + all.length + '</b> หัวข้อที่แก้ได้ · แก้ไว้แล้ว <b style="color:var(--neon-yellow)">' + Object.keys(cur).length + '</b> รายการ' + (want ? ' · หน้าจอ <b style="color:#7db8ff">' + window.textEscAttr(screenLabel) + '</b>' : '') + ((qq || want) ? ' · กรองเหลือ ' + rows.length : '');
-        if (!rows.length) { box.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:24px;">ไม่พบข้อความที่ตรงกับ' + (want && !qq ? 'หน้าจอนี้' : 'คำค้น') + '</div>'; return; }
+        if (st) st.innerHTML = 'พบ <b>' + all.length + '</b> หัวข้อที่แก้ได้ · แก้ไว้แล้ว <b style="color:var(--neon-yellow)">' + editedKeys.length + '</b> รายการ' + (pendN ? ' · <b style="color:#8cc4ff">ยังไม่บันทึก ' + pendN + '</b>' : '') + (want ? ' · หน้าจอ <b style="color:#7db8ff">' + window.textEscAttr(screenLabel) + '</b>' : '') + ((qq || want || onlyEd) ? ' · กรองเหลือ ' + rows.length : '');
+        const onlyBtn = document.getElementById('textEditOnlyEdited');
+        if (onlyBtn) onlyBtn.classList.toggle('on', onlyEd);
+        const onlyN = document.getElementById('textEditOnlyEditedN');
+        if (onlyN) onlyN.textContent = String(editedKeys.length);
+        if (!rows.length) { box.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:24px;">' + (onlyEd ? 'ยังไม่มีข้อความที่ถูกแก้ไว้ — ทุกรายการยังเป็นต้นฉบับ' : 'ไม่พบข้อความที่ตรงกับ' + (want && !qq ? 'หน้าจอนี้' : 'คำค้น')) + '</div>'; return; }
         const cap = 300;
-        box.innerHTML = rows.slice(0, cap).map(r => {
-            const def = window.textEscAttr(r.def);
-            const val = window.textEscAttr(cur[r.def] || '');
-            const chg = !!cur[r.def];
+        box.innerHTML = rows.slice(0, cap).map((r, ri) => {
+            const defTxt = r.def;
+            const def = window.textEscAttr(defTxt);
+            const curVal = String(cur[defTxt] || '');
+            const val = window.textEscAttr(curVal);
+            const chg = !!curVal;
+            const pending = chg && savedMap[defTxt] !== curVal;   // 🕒 พิมพ์ค้าง/แก้แล้วยังไม่กดบันทึก
             const where = Array.from(r.where).slice(0, 3).join(' · ');
             const labelSet = Array.from(r.labels);
             const chip = labelSet.slice(0, 2).join(' · ') + (labelSet.length > 2 ? ' +' + (labelSet.length - 2) : '');
             return '<div style="border:1px solid ' + (chg ? 'rgba(255,210,77,0.45)' : 'rgba(255,255,255,0.09)') + '; background:' + (chg ? 'rgba(255,210,77,0.07)' : 'rgba(255,255,255,0.03)') + '; border-radius:12px; padding:9px 10px; margin-bottom:8px;">' +
                 '<div style="display:flex; align-items:flex-start; gap:8px;">' +
-                    '<div style="flex:1; min-width:0; font-size:12.5px; color:#fff; line-height:1.5; word-break:break-word;">' + def + '</div>' +
+                    '<div style="flex:1; min-width:0; font-size:12.5px; color:#fff; line-height:1.5; word-break:break-word;"><span style="color:var(--text-dim);">ต้นฉบับ:</span> ' + def +
+                        (chg ? '<span class="txt-edit-badge' + (pending ? ' pending' : '') + '">' + (pending ? '🕒 ยังไม่บันทึก' : '✏️ แก้แล้ว') + '</span>' : '') +
+                    '</div>' +
                     '<button type="button" class="txt-prev-btn" data-def="' + def + '" onclick="window.textEditPreview(this)" title="พรีวิว — เปิดหน้าจอที่มีข้อความนี้" aria-label="พรีวิวหน้าจอของข้อความนี้"><span class="material-symbols-outlined">visibility</span></button>' +
                 '</div>' +
-                '<div style="display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:4px 0 7px;" title="' + window.textEscAttr(where) + '"><span class="txt-screen-chip">' + window.textEscAttr(chip) + '</span><span style="font-size:10.5px; color:var(--text-dim);">' + r.count + ' จุด</span></div>' +
+                '<div style="display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:4px 0 7px;" title="' + window.textEscAttr(where) + '"><span class="txt-screen-chip">' + window.textEscAttr(chip) + '</span><span style="font-size:10.5px; color:var(--text-dim);">' + r.count + ' จุด</span>' + (chg ? '<span style="font-size:10.5px; color:var(--neon-yellow);">ข้อความที่แสดง: “' + (curVal.length > 40 ? window.textEscAttr(curVal.slice(0, 40)) + '…' : val) + '”</span>' : '') + '</div>' +
                 '<input type="text" data-def="' + def + '" value="' + val + '" placeholder="(เว้นว่าง = ใช้ต้นฉบับ)" style="width:100%; text-align:left; font-size:13px;">' +
-                (chg ? '<div style="text-align:right; margin-top:5px;"><span data-def="' + def + '" onclick="window.textEditClearOne(this)" style="font-size:11.5px; color:#ff8a95; cursor:pointer;">↺ ล้างรายการนี้</span></div>' : '') +
+                (chg ? '<div id="txtOrigRow' + ri + '" class="txt-orig-panel" style="display:none;">' +
+                        '<div>ต้นฉบับ&nbsp;: <b>“' + def + '”</b> <span class="num">(' + defTxt.length + ' ตัวอักษร)</span></div>' +
+                        '<div>ใช้อยู่&nbsp;&nbsp;: <b>“' + val + '”</b> <span class="num">(' + curVal.length + ' ตัวอักษร)</span></div>' +
+                        '<div style="margin-top:3px;">' + (pending ? '🕒 ยังไม่บันทึก — <b>คนอื่นยังเห็นต้นฉบับ</b> · กด “บันทึกทั้งหมด” เพื่อให้ทุกคนเห็นข้อความนี้' : '✏️ แก้แล้ว — ทุกคนที่ใช้แอปเห็นข้อความนี้อยู่') + '</div>' +
+                    '</div>' : '') +
+                (chg ? '<div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap; margin-top:7px;">' +
+                        '<button type="button" class="txt-row-btn" onclick="window.textEditToggleOrig(' + ri + ', this)" title="เทียบข้อความต้นฉบับกับข้อความที่ใช้อยู่"><span class="material-symbols-outlined" style="font-size:16px;">visibility</span> ดูต้นฉบับ</button>' +
+                        '<button type="button" class="txt-row-btn danger" data-def="' + def + '" onclick="window.textEditClearOne(this)" title="กลับไปใช้ข้อความต้นฉบับของแอป"><span class="material-symbols-outlined" style="font-size:16px;">restart_alt</span> คืนค่าต้นฉบับ</button>' +
+                    '</div>' : '') +
                 '</div>';
         }).join('') + (rows.length > cap ? '<div style="text-align:center; color:var(--text-dim); font-size:11.5px; padding:6px;">แสดง ' + cap + ' จาก ' + rows.length + ' — ใช้ช่องค้นหาเพื่อเจอที่เหลือ</div>' : '');
     };
-    window.textEditClearOne = (el) => { const def = el && el.getAttribute('data-def'); if (!def) return; const ovr = Object.assign({}, window.__textOvr || {}); delete ovr[def]; window.__textOvr = ovr; window.applyTextOverrides(); window.__txtSkipHarvest = true; window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : ''); window.__txtSkipHarvest = false; };
+    // 👁 กาง/พับแผง “ต้นฉบับ vs ที่ใช้อยู่” ของแถวนั้น
+    window.textEditToggleOrig = (ri, btn) => {
+        const p = document.getElementById('txtOrigRow' + ri); if (!p) return;
+        const open = p.style.display === 'none';
+        p.style.display = open ? 'block' : 'none';
+        if (btn) btn.classList.toggle('on', open);
+    };
+    // ✏️ สลับโหมด “ดูเฉพาะที่แก้ไว้” (นับเฉพาะรายการที่ไม่ใช่ต้นฉบับ)
+    window.__txtOnlyEdited = false;
+    window.textEditToggleOnlyEdited = () => {
+        window.__txtOnlyEdited = !window.__txtOnlyEdited;
+        // ต้อง harvest ก่อนวาดใหม่ — ค่าที่พิมพ์ค้างในช่องจะไม่หาย
+        window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : '');
+    };
+    // ↺ คืนค่าต้นฉบับของ “รายการเดียว” (ยังไม่ถึงคนอื่นจนกว่าจะกดบันทึกทั้งหมด)
+    window.textEditClearOne = (el) => {
+        const def = el && el.getAttribute('data-def'); if (!def) return;
+        window.textEditHarvest();   // เก็บค่าที่พิมพ์ค้างในแถวอื่นก่อน (ไม่งั้นหาย)
+        const ovr = Object.assign({}, window.__textOvr || {});
+        delete ovr[def];
+        window.__textOvr = ovr;
+        window.applyTextOverrides();
+        window.__txtSkipHarvest = true;
+        window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : '');
+        window.__txtSkipHarvest = false;
+        window.showToast('คืนค่าต้นฉบับ “' + def + '” แล้ว — กด “บันทึกทั้งหมด” เพื่อให้ทุกคนเห็น', false);
+    };
 
     // ===================== 👁 พรีวิวหน้าจอของข้อความ (ปุ่มสัญลักษณ์ในหน้าแก้ข้อความ) =====================
     //  แนวคิด: ข้อความแต่ละรายการ “อยู่บนหน้าจอไหน” ไม่ต้องเดา — แตะปุ่มลูกตาที่ท้ายหัวข้อ → เปิดหน้าจอนั้นให้เลย
@@ -7658,6 +7734,7 @@
         window.textEditHarvest(); // เก็บข้อความที่พิมพ์ค้างไว้ก่อนวาดใหม่ (การ์ดเดียวกันเปิดซ้ำ/กลับมาจากพรีวิว)
         window.textPreviewUnmark(); // กลับมาแก้ข้อความ = เอาตัวอย่างที่ค้างอยู่ออก
         const s = document.getElementById('textEditSearch'); if (s) s.value = '';
+        window.__txtOnlyEdited = false; // เปิดหน้าใหม่ = กลับไปดูทั้งหมดก่อน (กันเจอหน้าว่างแล้วนึกว่าข้อความหาย)
         const box = document.getElementById('textEditList'); if (box) box.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:20px;">กำลังรวบรวมข้อความ…</div>';
         await new Promise(r => setTimeout(r, 30));
         window.renderTextEditList('');
@@ -12381,6 +12458,7 @@
         ['2026-09-15', '🖥 เปลี่ยนชื่อเมนู “โควต้า Firestore” → “โควต้าการใช้งาน” (คุม TomTom + Firestore)'],
         ['2026-09-15', '👁 พรีวิวข้อความ: กรอบทองค้างจนปิดหน้าต่าง · ไม่มีป๊อปอัป · กดซ้ำดูจุดถัดไป'],
         ['2026-09-15', '✍️ แก้ข้อความจากหน้าที่กำลังดูอยู่ได้เลย — พิมพ์แล้วเห็นผลทันที มีล้างค่า/จุดถัดไป'],
+        ['2026-09-15', '🏷 หน้าแก้ข้อความ: ป้าย ✏️ แก้แล้ว / 🕒 ยังไม่บันทึก · ดูต้นฉบับ–คืนค่ารายตัว'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
