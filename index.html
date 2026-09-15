@@ -279,15 +279,15 @@
         .app-switch input:checked + .app-slider { background: var(--neon-green); }
         .app-switch input:checked + .app-slider::before { transform: translateX(20px); }
 
-        .dropdown-box { position: absolute; background: rgba(30, 32, 45, 0.95); width: 100%; z-index: 1000; border-radius: 20px; max-height: 320px; overflow-y: auto; display: none; margin-top: 10px; border: 1px solid var(--border-glass); box-shadow: 0 15px 40px rgba(0,0,0,0.8); backdrop-filter: blur(15px); -ms-overflow-style: none; scrollbar-width: none; }
+        .dropdown-box { position: absolute; background: rgba(30, 32, 45, 0.95); width: 100%; z-index: 1000; border-radius: 20px; max-height: 320px; overflow-y: auto; display: none; margin-top: 10px; border: 1px solid var(--border-glass); box-shadow: 0 15px 40px rgba(0,0,0,0.8); -ms-overflow-style: none; scrollbar-width: none; }
         .dropdown-box::-webkit-scrollbar { display: none; }
-        .history-header { padding: 15px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border-glass); display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--neon-green); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(5px); }
+        .history-header { padding: 15px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border-glass); display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--neon-green); position: sticky; top: 0; z-index: 10; }
         .clear-history-btn { background: none; color: var(--accent-red); padding: 6px; border-radius: 8px; font-size: 11px; cursor: pointer; border: none; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
         .clear-history-btn:active { transform: scale(0.88); }
         .hist-del-btn { background: none; border: none; color: rgba(255,255,255,0.35); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px; flex-shrink: 0; -webkit-tap-highlight-color: transparent; transition: color 0.2s, transform 0.15s; }
         .hist-del-btn:hover { color: var(--accent-red); }
         .hist-del-btn:active { transform: scale(0.88); }
-        .list-item { padding: 16px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); text-align: left; font-size: 14px; display: flex; align-items: center; gap: 12px; transition: 0.2s; }
+        .list-item { padding: 16px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); text-align: left; font-size: 14px; display: flex; align-items: center; gap: 12px; transition: background-color 0.15s ease; }
         .list-item:hover { background: rgba(255,255,255,0.05); }
         .item-icon { font-size: 20px !important; color: var(--neon-green); text-shadow: 0 0 10px rgba(46, 204, 113, 0.4); flex-shrink: 0; }
 
@@ -827,15 +827,14 @@
 
         /* Dropdown results */
         .dropdown-box {
-            background: rgba(16,21,32,0.94);
+            background: rgba(16,21,32,0.985);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 20px;
             margin-top: 8px;
             box-shadow: 0 22px 60px rgba(0,0,0,0.65);
-            backdrop-filter: blur(20px);
         }
         .history-header {
-            background: rgba(255,255,255,0.03);
+            background: rgba(12,15,24,0.97);
             border-bottom: 1px solid rgba(255,255,255,0.07);
             color: #2fd883;
         }
@@ -1698,6 +1697,48 @@
                sticky + blur = กระตุกหนักที่สุดบนมือถือ (ต้องเบลอใหม่ทุกเฟรม) → ใช้พื้นทึบแทน */
             .history-header { background: rgba(12, 15, 24, 0.96); }
             html.light .history-header { background: rgba(246, 248, 252, 0.97); }
+        }
+
+        /* ===== 📜 ลิสต์ค้นหา (ที่โปรด/ประวัติ/ผลค้นหา) — เลื่อนให้เนียนทุกเครื่อง (แก้ 15 ก.ย. 69) =====
+           กฎนี้ตั้งใจวาง “ท้ายไฟล์” เพื่อให้ชนะกฎ .dropdown-box/.history-header/.list-item ที่เขียนไว้ก่อนหน้า
+
+           อาการที่ผู้ใช้เจอ: คอมลากสกรอลบาร์/หมุนล้อแล้วสะดุด · มือถือปัดแล้วหลัก ๆ ต้องรอแล้วปัดใหม่
+           สาเหตุที่ตัดออกครบในบล็อกนี้:
+             ① blur (backdrop-filter) บน/หลังกล่องที่กำลังเลื่อน → ต้องเบลอใหม่ทุกเฟรม (เดิมตัด blur เฉพาะจอ ≤ 900px
+                → จอคอมกว้างยังเบลออยู่ = ตัวหลักที่ทำเลื่อนสะดุด)
+             ② sticky header ที่มี blur → หนักกว่าเดิม (เดิมตัดเฉพาะมือถือ)
+             ③ transition: all 0.2s บนแถวรายการ → repaint ทั้งแถวทุกครั้งที่ hover/แตะ
+             ④ ไม่มี touch-action → เบราว์เซอร์ต้องรอ JS ก่อนตัดสินท่าลาก (เสี่ยงโดนตัวอื่นแทรกกลางท่า)
+             ⑤ user-select ไม่ถูกปิด → กดค้างช้า ๆ ระหว่างปัด = เบราว์เซอร์เริ่มเลือกข้อความ → ลากต่อไม่ได้ (ต้องปล่อยนิ้วแล้วปัดใหม่)
+             ⑥ แถบเลื่อนถูกซ่อนทุกอุปกรณ์ → บนคอมลากแถบเลื่อนไม่ได้เลย ต้องใช้ล้อเท่านั้น */
+        .dropdown-box {
+            touch-action: pan-y;                  /* ลากขึ้น-ลง = ให้เบราว์เซอร์จัดการเองแบบ native */
+            -webkit-user-select: none; user-select: none;   /* ⑤ กัน "เลือกข้อความ" แทรกกลางท่า (ลากแล้วหยุด) */
+            -webkit-touch-callout: none;
+            overscroll-behavior: contain;         /* ลากสุดลิสต์แล้วไม่ลากหน้าเว็บต่อ */
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: auto;                /* มั่นใจว่าไม่มี smooth ที่ไปตีกับ JS เลื่อน */
+            scrollbar-gutter: stable;             /* มี/ไม่มีแถบเลื่อน → ข้อความไม่กระโดด */
+            contain: layout style;                /* จำกัดงาน layout/style ให้อยู่ในกล่อง (ไม่กระเทือนทั้งหน้า) */
+            transition: none;
+        }
+        .list-item { transition: background-color 0.15s ease; }
+        .history-header {
+            -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+            background: rgba(12, 15, 24, 0.97);
+            transition: none;
+        }
+        html.light .history-header { background: rgba(246, 248, 252, 0.98) !important; }
+        /* แถบเลื่อนบาง ๆ เฉพาะจอที่มีเมาส์ — มือถือปัดนิ้ว ไม่ต้องมี (คงดีไซน์เดิม) */
+        @media (hover: hover) and (pointer: fine) {
+            .dropdown-box { scrollbar-width: thin; scrollbar-color: rgba(255, 210, 77, 0.55) rgba(255, 255, 255, 0.06); }
+            .dropdown-box::-webkit-scrollbar { display: block; width: 10px; }
+            .dropdown-box::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
+            .dropdown-box::-webkit-scrollbar-thumb {
+                background: rgba(255, 210, 77, 0.5); border-radius: 10px;
+                border: 2px solid transparent; background-clip: padding-box;
+            }
+            .dropdown-box::-webkit-scrollbar-thumb:hover { background: rgba(255, 210, 77, 0.75); background-clip: padding-box; }
         }
 
         /* ===== แบนเนอร์แนะนำติดตั้งแอปเต็มจอ (PWA) — ชวนใหม่ทุกครั้งจนกว่าจะติดตั้ง (ปิด = งด 7 วัน) ===== */
@@ -11524,6 +11565,8 @@
         ['2026-09-15', '🧪 ชุดทดสอบออฟไลน์ล็อกจอ 10 ข้อผ่านครบ — ไม่ใช้เน็ต/GPS จริง ตรวจระยะ+เวลารถติดที่เบิกคืน'],
         ['2026-09-15', '🧊 จุดเริ่มช่วงล็อกจอนับจากวินาทีสุดท้ายที่จอทำงานจริง — เดิมนับจากตอนกลับมา ช่วงหัวหาย'],
         ['2026-09-15', '📍 ยึดระยะทางช่วงล็อกจอกับตำแหน่งก่อนซ่อนจริง — กัน fix ตั้งต้นเที่ยวทับ ทำให้ระยะหาย'],
+        ['2026-09-15', '📜 ลิสต์ค้นหาเลื่อนเนียนขึ้น — ตัด blur บนกล่องที่เลื่อน + โชว์แถบเลื่อนบนคอม'],
+        ['2026-09-15', '👆 มือถือปัดลิสต์ค้นหาไม่สะดุดกลางท่า — ล็อกท่าลากแนวตั้ง + กัน “กดค้างเลือกข้อความ” แทรก'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {

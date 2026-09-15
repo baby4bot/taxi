@@ -503,8 +503,8 @@ TomTom **ไม่ให้ชื่อด่านและไม่ให้�
 
 | ❌ ห้ามทำ | ✅ ทำแบบนี้ |
 |---|---|
-| `backdrop-filter` บน **กล่องที่กำลังเลื่อน** (`.dropdown-box`) | `@media (max-width: 900px)` ตัด blur ออก → ใช้พื้นเกือบทึบ (`rgba(18,22,34,0.985)`) — อ่านง่ายกว่าด้วย |
-| `position: sticky` + `backdrop-filter` **ในลิสต์ที่เลื่อน** (`.history-header`) | ตัด blur ออก แล้วให้พื้นทึบ · sticky ได้ แต่ห้าม blur |
+| `backdrop-filter` บน **กล่องที่กำลังเลื่อน** (`.dropdown-box`) | **ตัด blur ออกทุกความกว้าง** (เดิมตัดแค่ ≤900px → จอคอมยังเบลอ = สาเหตุอันดับ 1 ที่ล้อ/แถบเลื่อนสะดุด) → ใช้พื้นทึบ `rgba(16,21,32,0.985)` |
+| `position: sticky` + `backdrop-filter` **ในลิสต์ที่เลื่อน** (`.history-header`) | ตัด blur ออกทุกความกว้าง แล้วให้พื้นทึบ (สีกลางวัน/กลางคืนมีแยก) · sticky ได้ แต่ห้าม blur |
 | `touchmove` ระดับ `window` แบบ `passive:false` + `capture` → เบราว์เซอร์ต้องรอ JS ทุกเฟรม | ติดตั้งเฉพาะเมื่อ `CSS.supports('overscroll-behavior','contain')` เป็น false (iOS เก่า) และ **ข้ามท่านั้นทั้งท่า** ถ้านิ้วเริ่มในลิสต์ที่เลื่อนได้ |
 
 **รายละเอียดตัวดัก PTR (`lockPullToRefresh`) — หลักการคือ “ข้ามออกเร็วที่สุด”:**
@@ -530,7 +530,25 @@ TomTom **ไม่ให้ชื่อด่านและไม่ให้�
 - ตรวจว่าไม่ค้าง: `window.__pageScrollLocked` · `html.locked-scroll` · `getComputedStyle(document.body).overflowY`
 
 **เพิ่มเติมที่กล่องรายการ:** `-webkit-overflow-scrolling: touch` (โมเมนตัมแบบ iOS เก่า) · `overscroll-behavior: contain` (ลากจนสุดลิสต์แล้วไม่ลากหน้าเว็บต่อ)
-· `transform: translateZ(0)` (ยกเป็นเลเยอร์ของตัวเอง → เลื่อนแล้วไม่ต้อง repaint พื้นหลัง)
+· `scroll-behavior: auto` · `scrollbar-gutter: stable` (มี/ไม่มีแถบเลื่อน → ข้อความไม่กระโดด) · `contain: layout style`
+
+#### 📜 เลื่อนเนียนขึ้นอีกขั้น — ตัดสาเหตุสะดุดที่เหลือ (แก้ 15 ก.ย.)
+
+รอบนี้เจอว่าเหลือ **6 ต้นเหตุ** ที่ทำให้ “เลื่อนแล้วก็หยุด” (ทั้งคอมและมือถือ) — ดูตารางเต็มใน
+[`.freebuff/run.md`](.freebuff/run.md) หัวข้อ “ลิสต์ค้นหา (ที่โปรด/ประวัติ) — กฎความลื่นของการเลื่อน”
+
+| # | ต้นเหตุ | แก้เป็น |
+|---|---|---|
+| 1 | blur บนกล่องที่เลื่อน (จอคอมกว้างยังเบลออยู่) | ลบ blur ที่ต้นทาง + พื้นทึบ — **ห้ามใส่กลับ** |
+| 2 | sticky header ที่ยัง blur | ตัด blur ทุกความกว้าง |
+| 3 | `.list-item { transition: 0.2s }` (= `all` → repaint ทั้งแถวทุก hover) | `transition: background-color 0.15s ease` |
+| 4 | ไม่มี `touch-action` | `touch-action: pan-y` (ปล่อยท่าลากแนวตั้งให้เบราว์เซอร์จัดการเอง) |
+| 5 | **กดค้างช้า ๆ ระหว่างปัด = เริ่มเลือกข้อความ → ลากต่อไม่ได้** (อาการ “ปัดแล้วหยุด” บนมือถือ) | `user-select: none` + `-webkit-touch-callout: none` |
+| 6 | ซ่อนแถบเลื่อนทุกอุปกรณ์ → **บนคอมลากแถบเลื่อนไม่ได้เลย** | `@media (hover:hover) and (pointer:fine)` → แถบทองบาง 10px (มือถือยังซ่อนเหมือนเดิม) |
+
+> 🔎 วัดผลในพรีวิว: `getComputedStyle(#historyList)` → `backdropFilter` = `none` · `touchAction` = `pan-y` ·
+> `userSelect` = `none` · `offsetWidth - clientWidth > 0` = มีแถบเลื่อนบนคอม
+> (พรีวิวบนเครื่องแรงวัดได้ 60fps ไม่มี long task — จึงต้องยึด “ตัดงานที่รู้ว่าแพง” แทนการวัดอาการ)
 
 > ⚠️ ตรวจด้วยตา: เปิดหน้านี้ในมือถือ → แตะช่องค้นหา → ลากในลิสต์ต้องลื่นต่อเนื่อง
 > และห้ามให้หน้าจอทั้งหน้าถูกดึงลงมารีเฟรชในกล่องที่กำลังเลื่อน
