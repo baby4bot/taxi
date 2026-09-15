@@ -800,6 +800,20 @@
             box-shadow: 0 0 16px rgba(255,181,46,0.24), inset 0 1px 0 rgba(255,255,255,0.08);
         }
         .small-toll-btn.is-hidden { display: none !important; }
+        /* 🔵 ปุ่ม “เปิดแผนที่นำทาง” — โผล่เมื่อมีเส้นทางแต่แผนที่ยังไม่เปิด (ค่าเริ่มต้นใหม่)
+           เดิมเป็นสีเทาเหมือนปุ่มปิดการทำงาน คนขับไม่รู้ว่ากดได้ → ตอนนี้เป็นสีฟ้า + หายใจเบา ๆ */
+        .small-toll-btn.map-ready {
+            background: linear-gradient(135deg, #2196f3, #1976d2) !important;
+            border-color: rgba(33,150,243,0.95) !important;
+            color: #fff !important;
+            animation: mapReadyPulse 2.4s ease-in-out infinite;
+        }
+        .small-toll-btn.map-ready .material-symbols-outlined { color: #fff !important; }
+        .small-toll-btn.map-ready:active { transform: scale(0.94); }
+        @keyframes mapReadyPulse {
+            0%, 100% { box-shadow: 0 0 0 1px rgba(33,150,243,0.35), 0 2px 10px rgba(33,150,243,0.28); }
+            50%      { box-shadow: 0 0 0 1px rgba(33,150,243,0.60), 0 2px 16px rgba(33,150,243,0.55); }
+        }
         @keyframes tollFadeSlideIn { from { opacity: 0; transform: translateY(5px) scale(0.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
         .small-toll-btn.toll-pop-in { animation: tollFadeSlideIn 0.28s ease-out both; }
         .trip-resume-banner { display: none; align-items: center; gap: 10px; background: linear-gradient(135deg, rgba(250,204,21,0.14), rgba(250,204,21,0.04)); border: 1px solid rgba(250,204,21,0.4); border-radius: 16px; padding: 10px 12px; margin: 0 2px 10px 2px; box-shadow: 0 4px 18px rgba(0,0,0,0.35); cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -4842,6 +4856,7 @@
                     currentTrueRemainKm = route.km;
                     currentTrueRemainSec = route.sec;
                     window.currentTollInfo = route.tolls || null;
+                    window.invalidateRouteBase(); // 🧭 เส้นทางถูกเปลี่ยนกลางเที่ยว → ตั้งฐานระยะใหม่รอบัดไป
                     
                     // Update nav distance
                     if (document.getElementById('navDistance')) {
@@ -8721,6 +8736,7 @@
             if (route) {
                 currentTrueRemainKm = route.km; currentTrueRemainSec = route.sec;
                 window.currentTollInfo = route.tolls || null;
+                window.invalidateRouteBase(); // 🧭 เปลี่ยนเส้นจากหน้าสรุป → ตั้งฐานระยะใหม่
                 p.km = route.km; p.sec = route.sec; p.coords = route.coords || [];
                 $('kmInput').value = route.km.toFixed(2);
                 window.updateFareEstimation(route.km);
@@ -9377,6 +9393,7 @@
                     // 🧭 ยึดฐาน: ระยะทางรวมต้องไม่น้อยกว่า ฐานตอนปิด + ที่วิ่งจริง (กันยอดหายหลังแอปถูกปิด/รีเฟรช)
                     actualDrivenKm = Math.max(actualDrivenKm, baseKm + caughtKm);
                     currentTrueRemainKm = Math.max(0, remainKm); // ระยะเหลือใหม่จากเส้นทาง/เส้นตรงที่คำนวณไว้
+                    window.invalidateRouteBase(); // 🧭 เบิกคืนช่วงปิดแอปแล้ว → ตั้งฐานระยะใหม่จากยอดที่เพิ่งคำนวณ
                     if (remainSec !== undefined && remainSec > 0) currentTrueRemainSec = remainSec;
                 }
                 catchUpLog.push({ type: 'kill', from: gapStart, to: Date.now(), idleSec: caughtTimeSec, km: caughtKm, fareDelta: Math.max(0, calcFareOf(actualDrivenKm, trafficSeconds) - calcFareOf(data.km || 0, data.trafficSec || 0)), via: caughtKm > 0.02 ? kmVia : 'idle' }); // 📒 จดประวัติการเบิกคืนรอบนี้ (ช่วงปิด เริ่ม-จบ + ยอดที่เบิก + วิธีหักระยะ)
@@ -9664,6 +9681,8 @@
             // 🧊 ตรวจก่อนว่าหน้ายังอยู่หน้าจอจริงไหม (จอดับ/ล็อกจอที่เชราวเซอร์ไม่ยิง visibilitychange)
             if (typeof window.detectPageThrottle === 'function') window.detectPageThrottle(nowTick);
             window.advanceMeterTime(nowTick);
+            // 🧭 ระยะที่เหลือแบบต่อเนื่อง (snap บนเส้นทางในเครื่อง) ก่อนวาดจอ → เลขไม่ค้างเป็นนาที
+            if (typeof window.refreshRemainFromRoute === 'function') window.refreshRemainFromRoute();
             window.updateLiveMeterDisplay(); 
             window.saveActiveTrip(); 
             // 📡 GPS ตายเงียบ (Android พัก watchPosition ตอนล็อกจอ) → ปลุกใหม่ ไม่งั้นระยะทางหยุดนับทั้งที่มิเตอร์วิ่ง
@@ -10753,6 +10772,25 @@
             window.setFareProgressPct(displayFare);
         }
 
+        // 📈 ราคาประเมิน (ป้าย “ประเมิน: X ฿” ในการ์ดค่าโดยสาร) — คิดใหม่ทุก tick
+        //    = มิเตอร์ที่คิดไปแล้ว + ประเมินระยะที่เหลือของ “เส้นทางปัจจุบัน”
+        //    ⚠️ บั๊กที่คนขับเจอ: เดิมค่านี้ตั้งครั้งเดียวตอนเริ่มเที่ยว (updateFareEstimation) → พอสลับขึ้น/เลี่ยงทางด่วน
+        //       ระยะทางกับเวลาถึงเปลี่ยน แต่ราคาประเมินค้างอยู่ที่เลขเดิม
+        //    ✅ ค่าตอนเริ่มเที่ยวเท่าเดิมเป๊ะ (มิเตอร์ 35 + ระยะทั้งเส้น) จึงไม่กระทบตัวเลขที่ผู้ใช้คุ้น
+        if (window.isManualRunning && destLoc) {
+            const _estRemainKm = (typeof currentTrueRemainKm === 'number' && currentTrueRemainKm > 0) ? currentTrueRemainKm : 0;
+            const _estRemainFare = Math.floor(window.calcThaiMeterDist(_estRemainKm) / 2) * 2;
+            window.estimateFareAmt = displayFare + _estRemainFare;
+            window.estimateFareParts = { meterNow: displayFare, remainKm: _estRemainKm, remainFare: _estRemainFare };
+            const _estEl = $('tzEstFare');
+            if (_estEl) {
+                const _estToll = (typeof window.getRouteTollTotal === 'function') ? (window.getRouteTollTotal() || 0) : 0;
+                window.estimateFareParts.toll = _estToll;
+                _estEl.title = 'มิเตอร์ ' + displayFare.toLocaleString('th-TH') + ' ฿ + อีก ' + _estRemainKm.toFixed(1) + ' กม. (ประมาณ ' + _estRemainFare.toLocaleString('th-TH') + ' ฿)'
+                    + (_estToll > 0 ? ' · ค่าทางด่วน ' + _estToll.toLocaleString('th-TH') + ' ฿ (ยังไม่รวมในยอดนี้)' : '');
+            }
+        }
+
         let modalBtn = $('modalStopBtn');
         if (modalBtn) {
             try {
@@ -10804,6 +10842,33 @@
         }
     };
 
+    // 🧭 ระยะทางที่เหลือ “ต่อเนื่อง” ระหว่างวิ่ง (ไม่กินโควตา TomTom)
+    //   ปัญหาเดิม: currentTrueRemainKm ถูกอัปเดตเฉพาะตอนโพเส้นทางใหม่ทุก 120 วิ (หรือตอนสลับโหมด)
+    //             → เลข “เหลือ (กม.)” ค้างเป็นนาที บนมินิแมพ/จอมิเตอร์
+    //   วิธีใหม่: snap ตำแหน่งรถลงบนเส้นทางปัจจุบัน (ทำในเครื่อง) → เหลือ = ความยาวเส้นทาง − ที่วิ่งไปตามเส้นทาง
+    //            ยึด “ความยาว + เวลารวม” ล่าสุดจาก API เป็นฐาน (__routeBaseKm/__routeBaseSec) → อัปเดตทุกวินาที
+    window.__routeBaseKm = 0; window.__routeBaseSec = 0;
+    window.invalidateRouteBase = () => { window.__routeBaseKm = 0; window.__routeBaseSec = 0; };
+    window.refreshRemainFromRoute = () => {
+        try {
+            if (typeof window.navMiniAlongKm !== 'function') return false;
+            const along = window.navMiniAlongKm();
+            if (along === null || !isFinite(along)) return false;
+            if (!(window.__routeBaseKm > 0)) {
+                // ตั้งฐานจากค่า API ที่มีอยู่ (เหลือ + ที่วิ่งไปตามเส้นทางแล้ว)
+                const rem = (typeof currentTrueRemainKm === 'number' && currentTrueRemainKm > 0) ? currentTrueRemainKm : 0;
+                if (!(rem > 0)) return false;
+                window.__routeBaseKm = along + rem;
+                const remSec = (typeof currentTrueRemainSec === 'number' && currentTrueRemainSec > 0) ? currentTrueRemainSec : 0;
+                window.__routeBaseSec = remSec > 0 ? (remSec / rem) * window.__routeBaseKm : 0;
+            }
+            const remain = Math.max(0, window.__routeBaseKm - along);
+            currentTrueRemainKm = remain;
+            if (window.__routeBaseSec > 0) currentTrueRemainSec = Math.max(0, Math.round(window.__routeBaseSec * (remain / window.__routeBaseKm)));
+            return true;
+        } catch (e) { return false; }
+    };
+
     window.startDynamicRouting = () => { 
         if(routeUpdateTimer) clearInterval(routeUpdateTimer); 
         routeUpdateTimer = setInterval(async () => { 
@@ -10813,6 +10878,7 @@
             if(route) {
                 currentTrueRemainKm = route.km; 
                 currentTrueRemainSec = route.sec; 
+                window.invalidateRouteBase(); // 🧭 ของใหม่จาก API (มีรถติด) → ตั้งฐานใหม่รอบัดไป
                 if (window.isTollwayMode) {
                     window.currentTollInfo = route.tolls || null;
                     window.updateTollDisplay();
@@ -11789,6 +11855,10 @@
         ['2026-09-15', '🔒 ล็อกไม่ให้เลือก/คัดลอกข้อความทั้งแอป (เว้นช่องกรอก) + ลากบนรูปแล้วเลื่อนหน้าจอได้'],
         ['2026-09-15', '🪟 แถบเลื่อนแบบเดียวกันคุม หน้าต่าง·เมนูข้าง·แถบแท็บไอคอนด้วย + เมนูข้างเลื่อนในตัวได้'],
         ['2026-09-15', '⏳ กดค้างเข้าโหมดลากติดง่ายขึ้น — 0.56 วิ มีแถบนับถอยหลัง + สั่นบอก ไม่กระทบการเลื่อน'],
+        ['2026-09-15', '📈 ราคาประเมินคิดใหม่ทุกวินาที — สลับขึ้น/เลี่ยงทางด่วนแล้วตัวเลขขยับตามทันที'],
+        ['2026-09-15', '🧭 ระยะ “เหลือ” อัปเดตต่อเนื่อง — snap ตำแหน่งบนเส้นทาง ไม่รอโพ API ทุก 2 นาที'],
+        ['2026-09-15', '🗺️ Mini Map ไม่เด้งเองตอนเริ่มนำทาง — มีปุ่มสีฟ้าให้กดเปิดเอง (จำใจคนขับไว้ให้)'],
+        ['2026-09-15', '🧭 Mini Map หันหัวขึ้น — รถชี้ขึ้นบน เส้นทางหมุนตามทิศรถไม่ใช่มุมทิศเหนือ'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -14428,7 +14498,9 @@
     var turnDir = document.getElementById('navMiniTurnDir');
 
     // ---------- ค่าที่ผู้ใช้ตั้งไว้ ----------
-    var pref = { x: null, y: null, big: false, hidden: false };
+    //   autoOpen = ผู้ใช้ “เปิดแผนที่เอง” ครั้งล่าสุดหรือไม่ → ใช้ตัดสินตอนเริ่มนำทางครั้งถัดไป
+    //   ค่าเริ่มต้น false = เริ่มนำทางแล้ว “ยังไม่โชว์แผนที่” และโชว์เมื่อกดปุ่มเท่านั้น (ตามที่คนขับขอ)
+    var pref = { x: null, y: null, big: false, hidden: false, autoOpen: false };
     try {
         var raw = localStorage.getItem(LS_KEY);
         if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') { for (var k in pref) { if (k in o) pref[k] = o[k]; } } }
@@ -14453,6 +14525,7 @@
     var cum = [];        // ระยะสะสมจากจุดเริ่มถึงจุดที่ i (กม.)
     var turns = [];      // จุดเลี้ยวที่คำนวณจากรูปทรงเส้นทาง [{ i, km, delta }]
     var nextTurn = null; // จุดเลี้ยวถัดไปจากตำแหน่งรถ
+    var CLIP_PAD = 0;    // 🧭 เผื่อขอบสำหรับการหมุนฉาก (heading-up) — กันเส้นทางถูกตัดที่มุมจอ
 
     // ---------- คณิตแผนที่ ----------
     function proj(lat, lng, z) {
@@ -14607,7 +14680,8 @@
     function drawLine(points, color, width, ox, oy, z, W, H) {
         if (!points || points.length < 2) { return; }
         ctx.save();
-        ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+        // 🧭 clip เผื่อขอบไว้ให้การหมุนฉาก — ไม่งั้นเส้นทางที่วิ่งทะแยงจะถูกตัดก่อนถึงมุมจอ
+        ctx.beginPath(); ctx.rect(-CLIP_PAD, -CLIP_PAD, W + CLIP_PAD * 2, H + CLIP_PAD * 2); ctx.clip();
         ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
         ctx.beginPath();
         for (var i = 0; i < points.length; i++) {
@@ -14647,10 +14721,19 @@
         var c = proj(center.lat, center.lng, z);
         var ox = W / 2 - c.x, oy = H / 2 - c.y;
 
+        // 🧭 Heading-up: หมุนทั้งฉากกลับตามทิศรถ → “รถชี้ขึ้นบนเสมอ” และเส้นทางหมุนตามรถ
+        //    ⚠️ เดิมหมุนเฉพาะลูกศรรถ — ตัวแผนที่/เส้นทางยังหันทิศเหนือตาย → คนขับต้องคอยเทียบเอง
+        //    เผื่อกระเบื้องเป็นแนวทแยง (rotPad) ไม่งั้นจะเห็นมุมดำหลังหมุน
+        var rotRad = ((bearing || 0) * Math.PI) / 180;
+        var rotPad = (Math.SQRT2 - 1) * Math.max(W, H) / 2 + 12;
+        CLIP_PAD = rotPad;
+        ctx.save();
+        ctx.translate(W / 2, H / 2); ctx.rotate(-rotRad); ctx.translate(-W / 2, -H / 2);
+
         // กระเบื้องแผนที่
         var n = Math.pow(2, z), missing = false;
-        var x0 = Math.floor((c.x - W / 2) / 256), x1 = Math.floor((c.x + W / 2) / 256);
-        var y0 = Math.floor((c.y - H / 2) / 256), y1 = Math.floor((c.y + H / 2) / 256);
+        var x0 = Math.floor((c.x - W / 2 - rotPad) / 256), x1 = Math.floor((c.x + W / 2 + rotPad) / 256);
+        var y0 = Math.floor((c.y - H / 2 - rotPad) / 256), y1 = Math.floor((c.y + H / 2 + rotPad) / 256);
         for (var tx = x0; tx <= x1; tx++) {
             for (var ty = y0; ty <= y1; ty++) {
                 if (ty < 0 || ty >= n) { continue; }
@@ -14704,6 +14787,7 @@
             ctx.fillStyle = '#ffffff'; ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1; ctx.fill(); ctx.stroke();
             ctx.restore();
         }
+        ctx.restore(); // 🧭 จบการหมุนฉาก (heading-up) — ลูกศรรถหมุน +bearing อยู่แล้ว จึงชี้ขึ้นบนเสมอ
     }
     function request() {
         if (rafId) { return; }
@@ -14780,13 +14864,20 @@
         var ids = ['btnLiveMap', 'btnLiveMapZoom'];
         for (var i = 0; i < ids.length; i++) {
             var b = document.getElementById(ids[i]);
-            if (b) { b.classList.toggle('is-hidden', !on); }
+            if (b) {
+                b.classList.toggle('is-hidden', !on);
+                // 🔵 มีเส้นทางรออยู่แต่แผนที่ยังไม่เปิด = ปุ่มสีฟ้า (แตะเพื่อเปิดแผนที่) — เดิมเป็นสีเทา อ่านไม่ออกว่ากดได้
+                b.classList.toggle('map-ready', on);
+                b.title = on ? 'เปิดแผนที่นำทาง (กดเพื่อดูเส้นทาง)' : '';
+            }
         }
     }
     window.navMiniReopen = function () {
         try {
             canReopen = false;
-            pref.hidden = false; savePref();
+            pref.hidden = false;
+            pref.autoOpen = true; // 🧠 จำไว้ว่าผู้ขับอยากเห็นแผนที่ → เที่ยวหน้าจะเปิดให้เอง
+            savePref();
             show();          // แผนที่กลับมาแสดงเส้นทาง/ตำแหน่งรถที่ค้างอยู่ทันที
             request(); chrome(); syncReopenBtns();
         } catch (e) {}
@@ -14864,9 +14955,15 @@
     // ผู้ใช้กด ✕ เอง → จำไว้เพื่อโชว์ปุ่มเปิดคืนในแถบสรุปเส้นทาง
     window.navMiniHideByUser = function () {
         canReopen = true;
-        pref.hidden = true; savePref();
+        pref.hidden = true;
+        pref.autoOpen = false; // 🧠 ผู้ขับปิดเอง → เที่ยวหน้าอย่าเปิดให้เอง (กลับไปเป็น “เริ่มต้นไม่โชว์”)
+        savePref();
         hideNow();
     };
+    // ตัวช่วยตรวจ: ระยะตามเส้นทางที่วิ่งไปแล้ว (กม.) — ให้ตัวหลักคิด “เหลือ” แบบต่อเนื่องได้โดยไม่ต้องเรียก API
+    window.navMiniAlongKm = function () { return carAlongKm(); };
+    window.navMiniRouteKm = function () { return routeKm; };
+    window.navMiniHasRoute = function () { return route.length > 1; };
     window.navMiniIsVisible = function () { return visible; };
     // ตัวช่วยตรวจสอบสถานะ Mini Map (ใช้ตอนทดสอบ/แก้ปัญหา)
     window.navMiniDebug = function () {
@@ -14888,13 +14985,18 @@
             // ไม่มีเส้นทางและไม่มีพิกัดต้น-ปลาย (เช่น เริ่มมิเตอร์ธรรมดา) → ไม่ต้องเปิดแผนที่ว่าง
             var hasLine = (coords && coords.length > 1) || (sLat && sLon && dLat && dLon);
             if (!hasLine) { hideNow(); return; }
-            pref.hidden = false; savePref();
+            // 🗺️ เริ่มนำทางจาก “ค้นหาเส้นทาง” → ค่าเริ่มต้นคือ “ยังไม่โชว์แผนที่”
+            //    (โชว์เฉพาะเมื่อกดปุ่มแผนที่ในแถบหัว — ปุ่มจะติดสีฟ้าให้เห็น)
+            //    ถ้าผู้ขับเคยกดเปิดเองในเที่ยวก่อน ระบบจะจำและเปิดให้เอง (pref.autoOpen)
+            pref.hidden = !pref.autoOpen;
+            savePref();
             destLabel = destName ? String(destName).slice(0, 40) : '';
             if (coords && coords.length > 1) { window.navMiniSetRoute(coords, destLabel); }
             else if (sLat && sLon && dLat && dLon) { window.navMiniSetRoute([[sLat, sLon], [dLat, dLon]], destLabel); }
             if (sLat && sLon) { car = { lat: sLat, lng: sLon }; }
             follow = true; panCenter = null;
-            show(); request();
+            if (pref.hidden) { canReopen = true; hideNow(); syncReopenBtns(); } // ยังไม่โชว์ + ติดปุ่มเปิดคืน
+            else { show(); request(); }
         } catch (e) {}
     };
 
@@ -14952,6 +15054,12 @@
         var base = (!follow && panCenter) ? panCenter : (car || (route.length ? { lat: route[0][0], lng: route[0][1] } : null));
         if (!base) { return; }
         var c = proj(base.lat, base.lng, z);
+        // 🧭 แผนที่หมุนอยู่ (heading-up) → แปลงท่าลากจากพิกัดจอเป็นพิกัดแผนที่ก่อน ไม่งั้นลากแล้วแผนที่เลื่อนคนละทางกับนิ้ว
+        if (bearing) {
+            var br = bearing * Math.PI / 180, cs = Math.cos(br), sn = Math.sin(br);
+            var rdx = dx * cs - dy * sn, rdy = dx * sn + dy * cs;
+            dx = rdx; dy = rdy;
+        }
         panCenter = unproj(c.x - dx, c.y - dy, z);
         follow = false; btnFollow.classList.remove('on');
         request();
