@@ -11903,6 +11903,8 @@
         ['2026-09-15', '🔊 เปิด/ปิดเสียงนำทางพูดได้เองในหน้าโปรไฟล์ — จำค่าต่อบัญชี ใช้ทุกเครื่อง'],
         ['2026-09-15', '🔇 ปุ่มปิดเสียงนำทางบน Mini Map — เงียบทั้งคำพูดและติ๊ง แต่ยังสั่นเตือน'],
         ['2026-09-15', '⬆️ ย้ายแถบคำบอกเลี้ยวขึ้นบนสุดของ Mini Map — เห็นคำสั่งก่อนแผนที่'],
+        ['2026-09-15', '🗺️ รีเฟรช/กลับเข้าแอปแล้วมินิแมพไม่เด้งเองอีก — คงสถานะเดิม เปิดเองเท่านั้น'],
+        ['2026-09-15', '🔇 แผนที่ปิด = เงียบทั้งชุด (คำพูด·ติ๊ง·สั่น) — เสียงดังเมื่อเปิดแผนที่เองเท่านั้น'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -14684,6 +14686,10 @@
         try { if (window.speechSynthesis) { window.speechSynthesis.cancel(); voiceLastText = ''; } } catch (e) {}
     }
     function checkTurnAlert(nt, meta, fromKm) {
+        // 🔇 แผนที่ถูกซ่อน = เงียบทั้งชุด (ติ๊ง · สั่น · คำพูด)
+        //    เสียงจะดังเฉพาะเมื่อผู้ขับ “เปิดแผนที่มองอยู่” เท่านั้น — เดิมการโพเส้นทางใหม่ (ทุก 120 วิ)
+        //    เรียก chrome() ได้ตอนแผนที่ซ่อน → มีโอกาสเตือน/พูดทั้งที่ไม่มีแผนที่ให้ดู
+        if (!visible || pref.hidden) { return; }
         var key = nt.i + '@' + Math.round(nt.km * 1000);
         if (alertKey !== key) { alertKey = key; alertDoneFar = false; alertDoneNear = false; } // จุดใหม่ → เริ่มเตือนใหม่
         var distM = (nt.km - fromKm) * 1000;
@@ -15162,8 +15168,13 @@
                 if (lp0 && (Math.abs(lp0.lat - lp.lat) > 1e-6 || Math.abs(lp0.lng - lp.lng) > 1e-6)) { bearing = bearingTo(lp0, lp); }
                 else { alignHeadingToRoute(car); } // ไม่มีทิศที่วิ่งมา → ยึดทิศของเส้นทาง
             }
-            pref.hidden = false; savePref();
-            show();
+            // 🗺️ กลับเข้าแอป/รีเฟรช = **คงสถานะเดิมไว้** — ค่าเริ่มต้นคือ “ยังไม่โชว์”
+            //    เปิดให้เองเฉพาะเมื่อผู้ขับเคยกดเปิดเองในเที่ยวก่อน (pref.autoOpen)
+            //    ⚠️ เดิมบรรทัดนี้เป็น `pref.hidden = false` → รีเฟรช/กลับเข้าแอปแล้วแผนที่เด้งเอง
+            pref.hidden = !pref.autoOpen;
+            savePref();
+            if (pref.hidden) { canReopen = true; hideNow(); syncReopenBtns(); }
+            else { show(); request(); chrome(); }
         } catch (e) {}
     };
     window.navMiniHide = function (remember) {
