@@ -1742,6 +1742,28 @@
             html.light .history-header { background: rgba(246, 248, 252, 0.97); }
         }
 
+        /* ===== 👁 ปุ่มพรีวิวหน้าจอในหน้า "แก้ไขข้อความ / หัวข้อ" (เพิ่ม 15 ก.ย. 69) =====
+           ปุ่มสัญลักษณ์ล้วน (ไม่มีข้อความ) ต่อท้ายหัวข้อ → แตะแล้วเปิดหน้าจอที่มีข้อความนั้น + ไฮไลต์ให้เห็น */
+        .txt-prev-btn { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; border: 1px solid rgba(77,163,255,0.45); background: rgba(77,163,255,0.14); color: #7db8ff; cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; transition: 0.15s; }
+        .txt-screen-sel { width: 100%; text-align: left; font-size: 12.5px; padding: 9px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: var(--text-main, #fff); -webkit-appearance: none; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%), linear-gradient(135deg, var(--text-dim) 50%, transparent 50%); background-position: right 16px center, right 11px center; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; cursor: pointer; }
+        .txt-screen-sel option { background: #12151c; color: #fff; }
+        html.light .txt-screen-sel { border-color: rgba(0,0,0,0.14); background-color: rgba(0,0,0,0.03); color: #16202e; }
+        html.light .txt-screen-sel option { background: #fff; color: #16202e; }
+        .txt-screen-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 700; color: #8cc4ff; background: rgba(77,163,255,0.13); border: 1px solid rgba(77,163,255,0.3); border-radius: 999px; padding: 2px 8px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+        .txt-screen-chip::before { content: '🖥'; font-size: 10px; }
+        html.light .txt-screen-chip { color: #1f6feb; background: rgba(31,111,235,0.1); border-color: rgba(31,111,235,0.28); }
+        .txt-prev-btn:hover { background: rgba(77,163,255,0.26); border-color: rgba(77,163,255,0.7); }
+        .txt-prev-btn:active { transform: scale(0.9); }
+        .txt-prev-btn .material-symbols-outlined { font-size: 20px; }
+        html.light .txt-prev-btn { border-color: rgba(31,111,235,0.45); background: rgba(31,111,235,0.12); color: #1f6feb; }
+        /* ไฮไลต์ทองกะพริบ 4 จังหวะ บนข้อความที่กำลังดูตัวอย่าง (เห็นชัดว่าอันไหน) */
+        .txt-prev-flash { background: rgba(255,210,77,0.16) !important; animation: txtPrevFlash 0.68s ease 4; border-radius: 8px; }
+        @keyframes txtPrevFlash { 0%, 100% { outline: 3px solid rgba(255,210,77,0); } 50% { outline: 3px solid rgba(255,210,77,0.95); } }
+        /* ปุ่มลอย "กลับไปแก้ข้อความ" (โผล่เฉพาะเมื่อต้องปิดหน้าต่างแก้ข้อความเพื่อดูหน้าหลัก) */
+        #txtPrevBackChip { position: fixed; left: 14px; bottom: 44px; z-index: 10090; display: none; align-items: center; gap: 6px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 999px; padding: 9px 14px 9px 11px; font-size: 12.5px; font-weight: 700; box-shadow: 0 10px 26px rgba(0,0,0,0.45); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        #txtPrevBackChip:active { transform: scale(0.96); }
+        #txtPrevBackChip .material-symbols-outlined { font-size: 18px; }
+
         /* ===== 📜 ลิสต์ค้นหา (ที่โปรด/ประวัติ/ผลค้นหา) — เลื่อนให้เนียนทุกเครื่อง (แก้ 15 ก.ย. 69) =====
            กฎนี้ตั้งใจวาง “ท้ายไฟล์” เพื่อให้ชนะกฎ .dropdown-box/.history-header/.list-item ที่เขียนไว้ก่อนหน้า
 
@@ -3300,11 +3322,11 @@
 <div id="hubQuotaItem" class="hub-item" data-cat="cat-system" style="display:none;" onclick="window.openQuotaMonitor();"><div class="hub-item-icon" style="background:rgba(239,68,68,0.13); color:#ff8a95;"><span class="material-symbols-outlined" style="font-size:24px;">data_usage</span></div><div class="hub-item-body"><div class="hub-item-title" style="color:#ff8a95;">โควต้า Firestore <span style="background:rgba(255,138,149,0.15); border:1px solid rgba(255,138,149,0.35); color:#ff8a95; border-radius:999px; font-size:10.5px; font-weight:700; padding:1px 8px; margin-left:5px; vertical-align:middle;">โควต้า</span> <span id="hubQuotaBadge" class="perm-req-count" style="display:none;"></span></div><div class="hub-item-desc">ดูการใช้ อ่าน/เขียน/ลบ วันนี้แยกตามฟีเจอร์ + ประมาณโควตาที่เหลือ</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 </div></div></div>
 
-<div id="textEditModal" class="modal-overlay" style="z-index: 10045;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('textEditModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>แก้ไขข้อความ / หัวข้อ</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetTextOverrides()" title="รีเซ็ตทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('textEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 8px; line-height:1.65;">แก้ชื่อหัวข้อ ป้าย ปุ่ม และคำอธิบายในแอปได้เอง — <b>ไม่ต้องแก้โค้ด</b> · บันทึกแล้วมีผลกับ <b>ทุกคนที่ใช้แอป</b>ทันที<br>บรรทัดบน = ข้อความต้นฉบับ (แก้ไม่ได้) · ช่องกรอก = ข้อความที่อยากให้แสดง (เว้นว่าง = ใช้ต้นฉบับ) · <b>ข้อความที่เหมือนกันจะเปลี่ยนพร้อมกันทุกจุด</b> — ตัวเลข/เปอร์เซ็นต์ระบบข้ามให้อัตโนมัติ</p><div style="position:relative; margin:0 4px 8px;"><input type="text" id="textEditSearch" placeholder="ค้นหาข้อความ…" oninput="window.renderTextEditList(this.value)" style="width:100%; text-align:left; padding-left:38px;"><span class="material-symbols-outlined" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:19px; color:var(--text-dim);">search</span></div><div id="textEditStats" style="font-size:11.5px; color:var(--text-dim); margin:0 6px 8px; line-height:1.6;"></div><div id="textEditList" style="min-height:200px;"></div></div><div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveTextEditBtn" onclick="window.saveTextOverrides()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color:#fff;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกทั้งหมด</button></div></div></div>
+<div id="textEditModal" class="modal-overlay" style="z-index: 10045;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('textEditModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>แก้ไขข้อความ / หัวข้อ</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetTextOverrides()" title="รีเซ็ตทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('textEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 8px; line-height:1.65;">แก้ชื่อหัวข้อ ป้าย ปุ่ม และคำอธิบายในแอปได้เอง — <b>ไม่ต้องแก้โค้ด</b> · บันทึกแล้วมีผลกับ <b>ทุกคนที่ใช้แอป</b>ทันที<br>บรรทัดบน = ข้อความต้นฉบับ (แก้ไม่ได้) · ช่องกรอก = ข้อความที่อยากให้แสดง (เว้นว่าง = ใช้ต้นฉบับ) · <b>ข้อความที่เหมือนกันจะเปลี่ยนพร้อมกันทุกจุด</b> — ตัวเลข/เปอร์เซ็นต์ระบบข้ามให้อัตโนมัติ</p><div style="position:relative; margin:0 4px 8px;"><input type="text" id="textEditSearch" placeholder="ค้นหาข้อความ…" oninput="window.renderTextEditList(this.value)" style="width:100%; text-align:left; padding-left:38px;"><span class="material-symbols-outlined" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:19px; color:var(--text-dim);">search</span></div><div style="margin:0 4px 8px;"><select id="textEditScreenFilter" class="txt-screen-sel" onchange="window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : '')" title="เลือกดูเฉพาะข้อความที่อยู่ในหน้าจอนั้น"><option value="">ทุกหน้าจอ</option></select></div><div id="textEditStats" style="font-size:11.5px; color:var(--text-dim); margin:0 6px 8px; line-height:1.6;"></div><div id="textEditList" style="min-height:200px;"></div></div><div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveTextEditBtn" onclick="window.saveTextOverrides()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color:#fff;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกทั้งหมด</button></div></div></div>
 <div id="itemTextEditModal" class="modal-overlay" style="z-index: 10046;"><div class="modal-box standard-box" data-txt-skip onclick="event.stopPropagation()"><div class="modal-header"><h3 id="itemTextEditTitle">แก้ข้อความเมนู</h3><button class="btn-close-floating" onclick="window.toggleModal('itemTextEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><div id="itemTextEditWho" style="font-size:12.5px; color:var(--neon-yellow); font-weight:700; margin-bottom:10px; word-break:break-word;"></div><label for="itemTextTitle" style="text-align:left;">ชื่อเมนูที่แสดงบนจอ</label><div id="itemTextOrigTitle" style="font-size:11px; color:var(--text-dim); margin:2px 0 6px; word-break:break-word;"></div><input type="text" id="itemTextTitle" maxlength="60" placeholder="เว้นว่าง = ใช้ข้อความต้นฉบับ" style="width:100%; text-align:left; margin-bottom:12px;" onkeydown="if(event.key==='Enter') window.saveHubItemText()"><label for="itemTextDesc" style="text-align:left;">คำอธิบายใต้เมนู</label><div id="itemTextOrigDesc" style="font-size:11px; color:var(--text-dim); margin:2px 0 6px; word-break:break-word;"></div><input type="text" id="itemTextDesc" maxlength="140" placeholder="เว้นว่าง = ใช้ข้อความต้นฉบับ" style="width:100%; text-align:left; margin-bottom:10px;" onkeydown="if(event.key==='Enter') window.saveHubItemText()"><div id="itemTextEditNote" style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:14px;"></div><div style="display:flex; gap:8px;"><button class="manual-timer-btn" style="background:rgba(255,255,255,0.08); color:var(--text-dim); padding:0 12px;" onclick="window.clearHubItemText()" title="ล้างข้อความที่แก้ไว้ของเมนูนี้ (กลับเป็นต้นฉบับ)"><span class="material-symbols-outlined" style="font-size:18px;">restart_alt</span> คืนต้นฉบับ</button><button class="manual-timer-btn" style="background: var(--neon-green); flex:1; justify-content:center; color:#fff;" onclick="window.saveHubItemText()"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div></div>
 <div id="hubCatEditModal" class="modal-overlay" style="z-index: 10040;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="hubCatEditTitle">หัวข้อใหม่</h3><button class="btn-close-floating" onclick="window.toggleModal('hubCatEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><label style="text-align:left;">ชื่อหัวข้อ</label><input type="text" id="hubCatNameInput" maxlength="40" placeholder="เช่น 🚕 งานรถ / 🧾 ใบเสร็จ" style="width: 100%; margin-bottom: 10px; text-align: left;" onkeydown="if(event.key==='Enter') window.saveHubCat()"><div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 14px;">ตั้งชื่อแล้วลากเมนูไปวางในหัวข้อนี้ได้เลย — <b>หัวข้อที่ไม่มีเมนูจะถูกซ่อนเอง</b> (กลับมาเมื่อมีเมนูวางอยู่)<br>ใส่ emoji นำหน้าได้ เช่น 📁 · เก็บในเครื่องนี้ ไม่กินโควตา</div><button class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: #fff;" onclick="window.saveHubCat()"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกหัวข้อ</button></div></div></div>
 
-<div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควตา Firestore</h3><button id="quotaRefreshBtn" onclick="window.refreshQuotaMonitor()" title="ดึงยอดใหม่จากเซิร์ฟเวอร์" style="display:inline-flex; align-items:center; gap:4px; background:rgba(77,163,255,0.15); border:1px solid rgba(77,163,255,0.4); color:#7db8ff; border-radius:99px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s; position:absolute; right:58px; top:50%; transform:translateY(-50%);"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span>รีเฟรช</button><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">จำนวน อ่าน / เขียน / ลบ ที่ทุกบัญชี (ID) ใช้ Firestore วันนี้รวมกันทั้งระบบ <b style="color:#fff;">(ทุกเครื่องส่งยอดขึ้นเซิร์ฟเวอร์ทุก 10 นาที / ตอนปิดแอป</b> — แสดงยอดรวมทุก ID + เหลือเท่าไหร่ และแยกตาม ID ชื่อโปรไฟล์) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ฟีเจอร์ที่ฟังข้อมูลสดแบบเรียลไทม์จะกินโควตาอ่านตามจำนวนเครื่องที่เปิดดูพร้อมกัน)</div></div></div></div>
+<div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควตาใช้งาน</h3><button id="quotaRefreshBtn" onclick="window.refreshQuotaMonitor()" title="ดึงยอดใหม่จากเซิร์ฟเวอร์" style="display:inline-flex; align-items:center; gap:4px; background:rgba(77,163,255,0.15); border:1px solid rgba(77,163,255,0.4); color:#7db8ff; border-radius:99px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s; position:absolute; right:58px; top:50%; transform:translateY(-50%);"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span>รีเฟรช</button><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">แอปนี้กินโควตา 2 ระบบ: <b style="color:#fff;">TomTom</b> (ค้นหา + คำนวณเส้นทาง — ด้านบนสุด) และ <b style="color:#fff;">Firestore</b> (ฐานข้อมูล — ด้านล่าง) · Firestore = จำนวน อ่าน / เขียน / ลบ ที่ทุกบัญชี (ID) ใช้ Firestore วันนี้รวมกันทั้งระบบ <b style="color:#fff;">(ทุกเครื่องส่งยอดขึ้นเซิร์ฟเวอร์ทุก 10 นาที / ตอนปิดแอป</b> — แสดงยอดรวมทุก ID + เหลือเท่าไหร่ และแยกตาม ID ชื่อโปรไฟล์) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ฟีเจอร์ที่ฟังข้อมูลสดแบบเรียลไทม์จะกินโควตาอ่านตามจำนวนเครื่องที่เปิดดูพร้อมกัน)</div></div></div></div>
 
 <div id="adminMenuModal" class="modal-overlay" style="z-index: 10004;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('adminMenuModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>ระบบจัดการผู้ใช้งาน</h3><button id="adminGlobalLogsBtn" class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><button id="permReqBanner" class="perm-req-banner" style="display: none;" onclick="window.openPermRequests()"></button><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div id="loginLogToggleRow" style="display:none; padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><div style="display:flex; align-items:center; justify-content:space-between; gap:12px;"><div style="flex:1; min-width:0;"><div style="font-size:13px; color:#fff; font-weight:600;">บันทึก log ล็อกอิน / ล็อกเอาต์ (ย้ายไปตั้งค่าสิทธิ์ → บันทึกประวัติ)</div><div style="font-size:11px; color:#9aa3b5; margin-top:2px; line-height:1.5;">เปิด = เขียน log 2 จุด (ประวัติผู้ใช้ + global_logs) ทุกล็อกอิน/เอาต์ · ปิด = ประหยัดโควตา (แนะนำ)</div></div><label class="app-switch"><input type="checkbox" id="logLoginLogoutToggle" onchange="window.toggleLoginLogLogging(this.checked)"><span class="app-slider"></span></label></div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
 
@@ -4660,24 +4682,75 @@
             return { gapKm, remainKm: Math.max(0, projB.remainKm), remainSec, gapNoTrafficSec, via: 'polyline' };
         } catch(e) { return null; }
     };
-    const TOMTOM_DAILY_LIMIT = 2500; // แผนฟรี TomTom Developer: ~2,500 ครั้ง/วัน (นับในเครื่อง เพื่อเตือนก่อนโควตาจะหมด)
-    // นับจำนวนครั้งที่เรียก TomTom ในวันนี้ (หาเส้นทาง + ค้นหาสถานที่) แล้วเตือนทองเมื่อใช้ใกล้เต็ม (ครั้งเดียวต่อเกณฑ์/วัน)
-    const countTomTomCall = () => {
-        const today = new Date().toISOString().slice(0, 10);
-        let st = {}; try { st = JSON.parse(localStorage.getItem('tomtom_usage_daily') || '{}'); } catch(e) {}
-        if (st.date !== today) st = { date: today, n: 0 };
-        st.n += 1;
-        try { localStorage.setItem('tomtom_usage_daily', JSON.stringify(st)); } catch(e) {}
+    // 🚗 โควตา TomTom — นับในเครื่อง (แยก "ถัง" ให้ตรงกับของจริง)
+    //    ⚠️ สิ่งที่พิสูจน์แล้ว (15 ก.ย. 69): TomTom **ไม่มี** API ให้อ่านโควตาที่เหลือด้วยคีย์ของแอป
+    //       (ยิงจริงแล้วดู header: มีแต่ x-tomtom-processed-by / upstream-service-time — ไม่มีค่าโควตาเลย)
+    //       → ตัวเลขจริงดูได้ที่แดชบอร์ด TomTom เท่านั้น · ที่นี่คือ "ยอดที่แอปนับเอง" แล้วให้กรอกยอดแดชบอร์ดเทียบได้
+    //    ⚠️ แผนฟรี ~2,500 ครั้ง/วัน **แยกต่อ API** → Routing กับ Search คนละถัง (เมื่อก่อนรวมเป็นก้อนเดียว = เตือนเร็วเกินจริง)
+    const TOMTOM_DAILY_LIMIT = 2500; // ค่าเริ่มต้นต่อถัง (Routing / Search) — แอดมินแก้ได้จากหน้าต่างโควตา
+    const TT_LIMIT_KEY = 'tomtom_daily_limit';
+    const TT_USAGE_KEY = 'tomtom_usage_daily';
+    const TT_DASH_KEY = 'tomtom_dash_ref'; // ยอดจริงที่แอดมินกรอกจากแดชบอร์ด TomTom (ไว้เทียบว่าที่แอปนับตรงไหม)
+    const ttToday = () => new Date().toISOString().slice(0, 10);
+    window.tomtomDailyLimit = () => {
+        try { const v = parseInt(localStorage.getItem(TT_LIMIT_KEY) || '', 10); if (v >= 100 && v <= 1000000) return v; } catch (e) {}
+        return TOMTOM_DAILY_LIMIT;
+    };
+    window.setTomtomDailyLimit = (v) => {
+        const n = Math.round(Number(v) || 0);
+        if (!(n >= 100 && n <= 1000000)) { window.showToast('ใส่ตัวเลข 100 – 1,000,000', true); return false; }
+        try { localStorage.setItem(TT_LIMIT_KEY, String(n)); } catch (e) {}
+        window.showToast('ตั้งวงเงิน TomTom ต่อวัน = ' + n.toLocaleString('th-TH') + ' ครั้ง/ถัง (เครื่องนี้)');
+        if (typeof window.renderQuotaMonitor === 'function') window.renderQuotaMonitor();
+        return true;
+    };
+    // ยอดที่แอปนับเองวันนี้ — คืนทั้งแบบแยกถังและรวม
+    window.tomtomUsageToday = () => {
+        const today = ttToday();
+        let st = {}; try { st = JSON.parse(localStorage.getItem(TT_USAGE_KEY) || '{}'); } catch (e) {}
+        const route = (st.date === today ? (st.route || 0) : 0);
+        const search = (st.date === today ? (st.search || 0) : 0);
+        return { date: today, route, search, total: route + search };
+    };
+    // ยอดจริงจากแดชบอร์ด TomTom (กรอกมือ) — เพื่อเทียบความแม่นของตัวนับ
+    window.tomtomDashRef = () => {
+        try { const r = JSON.parse(localStorage.getItem(TT_DASH_KEY) || '{}'); if (r && r.date === ttToday()) return r; } catch (e) {}
+        return null;
+    };
+    window.setTomtomDashRef = (route, search) => {
+        const r = Math.max(0, Math.round(Number(route) || 0));
+        const s = Math.max(0, Math.round(Number(search) || 0));
+        if (r === 0 && s === 0) { try { localStorage.removeItem(TT_DASH_KEY); } catch (e) {} }
+        else { try { localStorage.setItem(TT_DASH_KEY, JSON.stringify({ date: ttToday(), route: r, search: s })); } catch (e) {} }
+        window.showToast(r === 0 && s === 0 ? 'ล้างยอดอ้างอิงแดชบอร์ดแล้ว' : 'บันทึกยอดแดชบอร์ดจริง (วันนี้) เรียบร้อย');
+        if (typeof window.renderQuotaMonitor === 'function') window.renderQuotaMonitor();
+    };
+    // 📈 นับจำนวนครั้งที่เรียก TomTom — kind: 'route' (คำนวณ/รีเฟรชเส้นทาง) | 'search' (ค้นหาสถานที่)
+    //    แล้วเตือนทองเมื่อ "ถังนั้น" ใกล้เต็ม (ครั้งเดียวต่อเกณฑ์/ถัง/วัน)
+    const countTomTomCall = (kind) => {
+        const k = (kind === 'search') ? 'search' : 'route';
+        const today = ttToday();
+        let st = { date: today, route: 0, search: 0 };
+        try {
+            const raw = JSON.parse(localStorage.getItem(TT_USAGE_KEY) || '{}');
+            if (raw.date === today) st = { date: today, route: raw.route || 0, search: raw.search || 0 };
+        } catch (e) {}
+        st[k] += 1;
+        try { localStorage.setItem(TT_USAGE_KEY, JSON.stringify({ date: today, route: st.route, search: st.search, n: st.route + st.search })); } catch (e) {}
+        const lim = window.tomtomDailyLimit();
         for (const [pct, id] of [[0.88, 1], [0.97, 2]]) {
-            const dayId = today + ':' + id;
-            let prev = ''; try { prev = localStorage.getItem('tomtom_warned_' + id) || ''; } catch(e) {}
-            if (st.n >= Math.floor(TOMTOM_DAILY_LIMIT * pct) && prev !== dayId) {
-                try { localStorage.setItem('tomtom_warned_' + id, dayId); } catch(e) {}
-                window.showToast('⚠️ ใช้ TomTom ไปแล้ว ~' + st.n.toLocaleString('th-TH') + '/' + TOMTOM_DAILY_LIMIT.toLocaleString('th-TH') + ' ครั้งวันนี้ — โควตาใกล้เต็ม ระบบอาจค้นหาหรือรีเฟรชเส้นทางชั่วคราวไม่ได้', false, null, true);
+            const dayId = today + ':' + k + ':' + id;
+            let prev = ''; try { prev = localStorage.getItem('tomtom_warned_' + k + '_' + id) || ''; } catch (e) {}
+            if (st[k] >= Math.floor(lim * pct) && prev !== dayId) {
+                try { localStorage.setItem('tomtom_warned_' + k + '_' + id, dayId); } catch (e) {}
+                const label = (k === 'search') ? 'ค้นหาสถานที่' : 'คำนวณเส้นทาง';
+                const tail = (k === 'search') ? 'ระบบอาจค้นหาสถานที่ไม่ได้ชั่วคราว' : 'ระบบจะประเมินจากระยะทางแทนชั่วคราว';
+                window.showToast('⚠️ โควตา TomTom (' + label + ') ใช้ไป ~' + st[k].toLocaleString('th-TH') + '/' + lim.toLocaleString('th-TH') + ' ครั้งวันนี้ — ' + tail, false, null, true);
             }
         }
-        return st.n;
+        return st[k];
     };
+    window.countTomTomCall = countTomTomCall; // ให้หน้าโควตา/สคริปต์อื่นเรียกได้ (ใช้ทดสอบด้วย)
     function formatDuration(totalMins) { if (totalMins < 60) return totalMins + " น."; let h = Math.floor(totalMins / 60); let m = Math.round(totalMins % 60); return h + " ชม." + (m > 0 ? " " + m + " น." : ""); }
     // 🕒 จัดรูปแบบ "เวลาเป็นวินาที": ซ่อนหน่วยที่ยังเป็นศูนย์ทางซ้าย (ยังไม่ถึงนาที → โชว์แค่วินาที · ยังไม่ถึงชั่วโมง → ไม่โชว์ชั่วโมง)
     //    ตัวอย่าง: 30 ว. · 52 น. 20 ว. · 1 ชม. 15 น. 30 ว. — กันข้อความยาวเกินจำเป็น
@@ -5259,7 +5332,7 @@
             const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=${routeType}&routeRepresentation=polyline&language=th-TH&sectionType=toll&instructionsType=text${avoidParam}`;
             
             let res = await fetch(url);
-            countTomTomCall(); // นับรอบที่ถึงเซิร์ฟเวอร์จริง (สำเร็จหรือโดนจำกัดโควตาก็ใช้สิทธิ์ไปแล้ว)
+            countTomTomCall('route'); // นับรอบที่ถึงเซิร์ฟเวอร์จริง (สำเร็จหรือโดนจำกัดโควตาก็ใช้สิทธิ์ไปแล้ว) — ถัง Routing
             if (!res.ok) {
                 // TomTom ปฏิเสธ (โควตาหมด/คีย์ผิด/ถูกจำกัดอัตรา) → เตือนทอง ครั้งเดียว/ชั่วโมง กันโพล 120 วิ รบกวนซ้ำ
                 const errTxt = await res.text().catch(() => '');
@@ -7117,7 +7190,52 @@
         if (el.closest('#textEditModal')) return true;                      // หน้าต่างแก้ข้อความเอง
         return false;
     };
-    window.textOvrWhere = (el) => { const m = el && el.closest ? el.closest('[id$="Modal"]') : null; if (!m) return 'หน้าหลัก'; return m.id.replace(/Modal$/, ''); };
+    // 📍 บอกว่าข้อความนี้อยู่หน้าจอไหน — หน้าต่าง (.modal-overlay) ทุกบาน ไม่ใช่เฉพาะที่ลงท้ายด้วย Modal · เมนูข้างแยกออกมา
+    window.textOvrWhere = (el) => {
+        if (!el || !el.closest) return 'หน้าหลัก';
+        const m = el.closest('.modal-overlay');
+        if (m) return m.id ? m.id.replace(/Modal$/, '') : 'หน้าต่าง';
+        if (el.closest('#sideMenuOverlay') || el.closest('#sideMenu')) return 'เมนูข้าง';
+        return 'หน้าหลัก';
+    };
+    // 🏷 ข้อความนี้อยู่บน “หน้าจอไหน” — คืนคีย์ (ไว้กรอง) และชื่อภาษาไทย (ไว้โชว์/ให้คนขับอ่านรู้เรื่อง)
+    window.textOvrScreenKey = (el) => {
+        if (!el || !el.closest) return 'main';
+        const m = el.closest('.modal-overlay');
+        if (m) return m.id || 'modal';
+        if (el.closest('#sideMenuOverlay') || el.closest('#sideMenu')) return 'sideMenu';
+        return 'main';
+    };
+    window.textOvrScreenLabel = (key) => {
+        if (key === 'main') return 'หน้าหลัก';
+        if (key === 'sideMenu') return 'เมนูข้าง';
+        try {
+            const m = document.getElementById(key);
+            // ใช้ “ชื่อจริงที่โชว์บนหัวหน้าต่าง” เป็นชื่อหน้าจอ → ตรงกับที่คนขับเห็น ไม่ต้องดูแลแมปเอง
+            const t = m && m.querySelector('.modal-header h3, .modal-header h4, h3');
+            const s = t ? String(t.textContent || '').replace(/^[\u{1F000}-\u{1FAFF}\u2600-\u27BF\uFE0F\s]+/u, '').trim() : '';
+            if (s) return s;
+        } catch (e) {}
+        const fallback = { profileModal: 'โปรไฟล์', settingsHubModal: 'ตั้งค่าการใช้งาน', quotaMonitorModal: 'โควตาบริการ', notifCenterModal: 'ศูนย์แจ้งเตือน', newUsersModal: 'สมาชิกใหม่', permRequestsModal: 'คำขอสิทธิ์', toastMsgModal: 'ข้อความแจ้งเตือน', loadingScreenModal: 'หน้าจอโหลด', searchScrollbarModal: 'แถบเลื่อนลิสต์ค้นหา', roleSettingsModal: 'ตั้งค่าสิทธิ์', servicePortalModal: 'Service Portal', favoritesManageModal: 'จุดโปรด', createRoleModal: 'สร้างบทบาท', shareModal: 'แชร์แอป', textEditModal: 'แก้ไขข้อความ', loginOverlay: 'เข้าสู่ระบบ', routeSummaryModal: 'สรุปเส้นทาง', tripHistoryModal: 'ประวัติ' };
+        return fallback[key] || 'หน้าต่าง';
+    };
+    // 🎯 ให้คะแนน “ความเหมาะที่จะถูกพรีวิว” — เห็นอยู่แล้ว > หน้าหลัก > เมนูข้าง > หน้าต่างที่เปิดได้ > ซ่อนอยู่
+    //    (ข้อความเดียวกันมักอยู่หลายที่ — ต้องเลือก “ที่ที่คนขับเห็นจริง” ไม่ใช่ที่แรกที่เจอ)
+    window.textPreviewRank = (el) => {
+        if (!el || !el.nodeType) return -1;
+        let vis = 0; try { vis = el.getClientRects().length ? 100 : 0; } catch (e) {}
+        const k = window.textOvrScreenKey(el);
+        if (k === 'main') return vis + 40;
+        if (k === 'sideMenu') return vis + 30;
+        let openable = false;
+        try { openable = !!(window.TEXT_PREVIEW_OPENERS && window.TEXT_PREVIEW_OPENERS[k]) || !!document.getElementById(k); } catch (e) {}
+        return vis + (openable ? 20 : 5);
+    };
+    window.textPreviewBest = (def) => {
+        const arr = (window.__txtEls && window.__txtEls.get(def)) || [];
+        if (!arr.length) return null;
+        return arr.slice().sort((a, b) => window.textPreviewRank(b) - window.textPreviewRank(a))[0];
+    };
     window.textOvrInit = () => { window.__textOvr = window.textOvrCacheRead(); return window.__textOvr; };
     // โหลดเวอร์ชันล่าสุดจากเซิร์ฟเวอร์ (1 อ่านต่อการเปิดแอป — เหมือนระบบข้อความแจ้งเตือน)
     window.textOvrLoad = async () => {
@@ -7173,10 +7291,15 @@
     // รวม “หัวข้อที่แก้ได้” ทั้งหมดบนจอ (ใช้ต้นฉบับเป็นคีย์ ⇒ ข้อความเดียวกันรวมกันเป็นรายการเดียว)
     window.textCollect = () => {
         const map = new Map();
+        // 👁 จำ element จริงของแต่ละข้อความไว้ → ปุ่มพรีวิวเอาไปเปิดหน้าจอ + ไฮไลต์ได้
+        if (!window.__txtEls) window.__txtEls = new Map();
+        window.__txtEls.clear();
         const add = (def, el) => {
             if (!def) return;
-            const e = map.get(def) || { def: def, count: 0, where: new Set() };
+            const e = map.get(def) || { def: def, count: 0, where: new Set(), screens: new Set(), labels: new Set() };
             e.count++; try { e.where.add(window.textOvrWhere(el)); } catch (err) {}
+            // เก็บ “ทุกที่” ที่ข้อความนี้อยู่ (ไม่ใช่ที่เดียว) — ไว้เลือกที่เหมาะสุดตอนกดพรีวิว
+            if (el && el.nodeType === 1) { const arr = window.__txtEls.get(def) || []; if (arr.indexOf(el) === -1 && arr.length < 12) arr.push(el); window.__txtEls.set(def, arr); }
             map.set(def, e);
         };
         try {
@@ -7192,41 +7315,167 @@
                 if (!found && el.dataset && el.dataset.txtDef) add(el.dataset.txtDef, el);
             });
         } catch (e) {}
+        // เรียงหน้าจอของแต่ละข้อความตาม “เปิดได้ง่ายสุดก่อน” → chip ด้านหลังหัวข้อจะเรียงตรงกับที่กดพรีวิวจริง
+        map.forEach(e => {
+            try {
+                const arr = (window.__txtEls.get(e.def) || []).slice().sort((a, b) => window.textPreviewRank(b) - window.textPreviewRank(a));
+                arr.forEach(el => { const k = window.textOvrScreenKey(el); if (e.screens.has(k)) return; e.screens.add(k); e.labels.add(window.textOvrScreenLabel(k)); });
+            } catch (err) {}
+        });
         // รายการที่แอดมินเคยตั้งไว้แต่ตอนนี้ไม่ปรากฏบนจอ (เช่น เมนูที่ถูกซ่อน) — ให้แก้/ลบได้
-        Object.keys(window.__textOvr || {}).forEach(k => { if (!map.has(k)) map.set(k, { def: k, count: 0, where: new Set(['(ไม่พบบนจอนี้)']) }); });
+        Object.keys(window.__textOvr || {}).forEach(k => { if (!map.has(k)) map.set(k, { def: k, count: 0, where: new Set(['(ไม่พบบนจอนี้)']), screens: new Set(['gone']), labels: new Set(['⚠ ถูกซ่อนอยู่']) }); });
         return Array.from(map.values());
     };
     window.textEscAttr = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // 🧺 เก็บค่าที่พิมพ์ค้างในช่องกรอกไว้ก่อนวาดลิสต์ใหม่ — เดินดูหน้าจออื่น/กรอง/ค้นหา แล้วกลับมา ข้อความที่พิมพ์ไว้ไม่หาย
+    //    (ตอนบันทึก/รีเซ็ต/ล้างรายการ จะข้ามด้วย flag เพราะไม่อยากให้ค่าที่กำลังจะลบกลับมา)
+    window.textEditHarvest = () => {
+        if (window.__txtSkipHarvest) return 0;
+        let n = 0;
+        try {
+            const cur = Object.assign({}, window.__textOvr || {});
+            let touched = false;
+            document.querySelectorAll('#textEditList input[data-def]').forEach(inp => {
+                const def = inp.getAttribute('data-def'); const v = (inp.value || '').trim();
+                if (v && v !== def) { if (cur[def] !== v) { cur[def] = v; touched = true; n++; } }
+                else if (cur[def] !== undefined) { delete cur[def]; touched = true; n++; }
+            });
+            if (touched) { window.__textOvr = cur; window.applyTextOverrides(); }
+        } catch (e) {}
+        return n;
+    };
     window.renderTextEditList = (q) => {
         const box = document.getElementById('textEditList'); if (!box) return;
+        window.textEditHarvest();
         const all = window.textCollect();
         const cur = window.__textOvr || {};
+        // 🏷 กรองตามหน้าจอ — ตัวช่วยตอบคำถาม “ข้อความนี้อยู่หน้าต่างไหน” (มี select ด้านบนช่องค้นหา)
+        const sel = document.getElementById('textEditScreenFilter');
+        let want = sel ? sel.value : (window.__txtScreenFilter || '');
+        if (sel) {
+            const firstKey = (x) => Array.from(x.screens)[0] || 'main';
+            const labelOf = (x) => Array.from(x.labels)[0] || 'หน้าหลัก';
+            const keys = [];
+            all.forEach(x => { const k = firstKey(x); if (keys.indexOf(k) === -1) keys.push(k); });
+            const opts = keys.map(k => ({ k: k, label: labelOf(all.find(x => firstKey(x) === k)), n: all.filter(x => x.screens.has(k)).length }));
+            opts.sort((a, b) => String(a.label).localeCompare(String(b.label), 'th'));
+            const html = '<option value="">ทุกหน้าจอ (' + all.length + ')</option>' + opts.map(o => '<option value="' + window.textEscAttr(o.k) + '">' + window.textEscAttr(o.label) + ' — ' + o.n + '</option>').join('');
+            if (sel.innerHTML !== html) sel.innerHTML = html;
+            if (want && !opts.some(o => o.k === want)) want = '';
+            sel.value = want;
+        }
+        window.__txtScreenFilter = want;
+        const inScreen = want ? all.filter(x => x.screens.has(want)) : all;
+        const screenLabel = want ? ((inScreen[0] && Array.from(inScreen[0].labels)[0]) || want) : '';
         const qq = String(q || '').trim().toLowerCase();
-        const rows = all.filter(x => !qq || x.def.toLowerCase().indexOf(qq) !== -1 || String(cur[x.def] || '').toLowerCase().indexOf(qq) !== -1);
+        const rows = inScreen.filter(x => !qq || x.def.toLowerCase().indexOf(qq) !== -1 || String(cur[x.def] || '').toLowerCase().indexOf(qq) !== -1);
         rows.sort((a, b) => (b.count - a.count) || String(a.def).localeCompare(String(b.def), 'th'));
         const st = document.getElementById('textEditStats');
-        if (st) st.innerHTML = 'พบ <b>' + all.length + '</b> หัวข้อที่แก้ได้ · แก้ไว้แล้ว <b style="color:var(--neon-yellow)">' + Object.keys(cur).length + '</b> รายการ' + (qq ? ' · กรองเหลือ ' + rows.length : '');
-        if (!rows.length) { box.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:24px;">ไม่พบข้อความที่ตรงกับคำค้น</div>'; return; }
+        if (st) st.innerHTML = 'พบ <b>' + all.length + '</b> หัวข้อที่แก้ได้ · แก้ไว้แล้ว <b style="color:var(--neon-yellow)">' + Object.keys(cur).length + '</b> รายการ' + (want ? ' · หน้าจอ <b style="color:#7db8ff">' + window.textEscAttr(screenLabel) + '</b>' : '') + ((qq || want) ? ' · กรองเหลือ ' + rows.length : '');
+        if (!rows.length) { box.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:24px;">ไม่พบข้อความที่ตรงกับ' + (want && !qq ? 'หน้าจอนี้' : 'คำค้น') + '</div>'; return; }
         const cap = 300;
         box.innerHTML = rows.slice(0, cap).map(r => {
             const def = window.textEscAttr(r.def);
             const val = window.textEscAttr(cur[r.def] || '');
             const chg = !!cur[r.def];
             const where = Array.from(r.where).slice(0, 3).join(' · ');
+            const labelSet = Array.from(r.labels);
+            const chip = labelSet.slice(0, 2).join(' · ') + (labelSet.length > 2 ? ' +' + (labelSet.length - 2) : '');
             return '<div style="border:1px solid ' + (chg ? 'rgba(255,210,77,0.45)' : 'rgba(255,255,255,0.09)') + '; background:' + (chg ? 'rgba(255,210,77,0.07)' : 'rgba(255,255,255,0.03)') + '; border-radius:12px; padding:9px 10px; margin-bottom:8px;">' +
-                '<div style="font-size:12.5px; color:#fff; line-height:1.5; word-break:break-word;">' + def + '</div>' +
-                '<div style="font-size:10.5px; color:var(--text-dim); margin:3px 0 6px;">' + r.count + ' จุด · ' + window.textEscAttr(where) + '</div>' +
+                '<div style="display:flex; align-items:flex-start; gap:8px;">' +
+                    '<div style="flex:1; min-width:0; font-size:12.5px; color:#fff; line-height:1.5; word-break:break-word;">' + def + '</div>' +
+                    '<button type="button" class="txt-prev-btn" data-def="' + def + '" onclick="window.textEditPreview(this)" title="พรีวิว — เปิดหน้าจอที่มีข้อความนี้" aria-label="พรีวิวหน้าจอของข้อความนี้"><span class="material-symbols-outlined">visibility</span></button>' +
+                '</div>' +
+                '<div style="display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin:4px 0 7px;" title="' + window.textEscAttr(where) + '"><span class="txt-screen-chip">' + window.textEscAttr(chip) + '</span><span style="font-size:10.5px; color:var(--text-dim);">' + r.count + ' จุด</span></div>' +
                 '<input type="text" data-def="' + def + '" value="' + val + '" placeholder="(เว้นว่าง = ใช้ต้นฉบับ)" style="width:100%; text-align:left; font-size:13px;">' +
                 (chg ? '<div style="text-align:right; margin-top:5px;"><span data-def="' + def + '" onclick="window.textEditClearOne(this)" style="font-size:11.5px; color:#ff8a95; cursor:pointer;">↺ ล้างรายการนี้</span></div>' : '') +
                 '</div>';
         }).join('') + (rows.length > cap ? '<div style="text-align:center; color:var(--text-dim); font-size:11.5px; padding:6px;">แสดง ' + cap + ' จาก ' + rows.length + ' — ใช้ช่องค้นหาเพื่อเจอที่เหลือ</div>' : '');
     };
-    window.textEditClearOne = (el) => { const def = el && el.getAttribute('data-def'); if (!def) return; const ovr = Object.assign({}, window.__textOvr || {}); delete ovr[def]; window.__textOvr = ovr; window.applyTextOverrides(); window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : ''); };
+    window.textEditClearOne = (el) => { const def = el && el.getAttribute('data-def'); if (!def) return; const ovr = Object.assign({}, window.__textOvr || {}); delete ovr[def]; window.__textOvr = ovr; window.applyTextOverrides(); window.__txtSkipHarvest = true; window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : ''); window.__txtSkipHarvest = false; };
+
+    // ===================== 👁 พรีวิวหน้าจอของข้อความ (ปุ่มสัญลักษณ์ในหน้าแก้ข้อความ) =====================
+    //  แนวคิด: ข้อความแต่ละรายการ “อยู่บนหน้าจอไหน” ไม่ต้องเดา — แตะปุ่มลูกตาที่ท้ายหัวข้อ → เปิดหน้าจอนั้นให้เลย
+    //  · ข้อความอยู่ในหน้าต่าง → เปิดหน้าต่างนั้น “ซ้อน” เหนือหน้าแก้ข้อความ (z-index สูงกว่า) → ปิดหน้าต่างแล้วกลับมาแก้ต่อได้เลย
+    //  · ข้อความอยู่หน้าหลัก/เมนูข้าง → ปิดหน้าแก้ข้อความก่อน แล้วโชว์ปุ่มลอย “↩ กลับไปแก้ข้อความ”
+    //  ทั้งสองทางจะกระพริบกรอบทองบนข้อความจริง 4 จังหวะ เพื่อให้เห็นชัดว่าคืออันไหน
+    const TEXT_PREVIEW_OPENERS = window.TEXT_PREVIEW_OPENERS = {
+        profileModal: () => window.openProfileModal(),
+        settingsHubModal: () => window.openSettingsHub(),
+        quotaMonitorModal: () => window.openQuotaMonitor(),
+        notifCenterModal: () => window.openNotifCenter(),
+        newUsersModal: () => window.openNewUsers(),
+        permRequestsModal: () => window.openPermRequests(),
+        toastMsgModal: () => window.openToastMsgModal(),
+        loadingScreenModal: () => window.openLoadingScreenModal(),
+        searchScrollbarModal: () => window.openSearchScrollbarModal(),
+        roleSettingsModal: () => window.openRoleSettingsModal(),
+        servicePortalModal: () => window.openServicePortal(),
+        favoritesManageModal: () => window.openFavoritesManageModal(),
+        createRoleModal: () => window.openCreateRoleModal(),
+        shareModal: () => window.openShareModal(),
+        textEditModal: () => window.openTextEditModal()
+    };
+    window.textPreviewFlash = (el) => {
+        try {
+            document.querySelectorAll('.txt-prev-flash').forEach(x => x.classList.remove('txt-prev-flash'));
+            if (!el || !el.classList) return;
+            el.classList.add('txt-prev-flash');
+            setTimeout(() => { try { el.classList.remove('txt-prev-flash'); } catch (e) {} }, 2900);
+        } catch (e) {}
+    };
+    // ปุ่มลอย “กลับไปแก้ข้อความ” (ใช้เฉพาะกรณีที่ปิดหน้าแก้ข้อความเพื่อดูหน้าหลัก)
+    window.hideTxtPrevChip = () => { const c = document.getElementById('txtPrevBackChip'); if (c) c.style.display = 'none'; };
+    window.showTxtPrevChip = () => {
+        let c = document.getElementById('txtPrevBackChip');
+        if (!c) {
+            c = document.createElement('div');
+            c.id = 'txtPrevBackChip';
+            c.innerHTML = '<span class="material-symbols-outlined">undo</span> กลับไปแก้ข้อความ';
+            c.onclick = () => { window.hideTxtPrevChip(); window.openTextEditModal(); };
+            document.body.appendChild(c);
+        }
+        c.style.display = 'inline-flex';
+        clearTimeout(window.__txtPrevChipT);
+        window.__txtPrevChipT = setTimeout(() => window.hideTxtPrevChip(), 20000); // กันค้าง — หายเองใน 20 วิ
+    };
+    window.textEditPreview = (btn) => {
+        const def = btn && btn.getAttribute ? btn.getAttribute('data-def') : '';
+        if (!def) return;
+        const el = window.textPreviewBest(def);
+        if (!el || !document.body.contains(el)) { window.showToast('หาที่อยู่ของข้อความนี้ไม่เจอ — อาจอยู่ในเมนูที่ถูกซ่อน', true); return; }
+        const overlay = el.closest('.modal-overlay');
+        const inSide = !!el.closest('#sideMenuOverlay') || !!el.closest('#sideMenu');
+        const live = !!(el.getClientRects && el.getClientRects().length); // เห็นอยู่จริงบนจอไหม
+        let screen = 'หน้าหลัก';
+        if (overlay) {
+            screen = overlay.id ? overlay.id.replace(/Modal$/, '') : 'หน้าต่าง';
+            const id = overlay.id;
+            let opened = false;
+            if (id && TEXT_PREVIEW_OPENERS[id]) { try { TEXT_PREVIEW_OPENERS[id](); opened = !!(document.getElementById(id) && getComputedStyle(document.getElementById(id)).display !== 'none'); } catch (e) { opened = false; } }
+            if (!opened && id) { try { window.toggleModal(id, true); opened = true; } catch (e) {} }
+            if (id) { overlay.style.zIndex = '10080'; setTimeout(() => { try { overlay.style.zIndex = ''; } catch (e) {} }, 6000); } // ต้องอยู่เหนือหน้าแก้ข้อความ (10045) ไม่งั้นเปิดแล้วมองไม่เห็น — คืนค่าเดิมหลัง 6 วิ
+        } else if (inSide) {
+            screen = 'เมนูข้าง';
+            try { window.toggleSideMenu(true); } catch (e) {}
+        } else {
+            const te = document.getElementById('textEditModal');
+            if (te && getComputedStyle(te).display !== 'none') { window.toggleModal('textEditModal', false); window.showTxtPrevChip(); }
+        }
+        try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { try { el.scrollIntoView(); } catch (e2) {} }
+        setTimeout(() => window.textPreviewFlash(el), 260); // รอให้หน้าจอ/การเลื่อนเข้าที่ก่อนแล้วค่อยกระพริบ
+        let msg = '👁 หน้าจอ: ' + screen;
+        if (!live) msg += ' · ข้อความนี้ยังถูกซ่อนอยู่ตอนนี้ (อาจต้องเปิดเส้นทาง/เข้าหน้านั้นก่อน)';
+        if (overlay) msg += ' — ปิดหน้าต่างนี้แล้วกลับมาแก้ต่อได้เลย';
+        else if (!inSide) msg += ' — กด ↩ มุมล่างซ้ายเพื่อกลับมาแก้ต่อ';
+        window.showToast(msg);
+    };
     window.openTextEditModal = async () => {
         if (!window.isAdminNow()) return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
         if (!document.getElementById('textEditModal')) return;
         window.textOvrInit();
         window.toggleModal('textEditModal', true);
+        window.textEditHarvest(); // เก็บข้อความที่พิมพ์ค้างไว้ก่อนวาดใหม่ (การ์ดเดียวกันเปิดซ้ำ/กลับมาจากพรีวิว)
         const s = document.getElementById('textEditSearch'); if (s) s.value = '';
         const box = document.getElementById('textEditList'); if (box) box.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:20px;">กำลังรวบรวมข้อความ…</div>';
         await new Promise(r => setTimeout(r, 30));
@@ -7263,7 +7512,9 @@
             await window.__fsTimeout(setDoc(doc(db, 'settings', 'app_texts'), { items: {}, updatedAt: Date.now(), updatedBy: loggedInUserId }), 8000);
             window.__textOvr = {}; window.textOvrCacheWrite({});
             window.applyTextOverrides();
+            window.__txtSkipHarvest = true;
             window.renderTextEditList('');
+            window.__txtSkipHarvest = false;
             window.showToast('รีเซ็ตข้อความกลับเป็นต้นฉบับแล้ว');
         } catch (e) { window.showToast('รีเซ็ตไม่สำเร็จ', true); }
     };
@@ -8321,7 +8572,7 @@
                     list.style.display = 'block';
                     window.updateClearDestBtn();
                     let httpRes = await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(smartQuery)}.json?key=${TOMTOM_KEY}&countrySet=TH&limit=10&language=th-TH&typeahead=true&minFuzzyLevel=2&maxFuzzyLevel=4&idxSet=Geo,Addr,PAD,POI`);
-                    countTomTomCall();
+                    countTomTomCall('search'); // ถัง Search (คนละถังกับ Routing)
                     let res = await httpRes.json();
                     if (seq !== searchSeq) return;
                     if(!res.results || !res.results.length) { list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติม</span></div>'; list.style.display = 'block'; window.updateClearDestBtn(); return; }
@@ -8363,7 +8614,7 @@
                 if (seq !== searchSeq) return; // มีคำค้นใหม่กว่า → ทิ้งผลเก่า (กัน response เก่ามาเขียนทับ)
                 const near = upos ? `&near=${upos.lat},${upos.lon}` : '';
                 let httpRes = await fetch(`https://api.tomtom.com/search/2/search/${encodeURIComponent(smartQuery)}.json?key=${TOMTOM_KEY}&countrySet=TH&limit=15&language=th-TH&typeahead=true&minFuzzyLevel=2&maxFuzzyLevel=4&idxSet=Geo,Addr,PAD,POI${near}`);
-                countTomTomCall(); // ค้นหาสถานที่ก็ใช้โควตา TomTom เหมือนกัน → นับด้วย
+                countTomTomCall('search'); // ค้นหาสถานที่ = ถัง Search (แยกจาก Routing)
                 let res = await httpRes.json(); 
                 if (seq !== searchSeq) return;
                 if(!res.results || !res.results.length) { lastSearchHtml = headHtml + '<div style="padding:15px; text-align:center; color:var(--neon-yellow);">ไม่พบสถานที่นี้<br><span style="font-size:12px;color:var(--text-dim);">ลองพิมพ์ชื่อให้สั้นลง หรือระบุ เขต/จังหวัด เพิ่มเติมนะครับ</span></div>'; list.innerHTML = lastSearchHtml; list.style.display = 'block'; window.updateClearDestBtn(); return; } 
@@ -11943,6 +12194,8 @@
         ['2026-09-15', '⭐ จุดโปรดเป็นรายบุคคล — ถอดปุ่ม “เซฟเป็นค่าเริ่มต้น (ทุกคน)” กับปุ่มปิดออก'],
         ['2026-09-15', '✖️ ปุ่มกากบาทย้ายไปมุมบนขวาของหน้าต่างทุกบาน — ขยายสูงแค่ไหนก็อยู่มุมเดิม'],
         ['2026-09-15', '📜 ลิสต์ค้นหา: เลื่อนลื่นขึ้น — ไม่ตรึงหน้าจอตอนพิมพ์ และแป้นพิมพ์ย่อจอจริง'],
+        ['2026-09-15', '🚗 หน้าต่างโควตา: เพิ่มโควตาธอมธอมไว้บนสุด (แยกถังเส้นทาง/ค้นหา + เทียบยอดแดชบอร์ดได้)'],
+        ['2026-09-15', '👁 หน้าแก้ข้อความ: ปุ่มรูปตาเปิดหน้าจอที่มีข้อความนั้น + กรองเฉพาะหน้าจอ'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -11977,6 +12230,8 @@
         ['⏱️ มิเตอร์ตรงจริง: คิดเวลาตามนาฬิกาแม้ซ่อนแอป · จอดนับเมื่อ GPS ยืนยันหยุด · ระยะตามถนนจริง', '⏱️ มิเตอร์ตรงจริง: คิดเวลาตามนาฬิกาแม้ซ่อนแอป · จอดนับเมื่อ GPS ยืนยันหยุด · ระยะตามถนน'],
         ['💾 เก็บเที่ยวที่วิ่งอยู่ลงเครื่อง + ปุ่ม \"เริ่มต่อ\" หลังปิด/รีเฟรช + เบิกเวลาช่วงปิดอัตโนมัติ', '💾 เก็บเที่ยวที่วิ่งอยู่ลงเครื่อง + ปุ่ม \"เริ่มต่อ\" หลังปิด/รีเฟรช + เบิกเวลาช่วงปิด'],
         ['🧰 ปรับ UI/แก้บั๊กรวม: ใบเสร็จ QR 9:16 · ปุ่ม × · การ์ดประเมินสูงขึ้น · modal เลื่อนขึ้นบนสุด', '🧰 ปรับ UI/แก้บั๊ก: ใบเสร็จ QR 9:16 · ปุ่ม × · การ์ดประเมินสูงขึ้น · modal เลื่อนขึ้นบนสุด'],
+        // 15 ก.ย. — กันซ้ำ: bullet “ปุ่มรูปตาพรีวิว” รุ่นแรก (93 ตัวอักษร) ซิงก์ขึ้น Firestore ไปแล้ว ⇒ ย่อให้ตรงกันเพื่อไม่ให้การ์ดวันนี้ขึ้น 2 บรรทัดความหมายเดียวกัน
+        ['👁 หน้าแก้ข้อความ: ปุ่มรูปตาเปิดหน้าจอที่มีข้อความนั้นให้ดู', '👁 หน้าแก้ข้อความ: ปุ่มรูปตาเปิดหน้าจอที่มีข้อความนั้น + กรองเฉพาะหน้าจอ'],
     ];
     const chgShortenOld = (note) => {
         const t = String(note == null ? '' : note);
@@ -13764,6 +14019,49 @@
         const tot = { read: 0, write: 0, del: 0 };
         Object.values(window.__quotaUsers || {}).forEach(u => { tot.read += u.read || 0; tot.write += u.write || 0; tot.del += u.del || 0; });
         let html = '';
+        // ===================== 🚗 โควตาธอมธอม (บนสุด · ตามที่สั่ง) =====================
+        //  ⚠️ TomTom ไม่มี API ให้อ่านโควตาที่เหลือด้วยคีย์ของแอป (ยิงจริงแล้ว — ไม่มี header โควตาเลย)
+        //     ตัวเลขนี้คือ “ยอดที่แอปนับเองจากเครื่องนี้” แล้วให้กรอกยอดแดชบอร์ดมาเทียบความแม่น
+        (function renderTomtomQuota() {
+            if (typeof window.tomtomUsageToday !== 'function') return;
+            const tt = window.tomtomUsageToday();
+            const lim = window.tomtomDailyLimit();
+            const dash = window.tomtomDashRef();
+            const BUCKETS = [
+                { k: 'route', label: 'คำนวณ/รีเฟรชเส้นทาง', color: '#4da3ff', hint: 'ทุกครั้งที่กดนำทาง/สลับขึ้น–เลี่ยงทางด่วน/รีเฟรชเส้นทางระหว่างวิ่ง' },
+                { k: 'search', label: 'ค้นหาสถานที่', color: '#a78bfa', hint: 'ทุกครั้งที่พิมพ์หาปลายทางแล้วกดค้น' }
+            ];
+            html += '<div style="border:1px solid rgba(255,210,77,0.28); background:rgba(255,210,77,0.05); border-radius:14px; padding:11px 12px; margin-bottom:14px;">' +
+                '<div style="display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:700; color:#ffd24d;"><span class="material-symbols-outlined" style="font-size:18px;">navigation</span> โควตาธอมธอม (TomTom) — วันนี้</div>' +
+                '<div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin:4px 0 10px;">ตัวเลขนี้คือ <b>ยอดที่แอปนับเองจากเครื่องนี้</b> (แต่ละเครื่องนับของตัวเอง) · แผนฟรีแยก “ถัง” ตาม API · TomTom ไม่มี API ให้อ่านโควตาที่เหลือ → ยอดจริงดูที่แดชบอร์ด TomTom แล้วกรอกด้านล่างเพื่อเทียบได้</div>';
+            BUCKETS.forEach(b => {
+                const v = tt[b.k] || 0;
+                const pct = Math.min(100, (v / lim) * 100);
+                const remain = Math.max(0, lim - v);
+                const warn = pct >= 80;
+                const dref = dash ? (b.k === 'route' ? dash.route : dash.search) : null;
+                const diff = (dref === null || dref === undefined) ? '' : (() => { const d = dref - v; return ' · แดชบอร์ดแจ้ง ' + dref.toLocaleString() + (d === 0 ? ' (= ตรงกัน ✓)' : (d > 0 ? ' (ตัวนับน้อยกว่า ' + d.toLocaleString() + ')' : ' (ตัวนับมากกว่า ' + Math.abs(d).toLocaleString() + ')')); })();
+                html += '<div style="margin-bottom:9px;">' +
+                    '<div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:5px;">' +
+                    '<b style="color:' + b.color + '; font-size:12.5px;" title="' + b.hint + '">' + b.label + '</b>' +
+                    '<span style="font-size:11.5px; color:' + (warn ? '#ff8a95' : '#fff') + '; white-space:nowrap;">ใช้ ' + v.toLocaleString() + ' · เหลือ ' + remain.toLocaleString() + ' · ' + pct.toFixed(1) + '%</span></div>' +
+                    '<div style="height:8px; border-radius:99px; background:rgba(255,255,255,0.1); overflow:hidden;"><div style="height:100%; width:' + pct + '%; border-radius:99px; background:' + b.color + '; transition:width .3s;"></div></div>' +
+                    (diff ? '<div style="font-size:10.5px; color:var(--text-dim); margin-top:4px;">📊 ' + diff.replace(/^ · /, '') + '</div>' : '') +
+                    '</div>';
+            });
+            html += '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,0.08); padding-top:9px;">' +
+                '<span style="font-size:11.5px; color:var(--text-dim);">วงเงินต่อวัน (ต่อถัง)</span>' +
+                '<input type="number" id="ttLimitInput" min="100" max="1000000" value="' + lim + '" style="width:110px; padding:7px 10px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:12.5px; text-align:left;">' +
+                '<button onclick="window.setTomtomDailyLimit(document.getElementById(\'ttLimitInput\').value)" class="sp-btn-add" style="padding:7px 12px; font-size:12px; white-space:nowrap;">ตั้งวงเงิน</button></div>' +
+                '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px;">' +
+                '<span style="font-size:11.5px; color:var(--text-dim);">ยอดจริงจากแดชบอร์ด</span>' +
+                '<input type="number" id="ttDashRoute" min="0" placeholder="เส้นทาง" value="' + (dash ? dash.route : '') + '" style="width:88px; padding:7px 10px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:12.5px; text-align:left;">' +
+                '<input type="number" id="ttDashSearch" min="0" placeholder="ค้นหา" value="' + (dash ? dash.search : '') + '" style="width:88px; padding:7px 10px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:12.5px; text-align:left;">' +
+                '<button onclick="window.setTomtomDashRef(document.getElementById(\'ttDashRoute\').value, document.getElementById(\'ttDashSearch\').value)" class="sp-btn-add" style="padding:7px 12px; font-size:12px; white-space:nowrap;">บันทึกไว้เทียบ</button></div>' +
+                '<div style="font-size:10.5px; color:var(--text-dim); margin-top:7px; line-height:1.55;">เว้นว่าง/ใส่ 0 ทั้งคู่ = ล้างยอดอ้างอิง · ล้างเองทุกวัน (เทียบได้เฉพาะยอดของวันนี้)</div>' +
+                '</div>';
+        })();
+        html += '<div style="font-size:12.5px; font-weight:700; color:#fff; margin:0 0 8px; display:flex; align-items:center; gap:6px;"><span class="material-symbols-outlined" style="font-size:17px; color:#4da3ff;">database</span> โควตา Firestore</div>';
         Object.keys(NAMES).forEach(k => {
             const v = tot[k];
             const pct = Math.min(100, (v / LIMITS[k]) * 100);
