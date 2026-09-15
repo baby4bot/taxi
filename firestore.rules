@@ -1,20 +1,29 @@
 rules_version = '2';
 
 // ════════════════════════════════════════════════════════════════════════════
-// 🔐 Taxi Meter 2026 — Firestore Security Rules (ฉบับเสริมความปลอดภัย)
+// 🔐 Taxi Meter 2026 — Firestore Security Rules (ขั้นที่ 1: ทำได้เลยวันนี้)
 //
 // วิธีใช้: คัดลอกทั้งไฟล์ไปวางที่ Firebase Console → Firestore Database → Rules
-//         แล้วกด Publish (หรือใช้ `firebase deploy --only firestore:rules` ถ้ามี Firebase CLI)
+//         แล้วกด Publish (หรือ `firebase deploy --only firestore:rules` ถ้ามี Firebase CLI)
+//         ขั้นตอนละเอียด + วิธีตรวจผล + วิธีย้อนกลับ → ดู SECURITY.md
 //
-// ⚠️ อ่านก่อนใช้ — กติกาชุดนี้ "ลดความเสียหาย" แต่ยังไม่ใช่การปิดประตูสนิท
-//    แอปนี้ล็อกอินด้วย Username/รหัสผ่านของตัวเอง ไม่ได้ใช้ Firebase Authentication
-//    จึงตรวจไม่ได้ว่าคนที่ยิงคำขอมาเป็น "แอปของเรา" หรือ "สคริปต์ของคนนอก" (ทั้งคู่ไม่มีตัวตน)
-//    → สิ่งที่ทำได้ในไฟล์นี้: จำกัดว่าเขียนอะไรได้/ไม่ได้ ป้องกันการลบข้อมูลทิ้ง การยัดข้อมูลบวม
-//      และปิดไม่ให้ใช้โปรเจกต์เป็นที่ฝากไฟล์ — ส่วน "ใครอ่านได้" ต้องปิดด้วย App Check / Firebase Auth
-//      (ดูคู่มือครบขั้นตอนใน SECURITY.md)
+// ⚠️ อ่านก่อนใช้
+//   • แอปนี้ล็อกอินด้วย Username/รหัสผ่านของตัวเอง (เก็บใน Firestore) ไม่ได้ใช้ Firebase Auth
+//     ⇒ `request.auth` เป็น null เสมอ → เขียนกติกาแบบ `if request.auth != null` จะบล็อก "ตัวแอปเอง" ไปด้วย
+//     ⇒ ไฟล์นี้จึงทำสิ่งที่ทำได้จริงตอนนี้: จำกัด "เขียนอะไรได้/ไม่ได้" · ห้ามลบข้อมูลสำคัญ ·
+//        กันการยัดข้อมูลบวม · ปิดคอลเลกชันที่ไม่รู้จัก (catch-all deny)
+//   • "ปิดประตูสนิท" (ใครอ่าน/เขียนได้) ต้องใช้ 2 อย่างนี้เท่านั้น:
+//        ① App Check  → คนนอกที่ไม่มี token จากแอปจริงเข้าไม่ได้   (ดู SECURITY.md ขั้นที่ 2)
+//        ② Firebase Auth → รู้ว่าเป็นบัญชีใคร → ใช้ไฟล์ firestore-auth.rules (ขั้นที่ 3)
+//   • กติกามีผล "ทั้งโปรเจกต์" ไม่ใช่เฉพาะแอปนี้ — โปรเจกต์ที่แอปนี้ใช้คือ `mytalkie-3955a`
+//     ถ้ามีแอปอื่น (แอปแชท/แอปอื่นของเจ้าของ) ใช้โปรเจกต์เดียวกัน **ต้องรวมคอลเลกชันของแอปนั้นในไฟล์นี้ด้วย**
+//     ไม่งั้น catch-all ข้างล่างจะปิดแอปนั้นทันที (เช็กก่อนวาง — ดู SECURITY.md หัวข้อ "ก่อนวาง")
 //
 // 📌 สัญญาระหว่างไฟล์นี้กับแอป: ชื่อคอลเลกชัน/ฟิลด์ในนี้ ต้องตรงกับที่ index.html เขียนจริง
-//    ถ้าแอปเพิ่มฟิลด์ใหม่ใน trips/logs แล้วยังไม่อัปเดตกติกา การบันทึกจะถูกปฏิเสธ (จะรู้ทันทีตอนทดสอบ)
+//    (ตรวจจากโค้ดจริง 15 ก.ย. 2569 — เก็บครบทุกเส้นทางที่แอปใช้ ถ้าแอปเพิ่มฟิลด์ใหม่ต้องอัปเดตไฟล์นี้คู่กัน)
+//    เอกสาร settings ที่มีอยู่จริงบนเซิร์ฟเวอร์: roles · app_config · app_texts · changelog ·
+//                                              loading_screen · menuOrder · permission_config ·
+//                                              toast_messages · ui_prefs
 // ════════════════════════════════════════════════════════════════════════════
 
 service cloud.firestore {
@@ -28,32 +37,45 @@ service cloud.firestore {
     function listLe(f, n) { return !(f in request.resource.data) || (request.resource.data[f] is list && request.resource.data[f].size() <= n); }
     function mapLe(f, n) { return !(f in request.resource.data) || (request.resource.data[f] is map && request.resource.data[f].keys().size() <= n); }
 
-    // 📄 รูปโปรไฟล์/QR เก็บเป็น base64 data URL — เพดาน 900,000 ตัวอักษร
+    // 🔁 ฟิลด์ที่แอปเขียนได้ "หลายรูปแบบ" — ต้องยอมรับทั้งคู่ ไม่งั้นบันทึกไม่ผ่าน
+    //    menuOrder: เขียนเป็น object/array ผ่าน SDK แต่เป็น JSON string ตอน fallback ผ่าน REST
+    //    (บทเรียนจริง: ถ้าบังคับ `is string` อย่างเดียว เมนูที่ลากจัดใหม่จะเซฟไม่ติด)
+    function shapeOk(f, maxStr, maxItems) {
+      return !(f in request.resource.data) ||
+        ((request.resource.data[f] is string && request.resource.data[f].size() <= maxStr) ||
+         (request.resource.data[f] is map    && request.resource.data[f].keys().size() <= maxItems) ||
+         (request.resource.data[f] is list   && request.resource.data[f].size() <= maxItems));
+    }
+
+    // 📄 รูปโปรไฟล์/QR เก็บเป็น base64 data URL — เพดาน 900,000 ตัวอักษรต่อรูป
     //    (Firestore จำกัด 1 MB ต่อเอกสารอยู่แล้ว จึงไม่ตัดความสามารถเดิมของแอป แต่กันการยัดสตริงยักษ์)
     function okImages() { return strLe('photoURL', 900000) && strLe('qrCodeURL', 900000) && strLe('profilePic', 900000) && strLe('qrPic', 900000); }
 
     // ─────────────────────────────── 👤 สมาชิก (users) ───────────────────────────────
     // อ่าน: ต้องเปิดไว้ เพราะหน้าเข้าสู่ระบบค้นหา username ในคอลเลกชันนี้ (ยังไม่มี Firebase Auth)
     // เขียน: จำกัดขนาด/ประเภทของฟิลด์สำคัญ — ไม่ตรวจ "ใคร" เพราะตรวจไม่ได้ (ดูหมายเหตุหัวไฟล์)
+    // ℹ️ maxKeys 120: เอกสารสมาชิกจริงมี ~30-60 ฟิลด์ (perms/extraPerms/menuOrder/รูป/pinHash/...) — ตั้งต่ำเกินจะบล็อกแอปเอง
     match /users/{uid} {
       allow read: if true;
 
       allow create, update: if
-        maxKeys(60) && okImages() &&
-        strLe('username', 60) && strLe('displayName', 80) && strLe('companyName', 80) &&
-        strLe('phoneNumber', 20) && strLe('plateNo', 20) && strLe('role', 30) &&
-        strLe('password', 300) && strLe('sessionId', 100) &&
+        maxKeys(120) && okImages() &&
+        strLe('username', 60) && strLe('displayName', 120) && strLe('companyName', 120) &&
+        strLe('phoneNumber', 20) && strLe('plateNo', 20) && strLe('role', 60) &&
+        strLe('password', 300) && strLe('sessionId', 100) && strLe('pinHash', 300) &&
         strLe('themeMode', 20) && strLe('taxiType', 20) && strLe('tollwayMode', 20) &&
-        mapLe('extraPerms', 80); // สิทธิ์พิเศษรายคน = map
+        shapeOk('menuOrder', 20000, 500) &&          // ลำดับเมนูส่วนตัว (object หรือ JSON string)
+        mapLe('extraPerms', 120) && mapLe('perms', 120) && shapeOk('custom', 500, 60);
 
       // ลบบัญชีได้ (แอดมินใช้จริง) — กติกาชุดนี้กันไม่ได้ว่าใครสั่งลบ ต้องพึ่ง App Check (SECURITY.md)
       allow delete: if true;
 
       // 📒 ประวัติเที่ยว — แอปเขียนเพิ่ม/แก้ (retry) แต่ "ไม่เคยลบ" จึงห้ามลบจากภายนอก
+      //    ⚙️ 'calib' = ค่าที่ผู้ใช้กรอกเทียบมิเตอร์จริง (หน้าปรับเทียบ) เขียนแบบ merge ทีหลัง
       match /trips/{tripId} {
         allow read: if true;
         allow create, update: if
-          request.resource.data.keys().hasOnly(['startTime', 'endTime', 'destName', 'km', 'trafficSec', 'baseFare', 'surcharges', 'pauses', 'catchUps', 'fare', 'driverUid', 'createdAt']) &&
+          request.resource.data.keys().hasOnly(['startTime', 'endTime', 'destName', 'km', 'trafficSec', 'baseFare', 'surcharges', 'pauses', 'catchUps', 'fare', 'driverUid', 'createdAt', 'calib']) &&
           numBetween('startTime', 1000000000000, 9999999999999) &&
           numBetween('endTime', 1000000000000, 9999999999999) &&
           numBetween('km', 0, 5000) &&
@@ -61,8 +83,9 @@ service cloud.firestore {
           numBetween('baseFare', 0, 1000) &&
           numBetween('fare', 0, 200000) &&
           numBetween('createdAt', 1000000000000, 9999999999999) &&
-          strLe('destName', 200) && strLe('driverUid', 60) &&
-          listLe('surcharges', 200) && listLe('pauses', 200) && listLe('catchUps', 200);
+          strLe('destName', 300) && strLe('driverUid', 60) &&
+          listLe('surcharges', 200) && listLe('pauses', 200) && listLe('catchUps', 200) &&
+          mapLe('calib', 30);
         allow delete: if false; // 🛡️ ห้ามลบเที่ยวจากภายนอก (กันประวัติรายได้ถูกลบทิ้ง)
       }
 
@@ -90,37 +113,52 @@ service cloud.firestore {
     }
 
     // ─────────────────────────── 🙋 คำขอสิทธิ์เพิ่ม / แจ้งผลคำขอ ───────────────────────────
+    // เอกสารนี้แอปเขียนฟิลด์ uid / username / displayName / photoURL / missingIds / missingLabels / status / requestedAt
     match /perm_requests/{uid} {
       allow read: if true;
-      allow write: if maxKeys(40) && strLe('username', 60) && strLe('displayName', 80) && listLe('perms', 80) && mapLe('extraPerms', 80);
+      allow write: if maxKeys(40) && strLe('username', 60) && strLe('displayName', 120) && strLe('photoURL', 900000) &&
+                      strLe('status', 20) && listLe('perms', 120) && listLe('missingIds', 120) && listLe('missingLabels', 120) &&
+                      mapLe('extraPerms', 120) && numBetween('requestedAt', 1000000000000, 9999999999999);
     }
+    // เอกสารนี้แอปเขียนฟิลด์ outcome / grantedIds / grantedLabels / at
     match /perm_notices/{uid} {
       allow read: if true;
-      allow write: if maxKeys(40) && listLe('items', 80);
+      allow write: if maxKeys(40) && listLe('items', 120) && listLe('grantedIds', 120) && listLe('grantedLabels', 120) &&
+                      strLe('outcome', 20) && numBetween('at', 1000000000000, 9999999999999);
     }
 
     // ─────────────────────────── 📊 โควตาการใช้งาน (ตัวนับรายวัน) ───────────────────────────
+    // โครงสร้างจริง: { byName, byUid, "2026-09-15": { read, write, del } } — เพิ่มวันละ 1 คีย์ไปเรื่อย ๆ
+    // ℹ️ maxKeys 400: เผื่อสะสมได้หลายปี (ตั้ง 30 แบบเดิม = ผ่านไป ~1 เดือนแล้วแอปเขียนไม่ได้)
     match /quota_usage/{uid} {
       allow read: if true;
       allow create, update: if
-        maxKeys(30) &&
-        numBetween('reads', 0, 100000000) && numBetween('writes', 0, 100000000) && numBetween('deletes', 0, 100000000);
+        maxKeys(400) &&
+        strLe('byName', 80) && strLe('byUid', 60);
       allow delete: if false;
     }
 
     // ─────────────────────────── ⚙️ เอกสารตั้งค่าระบบ ───────────────────────────
     // เขียนได้เฉพาะเอกสารที่แอปใช้จริง และห้ามลบทั้งเอกสาร
+    // ⚠️ รายชื่อนี้คือ "ทุกเอกสารใน settings ที่แอปเขียน" — ถ้าแอปเพิ่มเอกสารใหม่ ต้องเพิ่มที่นี่ ไม่งั้นบันทึกไม่ผ่าน
     match /settings/{docId} {
       allow read: if true;
       allow create, update: if
-        docId in ['roles', 'changelog', 'toast_messages', 'app_config', 'appConfig', 'permission_config', 'menuOrder'] &&
-        maxKeys(60) &&
-        listLe('entries', 600); // ประวัติเวอร์ชันรายวัน (การ์ดวันละใบ + bullet)
+        docId in ['roles', 'changelog', 'toast_messages', 'app_config', 'appConfig',
+                  'permission_config', 'menuOrder', 'app_texts', 'loading_screen', 'ui_prefs'] &&
+        maxKeys(80) &&
+        listLe('entries', 600) &&                        // ประวัติเวอร์ชันรายวัน (การ์ดวันละใบ + bullet)
+        mapLe('items', 600) &&                           // ข้อความที่แอดมินแก้ (app_texts) / สิทธิ์ (roles)
+        strLe('image', 900000) &&                        // รูปหน้าจอโหลด (base64) — เอกสารรวมต้องไม่เกิน 1 MB
+        shapeOk('side', 20000, 500) &&                   // settings/menuOrder (array ผ่าน SDK · JSON string ผ่าน REST)
+        shapeOk('hub', 40000, 500) &&
+        shapeOk('hubCats', 20000, 200) &&
+        shapeOk('hubItemCat', 20000, 200);
       allow delete: if false;
     }
     match /system/{docId} {
       allow read: if true;
-      allow create, update: if docId == 'service_data' && maxKeys(40);
+      allow create, update: if docId == 'service_data' && maxKeys(40) && listLe('categories', 60);
       allow delete: if false;
     }
 
