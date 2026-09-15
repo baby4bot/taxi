@@ -1758,6 +1758,25 @@
                 html.sb-off .dropdown-box { scrollbar-width: none; }
             }
         }
+        /* ===== 🔒 ล็อกการเลือก/คัดลอกข้อความทั้งแอป + ให้ลากบนรูปแล้วเลื่อนหน้าจอได้ (15 ก.ย. 69) =====
+           เหตุผล ① ผู้ใช้ไม่ต้องการให้เลือก/คัดลอกข้อความได้ทั้งโปรแกรม
+                  ② ลากนิ้ว (หรือเมาส์) บนรูป เช่น QR Code รับเงิน แล้วหน้าจอไม่เลื่อน
+                     เพราะเบราว์เซอร์เริ่มท่าทาง “ลากรูป” ทันที → ต้องลากนอกกรอบรูปเท่านั้น
+           ⇒ ปิดการลากรูป (-webkit-user-drag) + ปิดเมนูกดค้าง (-webkit-touch-callout)
+             + ประกาศ touch-action: manipulation (ลากแนวไหนก็เลื่อนหน้าจอได้ ยังแตะ/คลิกได้ปกติ)
+           ⛔ ห้ามใช้ pointer-events:none กับรูป — ฟีเจอร์ “แตะรูปเพื่อเปลี่ยนรูป” จะใช้ไม่ได้ทันที
+           ⛔ ห้ามครอบ canvas — แผนที่ Mini Map ต้องรับท่าลาก/ซูมเอง (#navMini canvas ตั้ง touch-action:none ไว้)
+           ⛔ ช่องกรอกทุกชนิดต้องเลือก/คัดลอกได้ ไม่งั้นแก้ข้อความไม่ได้ (override ด้านล่าง) */
+        body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        input, textarea, select, [contenteditable="true"], .allow-select, .allow-select * {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+        }
+        img, picture, video, svg {
+            -webkit-user-drag: none; user-drag: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
+        }
         /* กล่องตัวอย่างในหน้าตั้งค่าของแอดมิน — ต้องเลื่อนได้จริงและเป็นพื้นเรียบ (ไม่ absolute) */
         #sbDemo.dropdown-box { position: relative; display: block; max-height: 168px; overflow-y: auto; margin-top: 0; background: rgba(16,21,32,0.96); }
         #sbDemo .list-item { padding: 11px 14px; }
@@ -11732,6 +11751,7 @@
         ['2026-09-15', '📜 ลิสต์ค้นหาเลื่อนเนียนขึ้น — ตัด blur บนกล่องที่เลื่อน + โชว์แถบเลื่อนบนคอม'],
         ['2026-09-15', '👆 มือถือปัดลิสต์ค้นหาไม่สะดุดกลางท่า — ล็อกท่าลากแนวตั้ง + กัน “กดค้างเลือกข้อความ” แทรก'],
         ['2026-09-15', '🖱️ แอดมินตั้งค่าแถบเลื่อนลิสต์ค้นหาได้เอง (โชว์/หนา/จาง) ใช้ร่วมกันทุกเครื่อง'],
+        ['2026-09-15', '🔒 ล็อกไม่ให้เลือก/คัดลอกข้อความทั้งแอป (เว้นช่องกรอก) + ลากบนรูปแล้วเลื่อนหน้าจอได้'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
