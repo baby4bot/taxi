@@ -584,14 +584,14 @@
         }
         .tz-toll-item .tz-toll-del { font-size: 13px; opacity: 0.95; cursor: pointer; }
         .tz-toll-item .tz-toll-del:active { opacity: 1; transform: scale(0.85); }
-        /* 📈 ป้ายราคาประเมินบนการ์ดค่าโดยสาร + บรรทัด "ที่มาของยอด" (มิเตอร์ + ที่เหลือ + ทางด่วน) */
+        /* 📈 ป้ายราคาประเมินบนการ์ดค่าโดยสาร — โชว์แค่ตัวเลขยอดรวม
+           🚫 ไม่มีบรรทัด “ที่มาของยอด” แล้ว เพราะซ้ำกับที่โชว์อยู่แล้ว (มิเตอร์/เหลือ กม./การ์ดค่าทางด่วน)
+           ที่มาของยอดยังดูได้จาก tooltip ของป้าย (กดค้าง/ชี้ที่ตัวเลข) */
         .tz-est-wrap { position: absolute; bottom: 10px; right: 14px; z-index: 60; text-align: right; max-width: 74%; }
         .tz-est-fare {
             font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.92);
             text-shadow: 0 1px 3px rgba(0,0,0,0.25);
         }
-        .tz-est-break { font-size: 10.5px; font-weight: 600; line-height: 1.35; margin-top: 1px; color: rgba(255,255,255,0.85); text-shadow: 0 1px 3px rgba(0,0,0,0.25); }
-        .tz-est-break:empty { display: none; }
         .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: var(--space-zoom); }
         .tz-info-col { flex: 1; text-align: center; min-width: 0; }
         .tz-info-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.08); }
@@ -1658,7 +1658,6 @@
             /* การ์ดค่าโดยสารจอมิเตอร์ขยาย — สูงเท่ากับการ์ดประเมินราคาหน้าแรกบนจอแคบ (186 content + 6 + 4 padding = 196px) */
             .tz-fare-card { min-height: 196px; }
             .tz-est-wrap { right: 12px; bottom: 10px; }
-            .tz-est-break { font-size: 10px; }
             #fareResetBtn { top: 4px; right: 6px; width: 22px; height: 22px; }
             #fareResetBtn .material-symbols-outlined { font-size: 14px; }
             #farePauseBtn { top: 4px; right: 6px; width: 22px; height: 22px; }
@@ -3381,7 +3380,6 @@
             <div class="tz-fare-price-box"><span id="tzMeterPrice">35</span><span class="tz-fare-currency">฿</span></div>
             <div class="tz-est-wrap">
                 <div id="tzEstFare" class="tz-est-fare">ประเมิน: -- ฿</div>
-                <div id="tzEstBreak" class="tz-est-break"></div>
             </div>
         </div>
         <div class="tz-info-box" id="tzInfoBox">
@@ -4960,13 +4958,12 @@
         return { toll: route, estimated: route > 0 };
     };
 
-    // 📈 วาดป้าย "ประเมิน: X ฿" + บรรทัดที่มาของยอด (ใช้ทั้งจอมิเตอร์เดินจริงและโหมดกรอกระยะเอง)
-    //    breakText = ข้อความที่มาของยอด · ส่ง '' หรือไม่ส่ง = ล้างบรรทัดนั้น
-    window.renderEstimateBadge = (breakText) => {
+    // 📈 วาดป้าย "ประเมิน: X ฿" (ใช้ทั้งจอมิเตอร์เดินจริงและโหมดกรอกระยะเอง)
+    //    🚫 เดิมมีบรรทัดที่มาของยอดใต้ป้าย แต่ซ้ำซ้อนกับยอดอื่นที่โชว์อยู่แล้ว → ตัดออก
+    //    ที่มาของยอดยังดูได้จาก tooltip ของป้าย (ตั้งที่ call site)
+    window.renderEstimateBadge = () => {
         const el = $('tzEstFare');
         if (el) el.innerText = (window.estimateFareAmt > 0 ? 'ประเมิน: ' + window.estimateFareAmt.toLocaleString('th-TH') + ' ฿' : 'ประเมิน: -- ฿');
-        const brk = $('tzEstBreak');
-        if (brk) brk.innerText = (window.estimateFareAmt > 0) ? (breakText || '') : '';
     };
 
     // แสดงยอดรวมทางด่วนจริงบนปุ่ม "+ ค่าทางด่วน" ในช่องประเมินราคา (เช่น "ทางด่วน 155฿") เมื่อเส้นทางมีทางด่วน
@@ -9858,11 +9855,7 @@
         const _tollAdd = _tollInfo.estimated ? _tollInfo.toll : 0;
         if (displayFare > 0) displayFare += _tollAdd;
         window.estimateFareAmt = displayFare; // เก็บราคาประเมินไว้โชว์ในจอมอนิเตอร์/zoom
-        if (typeof window.renderEstimateBadge === 'function') {
-            window.renderEstimateBadge('ระยะ ' + km.toFixed(1) + ' กม. ≈' + (window.baseFare + Math.floor(distFare / 2) * 2).toLocaleString('th-TH')
-                + (_tollAdd > 0 ? ' + ทางด่วน ≈' + _tollAdd.toLocaleString('th-TH') : '')
-                + (extraSurcharge > 0 ? ' + ค่าเพิ่ม ' + extraSurcharge.toLocaleString('th-TH') : ''));
-        }
+        if (typeof window.renderEstimateBadge === 'function') { window.renderEstimateBadge(); }
 
         $('farePrice').innerHTML = displayFare.toLocaleString('th-TH') + '<span style="font-size: 32px; font-weight:400;"> ฿</span>'; 
         let extraText = extraSurcharge > 0 ? ` (+พิเศษ ${extraSurcharge}฿)` : "";
@@ -10830,11 +10823,7 @@
                     + (_estToll > 0 ? '• ค่าทางด่วน' + (_estTollInfo.estimated ? ' (ประมาณจากเส้นทาง)' : ' (ตั้งไว้แล้ว)') + ' ' + _estToll.toLocaleString('th-TH') + ' ฿\n' : '')
                     + '= ' + window.estimateFareAmt.toLocaleString('th-TH') + ' ฿';
             }
-            if (typeof window.renderEstimateBadge === 'function') {
-                window.renderEstimateBadge('มิเตอร์ ' + displayFare.toLocaleString('th-TH')
-                    + ' + เหลือ ' + _estRemainKm.toFixed(1) + ' กม. ≈' + _estRemainFare.toLocaleString('th-TH')
-                    + (_estToll > 0 ? ' + ทางด่วน ' + (_estTollInfo.estimated ? '≈' : '') + _estToll.toLocaleString('th-TH') : ''));
-            }
+            if (typeof window.renderEstimateBadge === 'function') { window.renderEstimateBadge(); }
         }
 
         let modalBtn = $('modalStopBtn');
@@ -11906,6 +11895,8 @@
         ['2026-09-15', '🗺️ Mini Map ไม่เด้งเองตอนเริ่มนำทาง — มีปุ่มสีฟ้าให้กดเปิดเอง (จำใจคนขับไว้ให้)'],
         ['2026-09-15', '🛣️ ป้ายราคาประเมินรวมค่าทางด่วนของเส้นทางแล้ว + โชว์ที่มาของยอดใต้ป้าย'],
         ['2026-09-15', '🧭 Mini Map หันหัวขึ้น — รถชี้ขึ้นบน เส้นทางหมุนตามทิศรถไม่ใช่มุมทิศเหนือ'],
+        ['2026-09-15', '🧭 หัวรถอิงทิศเส้นทางจริง — ยังไม่ขยับ/จอดก็หันหัวถูก ไม่ค้างชี้ทิศเหนือ'],
+        ['2026-09-15', '🚫 ตัดบรรทัด “ที่มาของยอด” ใต้ป้ายประเมินออก — ซ้ำกับยอดที่โชว์อยู่แล้ว'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -14748,6 +14739,44 @@
         return best;
     }
 
+    // 🧭 ทิศของ “เส้นทาง” ณ ตำแหน่งที่ระบุ (ไม่ใช่ทิศจาก GPS)
+    //    มองไปข้างหน้า ~40 ม. → ทิศนิ่ง ไม่สั่นตามจุดที่ผู้ให้บริการทิ้งไว้ถี่ ๆ
+    //    ใช้เมื่อ GPS ยังบอกทิศไม่ได้ (ยืน/เพิ่งเริ่มเที่ยว/คลานช้าในรถติด) — เดิมปล่อยให้หัวรถค้าง 0° = ชี้ทิศเหนือ
+    function routeHeadingAt(idx) {
+        if (route.length < 2) { return null; }
+        var a = Math.max(0, Math.min((idx || 0) | 0, route.length - 2));
+        var b = a + 1;
+        var useCum = (cum.length === route.length);
+        while (b < route.length - 1) {
+            var ahead = useCum ? (cum[b] - cum[a])
+                : kmBetween({ lat: route[a][0], lng: route[a][1] }, { lat: route[b][0], lng: route[b][1] });
+            if (ahead >= 0.04) { break; }
+            b++;
+        }
+        if (b <= a) { return null; }
+        var h = bearingTo({ lat: route[a][0], lng: route[a][1] }, { lat: route[b][0], lng: route[b][1] });
+        return isFinite(h) ? h : null;
+    }
+    // หันหัวรถให้ตรงกับทิศเส้นทางทันที (ตอนตั้งเส้นทาง/กลับเข้าเที่ยว) — แผนที่หันหัวขึ้นตั้งแต่วินาทีแรก
+    function alignHeadingToRoute(pos) {
+        var p = pos || (route.length ? { lat: route[0][0], lng: route[0][1] } : null);
+        if (!p) { return false; }
+        var h = routeHeadingAt(nearestIndex(p));
+        if (h === null) { return false; }
+        bearing = h;
+        return true;
+    }
+    // หมุน heading เข้าหาเป้าหมายแบบนุ่มแต่มีเพดานต่อครั้ง (กันภาพกระตุกเวลา GPS กระโดด)
+    function turnToward(target, gain, maxStep) {
+        if (target === null || !isFinite(target)) { return 0; }
+        var diff = ((target - bearing + 540) % 360) - 180;
+        var step = Math.max(-maxStep, Math.min(maxStep, diff * gain));
+        bearing = (bearing + step + 360) % 360;
+        return diff;
+    }
+    // จอดหรือคลานช้า (< 6 กม./ชม. = เกณฑ์ “รถติด” ของแอป) → GPS บอกทิศไม่ไหว ใช้ทิศเส้นทางแทน
+    function shouldUseRouteHeading() { return (speedKmh < 6) && route.length > 1; }
+
     // ---------- วาด ----------
     function render() {
         var dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -14947,6 +14976,7 @@
         } catch (e) {}
         buildTurns();
         resetTurnAlerts();
+        alignHeadingToRoute(car); // 🧭 หันหัวตามทิศเส้นทางทันที (ก่อนรถขยับ GPS ยังไม่บอกทิศ)
         follow = true; panCenter = null; btnFollow.classList.add('on');
         if (pref.hidden) { canReopen = true; } // ซ่อนอยู่แต่มีเส้นทางแล้ว → ให้มีปุ่มเปิดคืน
         request(); chrome(); syncReopenBtns();
@@ -14958,11 +14988,19 @@
         car = { lat: lat, lng: lon };
         if (prev) {
             var d = kmBetween(prev, car);
-            if (d > 0.012) {
-                var nb = bearingTo(prev, car);
-                var diff = ((nb - bearing + 540) % 360) - 180;
-                bearing = (bearing + diff * 0.5 + 360) % 360;
+            // กระโดดไกล (>500 ม. เช่น พิกัดเก่าค้าง/กลับเข้าแอปใหม่) → ทิศจากพิกัดเชื่อไม่ได้ ให้ยึดทิศเส้นทาง
+            var jumped = d > 0.5;
+            if (jumped) {
+                alignHeadingToRoute(car);
+            } else if (d > 0.012) {
+                // GPS ขยับจริง → ใช้ทิศจากพิกัด (หมุนเร็วขึ้นกว่าเดิม 0.5 แต่มีเพดาน 30°/ครั้ง → ตามทันตอนเลี้ยว)
+                turnToward(bearingTo(prev, car), 0.55, 30);
+            } else if (shouldUseRouteHeading()) {
+                var rh = routeHeadingAt(nearestIndex(car));
+                if (rh !== null) { turnToward(rh, 0.35, 25); }
             }
+        } else if (shouldUseRouteHeading()) {
+            alignHeadingToRoute(car);
         }
         syncReopenBtns(); // ตรวจทุกครั้งที่ได้พิกัด (เผื่อแถบสรุปเส้นทางเพิ่งโชว์ขึ้นมาทีหลัง)
         if (!visible || pref.hidden) { return; }
@@ -14989,6 +15027,7 @@
                 // หันหัวรถตามทิศที่วิ่งมาจริง (จากพิกัดก่อนหน้าล่าสุด)
                 var lp0 = posOf(seed.lastPath && seed.lastPath.length > 1 ? seed.lastPath[seed.lastPath.length - 2] : null);
                 if (lp0 && (Math.abs(lp0.lat - lp.lat) > 1e-6 || Math.abs(lp0.lng - lp.lng) > 1e-6)) { bearing = bearingTo(lp0, lp); }
+                else { alignHeadingToRoute(car); } // ไม่มีทิศที่วิ่งมา → ยึดทิศของเส้นทาง
             }
             pref.hidden = false; savePref();
             show();
@@ -15019,6 +15058,8 @@
             hasRoute: route.length, routeKm: Math.round(routeKm * 1000) / 1000,
             car: car ? { lat: car.lat, lng: car.lng } : null,
             bearing: Math.round(bearing), speedKmh: speedKmh,
+            routeHeading: (function () { var h = routeHeadingAt(nearestIndex(car)); return h === null ? null : Math.round(h); })(),
+            headingFromRoute: shouldUseRouteHeading(),
             turns: turns.length,
             alerts: alertLog.slice(-4),
             nextTurn: nextTurn ? { km: Math.round(nextTurn.km * 1000) / 1000, delta: Math.round(nextTurn.delta), dir: turnMeta(nextTurn.delta).text } : null,
@@ -15041,6 +15082,7 @@
             if (coords && coords.length > 1) { window.navMiniSetRoute(coords, destLabel); }
             else if (sLat && sLon && dLat && dLon) { window.navMiniSetRoute([[sLat, sLon], [dLat, dLon]], destLabel); }
             if (sLat && sLon) { car = { lat: sLat, lng: sLon }; }
+            alignHeadingToRoute(car); // 🧭 ให้แผนที่หันหัวขึ้นตั้งแต่เริ่มนำทาง (ไม่รอให้รถขยับ)
             follow = true; panCenter = null;
             if (pref.hidden) { canReopen = true; hideNow(); syncReopenBtns(); } // ยังไม่โชว์ + ติดปุ่มเปิดคืน
             else { show(); request(); }
