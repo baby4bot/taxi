@@ -11910,6 +11910,7 @@
         ['2026-09-15', '🚦 Mini Map โชว์สภาพจราจรจริง (เขียว = โล่ง · ส้ม/แดง = ช้า/รถติด) + ปุ่มเปิดปิด'],
         ['2026-09-15', '🔊 ย้ายปุ่มเสียงของ Mini Map ไปมุมล่างขวาแบบปุ่มกลมโปร่งใส (เดิมอยู่บนหัว)'],
         ['2026-09-15', '🔍 Mini Map ซูมเข้าเองก่อนถึงทางแยก/จุดเลี้ยว แล้วถอยออกหลังผ่าน — เหมือน Google Maps'],
+        ['2026-09-15', '⛔ ถอดแถบสีจราจรบน Mini Map ออก — กระเบื้อง TomTom กินโควตาต่อคีย์'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -14542,7 +14543,6 @@
     </div>
     <div class="nm-wrap">
         <canvas id="navMiniCanvas"></canvas>
-        <button class="nm-float fleft on" id="navMiniTraffic" title="ซ่อน/แสดงข้อมูลจราจร" aria-label="เปิด/ปิดข้อมูลจราจร"><span class="material-symbols-outlined">traffic</span></button>
         <button class="nm-float fright" id="navMiniMute" title="ปิดเสียงนำทาง" aria-label="ปิด/เปิดเสียงนำทาง"><span class="material-symbols-outlined">volume_up</span></button>
         <div class="nm-attr" id="navMiniAttr">© OpenStreetMap</div>
         <div class="nm-off">ไม่มีการเชื่อมต่อ — แสดงเส้นทางและตำแหน่งรถให้อยู่</div>
@@ -14574,7 +14574,6 @@
     var btnSize = document.getElementById('navMiniSize');
     var btnHide = document.getElementById('navMiniHide');
     var btnMute = document.getElementById('navMiniMute');
-    var btnTraffic = document.getElementById('navMiniTraffic');
     var attrEl = document.getElementById('navMiniAttr');
     var turnRow = document.getElementById('navMiniTurnRow');
     var turnIco = document.getElementById('navMiniTurnIco');
@@ -14585,7 +14584,7 @@
     //   🗺️ 16 ก.ย. 2569 (ตามที่คนขับขอ): **ห้ามจำว่าเคยเปิดเอง** — ทุกเที่ยว/ทุกรีเฟรชเริ่มจาก “ปิด”
     //   แผนที่จะโชว์เฉพาะเมื่อกดปุ่ม 🗺️ ในเที่ยวนั้น ๆ เท่านั้น (มีปุ่มให้กดเสมอ)
     //   (เดิมมี pref.autoOpen = “เปิดเองครั้งก่อน → เที่ยวหน้าเปิดให้เอง” — ตัดออกแล้ว)
-    var pref = { x: null, y: null, big: false, hidden: true, muted: false, traffic: true };
+    var pref = { x: null, y: null, big: false, hidden: true, muted: false };
     try {
         var raw = localStorage.getItem(LS_KEY);
         if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') { for (var k in pref) { if (k in o) pref[k] = o[k]; } } }
@@ -14862,50 +14861,11 @@
     var filterOK = (function () {
         try { var c = document.createElement('canvas').getContext('2d'); c.filter = 'invert(1)'; return c.filter === 'invert(1)'; } catch (e) { return false; }
     })();
-    // ---------- 🟥 ชั้นข้อมูลจราจร TomTom Traffic Flow ----------
-    //    ใช้คีย์เดิมของแอป (Routing/Search) · เป็นกระเบื้องแบบเดียวกับ OSM → พิกัด z/x/y ใช้ร่วมกันได้เลย
-    //    ⚠️ กระเบื้องจราจร “ห้ามผ่าน TILE_FILTER” (กลับสี) — สีแดง/เขียวจะเพี้ยนทั้งหมด
-    //    ถ้าดึงไม่ได้ 3 ครั้ง → ปิดชั้นนี้อัตโนมัติ + ปุ่มเปลี่ยนเป็นโทนจาง (แตะเพื่อลองใหม่)
-    var trafficTiles = Object.create(null), trafficKeys = [], trafficOk = true, trafficFail = 0, trafficReq = 0, trafficStyle = 'relative0';
-    function trafficOn() { return pref.traffic !== false; }
-    function trafficTile(z, x, y) {
-        var key = z + '/' + x + '/' + y;
-        var rec = trafficTiles[key];
-        if (rec) { return rec; }
-        if (trafficKeys.length > 60) { for (var i = 0; i < 25; i++) { delete trafficTiles[trafficKeys.shift()]; } }
-        rec = { img: new Image(), ok: false };
-        rec.img.onload = function () { rec.ok = true; request(); };
-        rec.img.onerror = function () {
-            rec.ok = false; trafficFail++;
-            if (trafficFail >= 3 && trafficOk) { trafficOk = false; syncTrafficBtn(); request(); }
-        };
-        var k = window.TOMTOM_KEY;
-        if (!k) { trafficOk = false; return rec; }
-        trafficReq++;
-        rec.img.src = 'https://api.tomtom.com/traffic/map/4/tile/flow/' + trafficStyle + '/' + z + '/' + x + '/' + y + '.png?key=' + k + '&tileSize=256';
-        trafficTiles[key] = rec; trafficKeys.push(key);
-        return rec;
-    }
-    function syncTrafficBtn() {
-        if (!btnTraffic) { return; }
-        var on = trafficOn() && trafficOk;
-        btnTraffic.classList.toggle('on', on);
-        btnTraffic.classList.toggle('dim', !trafficOk);
-        btnTraffic.setAttribute('aria-pressed', on ? 'true' : 'false');
-        btnTraffic.title = !trafficOk ? 'ข้อมูลจราจรใช้ไม่ได้ตอนนี้ — แตะเพื่อลองใหม่'
-            : (on ? 'ซ่อนข้อมูลจราจร (แดง = รถติด · เขียว = โล่ง)' : 'แสดงข้อมูลจราจร (แดง = รถติด · เขียว = โล่ง)');
-        if (attrEl) { attrEl.textContent = on ? '© OpenStreetMap · © TomTom' : '© OpenStreetMap'; }
-    }
-    window.navMiniTrafficToggle = function (force) {
-        if (!trafficOk) { // แตะตอนใช้ไม่ได้ = ลองใหม่ (ล้างแคชที่ค้างล้มเหลว)
-            trafficOk = true; trafficFail = 0; trafficTiles = Object.create(null); trafficKeys = [];
-            pref.traffic = true;
-        } else {
-            pref.traffic = (typeof force === 'boolean') ? force : !trafficOn();
-        }
-        savePref(); syncTrafficBtn(); request();
-        return pref.traffic !== false;
-    };
+    // ---------- 🟥 ชั้นข้อมูลจราจร (TomTom Traffic Flow) — ❌ เอาออกแล้ว (15 ก.ย. 2569)
+    //    เหตุผล: กระเบื้องจราจรของ TomTom นับเป็น “คำขอ” ต่อคีย์ของแอปทุกใบที่โหลด
+    //    → กินโควตาที่ต้องเก็บไว้ใช้กับส่วนจำเป็นจริง ๆ (Routing/Search) · แผนที่หลักยังใช้ OSM ฟรีเหมือนเดิม
+    //    ⛔ ห้ามใส่กลับโดยไม่ยิงถามคนขับก่อน — ถ้าต้องการเห็นรถติด ให้ใช้ “เวลารถติด” ที่มิเตอร์คิดอยู่แล้ว
+    window.navMiniTrafficToggle = function () { return false; }; // เก็บชื่อไว้เป็น no-op เผื่อโค้ดเก่าเรียก
     function tile(z, x, y) {
         var key = z + '/' + x + '/' + y;
         var rec = tiles[key];
@@ -15074,22 +15034,6 @@
             }
         }
         el.classList.toggle('nomap', missing && !anyTileOk);
-
-        // 🟥 ชั้นข้อมูลจราจร (TomTom Traffic Flow) — วาดทับบนแผนที่ “ไม่ผ่านฟิลเตอร์กลับสี”
-        //    เพื่อให้สีจริงอ่านได้: แดง = รถติดหนา · ส้ม/เหลือง = ช้า · เขียว = โล่ง
-        //    วาดก่อนเส้นทาง → เส้นทางสีน้ำเงิน/ขอบขาวอยู่บนสุดเสมอ
-        //    (เงื่อนไข `visible` ด้วย เพื่อไม่ดึงกระเบื้องจราจรตอนแผนที่ซ่อน = ประหยัดโควตา TomTom)
-        if (trafficOn() && trafficOk && visible) {
-            ctx.globalAlpha = 0.9;
-            for (var jx = x0; jx <= x1; jx++) {
-                for (var jy = y0; jy <= y1; jy++) {
-                    if (jy < 0 || jy >= n) { continue; }
-                    var trec = trafficTile(z, ((jx % n) + n) % n, jy);
-                    if (trec.ok) { ctx.drawImage(trec.img, Math.round(jx * 256 + ox), Math.round(jy * 256 + oy), 256, 256); }
-                }
-            }
-            ctx.globalAlpha = 1;
-        }
 
         // 📐 ทุกอย่างในฉากถูกย่อ/ขยายตาม zScale → ขนาดเส้น/หมุด/ลูกศรหาร zScale เพื่อให้ “ขนาดบนจอคงที่”
         var k = 1 / zScale;
@@ -15338,7 +15282,6 @@
             car: car ? { lat: car.lat, lng: car.lng } : null,
             bearing: Math.round(bearing), speedKmh: speedKmh,
             muted: navSoundMuted(),
-            traffic: { on: trafficOn(), ready: trafficOk, style: trafficStyle, requested: trafficReq, cached: trafficKeys.length },
             voice: (typeof window.navVoiceDebug === 'function') ? window.navVoiceDebug() : null,
             routeHeading: (function () { var h = routeHeadingAt(nearestIndex(car)); return h === null ? null : Math.round(h); })(),
             headingFromRoute: shouldUseRouteHeading(),
@@ -15465,10 +15408,8 @@
     });
     btnHide.addEventListener('click', function (e) { e.stopPropagation(); window.navMiniHideByUser(); });
     btnMute.addEventListener('click', function (e) { e.stopPropagation(); window.navMiniMuteToggle(); });
-    if (btnTraffic) { btnTraffic.addEventListener('click', function (e) { e.stopPropagation(); window.navMiniTrafficToggle(); }); }
     btnFollow.classList.add('on');
     syncMuteBtn();    // 🔇 คืนสภาพปุ่มเสียงตามที่จำไว้ในเครื่อง
-    syncTrafficBtn(); // 🟥 คืนสภาพปุ่มจราจร
 
     // ---------- ซ่อนชั่วคราวเมื่อมีหน้าต่างอื่นเปิดทับ (ยกเว้นจอมิเตอร์ใหญ่) ----------
     function blocked() {
