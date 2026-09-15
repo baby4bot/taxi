@@ -3687,6 +3687,12 @@
     let rollingKm = 0, rollingSec = 0;
     let lastPosTime = null, currentSpeedKmh = 0, currentTrueRemainKm = 0, currentTrueRemainSec = 0; 
     let hiddenGapStart = null, hiddenLastPos = null, hiddenTrafficBase = 0; // จดตอนแอปซ่อน/สลับแอป เพื่อเบิกเวลาจอด + ระยะทางที่หายกลับคืนเมื่อกลับมา; hiddenTrafficBase = trafficSeconds ตอนเริ่มซ่อน (อ้างอิงเบิก "exactly-once")
+    // 🧊 ตรวจจับ "หน้าถูกแช่แข็ง/หน่วง" (ล็อกจอ/จอดับ ที่บางเบราว์เซอร์ไม่ยิง visibilitychange) — ตัวจับเวลา 1 วิถูกเรียกห่างกันผิดปกติ = หน้าไม่ได้อยู่หน้าจอจริง
+    //    ทำไมต้องมี: ถ้าไม่รู้ว่าจอถูกปิด ระบบจะนับเวลารถติดต่อจากหลักฐานเก่า (จำได้ว่ารถจอดก่อนล็อกจอ) → เวลารถติดบวมทั้งช่วงที่ล็อกจอ
+    //    และระยะทางที่วิ่งช่วงนั้นจะไม่มีใครเบิกคืน (คนละสาเหตุกับ "ช่วงที่แจ้งซ่อน")
+    let lastTickAt = null, pageThrottled = false, lastFixAtMs = null, gpsWatchRestartAt = 0, gpsWatchRestarts = 0;
+    let gapRetryTimer = null, gapRetryCount = 0, gapLastReason = ''; // 🔁 เหตุผลที่ยังเบิกคืนช่วงซ่อนไม่ได้ (เดิมทิ้งช่วงไปเลย → ระยะทางหายถาวร)
+    let staleSinceCatchUp = 0; // ⏳ วินาทีที่ "เดา" ว่าเป็นเวลารถติดขณะไม่มี fix (หลักฐานเก่า) — ห้ามนับเป็นหลักฐานตอนเบิกคืนช่วงซ่อน
     // ⏸️ บันทึกช่วงที่มิเตอร์ "หยุด" ระหว่างเที่ยว (แอปถูกปิด/ซ่อนหน้าจอ) เพื่อโชว์ในหน้าสรุปหลังจบเที่ยว (ความโปร่งใสกับผู้โดยสาร)
     let pauseLog = [], pauseOpenAt = null, pauseTrafficBase = 0; // รายการที่ปิดแล้ว {s: เวลาหยุด, r: เวลากลับมา} + เวลาหยุดของรายการที่ยังไม่ปิด; pauseTrafficBase = trafficSeconds ตอนเริ่มหยุด (กันเบิกซ้ำตอนคิลแอป)
     // 🚩 เตือน "ใกล้ถึงปลายทาง" (ทอง, ครั้งเดียวต่อเที่ยว) — จดระยะทางรวมตอนเริ่มเที่ยว + ว่าปล่อยเสียง/โชว์ไปแล้วหรือยัง
@@ -4218,6 +4224,55 @@
     });
     window.addEventListener('pagehide', () => { captureHiddenGap(); });
     window.addEventListener('pageshow', () => { resumeFromHidden(); });
+    // 🧊 ตรวจจับ "หน้าถูกแช่แข็ง/หน่วง" จากตัวจับเวลาของมิเตอร์เอง
+    //    (ไม่พึ่ง visibilitychange เพราะบางเครื่อง/บางโหมดเต็มจอ "ล็อกจอแล้วไม่ยิง event" )
+    //    ตัวจับเวลาตั้งไว้ 1 วินาที → ถ้ำเรียกห่างเกิน 20 วินาที = หน้าไม่ได้อยู่หน้าจอจริง
+    //    → จดเป็น "ช่วงซ่อน" เพื่อ ① หยุดนับเวลารถติดต่อจากหลักฐานเก่า (ต้นเหตุเวลารถติดบวมตอนล็อกจอ)
+    //      ② ให้ catch-up เบิกคืนระยะเวลา/ระยะทางเมื่อกลับมา (ระยะทางช่วงล็อกจอต้องไม่หาย)
+    const THROTTLE_DETECT_SEC = 20;
+    window.detectPageThrottle = (now) => {
+        const prev = lastTickAt; lastTickAt = now;
+        if (!window.isManualRunning || window.isMeterPaused) { pageThrottled = false; return 'idle'; }
+        if (prev === null) return 'first';
+        const tickGapSec = (now - prev) / 1000;
+        if (tickGapSec > THROTTLE_DETECT_SEC) {
+            if (!pageThrottled) { pageThrottled = true; if (hiddenGapStart === null) captureHiddenGap(); return 'throttled-start'; }
+            return 'throttled';
+        }
+        if (pageThrottled) {
+            pageThrottled = false;
+            // 📡 เพิ่งกลับมาหน้าจอ — ถ้าสัญญาณขาดไปนานแล้วให้ปลุก GPS ทันที (ช่วนี้คือช่วงที่ระยะทางต้องกลับมานับ)
+            if (typeof window.restartGpsWatch === 'function' && lastFixAtMs !== null && (now - lastFixAtMs) / 1000 > 15) window.restartGpsWatch();
+            resumeFromHidden();
+            return 'resumed';
+        }
+        return 'normal';
+    };
+    // 🔎 อ่านอย่างเดียว (ใช้ตรวจสอบ/เทสต์): สถานะช่วงซ่อน/การปลุก GPS/ยอดที่ "เดา" ไว้
+    window.__gapAudit = () => ({
+        pendingGapSec: hiddenGapStart ? Math.round((Date.now() - hiddenGapStart) / 1000) : null,
+        retries: gapRetryCount, lastReason: gapLastReason,
+        throttled: pageThrottled, tickAgeSec: lastTickAt ? Math.round((Date.now() - lastTickAt) / 1000) : null,
+        fixAgeSec: lastFixAtMs ? Math.round((Date.now() - lastFixAtMs) / 1000) : null,
+        watchRestarts: gpsWatchRestarts, watchAlive: !!watchId,
+        guessedSec: Math.round(staleSinceCatchUp)
+    });
+    // ♻️ ล้างสถานะ "ช่วงซ่อน" หลังตัดสินใจครบรอบเท่านั้น (เดิมล้างก่อนตรวจ fix → fix ยังไม่นิ่งก็เสียช่วงนั้นไปเลย)
+    const resetHiddenGapState = () => { hiddenGapStart = null; hiddenLastPos = null; staleSinceCatchUp = 0; if (gapRetryTimer) { clearTimeout(gapRetryTimer); gapRetryTimer = null; } };
+    // 🔁 ยังตัดสินไม่ได้ (GPS ยังไม่นิ่ง/ยังไม่มา) → "ไม่ทิ้งช่วง" แต่ตั้งเวลาไปขอ fix ใหม่ (สูงสุด 20 นาที)
+    //    เดิม: ถ้าเปิดจอไม่ทันในวินาทีแรกแล้วเบิกไม่สำเร็จ = ระยะทางช่วงนั้นหายถาวร (เคสจริง 7.29 กม. จาก 12.0)
+    const GAP_MAX_AGE_SEC = 1200;
+    const scheduleGapRetry = (reason) => {
+        if (hiddenGapStart === null) return;
+        gapLastReason = reason;
+        const ageSec = (Date.now() - hiddenGapStart) / 1000;
+        if (ageSec > GAP_MAX_AGE_SEC) { gapLastReason = reason + ' · หมดเวลาเบิกคืน'; resetHiddenGapState(); return; }
+        if (gapRetryTimer) return;
+        gapRetryTimer = setTimeout(() => {
+            gapRetryTimer = null; gapRetryCount++;
+            if (typeof window.catchUpDrivenKmAfterHidden === 'function') window.catchUpDrivenKmAfterHidden();
+        }, 10000);
+    };
     
     const calcGPS = (l1, n1, l2, n2) => 6371 * 2 * Math.asin(Math.sqrt(Math.sin((l2-l1)*Math.PI/360)**2 + Math.cos(l1*Math.PI/180)*Math.cos(l2*Math.PI/180)*Math.sin((n2-n1)*Math.PI/360)**2));
     // ขอ fix GPS แบบลองหลายรอบ (ตอนกลับมาเปิดแอปครั้งแรก fix อาจยังไม่นิ่ง/หลุด) → ใช้รอบที่แม่นสุด
@@ -8639,6 +8694,7 @@
                 if (staleBaseAt === null) { staleBaseAt = now; staleBasePos = lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null; }
                 trafficSeconds += addSec;
                 staleAccruedSec += addSec;
+                staleSinceCatchUp += addSec; // ⏳ จดว่าเป็นยอด "เดา" — catch-up ต้องไม่นับเป็นหลักฐาน (กันเวลารถติดบวมหลังล็อกจอ)
             }
         }
 
@@ -8656,22 +8712,27 @@
     // - วิ่งไปช่วงซ่อน (เที่ยวมีปลายทาง) → ขอเส้นทางใหม่ เบิกระยะทางที่วิ่งจริง; ขอเส้นทางไม่ได้ → ใช้เส้นตรงสำรอง
     window.catchUpDrivenKmAfterHidden = async () => {
         if (!window.isManualRunning || kmCatchUpBusy) return;
-        if (window.isMeterPaused) { hiddenGapStart = null; hiddenLastPos = null; return; } // ⏸️ ธงลง (หยุดมิเตอร์) → ไม่เบิกอะไร
+        if (window.isMeterPaused) { resetHiddenGapState(); return; } // ⏸️ ธงลง (หยุดมิเตอร์) → ไม่เบิกอะไร
         if (hiddenGapStart === null) return;
         const gapSec = (Date.now() - hiddenGapStart) / 1000;
         const gpsPausedSec = (Date.now() - (lastPosTime || 0)) / 1000;
         const hidePos = hiddenLastPos;
-        hiddenGapStart = null; hiddenLastPos = null; // ใช้ครั้งเดียว กันเบิกซ้ำ
-        if (gapSec < 8 || gpsPausedSec < 8) return; // ซ่อนสั้นๆ / สัญญาณยังมา = กลไกปกติคิดให้อยู่แล้ว
+        // ✅ ล้างสถานะเฉพาะเมื่อ "ตัดสินใจจบรอบแล้ว" — เดิมล้างก่อนตรวจ fix ทำให้ช่วงนั้นหายถาวรถ้า fix ยังไม่นิ่ง
+        if (gapSec < 8) { resetHiddenGapState(); return; } // ซ่อนสั้นๆ = กลไกปกติคิดให้อยู่แล้ว
+        if (gpsPausedSec < 8) { resetHiddenGapState(); return; } // fix ยังไหลปกติ = ไม่มีช่วงขาดให้เบิก
         kmCatchUpBusy = true;
         let caughtTimeSec = 0, caughtKm = 0, kmVia = 'straight'; // ยอดที่เบิกคืนจริงตอนกลับจากเบื้องหลัง (สำหรับ toast แจ้งคนขับ) + วิธีที่ใช้หักระยะ
         try {
             const pos = await getBestFix();
-            if (!window.isManualRunning || !pos) return;
+            if (!window.isManualRunning) return;
+            // 🧭 ยังตัดสินไม่ได้ (ไม่มี fix / พิกัดหลุด / fix หยาบเกิน 150 ม. เช่นเพิ่งปลดล็อกจอ)
+            //    → "เก็บช่วไว้แล้วลองใหม่" ห้ามล้างทิ้ง (ต้นเหตุระยะทาง 4.9 กม. หายหลังล็อกจอ)
+            if (!pos || (Math.abs(pos.coords.latitude) < 1 && Math.abs(pos.coords.longitude) < 1) || pos.coords.accuracy > 150) {
+                return scheduleGapRetry('รอ GPS ที่เชื่อถือได้ (fix หยาบ/ยังไม่มา)');
+            }
             const p = { lat: pos.coords.latitude, lon: pos.coords.longitude };
             // กันพิกัดหลุด (0,0) เท่านั้น — fix แม่นยำปานกลาง (60-150 ม.) ยังใช้เบิกเวลาจอดได้
             // (กลางเมือง GPS มักได้แค่ ~70-100 ม. ถ้าตัด >60 ม. ทิ้งจะไม่เบิกอะไรเลย → เวลารถติดหายทั้งช่วง)
-            if ((Math.abs(p.lat) < 1 && Math.abs(p.lon) < 1) || pos.coords.accuracy > 150) return;
             const prevPos = lastPos; // ตำแหน่งก่อนซ่อน (ถ้ายังไม่มี fix ใหม่แทรกมา) — กันการนับระยะซ้ำซ้อน
             lastPos = p;
             lastPosTime = Date.now();
@@ -8757,7 +8818,8 @@
                 //    (เดิมบวกเพิ่มอย่างเดียว → เวลารถติดบวม เช่น จริง 2:15 กลายเป็น 7:31 หลังปิด/ซ่อนแอป)
                 // ⏱️ ยอดเป้า = ฐานตอนซ่อน + ค่าที่ "มากกว่า" ระหว่าง (ก) ที่แอปนับได้จริงระหว่างซ่อน กับ (ข) ค่าที่ประเมินจากเส้นทาง/ความเร็ว
                 //    ⚠️ ห้ามตัดยอดที่นับได้จริงทิ้ง (บั๊ก 13 ก.ย. 69: ค่าประเมินเป็น 0 แล้วลบเวลาจอดที่ ticker นับไว้ทั้งช่วง) และห้ามเกินความยาวช่วงซ่อน
-                const observedDuringGap = Math.max(0, Math.min(gapSec, trafficSeconds - (hiddenTrafficBase || 0)));
+                // ⏳ หักวินาทีที่ "เดา" เองระหว่างไม่มี fix ออกก่อน — เดาไม่ใช่หลักฐาน (ต้นเหตุ 1:21:32 ขณะที่จริง ~1:10)
+                const observedDuringGap = Math.max(0, Math.min(gapSec, (trafficSeconds - (hiddenTrafficBase || 0)) - Math.max(0, staleSinceCatchUp)));
                 const modelTrafficSec = Math.max(0, Math.round(gapEstTraffic)); // ไม่มีระยะ (hidePos ว่าง) → ฟังก์ชันคืนค่าขั้นต่ำ 3% เอง
                 const trafficTarget = (hiddenTrafficBase || 0) + Math.max(modelTrafficSec, observedDuringGap);
                 trafficSeconds = trafficTarget;
@@ -8765,6 +8827,8 @@
             }
             // ✅ จบรอบเบิกคืนช่วงซ่อน: ปิดฐานของรอบนี้ (รอบถัดไปจะจดฐานใหม่ตอนซ่อน) + จดว่าเบิกคืนรอบนี้แล้ว
             gapHiddenAt = null; gapBasePos = null; hiddenKmBase = actualDrivenKm; hiddenTrafficBase = trafficSeconds; tripCaughtUpAt = Date.now();
+            gapLastReason = 'เบิกคืนสำเร็จ (' + kmVia + ')'; gapRetryCount = 0;
+            resetHiddenGapState(); // ✅ ตัดสินใจจบรอบแล้ว → ค่อยล้างสถานะช่วงซ่อน (คู่กับการลองใหม่เมื่อยังตัดสินไม่ได้)
             window.saveActiveTrip(true);
             window.updateLiveMeterDisplay();
             // 🔔 แจ้งคนขับว่ามิเตอร์เบิกคืนให้แล้ว (กลับจากเบื้องหลัง) — ให้เชื่อใจว่าตัวเลข/ค่าโดยสารถูกต้อง
@@ -9074,7 +9138,8 @@
                 //    ตั้งใหม่จากฐาน (ติดลบได้ = ถอนเวลาจอดที่ ticker นับผิดระหว่างซ่อน) — กันเวลารถติดบวมหลังปิด/ซ่อนแอป
                 // ⏱️ เหมือนสาขาซ่อน: ยอดเป้า = ฐานตอนแอปตาย + ค่าที่ "มากกว่า" ระหว่างที่นับได้จริงก่อนตาย กับค่าที่ประเมินได้
                 //    ห้ามตัดยอดที่นับได้จริงทิ้ง และไม่ให้เกินความยาวช่วงที่ปิดไป (ดูหมายเหตุบั๊ก 13 ก.ย. 69 ที่สาขาซ่อนด้านบน)
-                const observedDuringKill = Math.max(0, Math.min(gapSec, (cur.trafficSec || 0) - baseTraffic));
+                // ⏳ เช่่นเดียวกัน: ยอดที่ "เดา" ไว้ตอนไม่มี fix ไม่ใช่หลักฐาน (แอปถูกปิด/ล็อกจอ)
+                const observedDuringKill = Math.max(0, Math.min(gapSec, ((cur.trafficSec || 0) - baseTraffic) - Math.max(0, staleSinceCatchUp)));
                 const modelKillSec = Math.max(0, Math.round(gapEstTraffic));
                 const trafficTargetKill = Math.min(baseTraffic + gapSec, baseTraffic + Math.max(modelKillSec, observedDuringKill));
                 if (trafficTargetKill > trafficSec) { caughtTimeSec += (trafficTargetKill - trafficSec); trafficSec = trafficTargetKill; }
@@ -9368,15 +9433,21 @@
         
         if(tripTimer) clearInterval(tripTimer);
         // ตัวจับเวลานี้ใช้แค่ "เตือนให้อัปเดตหน้าจอ" — การนับเวลาจริงอยู่ใน advanceMeterTime (อิง Date.now)
-        tripTimer = setInterval(() => { 
-            window.advanceMeterTime(Date.now());
+        tripTimer = setInterval(() => {
+            const nowTick = Date.now();
+            // 🧊 ตรวจก่อนว่าหน้ายังอยู่หน้าจอจริงไหม (จอดับ/ล็อกจอที่เชราวเซอร์ไม่ยิง visibilitychange)
+            if (typeof window.detectPageThrottle === 'function') window.detectPageThrottle(nowTick);
+            window.advanceMeterTime(nowTick);
             window.updateLiveMeterDisplay(); 
             window.saveActiveTrip(); 
+            // 📡 GPS ตายเงียบ (Android พัก watchPosition ตอนล็อกจอ) → ปลุกใหม่ ไม่งั้นระยะทางหยุดนับทั้งที่มิเตอร์วิ่ง
+            if (typeof window.gpsWatchdog === 'function') window.gpsWatchdog(nowTick);
         }, 1000);
         
         if(watchId) navigator.geolocation.clearWatch(watchId);
-        watchId = navigator.geolocation.watchPosition((pos) => { 
+        const onGpsFix = (pos) => { 
             let now = Date.now(); 
+            lastFixAtMs = now; // 📡 เวลา fix ล่าสุด — watchdog ใช้ตัดสินว่าสัญญาณขาดยาวจริง
             // ⏱️ เดินเวลามิเตอร์จาก "fix GPS" ด้วย ไม่รอแต่ setInterval — มือถือลดความถี่/พักตัวจับเวลาเมื่อแอปถูกย่อ/สลับ
             //    แต่ fix GPS ยังไหลมา → เวลารถติด-เวลาจอดยังถูกนับครบแม้แอปอยู่เบื้องหลัง (ยอดอิง Date.now จริง ไม่เพี้ยน)
             if (typeof window.advanceMeterTime === 'function') window.advanceMeterTime(now);
@@ -9467,7 +9538,27 @@
                 $('driveRemain').innerText = remainKm.toFixed(2); 
                 $('progressFill').style.width = pct + '%'; $('carIcon').style.left = pct + '%'; 
             } 
-        }, null, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
+        };
+        const GPS_WATCH_OPTS = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
+        watchId = navigator.geolocation.watchPosition(onGpsFix, null, GPS_WATCH_OPTS);
+        // 📡 ปลุก GPS กลับเมื่อสัญญาณขาดยาว (Android พัก watchPosition ตอนล็อกจอ/สลับแอปนาน)
+        //    เดิมไม่มีใครปลุกเลย ⇒ ไม่มี fix = ระยะทางหยุดนับเงียบ ๆ ทั้งที่มิเตอร์ยังวิ่ง (เคสจริง 7.29 กม. จาก 12.0)
+        //    ต้อง clearWatch ตัวเก่าก่อนทุกครั้ง ไม่งั้นจะได้ watch ซ้อนกัน = นับระยะซ้ำ
+        const GPS_WATCHDOG_SEC = 60;
+        window.restartGpsWatch = () => {
+            try { if (watchId) navigator.geolocation.clearWatch(watchId); } catch(e) {}
+            try { watchId = navigator.geolocation.watchPosition(onGpsFix, null, GPS_WATCH_OPTS); gpsWatchRestarts++; } catch(e) {}
+        };
+        window.gpsWatchdog = (now) => {
+            if (!window.isManualRunning || window.isMeterPaused) return false;
+            if (pageThrottled) return false; // หน้าถูกแช่แข็ง = ปลุกตอนนี้ไม่ได้ผล รอปลุกตอนกลับมา
+            if (lastFixAtMs === null) return false;
+            if ((now - lastFixAtMs) / 1000 < GPS_WATCHDOG_SEC) return false;
+            if (now - gpsWatchRestartAt < 20000) return false; // เว้น 20 วิ/ครั้ง — กันสร้าง watch ซ้ำรัว ๆ
+            gpsWatchRestartAt = now;
+            window.restartGpsWatch();
+            return true;
+        };
         
         window.updatePauseBtnUI();
         window.updateLiveMeterDisplay();
@@ -11373,6 +11464,9 @@
         ['2026-09-15', '✏️ ดินสอแก้ชื่อเมนูขึ้นในเมนูแฮมเบอร์เกอร์ด้วย (กดค้างเข้าโหมดลาก)'],
         ['2026-09-15', '🐞 แก้เมนู/ปุ่มแอดมินไม่โผล่ในเครื่องจริง — เช็คสิทธิ์ผิดตัวแปร (window.currentUserRole)'],
         ['2026-09-15', '🔢 แอดมินสร้าง/ตั้ง PIN ให้สมาชิกได้เองในหน้าจัดการผู้ใช้ — เดิมดูได้อย่างเดียว'],
+        ['2026-09-15', '🧊 ล็อกจอ/จอดับ: ตรวจจับเองจากตัวจับเวลาที่ถูกหน่วง — หยุดนับเวลารถติดที่ “เดา” เอง'],
+        ['2026-09-15', '🛰️ ปลุก GPS อัตโนมัติเมื่อสัญญาณขาดเกิน 60 วิ — ระยะทางไม่หยุดนับเงียบ ๆ หลังล็อกจอ'],
+        ['2026-09-15', '🔁 ช่วงที่ไม่มี GPS ไม่ถูกทิ้งอีกต่อไป — ลองใหม่ถึง 20 นาที (เดิมระยะทางหายถาวร)'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
