@@ -3681,6 +3681,7 @@
 
     // TomTom API key — ใช้คำนวณเส้นทางแบบรถติดสด (Routing API) + ค้นหาสถานที่ (Search API)
     const TOMTOM_KEY = "SA8pNpsaSKlTglSLWKwclRYArnFmWsyW";
+    window.TOMTOM_KEY = TOMTOM_KEY; // 🟥 ให้สคริปต์อื่น (Mini Map = คนละ <script>) ใช้ทำชั้นข้อมูลจราจรได้
 
     window.DEFAULT_AVATAR = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a5b5'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
     window.DEFAULT_QR = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a5b5'%3E%3Cpath d='M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4V5h-4zM13 13h8v8H3v-8zm6 6h-4V5h4v4zM13 13h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-2 4h2v2h-2v-2zm2 2h2v2h-2v-2zM13 17h2v2h-2v-2zm4-4h2v2h-2v-2z'></path></svg>";
@@ -11905,6 +11906,8 @@
         ['2026-09-15', '⬆️ ย้ายแถบคำบอกเลี้ยวขึ้นบนสุดของ Mini Map — เห็นคำสั่งก่อนแผนที่'],
         ['2026-09-15', '🗺️ รีเฟรช/กลับเข้าแอปแล้วมินิแมพไม่เด้งเองอีก — คงสถานะเดิม เปิดเองเท่านั้น'],
         ['2026-09-15', '🔇 แผนที่ปิด = เงียบทั้งชุด (คำพูด·ติ๊ง·สั่น) — เสียงดังเมื่อเปิดแผนที่เองเท่านั้น'],
+        ['2026-09-15', '🚦 Mini Map โชว์สภาพจราจรจริง (เขียว = โล่ง · ส้ม/แดง = ช้า/รถติด) + ปุ่มเปิดปิด'],
+        ['2026-09-15', '🔊 ย้ายปุ่มเสียงของ Mini Map ไปมุมล่างขวาแบบปุ่มกลมโปร่งใส (เดิมอยู่บนหัว)'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -14486,8 +14489,24 @@
     #navMini .nm-wrap { position: relative; width: 100%; height: 168px; background: #0b0f16; }
     #navMini.big .nm-wrap { height: 250px; }
     #navMini canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-    #navMini .nm-attr { position: absolute; right: 4px; bottom: 3px; font-size: 8px; letter-spacing: .2px;
-        color: rgba(255,255,255,.42); pointer-events: none; }
+    /* เครดิตแผนที่ — ย้ายมากลางล่าง เพราะมุมล่างซ้าย/ขวามีปุ่มลอยอยู่ */
+    #navMini .nm-attr { position: absolute; left: 50%; transform: translateX(-50%); bottom: 3px; white-space: nowrap;
+        font-size: 8px; letter-spacing: .2px; padding: 1px 5px; border-radius: 7px;
+        background: rgba(6,10,16,.55); color: rgba(255,255,255,.55); pointer-events: none; }
+    /* 🔘 ปุ่มลอยบนแผนที่ (มุมล่างซ้าย = จราจร · มุมล่างขวา = เสียง) — โปร่งใส มีวงกลมรองหลัง */
+    #navMini .nm-float { position: absolute; bottom: 16px; width: 30px; height: 30px; border-radius: 50%; padding: 0;
+        display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 4;
+        color: #e8f1ff; background: rgba(10,16,26,.52); border: 1px solid rgba(255,255,255,.24);
+        backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+        box-shadow: 0 2px 10px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.10);
+        transition: transform .12s ease, background .15s ease, color .15s ease; -webkit-tap-highlight-color: transparent; }
+    #navMini .nm-float:active { transform: scale(.9); }
+    #navMini .nm-float .material-symbols-outlined { font-size: 17px; }
+    #navMini .nm-float.fleft { left: 8px; }
+    #navMini .nm-float.fright { right: 8px; }
+    #navMini .nm-float.on { background: rgba(33,150,243,.78); border-color: rgba(255,255,255,.38); color: #fff; }
+    #navMini .nm-float.muted { background: rgba(239,68,68,.82); border-color: rgba(255,255,255,.38); color: #fff; }
+    #navMini .nm-float.dim { color: rgba(232,241,255,.55); }
     #navMini .nm-off { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
         padding: 10px; text-align: center; font-size: 10px; color: #93a0b4; background: rgba(6,10,16,.52); }
     #navMini.nomap .nm-off { display: flex; }
@@ -14508,7 +14527,6 @@
 <div id="navMini" aria-label="แผนที่นำทางขนาดย่อ">
     <div class="nm-head" id="navMiniHead">
         <span class="nm-title" id="navMiniTitle">📍 กำลังนำทาง</span>
-        <button class="nm-btn" id="navMiniMute" title="ปิดเสียงนำทาง" aria-label="ปิด/เปิดเสียงนำทาง"><span class="material-symbols-outlined">volume_up</span></button>
         <button class="nm-btn" id="navMiniFollow" title="กลับไปที่รถ" aria-label="กลับไปที่รถ">◎</button>
         <button class="nm-btn" id="navMiniSize" title="ย่อ/ขยายแผนที่" aria-label="ย่อ/ขยาย">⤢</button>
         <button class="nm-btn" id="navMiniHide" title="ซ่อนแผนที่" aria-label="ซ่อน">✕</button>
@@ -14522,7 +14540,9 @@
     </div>
     <div class="nm-wrap">
         <canvas id="navMiniCanvas"></canvas>
-        <div class="nm-attr">© OpenStreetMap</div>
+        <button class="nm-float fleft on" id="navMiniTraffic" title="ซ่อน/แสดงข้อมูลจราจร" aria-label="เปิด/ปิดข้อมูลจราจร"><span class="material-symbols-outlined">traffic</span></button>
+        <button class="nm-float fright" id="navMiniMute" title="ปิดเสียงนำทาง" aria-label="ปิด/เปิดเสียงนำทาง"><span class="material-symbols-outlined">volume_up</span></button>
+        <div class="nm-attr" id="navMiniAttr">© OpenStreetMap</div>
         <div class="nm-off">ไม่มีการเชื่อมต่อ — แสดงเส้นทางและตำแหน่งรถให้อยู่</div>
     </div>
     <div class="nm-foot">
@@ -14552,15 +14572,18 @@
     var btnSize = document.getElementById('navMiniSize');
     var btnHide = document.getElementById('navMiniHide');
     var btnMute = document.getElementById('navMiniMute');
+    var btnTraffic = document.getElementById('navMiniTraffic');
+    var attrEl = document.getElementById('navMiniAttr');
     var turnRow = document.getElementById('navMiniTurnRow');
     var turnIco = document.getElementById('navMiniTurnIco');
     var turnDist = document.getElementById('navMiniTurnDist');
     var turnDir = document.getElementById('navMiniTurnDir');
 
     // ---------- ค่าที่ผู้ใช้ตั้งไว้ ----------
-    //   autoOpen = ผู้ใช้ “เปิดแผนที่เอง” ครั้งล่าสุดหรือไม่ → ใช้ตัดสินตอนเริ่มนำทางครั้งถัดไป
-    //   ค่าเริ่มต้น false = เริ่มนำทางแล้ว “ยังไม่โชว์แผนที่” และโชว์เมื่อกดปุ่มเท่านั้น (ตามที่คนขับขอ)
-    var pref = { x: null, y: null, big: false, hidden: false, autoOpen: false, muted: false };
+    //   🗺️ 16 ก.ย. 2569 (ตามที่คนขับขอ): **ห้ามจำว่าเคยเปิดเอง** — ทุกเที่ยว/ทุกรีเฟรชเริ่มจาก “ปิด”
+    //   แผนที่จะโชว์เฉพาะเมื่อกดปุ่ม 🗺️ ในเที่ยวนั้น ๆ เท่านั้น (มีปุ่มให้กดเสมอ)
+    //   (เดิมมี pref.autoOpen = “เปิดเองครั้งก่อน → เที่ยวหน้าเปิดให้เอง” — ตัดออกแล้ว)
+    var pref = { x: null, y: null, big: false, hidden: true, muted: false, traffic: true };
     try {
         var raw = localStorage.getItem(LS_KEY);
         if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') { for (var k in pref) { if (k in o) pref[k] = o[k]; } } }
@@ -14830,6 +14853,50 @@
     var filterOK = (function () {
         try { var c = document.createElement('canvas').getContext('2d'); c.filter = 'invert(1)'; return c.filter === 'invert(1)'; } catch (e) { return false; }
     })();
+    // ---------- 🟥 ชั้นข้อมูลจราจร TomTom Traffic Flow ----------
+    //    ใช้คีย์เดิมของแอป (Routing/Search) · เป็นกระเบื้องแบบเดียวกับ OSM → พิกัด z/x/y ใช้ร่วมกันได้เลย
+    //    ⚠️ กระเบื้องจราจร “ห้ามผ่าน TILE_FILTER” (กลับสี) — สีแดง/เขียวจะเพี้ยนทั้งหมด
+    //    ถ้าดึงไม่ได้ 3 ครั้ง → ปิดชั้นนี้อัตโนมัติ + ปุ่มเปลี่ยนเป็นโทนจาง (แตะเพื่อลองใหม่)
+    var trafficTiles = Object.create(null), trafficKeys = [], trafficOk = true, trafficFail = 0, trafficReq = 0, trafficStyle = 'relative0';
+    function trafficOn() { return pref.traffic !== false; }
+    function trafficTile(z, x, y) {
+        var key = z + '/' + x + '/' + y;
+        var rec = trafficTiles[key];
+        if (rec) { return rec; }
+        if (trafficKeys.length > 60) { for (var i = 0; i < 25; i++) { delete trafficTiles[trafficKeys.shift()]; } }
+        rec = { img: new Image(), ok: false };
+        rec.img.onload = function () { rec.ok = true; request(); };
+        rec.img.onerror = function () {
+            rec.ok = false; trafficFail++;
+            if (trafficFail >= 3 && trafficOk) { trafficOk = false; syncTrafficBtn(); request(); }
+        };
+        var k = window.TOMTOM_KEY;
+        if (!k) { trafficOk = false; return rec; }
+        trafficReq++;
+        rec.img.src = 'https://api.tomtom.com/traffic/map/4/tile/flow/' + trafficStyle + '/' + z + '/' + x + '/' + y + '.png?key=' + k + '&tileSize=256';
+        trafficTiles[key] = rec; trafficKeys.push(key);
+        return rec;
+    }
+    function syncTrafficBtn() {
+        if (!btnTraffic) { return; }
+        var on = trafficOn() && trafficOk;
+        btnTraffic.classList.toggle('on', on);
+        btnTraffic.classList.toggle('dim', !trafficOk);
+        btnTraffic.setAttribute('aria-pressed', on ? 'true' : 'false');
+        btnTraffic.title = !trafficOk ? 'ข้อมูลจราจรใช้ไม่ได้ตอนนี้ — แตะเพื่อลองใหม่'
+            : (on ? 'ซ่อนข้อมูลจราจร (แดง = รถติด · เขียว = โล่ง)' : 'แสดงข้อมูลจราจร (แดง = รถติด · เขียว = โล่ง)');
+        if (attrEl) { attrEl.textContent = on ? '© OpenStreetMap · © TomTom' : '© OpenStreetMap'; }
+    }
+    window.navMiniTrafficToggle = function (force) {
+        if (!trafficOk) { // แตะตอนใช้ไม่ได้ = ลองใหม่ (ล้างแคชที่ค้างล้มเหลว)
+            trafficOk = true; trafficFail = 0; trafficTiles = Object.create(null); trafficKeys = [];
+            pref.traffic = true;
+        } else {
+            pref.traffic = (typeof force === 'boolean') ? force : !trafficOn();
+        }
+        savePref(); syncTrafficBtn(); request();
+        return pref.traffic !== false;
+    };
     function tile(z, x, y) {
         var key = z + '/' + x + '/' + y;
         var rec = tiles[key];
@@ -14958,6 +15025,22 @@
             }
         }
         el.classList.toggle('nomap', missing && !anyTileOk);
+
+        // 🟥 ชั้นข้อมูลจราจร (TomTom Traffic Flow) — วาดทับบนแผนที่ “ไม่ผ่านฟิลเตอร์กลับสี”
+        //    เพื่อให้สีจริงอ่านได้: แดง = รถติดหนา · ส้ม/เหลือง = ช้า · เขียว = โล่ง
+        //    วาดก่อนเส้นทาง → เส้นทางสีน้ำเงิน/ขอบขาวอยู่บนสุดเสมอ
+        //    (เงื่อนไข `visible` ด้วย เพื่อไม่ดึงกระเบื้องจราจรตอนแผนที่ซ่อน = ประหยัดโควตา TomTom)
+        if (trafficOn() && trafficOk && visible) {
+            ctx.globalAlpha = 0.9;
+            for (var jx = x0; jx <= x1; jx++) {
+                for (var jy = y0; jy <= y1; jy++) {
+                    if (jy < 0 || jy >= n) { continue; }
+                    var trec = trafficTile(z, ((jx % n) + n) % n, jy);
+                    if (trec.ok) { ctx.drawImage(trec.img, Math.round(jx * 256 + ox), Math.round(jy * 256 + oy), 256, 256); }
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
 
         // เส้นทาง: วิ่งแล้ว (เทา) + ที่เหลือ (น้ำเงิน ขอบขาว)
         if (route.length > 1) {
@@ -15091,8 +15174,7 @@
         try {
             canReopen = false;
             pref.hidden = false;
-            pref.autoOpen = true; // 🧠 จำไว้ว่าผู้ขับอยากเห็นแผนที่ → เที่ยวหน้าจะเปิดให้เอง
-            savePref();
+            savePref(); // จำแค่ตำแหน่ง/ขนาด/เสียง — ไม่จำว่าเปิดอยู่ (เที่ยวหน้าเริ่มจากปิดเสมอ)
             show();          // แผนที่กลับมาแสดงเส้นทาง/ตำแหน่งรถที่ค้างอยู่ทันที
             request(); chrome(); syncReopenBtns();
         } catch (e) {}
@@ -15168,13 +15250,11 @@
                 if (lp0 && (Math.abs(lp0.lat - lp.lat) > 1e-6 || Math.abs(lp0.lng - lp.lng) > 1e-6)) { bearing = bearingTo(lp0, lp); }
                 else { alignHeadingToRoute(car); } // ไม่มีทิศที่วิ่งมา → ยึดทิศของเส้นทาง
             }
-            // 🗺️ กลับเข้าแอป/รีเฟรช = **คงสถานะเดิมไว้** — ค่าเริ่มต้นคือ “ยังไม่โชว์”
-            //    เปิดให้เองเฉพาะเมื่อผู้ขับเคยกดเปิดเองในเที่ยวก่อน (pref.autoOpen)
+            // 🗺️ กลับเข้าแอป/รีเฟรช = **เริ่มจากปิดเสมอ** (เหมือนเที่ยวใหม่) — ต้องกดปุ่ม 🗺️ เองทุกครั้ง
             //    ⚠️ เดิมบรรทัดนี้เป็น `pref.hidden = false` → รีเฟรช/กลับเข้าแอปแล้วแผนที่เด้งเอง
-            pref.hidden = !pref.autoOpen;
+            pref.hidden = true;
             savePref();
-            if (pref.hidden) { canReopen = true; hideNow(); syncReopenBtns(); }
-            else { show(); request(); chrome(); }
+            canReopen = true; hideNow(); syncReopenBtns();
         } catch (e) {}
     };
     window.navMiniHide = function (remember) {
@@ -15186,7 +15266,6 @@
     window.navMiniHideByUser = function () {
         canReopen = true;
         pref.hidden = true;
-        pref.autoOpen = false; // 🧠 ผู้ขับปิดเอง → เที่ยวหน้าอย่าเปิดให้เอง (กลับไปเป็น “เริ่มต้นไม่โชว์”)
         savePref();
         hideNow();
     };
@@ -15203,6 +15282,7 @@
             car: car ? { lat: car.lat, lng: car.lng } : null,
             bearing: Math.round(bearing), speedKmh: speedKmh,
             muted: navSoundMuted(),
+            traffic: { on: trafficOn(), ready: trafficOk, style: trafficStyle, requested: trafficReq, cached: trafficKeys.length },
             voice: (typeof window.navVoiceDebug === 'function') ? window.navVoiceDebug() : null,
             routeHeading: (function () { var h = routeHeadingAt(nearestIndex(car)); return h === null ? null : Math.round(h); })(),
             headingFromRoute: shouldUseRouteHeading(),
@@ -15219,10 +15299,9 @@
             // ไม่มีเส้นทางและไม่มีพิกัดต้น-ปลาย (เช่น เริ่มมิเตอร์ธรรมดา) → ไม่ต้องเปิดแผนที่ว่าง
             var hasLine = (coords && coords.length > 1) || (sLat && sLon && dLat && dLon);
             if (!hasLine) { hideNow(); return; }
-            // 🗺️ เริ่มนำทางจาก “ค้นหาเส้นทาง” → ค่าเริ่มต้นคือ “ยังไม่โชว์แผนที่”
-            //    (โชว์เฉพาะเมื่อกดปุ่มแผนที่ในแถบหัว — ปุ่มจะติดสีฟ้าให้เห็น)
-            //    ถ้าผู้ขับเคยกดเปิดเองในเที่ยวก่อน ระบบจะจำและเปิดให้เอง (pref.autoOpen)
-            pref.hidden = !pref.autoOpen;
+            // 🗺️ เริ่มนำทางจาก “ค้นหาเส้นทาง” → **เริ่มจากปิดเสมอ ทุกเที่ยว**
+            //    (โชว์เฉพาะเมื่อกดปุ่มแผนที่ในแถบหัว — ปุ่มจะติดสีฟ้าให้เห็น · ไม่จำว่าครั้งก่อนเปิดค้างไว้)
+            pref.hidden = true;
             savePref();
             destLabel = destName ? String(destName).slice(0, 40) : '';
             if (coords && coords.length > 1) { window.navMiniSetRoute(coords, destLabel); }
@@ -15325,8 +15404,10 @@
     });
     btnHide.addEventListener('click', function (e) { e.stopPropagation(); window.navMiniHideByUser(); });
     btnMute.addEventListener('click', function (e) { e.stopPropagation(); window.navMiniMuteToggle(); });
+    if (btnTraffic) { btnTraffic.addEventListener('click', function (e) { e.stopPropagation(); window.navMiniTrafficToggle(); }); }
     btnFollow.classList.add('on');
-    syncMuteBtn(); // 🔇 คืนสภาพปุ่มเสียงตามที่จำไว้ในเครื่อง
+    syncMuteBtn();    // 🔇 คืนสภาพปุ่มเสียงตามที่จำไว้ในเครื่อง
+    syncTrafficBtn(); // 🟥 คืนสภาพปุ่มจราจร
 
     // ---------- ซ่อนชั่วคราวเมื่อมีหน้าต่างอื่นเปิดทับ (ยกเว้นจอมิเตอร์ใหญ่) ----------
     function blocked() {
