@@ -2,7 +2,11 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- 📱 interactive-widget=resizes-content (แก้ 15 ก.ย. 69): ให้แป้นพิมพ์ "ย่อหน้าจอจริง" แทนการเลื่อน visual viewport
+         อาการเดิม: พิมพ์ค้นหาแล้วปัดลิสต์ ที่โปรด/ประวัติ → พอหยุดนิ้ว รายการถูกดันขึ้นอีกทีอย่างหน่วง ๆ
+         สาเหตุ: Chrome Android ค่าเริ่มต้น (resizes-visual) จะเลื่อน/แพนหน้าจอเองเพื่อให้ช่องพิมพ์พ้นแป้นพิมพ์
+                 → หลังปัดลิสต์จบ หน้าจอถูกแพนต่อ = รู้สึกว่า "ลิสต์ไถลเองช้า ๆ" -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
     <!-- ⚡ ต่อท่อล่วงหน้าไป Firestore — ให้คำขอแรก (รวมค่าหน้าจอโหลด) เร็วขึ้น ~0.5-1 วิ -->
     <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
     <link rel="dns-prefetch" href="https://firestore.googleapis.com">
@@ -365,10 +369,13 @@
         .modal-header { position: relative; padding: 20px; flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; }
         .modal-header h3 { margin: 0; color: white; font-size: 22px; font-weight: 500; }
         
-        .btn-close-floating { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); width: 36px; height: 36px; background: var(--accent-red); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; cursor: pointer; z-index: 10001; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.4); -webkit-tap-highlight-color: transparent; transition: 0.2s; }
-        .btn-close-floating:active { transform: translateY(-50%) scale(0.9); }
-        .btn-action-floating { position: absolute; top: 50%; right: 60px; transform: translateY(-50%); width: 36px; height: 36px; background: #ff9800; color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; cursor: pointer; z-index: 10001; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.4); -webkit-tap-highlight-color: transparent; transition: 0.2s; }
-        .btn-action-floating:active { transform: translateY(-50%) scale(0.9); }
+        /* ❌ มุมขวาบนของหน้าต่างเสมอ (แก้ 15 ก.ย. 69): เดิม top:50% = ปุ่มไปลอยกลางหน้าต่าง ไปทับรายการข้างใน
+           และหน้าต่างขยายสูงขึ้น → ปุ่มเลื่อนตามลงมากลางจอ. ตอนนี้ตรึงมุมขวาบนของกล่อง → ขยายเท่าไรก็อยู่มุมเดิม */
+        .btn-close-floating { position: absolute; top: 14px; right: 14px; transform: none; width: 36px; height: 36px; background: var(--accent-red); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; cursor: pointer; z-index: 10001; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.4); -webkit-tap-highlight-color: transparent; transition: 0.2s; }
+        .btn-close-floating:active { transform: scale(0.9); }
+        /* ปุ่มลัดในหัวหน้าต่าง (เช่น กุญแจ/รีเฟรช) ขยับขึ้นไปแถวเดียวกับกากบาท → ไม่เหลื่อมกัน */
+        .btn-action-floating { position: absolute; top: 14px; right: 62px; transform: none; width: 36px; height: 36px; background: #ff9800; color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; cursor: pointer; z-index: 10001; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.4); -webkit-tap-highlight-color: transparent; transition: 0.2s; }
+        .btn-action-floating:active { transform: scale(0.9); }
         .btn-back-profile { position: absolute; top: 50%; left: 14px; transform: translateY(-50%); width: 36px; height: 36px; background: rgba(148,163,184,0.16); color: #dbe1ec; border: 1px solid rgba(148,163,184,0.45); border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; font-family: 'Kanit', sans-serif; font-size: 0; line-height: 0; cursor: pointer; z-index: 10001; -webkit-tap-highlight-color: transparent; transition: 0.15s; }
         .btn-back-profile:active { transform: translateY(-50%) scale(0.92); background: rgba(148,163,184,0.28); }
         .btn-back-profile .material-symbols-outlined { font-size: 24px; }
@@ -1706,8 +1713,11 @@
            ปิดการเลื่อนของ document เท่านั้น (ลิสต์ที่เปิดอยู่ยังเลื่อนได้ตามปกติ)
            เดิมหน้าเว็บด้านหลังยังเลื่อนได้ → สองตัวแย่งกัน → ลากแล้วติด ไม่ลื่น */
         html.locked-scroll, html.locked-scroll body { overflow: hidden !important; }
-        /* iOS: ต้องตรึง body ไว้ที่ตำแหน่งเดิม ไม่งั้นล็อกแล้วหน้าเด้งขึ้นบนสุด */
-        html.locked-scroll body { position: fixed; left: 0; right: 0; width: 100%; top: var(--locked-scroll-top, 0px); }
+        /* iOS: ต้องตรึง body ไว้ที่ตำแหน่งเดิม ไม่งั้นล็อกแล้วหน้าเด้งขึ้นบนสุด
+           ⚠️ (แก้ 15 ก.ย. 69) ใช้เฉพาะเบราว์เซอร์ที่ยังไม่รองรับ overscroll-behavior (iOS เก่า) — เบราว์เซอร์ใหม่แค่ overflow:hidden พอ
+           เพราะการตรึง body เป็น position:fixed ระหว่างพิมพ์ค้นหา ทำให้แป้นพิมพ์/visual viewport ต้องจัดจอใหม่
+           → ปัดลิสต์แล้วรู้สึกสะดุดและมี "ไถลต่อ" หลังหยุดนิ้ว */
+        html.locked-scroll.lock-fixed body { position: fixed; left: 0; right: 0; width: 100%; top: var(--locked-scroll-top, 0px); }
 
         /* ===== 📜 ลื่นขึ้นบนมือถือ — กล่องที่เลื่อนได้ (แก้ 14 ก.ย.) =====
            อาการเดิม: ลิสต์โปรด/ประวัติ/ผลค้นหา “ลากแล้วติด ต้องรอสักพัก”
@@ -6040,7 +6050,8 @@
            (3) ติดตั้ง listener เฉพาะเบราว์เซอร์ที่ยังไม่รองรับ CSS overscroll-behavior (iOS < 16) */
         let startY = null;
         let targetEl = null;
-        let skipGesture = false; // ท่านี้เริ่มจากกล่องที่เลื่อนได้ (ลิสต์/โมดอล) → ห้ามยุ่งเลย
+        let skipGesture = 0;      // 0 = ยังไม่ตัดสิน · 1 = ท่านี้อยู่ในกล่องที่เลื่อนได้ (ยกเลิก PTR ทั้งท่า)
+        let gestureReady = false; // ตัดสินใจแล้วหรือยัง (ตัดสินครั้งแรกที่ต้องใช้จริงเท่านั้น)
         let scrollable = null;   // กล่องที่เลื่อนขึ้นได้ของท่านี้ (จำไว้ ไม่ต้องเดิน DOM ซ้ำ)
         // กดค้าง/แตะในกล่องเหล่านี้ = ผู้ใช้กำลังเลื่อนรายการ ไม่ใช่ PTR
         const SAFE_ZONES = '.dropdown-box, .modal-overlay, .modal-box, .modal-content-scroll, .side-menu,'
@@ -6057,14 +6068,25 @@
             return null;
         }
         function onTouchStart(e) {
-            skipGesture = false; scrollable = null; targetEl = null; startY = null;
+            skipGesture = 0; gestureReady = false; scrollable = null; targetEl = null; startY = null;
             if (!e.touches || !e.touches[0]) return;
             startY = e.touches[0].clientY;
             targetEl = e.target;
-            if (targetEl && targetEl.closest && targetEl.closest(SAFE_ZONES)) { skipGesture = true; return; }
-            scrollable = findScrollableUp(targetEl); // คิดครั้งเดียวต่อท่า (ไม่ใช่ทุกเฟรม)
+        }
+        /* ⚡ (แก้ 15 ก.ย. 69) เลื่อนงานหนัก (closest + เดิน DOM + getComputedStyle) ออกไปคิด "ตอนต้องใช้จริง"
+           เดิมคิดทุกครั้งที่นิ้วแตะจอ → นิ้วแตะใหม่ทีไรมีงานบน main thread ก่อนเริ่มเลื่อน
+           → รู้สึกว่า "ปัดแล้วต้องรอสักพักกว่าจะเลื่อนต่อ". ตัวนี้ถูกเรียกเฉพาะทางสาย iOS เก่า (touchmove) เท่านั้น */
+        function resolveGesture() {
+            if (gestureReady) return;
+            gestureReady = true;
+            if (targetEl && targetEl.closest && targetEl.closest(SAFE_ZONES)) { skipGesture = 1; return; }
+            skipGesture = 0;
+            scrollable = findScrollableUp(targetEl);
         }
         function shouldBlockPull(clientY) {
+            resolveGesture();
+            if (skipGesture) return false;
+            if (startY === null) return false;
             const dy = clientY - startY;
             if (dy <= 10) return false; // ลากขึ้น/นิ่ง = ไม่ใช่ pull-to-refresh
             if (scrollable && scrollable.scrollTop > 1) return false; // ลิสต์ยังเลื่อนขึ้นได้ → ปล่อย
@@ -6072,7 +6094,7 @@
             return docEl.scrollTop <= 1; // อยู่หัวสุดหน้าแล้วลากลง = pull-to-refresh → ปิด
         }
         function onTouchMove(e) {
-            if (skipGesture || startY === null || !e.touches || !e.touches[0]) return;
+            if (startY === null || !e.touches || !e.touches[0]) return;
             if (shouldBlockPull(e.touches[0].clientY)) e.preventDefault();
         }
         // หนุนด้วย CSS เป็นหลัก (html,body { overscroll-behavior: none }) — ตัว JS เป็น only-iOS เก่า
@@ -6102,7 +6124,7 @@
             }, { passive: true });
         }
         ['touchend', 'touchcancel'].forEach(function (ev) {
-            document.addEventListener(ev, function () { startY = null; targetEl = null; scrollable = null; skipGesture = false; }, { passive: true });
+            document.addEventListener(ev, function () { startY = null; targetEl = null; scrollable = null; skipGesture = 0; gestureReady = false; }, { passive: true });
         });
     })();
 
@@ -6116,6 +6138,12 @@
         const DROPDOWNS = ['historyList', 'suggestionList'];
         const visible = (el) => !!el && el.style.display !== 'none' && el.children.length > 0;
         const anyOpen = () => DROPDOWNS.some((id) => visible(document.getElementById(id)));
+        // ⚠️ (แก้ 15 ก.ย. 69) เบราว์เซอร์ที่รองรับ overscroll-behavior (Chrome/Android/Safari 16+) ไม่ต้องตรึง body
+        //    เพราะการตรึง body ระหว่างพิมพ์ค้นหา ทำให้แป้นพิมพ์ต้องจัดจอใหม่ → ปัดลิสต์สะดุด/ไถลต่อหลังหยุดนิ้ว
+        const cssSupportsOverscroll = (() => {
+            try { return !!(window.CSS && CSS.supports && (CSS.supports('overscroll-behavior-y', 'contain') || CSS.supports('overscroll-behavior', 'contain'))); }
+            catch (e) { return false; }
+        })();
         let lockY = 0;
         let watchdog = null;
         window.__pageScrollLocked = false;
@@ -6128,11 +6156,13 @@
                 if (lockY > 0) html.style.setProperty('--locked-scroll-top', (-lockY) + 'px');
                 else html.style.removeProperty('--locked-scroll-top');
                 html.classList.add('locked-scroll');
+                if (!cssSupportsOverscroll) html.classList.add('lock-fixed'); // iOS เก่าเท่านั้น (ดู CSS ด้านบน)
                 window.__pageScrollLocked = true;
                 // กันล็อกค้าง: ถ้ามีเส้นทางอื่นที่ปิดลิสต์โดยไม่ผ่านจุดที่เรารู้ → ตรวจทุก 0.8 วิ (เฉพาะตอนล็อก)
                 if (!watchdog) watchdog = setInterval(() => { if (window.__pageScrollLocked && !anyOpen()) window.syncPageScrollLock(); }, 800);
             } else {
                 html.classList.remove('locked-scroll');
+                html.classList.remove('lock-fixed');
                 html.style.removeProperty('--locked-scroll-top');
                 window.__pageScrollLocked = false;
                 if (watchdog) { clearInterval(watchdog); watchdog = null; }
@@ -7871,13 +7901,10 @@
                     </div>
                 `).join('') + `</div>`;
         }
-        const adminBtn = (currentUserRole === 'Admin' || currentUserRole === 'Manager')
-            ? `<button onclick="event.stopPropagation(); window.saveDefaultFavoritesAsAdmin();" style="background: linear-gradient(135deg,#f1c40f,#f39c12); color:#3d2b00; border:none; padding:11px 16px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 4px 10px rgba(241,196,15,0.3);">💾 เซฟเป็นค่าเริ่มต้น (ทุกคน)</button>`
-            : '';
+        // ⭐ จุดโปรดเป็นรายบุคคล (ไอดีใครไอดีมัน) → ตัดปุ่ม "💾 เซฟเป็นค่าเริ่มต้น (ทุกคน)" และปุ่ม "ปิด" ออก
+        //    ปิดหน้าต่างได้จากกากบาทมุมบนขวา หรือแตะพื้นที่ว่างนอกหน้าต่าง (ตามพฤติกรรมเดิมของ overlay)
         const footer = `<div style="padding:14px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
             <button onclick="event.stopPropagation(); window.injectDefaultFavoritesToMe();" style="background:rgba(46,204,113,0.15); color:#2ecc71; border:1px solid rgba(46,204,113,0.4); padding:11px 16px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer;">✈️ นำเข้าสนามบิน 2 แห่ง</button>
-            ${adminBtn}
-            <button onclick="event.stopPropagation(); window.toggleModal('favoritesManageModal', false);" style="background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:11px 20px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer;">ปิด</button>
         </div>`;
         let modal = document.getElementById('favoritesManageModal');
         if (!modal) {
@@ -7905,6 +7932,8 @@
         try { if (typeof window.showHistory === 'function') window.showHistory(); } catch (e) {}
     };
 
+    // 🚫 เลิกใช้แล้ว (15 ก.ย. 69): จุดโปรดเป็นรายบุคคล — ปุ่มในหน้าจัดการจุดโปรดถูกถอดออก
+    //    เก็บฟังก์ชันไว้เผื่ออนาคตอยากได้กลับ (ไม่มีที่เรียกแล้ว)
     window.saveDefaultFavoritesAsAdmin = async () => {
         if (currentUserRole !== 'Admin' && currentUserRole !== 'Manager') { window.showToast('คุณไม่มีสิทธิ์', true); return; }
         const btn = event && event.target ? event.target : null;
@@ -11911,6 +11940,9 @@
         ['2026-09-15', '🔊 ย้ายปุ่มเสียงของ Mini Map ไปมุมล่างขวาแบบปุ่มกลมโปร่งใส (เดิมอยู่บนหัว)'],
         ['2026-09-15', '🔍 Mini Map ซูมเข้าเองก่อนถึงทางแยก/จุดเลี้ยว แล้วถอยออกหลังผ่าน — เหมือน Google Maps'],
         ['2026-09-15', '⛔ ถอดแถบสีจราจรบน Mini Map ออก — กระเบื้อง TomTom กินโควตาต่อคีย์'],
+        ['2026-09-15', '⭐ จุดโปรดเป็นรายบุคคล — ถอดปุ่ม “เซฟเป็นค่าเริ่มต้น (ทุกคน)” กับปุ่มปิดออก'],
+        ['2026-09-15', '✖️ ปุ่มกากบาทย้ายไปมุมบนขวาของหน้าต่างทุกบาน — ขยายสูงแค่ไหนก็อยู่มุมเดิม'],
+        ['2026-09-15', '📜 ลิสต์ค้นหา: เลื่อนลื่นขึ้น — ไม่ตรึงหน้าจอตอนพิมพ์ และแป้นพิมพ์ย่อจอจริง'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
