@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — ล็อกจอ/จอดับ: ระยะทาง + เวลารถติดต้องเบิกคืนครบ</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 900px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 900px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    iframe { display: none; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: ล็อกจอ/จอดับ → ระยะทาง + เวลารถติดต้องเบิกคืนครบ</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html</code>) ใน iframe แล้ว <b>ตัดเน็ตออกทั้งหมด</b>: บล็อก <code>fetch</code>/<code>XMLHttpRequest</code>
+        ที่ออกนอกเครื่อง (Firestore/TomTom/CDN) · <b>ควบคุมนาฬิกาเอง</b> (<code>Date.now</code>) · <b>GPS ปลอม</b> (ยิง fix เองทีละจุด)
+        · <b>จำลองการซ่อนหน้า/ล็อกจอ</b> ทั้งทาง <code>visibilitychange</code> และทาง “ตัวจับเวลาถูกหน่วง”
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> แล้วเปิด
+        <code>http://127.0.0.1:58911/tests/locked-screen-offline.html</code> (หรือเปิดจาก GitHub Pages ก็ได้ — ชุดนี้ไม่ต้องใช้เน็ต)
+        <br>ต่างจาก <code>catchup-regression.html</code> ที่ต้องพึ่ง Firestore/geo จริง — ชุดนี้ <b>ต้องผ่านครบทุกข้อในเครื่อง</b>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (10 สถานการณ์)</button>
+    <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <iframe id="appFrame" src="about:blank"></iframe>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[offline-test]', ...a); } catch (e) {} };
+
+    // ============================ สตับ (ตัดเน็ต + ควบคุมเวลา + GPS ปลอม) ============================
+    function installStubs() {
+        const cw = w();
+        cw.__testNoDbWrites = true;                       // 🚫 ห้ามเขียนเที่ยวลงฐานข้อมูลจริง (ธงเดียวกับที่แอปใช้)
+        try { cw.__testSkippedTripWrites = 0; } catch (e) {}
+
+        // ---- ⏰ นาฬิกาปลอม: เดินได้เฉพาะเมื่อเทสต์สั่ง (คำสั่ง __advance) ----
+        cw.__fakeNow = Date.now();
+        cw.Date.now = () => cw.__fakeNow;
+        cw.__advance = (ms) => { cw.__fakeNow += ms; return cw.__fakeNow; };
+
+        // ---- 🚫 ตัดเน็ต: ทุกคำขอออกนอกเครื่องต้องไม่ถูกส่งจริง (นับไว้เป็นหลักฐาน) ----
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u, ...rest) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) {
+                    cw.__net.blockedXhr++; cw.__net.lastUrl = u;
+                    x.__blocked = true;               // จะถูกทำให้ error ตอน send()
+                    return;
+                }
+                return open(m, u, ...rest);
+            };
+            const send = x.send.bind(x);
+            x.send = function (...a) {
+                if (x.__blocked) { try { Object.defineProperty(x, 'status', { value: 0 }); x.readyState = 4; x.dispatchEvent(new Event('error')); } catch (e) {} return; }
+                return send(...a);
+            };
+            return x;
+        };
+
+        // ---- 📡 GPS ปลอม: เทสต์เป็นคนป้อน fix ทีละจุด
+        //    · fix ที่ป้อนไว้จะถูกเก็บใน __pendingCur → จ่ายให้คำขอ getCurrentPosition ตัวถัดไป
+        //      (จำลองอุปกรณ์ที่ "มี fix สดรออยู่" — คำขอที่แอปยิงมาทีหลังจะได้ fix ทันที ไม่ใช่ไม่มีอะไรตอบ)
+        //    · ถ้าคำขอยิงมาก่อนที่เทสต์จะป้อน fix → ค้างใน __q รอ (เหมือน GPS ยังไม่จับสัญญาณ) แล้วหมดเวลาเอง
+        cw.__q = [];
+        cw.__pendingCur = [];
+        cw.__geo = { watchCalls: 0, clearCalls: 0, order: [], drained: 0, fed: { watch: 0, cur: 0, queued: 0, timeout: 0, miss: 0 } };
+        const g = cw.navigator.geolocation;
+        // ⚠️ ต้องจำลอง "หมดเวลา" เหมือนเบราว์เซอร์จริง — ถ้าคิวไม่ตอบแล้ว Promise ไม่ reject เลย
+        //    catch-up จะค้างตลอดกาล (= สถานะที่แอปเจอได้จริงถ้าผู้ให้บริการ GPS ไม่ตอบ)
+        g.getCurrentPosition = (ok, err, opts) => {
+            if (cw.__pendingCur.length) {              // มี fix รออยู่แล้ว → จ่ายทันที (อุปกรณ์มี fix สด)
+                const fx = cw.__pendingCur.shift();
+                setTimeout(() => { try { ok(fx); } catch (e) {} }, 0);
+                return;
+            }
+            const item = { kind: 'cur', ok, err };
+            cw.__q.push(item);
+            const to = (opts && typeof opts.timeout === 'number') ? opts.timeout : 8000;
+            setTimeout(() => {
+                const i = cw.__q.indexOf(item);
+                if (i < 0) return;
+                cw.__q.splice(i, 1);
+                cw.__geo.fed.timeout++;
+                try { if (err) err({ code: 3, message: 'offline-test: จำลองหมดเวลา (timeout ' + to + ' ms)' }); } catch (e) {}
+            }, to);
+        };
+        g.watchPosition = (ok, err) => {
+            cw.__geo.watchCalls++; cw.__geo.order.push('watch');
+            cw.__q.push({ kind: 'watch', ok, err });
+            cw.__watchCb = ok;
+            return 9000 + cw.__geo.watchCalls;
+        };
+        g.clearWatch = () => { cw.__geo.clearCalls++; cw.__geo.order.push('clear'); };
+
+        // ---- 👁️ จำลองการซ่อนหน้า/ล็อกจอ ----
+        cw.__setHidden = (hidden) => {
+            try {
+                Object.defineProperty(cw.document, 'visibilityState', { configurable: true, get: () => hidden ? 'hidden' : 'visible' });
+                Object.defineProperty(cw.document, 'hidden', { configurable: true, get: () => !!hidden });
+                cw.document.dispatchEvent(new cw.Event('visibilitychange'));
+            } catch (e) {}
+        };
+    }
+
+    // ============================ ตัวช่วยอ่าน/ขับแอป ============================
+    const TRIP_KEY = 'taxi_active_trip_v1';
+    const tripState = () => { try { return JSON.parse(w().localStorage.getItem(TRIP_KEY) || 'null'); } catch (e) { return null; } };
+    // อ่าน "ยอดจริง" — บังคับเซฟก่อนอ่าน (payload ปกติเขียนทุก ~2 วิ → อ่านดิบ ๆ อาจได้ค่าย้อนหลัง = วัดผลผิด)
+    const tripStateFresh = () => { try { w().saveActiveTrip(true); } catch (e) {} return tripState(); };
+    const audit = () => (typeof w().__gapAudit === 'function' ? w().__gapAudit() : null);
+    const meterDiag = () => (typeof w().__meterTimeDiag === 'function' ? w().__meterTimeDiag() : null);
+
+    // ยิง fix ให้ "คำขอชนิดที่ระบุ" (cur = getCurrentPosition ที่ catch-up ใช้ · watch = ตัวติดตามปกติ)
+    //   · cur  = เลือกคำขอเก่าสุด (FIFO) เหมือนเบราว์เซอร์จริงที่จ่าย fix ให้คำขอที่ขอไว้ก่อน
+    //   · watch = ใช้คอลแบ็กตัวล่าสุดเสมอ (ตัวติดตามที่ยังมีชีวิต) — ถ้าไม่มีก็หาคำขอ watch ค้างในคิว
+    //   บันทึกผลการจ่ายทุกครั้ง: served / miss (จ่ายไม่ตรงคำขอ) — จะได้ไม่ "เงียบ ๆ" แล้วทดสอบผ่านแบบผิด ๆ
+    function feedFix(kind, lat, lon, acc, speedKmh) {
+        const cw = w();
+        const coords = { latitude: lat, longitude: lon, accuracy: (typeof acc === 'number') ? acc : 8, speed: (typeof speedKmh === 'number') ? speedKmh / 3.6 : null };
+        const fix = { coords, timestamp: cw.__fakeNow };
+        cw.__geo.fed = cw.__geo.fed || { watch: 0, cur: 0, miss: 0 };
+        if (kind === 'watch') {
+            const cb = (typeof cw.__watchCb === 'function') ? cw.__watchCb : ((cw.__q || []).find(x => x.kind === 'watch') || {}).ok;
+            if (typeof cb === 'function') {
+                const i = (cw.__q || []).findIndex(x => x.kind === 'watch');
+                if (i >= 0) cw.__q.splice(i, 1);   // คำขอ watch เก่าใช้ได้ครั้งเดียว
+                try { cb(fix); cw.__geo.fed.watch++; return true; } catch (e) { return false; }
+            }
+            cw.__geo.fed.miss++;
+            return false;
+        }
+        const i = (cw.__q || []).findIndex(x => x.kind === kind);
+        if (i >= 0) {
+            const item = cw.__q.splice(i, 1)[0];
+            try { item.ok(fix); cw.__geo.fed[kind]++; return true; } catch (e) { return false; }
+        }
+        if (kind === 'cur') {
+            // ไม่มีคำขอค้าง → เก็บ fix ไว้จ่ายให้คำขอตัวถัดไป (อุปกรณ์มี fix สดรออยู่)
+            cw.__pendingCur.push(fix);
+            cw.__geo.fed.queued++;
+            return true;
+        }
+        cw.__geo.fed.miss++;
+        return false;
+    }
+
+    // 🧹 เก็บกวาดคำขอ getCurrentPosition ที่ค้างจากตอนบูต (แอปยิงตัวนี้เพื่อ "ตั้งจุดตั้งต้นเที่ยว")
+    //    ในเครื่องจริงคำขอนี้ได้ fix ภายในไม่กี่วินาที ไม่ค้างข้ามชั่วโมง — ถ้าไม่เก็บกวาด
+    //    มันจะ "แย่ง fix" ของสถานการณ์ไป (บั๊กของชุดทดสอบเอง ที่ทำให้ข้อ 4 ดูเหมือนแอปเบิกกิโลไม่ครบ)
+    function drainPending(tag) {
+        const cw = w();
+        const q = cw.__q || [];
+        let n = 0;
+        for (let i = q.length - 1; i >= 0; i--) {
+            if (q[i].kind !== 'cur') continue;
+            const item = q.splice(i, 1)[0];
+            try { item.ok({ coords: { latitude: pos.lat, longitude: pos.lon, accuracy: 8, speed: 0 }, timestamp: cw.__fakeNow }); n++; } catch (e) {}
+        }
+        cw.__geo.drained = (cw.__geo.drained || 0) + n;
+        if (n && tag) log('drainPending(' + tag + '): เก็บคำขอค้าง ' + n);
+        return n;
+    }
+
+    function seedTrip(overrides) {
+        const cw = w();
+        const now = cw.__fakeNow;
+        const data = Object.assign({
+            v: 1, savedAt: now, startTime: now, caughtUpAt: now,  // caughtUpAt = now → ไม่ให้เข้าเส้นทาง "เบิกคืนตอนเปิดแอป"
+            km: 0, trafficSec: 0, remainKm: 0, remainSec: 0,
+            lastPos: { lat: START.lat, lon: START.lon },
+            lastPath: [{ lat: START.lat - 0.01, lon: START.lon }, { lat: START.lat, lon: START.lon }],
+            dest: null, destName: '', surcharges: [], baseFare: 35,
+            pauseLog: [], pauseOpenAt: null, paused: false
+        }, overrides || {});
+        cw.localStorage.setItem(TRIP_KEY, JSON.stringify(data));
+        cw.resumeSavedTrip();
+        return data;
+    }
+
+    // ---- จำลองการ "ขับ" ด้วย GPS ปลอม: เดินนาฬิกา + ยิง fix ให้ตัวติดตาม (watch) ----
+    const START = { lat: 13.7563, lon: 100.5018 };
+    let pos = { lat: START.lat, lon: START.lon };
+    const KM_PER_DEG_LAT = 110.574, KM_PER_DEG_LON = 111.320 * Math.cos(START.lat * Math.PI / 180);
+
+    // เลื่อนตำแหน่งไปทางเหนือ (เอียงนิดหน่อยให้เหมือนมีเลี้ยว) ตามระยะที่วิ่งจริง
+    function driveStep(sec, kmh) {
+        const cw = w();
+        if (kmh > 0) {
+            const km = kmh * sec / 3600;
+            pos.lat += (km * 0.995) / KM_PER_DEG_LAT;
+            pos.lon += (km * 0.1) / KM_PER_DEG_LON;
+        }
+        cw.__advance(sec * 1000);
+        return feedFix('watch', pos.lat, pos.lon, 8, kmh);
+    }
+
+    // 🔒 ล็อกจอแบบ "เบราว์เซอร์ไม่ยิง visibilitychange"
+    //    ต้องเดินนาฬิกา "ทีละก้าว" ตลอดช่วงแช่แข็ง — ถ้ากระโดดครั้งเดียวแล้วปล่อย ตัวจับเวลาจริง (1 วิ)
+    //    จะ tick ด้วยเวลาที่ไม่ขยับ → เห็นเป็น "กลับมาแล้ว" ทันที (ในเครื่องจริงระหว่างล็อกจอ ตัวจับเวลาถูกหน่วงทุกครั้ง)
+    let freezeTimer = null;
+    async function lockByThrottle(sec) {
+        const cw = w();
+        if (freezeTimer) { clearInterval(freezeTimer); freezeTimer = null; }
+        let fakeMs = 0;
+        cw.__advance(25000); fakeMs += 25000;
+        freezeTimer = setInterval(() => { if (fakeMs < sec * 1000) { cw.__advance(25000); fakeMs += 25000; } }, 250);
+        const t0 = Date.now();
+        while (fakeMs < sec * 1000 && Date.now() - t0 < sec * 2000 + 8000) { await wait(200); }
+        await wait(1300);   // ให้ tick จริงทำงานอย่างน้อย 1 ครั้งระหว่างที่ยังแช่แข็งอยู่
+        return !!(audit() && audit().throttled);
+    }
+    // ⏏️ กลับมาที่จอ: หยุดแช่แข็ง → tick ถัดไปเห็นว่าปกติ → 'resumed'
+    async function unlockByThrottle() {
+        if (freezeTimer) { clearInterval(freezeTimer); freezeTimer = null; }
+        for (let i = 0; i < 25; i++) {
+            await wait(400);
+            if (audit() && audit().throttled === false) return true;
+        }
+        return false;
+    }
+    // ล็อกจอแบบมี event (บางเครื่อง/โหมดเต็มจอ)
+    async function lockByEvent(sec) { w().__setHidden(true); w().__advance(sec * 1000); await wait(300); }
+    async function unlockByEvent() { w().__setHidden(false); w().__advance(1000); await wait(400); }
+
+    async function waitFor(fn, timeoutMs, label) {
+        const t0 = Date.now();
+        while (Date.now() - t0 < timeoutMs) { if (fn()) return true; await wait(150); }
+        throw new Error('รอไม่สำเร็จ: ' + label);
+    }
+
+    // ============================ บูตแอป ============================
+    async function loadApp() {
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.resumeSavedTrip === 'function' && typeof cw.startMeterAndTracking === 'function' && typeof cw.detectPageThrottle === 'function') {
+                installStubs();
+                await wait(150);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    async function freshApp() {
+        if (freezeTimer) { clearInterval(freezeTimer); freezeTimer = null; }
+        // 🧹 กันเที่ยวเก่า "เซฟตัวเองกลับ" ระหว่างเปลี่ยนหน้า: ตัวจับเวลาของหน้าเดิมเขียน payload ทุก ~2 วิ
+        //    ถ้าไม่หยุดก่อน หน้าที่โหลดใหม่จะเจอเที่ยวค้าง → ฟีเจอร์เริ่มต่ออัตโนมัติเริ่มมิเตอร์เองก่อนติดสตับ
+        //    (พบจริง: watchPosition ถูกเรียกก่อนติดสตับ → GPS ปลอมไม่ทำงานทั้งชุด)
+        try { w().isManualRunning = false; } catch (e) {}
+        await wait(80);
+        try { w().localStorage.removeItem(TRIP_KEY); } catch (e) {}
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = 'about:blank';
+        await wait(60);
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        try { w().localStorage.removeItem(TRIP_KEY); } catch (e) {}
+        await loadApp();
+        w().userKillCapMin = 60;           // เปิดเพดานเบิกเวลาจอดให้ทดสอบครบช่วง (ค่าเริ่มต้นในแอป = 15 นาที)
+        w().__testKillCapMin = 60;         // ⭐ ใช้ช่อง override ของชุดทดสอบ (ชนะค่าโปรไฟล์ → กัน race ตอนโปรไฟล์โหลดทับ)
+        pos = { lat: START.lat, lon: START.lon };
+        // ให้แอปเริ่มตัวติดตาม + ได้ fix แรก แล้วค่อยเริ่มนับ (เหมือนเที่ยวจริง)
+        seedTrip({ km: 0, trafficSec: 0 });
+        await wait(300);
+        feedFix('watch', pos.lat, pos.lon, 8, 0);
+        await wait(250);
+        drainPending('boot');   // ให้คำขอ "ตั้งจุดตั้งต้นเที่ยว" ของแอปจบไปก่อนเริ่มสถานการณ์
+        await wait(150);
+        return true;
+    }
+
+    // ============================ assert ============================
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+    function near(actual, expected, tol, label) {
+        if (!(Math.abs(actual - expected) <= tol)) throw new Error(label + ': ได้ ' + actual + ' คาด ' + expected + ' (±' + tol + ')');
+        return actual;
+    }
+
+    // ============================ รัน 1 สถานการณ์ ============================
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            await freshApp();
+            const out = await Promise.race([
+                fn(),
+                wait(90000).then(() => { throw new Error('สถานการณ์ timeout 90 วิ'); })
+            ]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ล้มเหลว</span> ' + name + '\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span>';
+            failures.push({ name: name, error: e && e.message ? e.message : String(e) });
+            failCount++;
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ล้มเหลว ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        const n = w() && w().__net ? w().__net : { blockedFetch: 0, blockedXhr: 0 };
+        const geo = (w() && w().__geo) ? w().__geo : { fed: { watch: 0, cur: 0, queued: 0, timeout: 0, miss: 0 }, drained: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: คำขอออกนอกเครื่องที่ถูกบล็อกทั้งหมด ' + (n.blockedFetch + n.blockedXhr) +
+            ' ครั้ง (fetch ' + n.blockedFetch + ' · XHR ' + n.blockedXhr + ') — ชุดทดสอบนี้ไม่ต้องใช้อินเทอร์เน็ต' +
+            ' · GPS ปลอม: จ่ายให้ watch ' + geo.fed.watch + ' · จ่ายให้ getCurrentPosition ' + geo.fed.cur +
+            ' (รอคิวไว้จ่าย ' + geo.fed.queued + ' · หมดเวลา ' + geo.fed.timeout + ')' +
+            ' · เก็บคำขอค้างตอนบูต ' + (geo.drained || 0) + ' · จ่ายไม่ตรงคำขอ ' + geo.fed.miss + (geo.fed.miss ? ' ⚠️' : '');
+    }
+
+    async function runAll() {
+        resultsEl.innerHTML = ''; passCount = 0; failCount = 0; failures.length = 0;
+        renderSummary();
+        const only = parseInt(new URLSearchParams(location.search).get('only') || '0', 10);
+        const skip = (n) => only > 0 && n !== only;
+
+        // ---------- 0) บูตออฟไลน์ได้จริง ----------
+        await runScenario('0. บูตแอปได้โดยไม่ใช้เน็ต (มิเตอร์พร้อมเดิน)', async () => {
+            if (skip(0)) return;
+            await freshApp();
+            const cw = w();
+            assert(cw.isManualRunning === true, 'มิเตอร์ต้องเริ่มเดินหลังเริ่มต่อ (isManualRunning)');
+            assert(cw.isMeterPaused !== true, 'ต้องไม่ค้างสถานะหยุดมิเตอร์ชั่วคราว');
+            assert(cw.__net.blockedFetch + cw.__net.blockedXhr >= 0, 'ตัวนับการบล็อกต้องมี');
+            // ⭐ ต้องเป็น GPS ปลอมของชุดทดสอบเท่านั้น (ถ้าเป็นตัวจริงของเบราว์เซอร์ = ชุดทดสอบไม่คุมสถานะได้)
+            assert(cw.__geo.watchCalls >= 1, 'ตัวติดตาม GPS ต้องถูกสร้างผ่านสตับของชุดทดสอบ (watchCalls ≥ 1) แต่ได้ ' + cw.__geo.watchCalls);
+            const d = meterDiag();
+            assert(d && d.running === true, '__meterTimeDiag ต้องบอกว่ากำลังเดิน');
+            return 'มิเตอร์เดิน · นาฬิกาปลอมทำงาน · ฟังก์ชันวินิจฉัยพร้อม';
+        });
+
+        // ---------- 1) ล็อกจอแบบไม่มี event → ต้องตรวจจับจากการหน่วงของตัวจับเวลา ----------
+        await runScenario('1. ล็อกจอแบบไม่ยิง visibilitychange → ระบบตรวจจับเองและจดช่วงซ่อน', async () => {
+            if (skip(1)) return;
+            const before = audit();
+            assert(before.pendingGapSec === null, 'ก่อนล็อกจอต้องไม่มีช่วงค้าง');
+            const detected = await lockByThrottle(600);         // 10 นาทีแบบจอดับ (ไม่มี event)
+            const a = audit();
+            assert(detected === true, 'ต้องตรวจพบว่าหน้าถูกแช่แข็ง (throttled)');
+            assert(a.throttled === true, 'สถานะต้องเป็น throttled');
+            assert(typeof a.pendingGapSec === 'number', 'ต้องจด "ช่วงซ่อน" ให้ catch-up ทำงาน (pendingGapSec)');
+            return 'ตรวจพบจากการหน่วงของตัวจับเวลา · จดช่วงซ่อนเองใน ' + a.pendingGapSec + ' วิ';
+        });
+
+        // ---------- 2) ล็อกจอ = ห้ามนับเวลารถติดต่อจากหลักฐานเก่า ----------
+        await runScenario('2. ล็อกจอ 10 นาที → เวลารถติดต้องไม่บวมขึ้นเอง (ต้นเหตุ 1:21:32)', async () => {
+            if (skip(2)) return;
+            // จอดนิ่งก่อนล็อกจอ → ให้ระบบกำลังคิดเวลารถติดอยู่จริง (รถติด/จอด)
+            driveStep(20, 0); await wait(300); driveStep(20, 0); await wait(300);
+            const t1 = meterDiag().trafficSeconds;
+            const charging = meterDiag().charging;
+            assert(charging === true, 'ก่อนล็อกจอระบบต้อง "กำลังคิดเวลารถติด" (หลักฐานบอกว่าจอด)');
+            await lockByThrottle(600);                          // ล็อกจอ 10 นาที (ไม่มี fix เลย)
+            driveStep(0, 0);
+            const t2 = meterDiag().trafficSeconds;
+            assert((t2 - t1) <= 3, 'เวลารถติดต้องไม่เพิ่มระหว่างล็อกจอ (เพิ่มไป ' + Math.round(t2 - t1) + ' วิ)');
+            return 'ก่อนล็อก ' + t1 + ' วิ → หลังล็อก 10 นาที ' + t2 + ' วิ (เพิ่ม ' + Math.round(t2 - t1) + ' วิ เท่านั้น)';
+        });
+
+        // ---------- 3) กลับมาแล้ว fix ยังหยาบ (>150 ม.) → ช่วงต้องไม่ถูกทิ้ง ----------
+        await runScenario('3. กลับมาแล้ว fix ยังหยาบ → ช่วงไม่ถูกทิ้ง + ตั้งเวลาลองใหม่ (ต้นเหตุระยะทางหาย)', async () => {
+            if (skip(3)) return;
+            await lockByThrottle(420);
+            const kmBefore = tripStateFresh().km;
+            await unlockByThrottle();
+            // fix ที่ได้ตอนปลดล็อกจอมักหยาบ — ปล่อย fix หยาบ 300 ม. ให้ catch-up เห็นแล้ว "ยังตัดสินไม่ได้"
+            for (let i = 0; i < 3; i++) feedFix('cur', pos.lat + 0.02, pos.lon, 300, -1);
+            await waitFor(() => (audit().lastReason || '').length > 0, 25000, 'ให้ catch-up บันทึกเหตุผลว่ายังตัดสินไม่ได้');
+            const a = audit();
+            assert(typeof a.pendingGapSec === 'number' && a.pendingGapSec > 0, 'ช่วงต้องยังค้างอยู่ (ห้ามถูกล้างทิ้ง)');
+            assert(/GPS/.test(a.lastReason), 'เหตุผลต้องบอกว่ารอ GPS (ได้: ' + a.lastReason + ')');
+            await waitFor(() => audit().retries >= 1, 20000, 'ต้องลองใหม่อย่างน้อย 1 ครั้ง');
+            const kmAfter = (tripStateFresh() || {}).km;
+            assert(Math.abs(kmAfter - kmBefore) < 0.05, 'ระหว่างนี้ห้ามเบิกกิโลด้วย fix หยาบ (km ' + kmBefore + ' → ' + kmAfter + ')');
+            return 'ช่วงยังค้าง ' + audit().pendingGapSec + ' วิ · ลองใหม่ ' + audit().retries + ' ครั้ง · เหตุผล “' + a.lastReason + '”';
+        });
+
+        // ---------- 4) กลับมาแล้วได้ fix ดี + วิ่งไป 2 กม. → ระยะทางต้องถูกเบิกคืน ----------
+        await runScenario('4. ล็อกจอ 8 นาที วิ่งไป 2 กม. → ระยะทางถูกเบิกคืน (เดิมหายถาวร 7.29 จาก 12.0)', async () => {
+            if (skip(4)) return;
+            driveStep(60, 30); await wait(400);               // วิ่งมาก่อนล็อก เพื่อให้มี "ความเร็วล้อหมุน" เป็นอ้างอิง
+            const st1 = tripStateFresh(); const km1 = st1.km;
+            const straightFrom = { lat: pos.lat, lon: pos.lon };
+            await lockByThrottle(480);
+            // รถวิ่งต่อไป 2 กม. ระหว่างที่แอปถูกพัก (fix ไม่มาเลย)
+            const kmMoved = 2.0;
+            pos.lat += kmMoved / KM_PER_DEG_LAT;
+            await unlockByThrottle();
+            await wait(400);
+            const straight = haversineKm(straightFrom, pos);
+            drainPending('before-catchup');   // กันคำขอค้างจากตอนบูตมาแย่ง fix
+            for (let i = 0; i < 3; i++) { feedFix('cur', pos.lat, pos.lon, 8, -1); await wait(250); }
+            let credited = false;
+            const tw = Date.now();
+            while (Date.now() - tw < 25000) { if (((tripStateFresh() || {}).km) > km1 + 0.5) { credited = true; break; } await wait(400); }
+            if (!credited) {
+                const stD = tripStateFresh(), aD = audit();
+                throw new Error('catch-up ไม่เบิกกิโล · audit=' + JSON.stringify(aD) +
+                    ' · catchUpLog=' + JSON.stringify((stD && stD.catchUpLog) || null) +
+                    ' · km=' + (stD && stD.km) + ' (ก่อนล็อก ' + km1 + ') · paused=' + w().isMeterPaused + ' · running=' + w().isManualRunning);
+            }
+            const st2 = tripStateFresh(); const km2 = st2.km;
+            const added = km2 - km1;
+            assert(added >= straight * 1.0 - 0.05, 'ระยะที่เบิกคืนต้องไม่น้อยกว่าเส้นตรง (' + added.toFixed(2) + ' กม. / เส้นตรง ' + straight.toFixed(2) + ' กม.)');
+            assert(added <= straight * 2.2, 'ระยะที่เบิกคืนต้องไม่เกินเส้นตรง×2.2 (ได้ ' + added.toFixed(2) + ' กม.)');
+            const addedT = st2.trafficSec - st1.trafficSec;
+            assert(addedT <= 480, 'เวลารถติดที่เพิ่มต้องไม่เกินความยาวช่วงที่ล็อกจอ (ได้ ' + Math.round(addedT) + ' วิ)');
+            assert(addedT >= 0, 'เวลารถติดต้องไม่ถูกถอนจนติดลบ (ได้ ' + Math.round(addedT) + ' วิ)');
+            // 🚫 ห้ามมีคำขอ GPS ที่จ่ายไม่ตรง (ไม่งั้นสถานการณ์นี้อาจผ่าน/ไม่ผ่านด้วยเหตุผลผิด ๆ)
+            assert(w().__geo.fed.miss === 0, 'มี fix ที่จ่ายไม่ตรงคำขอ ' + w().__geo.fed.miss + ' ครั้ง (ชุดทดสอบผิดเอง ไม่ใช่แอป)');
+            assert(w().__geo.fed.cur + w().__geo.fed.queued >= 1, 'ต้องมี fix ถูกจ่ายให้คำขอ getCurrentPosition ของ catch-up อย่างน้อย 1 ครั้ง');
+            return 'เบิกคืน ' + added.toFixed(2) + ' กม. (เส้นตรง ' + straight.toFixed(2) + ') · รถติดเพิ่ม ' + Math.round(addedT) + ' วิ ในช่วง ' + 480 + ' วิ';
+        });
+
+        // ---------- 5) จอดนิ่งทั้งช่วง → เบิกเวลาจอดเต็มช่วง (ตรงกับมิเตอร์จริง) ----------
+        await runScenario('5. ล็อกจอ 5 นาทีโดยจอดนิ่ง → ได้เวลาจอดเต็มช่วง (เหมือนมิเตอร์จริง)', async () => {
+            if (skip(5)) return;
+            driveStep(30, 0); await wait(300);
+            const st1 = tripStateFresh();
+            await lockByThrottle(300);
+            await unlockByThrottle();
+            await wait(400);
+            for (let i = 0; i < 3; i++) { feedFix('cur', pos.lat, pos.lon, 8, 0); await wait(250); }
+            try {
+                await waitFor(() => (tripStateFresh() || {}).trafficSec > st1.trafficSec + 200, 25000, 'ให้ catch-up เบิกเวลาจอด');
+            } catch (e) {
+                const st = tripStateFresh(), a = audit(), d = meterDiag();
+                throw new Error('catch-up ยังไม่เบิกเวลาจอด · audit=' + JSON.stringify(a) +
+                    ' · รถติด ' + Math.round(st.trafficSec) + ' วิ (ก่อนล็อก ' + Math.round(st1.trafficSec) + ')' +
+                    ' · km=' + st.km + ' · running=' + w().isManualRunning + ' · paused=' + w().isMeterPaused +
+                    ' · charging=' + (d && d.charging) + ' · catchUpLog=' + JSON.stringify(st.catchUpLog || null));
+            }
+            const st2 = tripStateFresh();
+            const added = st2.trafficSec - st1.trafficSec;
+            near(added, 300, 60, 'เวลาจอดที่เบิกคืน (ช่วงล็อก 300 วิ)');
+            assert(Math.abs(st2.km - st1.km) < 0.05, 'จอดนิ่ง = ห้ามเพิ่มระยะทาง (ได้เพิ่ม ' + (st2.km - st1.km).toFixed(3) + ' กม.)');
+            return 'เบิกเวลาจอด ' + Math.round(added) + ' วิ · ระยะทางไม่เพิ่ม';
+        });
+
+        // ---------- 6) GPS ตายยาว (หน้าไม่ถูกแช่แข็ง) → watchdog ต้องปลุก watch ใหม่ ----------
+        await runScenario('6. GPS ขาดเกิน 60 วิ → ปลุก watchPosition ใหม่ (clear ก่อนเสมอ)', async () => {
+            if (skip(6)) return;
+            const a0 = audit();
+            assert(a0.watchRestarts === 0, 'เริ่มต้นต้องยังไม่เคยปลุก GPS');
+            const clearBefore = w().__geo.clearCalls;
+            // เดินนาฬิกาเป็นก้าวสั้น ๆ (10 วิ/ก้าว) → หน้าไม่ถูกมองว่าแช่แข็ง แต่ไม่มี fix มาเลย 90 วิ
+            for (let i = 0; i < 9; i++) { w().__advance(10000); await wait(500); }
+            const a1 = audit();
+            assert(a1.throttled === false, 'ต้องไม่ถูกมองว่าแช่แข็ง (เดินเวลาทีละ 10 วิ)');
+            await waitFor(() => audit().watchRestarts >= 1, 15000, 'ให้ watchdog ปลุก GPS');
+            const a2 = audit();
+            assert(a2.fixAgeSec === null || a2.fixAgeSec >= 0, 'อายุ fix ต้องอ่านได้');
+            assert(w().__geo.clearCalls > clearBefore, 'ต้อง clearWatch ตัวเก่าก่อนสร้างใหม่ (กัน watch ซ้อน = นับระยะซ้ำ)');
+            return 'ปลุก GPS ' + a2.watchRestarts + ' ครั้ง · clearWatch ' + (w().__geo.clearCalls - clearBefore) + ' ครั้ง · watch ที่ยังเปิด ' + a2.watchAlive;
+        });
+
+        // ---------- 7) สลับแอปสั้น ๆ (3 วิ) → ต้องไม่นับเป็น "ช่วงซ่อน" และไม่ขึ้นรายการหยุดพัก ----------
+        await runScenario('7. สลับแอปสั้น 3 วิ → ไม่จดช่วงซ่อน/ไม่ขึ้นรายการหยุดพัก', async () => {
+            if (skip(7)) return;
+            driveStep(30, 0); await wait(300);
+            const st1 = tripStateFresh();
+            await lockByEvent(3);
+            await unlockByEvent();
+            await wait(800);
+            const st2 = tripStateFresh();
+            const log2 = st2.catchUpLog || [];
+            assert(log2.length === 0, 'ช่วงสั้น 3 วิ ต้องไม่ถูกจดเป็นการเบิกคืน');
+            assert((st2.pauseLog || []).length === 0, 'ต้องไม่ขึ้นรายการหยุดพัก (สลับแอปสั้น ๆ)');
+            assert(Math.abs(st2.km - st1.km) < 0.05, 'ระยะทางต้องไม่เพี้ยนจากการสลับสั้น ๆ');
+            assert((audit().pendingGapSec === null), 'ต้องไม่มีช่วงค้างหลังกลับมาแล้ว');
+            return 'ไม่มีช่วงค้าง · ไม่มีรายการหยุดพัก · ระยะทางเท่าเดิม (' + st2.km.toFixed(2) + ' กม.)';
+        });
+
+        // ---------- 8) วินาทีที่ "เดา" ต้องไม่ถูกยกเป็นหลักฐานตอนเบิกคืน ----------
+        await runScenario('8. ยอดที่ “เดา” ระหว่างไม่มี fix ต้องถูกหักออกจากหลักฐานตอนเบิกคืน', async () => {
+            if (skip(8)) return;
+            driveStep(20, 0); await wait(300);
+            const st1 = tripStateFresh();
+            // ไม่มี fix 90 วิ แต่หน้าไม่ถูกมองว่าแช่แข็ง (เดินเวลา 10 วิ/ก้าว) → เข้าเส้นทาง "ยอดเดา" ได้
+            for (let i = 0; i < 9; i++) { w().__advance(10000); await wait(500); }
+            const guessed = audit().guessedSec;
+            const d = meterDiag();
+            assert(guessed >= 0, 'ตัวนับวินาทีที่เดาต้องอ่านได้ (ได้ ' + guessed + ')');
+            // ล็อกจอ + กลับมา แล้วเบิกคืนด้วย fix ดีที่ "วิ่งไป" → ยอดเดาต้องไม่ถูกใช้ตัดสิน
+            await lockByThrottle(420);
+            const stMid = tripStateFresh();
+            pos.lat += 1.5 / KM_PER_DEG_LAT;
+            await unlockByThrottle();
+            for (let i = 0; i < 3; i++) { feedFix('cur', pos.lat, pos.lon, 8, -1); await wait(250); }
+            await waitFor(() => (tripStateFresh() || {}).km > stMid.km + 0.5, 25000, 'ให้ catch-up เบิกกิโลคืน');
+            const st2 = tripStateFresh();
+            const roundTraffic = st2.trafficSec - stMid.trafficSec;
+            assert(roundTraffic <= 420, 'เวลารถติดรอบนี้ต้องไม่เกินความยาวช่วง (ได้ ' + Math.round(roundTraffic) + ' วิ จาก 420 วิ)');
+            assert(audit().guessedSec === 0, 'หลังเบิกคืนจบ ตัวนับยอดเดาต้องถูกล้าง (=0) แต่ได้ ' + audit().guessedSec);
+            return 'ยอดเดาก่อนเบิก ' + guessed + ' วิ · รอบนี้คิดรถติด ' + Math.round(roundTraffic) + ' วิ · หลังจบ guessedSec=0';
+        });
+
+        // ---------- 9) เที่ยวเต็ม (จำลอง) เทียบ "มิเตอร์จริง" ----------
+        await runScenario('9. เที่ยวเต็ม ~2 ชม. + ล็อกจอกลางเที่ยว → เทียบมิเตอร์จริงที่จำลอง', async () => {
+            if (skip(9)) return;
+            // 🎯 มิเตอร์จริงที่จำลอง: 12.0 กม. · รอ 1:10:40 (4,240 วิ) · รวม ~1:37:20
+            //    ⚙️ fix ต้องถี่ ≤ 6 วิ — แอปจึงเชื่อความเร็ว GPS (∫v·dt) แทนเส้นตรง×1.05
+            //       (ถ้ายิงห่างกว่านี้ แอปจะถูกบังคับให้ใช้เส้นตรง×1.05 = เปรียบเทียบไม่ตรงกับมิเตอร์ที่จำลอง)
+            const STEP = 4;
+            const CYCLES = 20;                 // 20 รอบ × (212 วิ จอด + 80 วิ วิ่ง 27 กม./ชม.) = 5,840 วิ · 12.0 กม.
+            const realKm = CYCLES * (80 / 3600) * 27;
+            const realWait = CYCLES * 212;
+            const postSec = 120;               // วิ่งต่อหลังเบิกคืน (ต้องนับเข้ายอด "มิเตอร์ที่จำลอง" ด้วย)
+            const postKm = (postSec / 3600) * 27;
+            let n = 0;
+            for (let c = 0; c < CYCLES; c++) {
+                for (let t = 0; t < 212; t += STEP) { driveStep(STEP, 0); if (++n % 120 === 0) await wait(0); }
+                for (let t = 0; t < 80; t += STEP) { driveStep(STEP, 27); if (++n % 120 === 0) await wait(0); }
+            }
+            await wait(600);
+            const stOn = tripStateFresh();
+            const onKm = stOn.km, onTraffic = stOn.trafficSec;
+            // 🔒 ล็อกจอกลางเที่ยว 5 นาที + รถวิ่งไป 2 กม. (ไม่มี fix เลย)
+            const kmBeforeLock = stOn.km;
+            await lockByThrottle(300);
+            const kmMoved = 2.0;
+            pos.lat += kmMoved / KM_PER_DEG_LAT;
+            await unlockByThrottle();
+            await wait(400);
+            for (let i = 0; i < 3; i++) { feedFix('cur', pos.lat, pos.lon, 8, -1); await wait(250); }
+            await waitFor(() => (tripStateFresh() || {}).km > kmBeforeLock + 0.8, 30000, 'ให้ catch-up เบิกระยะช่วงล็อกจอ');
+            await wait(600);
+            // กลับมาขับต่ออีกนิด (จำลองว่าคนขับไปถึงปลายทาง)
+            for (let t = 0; t < postSec; t += STEP) { driveStep(STEP, 27); await wait(0); }
+            await wait(600);
+            const stEnd = tripStateFresh();
+            const realKmAll = realKm + kmMoved + postKm, realWaitAll = realWait;
+            const kmErr = (stEnd.km - realKmAll) / realKmAll * 100;
+            const waitErrMin = (stEnd.trafficSec - realWaitAll) / 60;
+            assert(Math.abs(kmErr) <= 8, 'ระยะทางต้องต่างจากมิเตอร์จริงไม่เกิน 8% (แอป ' + stEnd.km.toFixed(2) + ' กม. / มิเตอร์ ' + realKmAll.toFixed(2) + ' กม. → ' + kmErr.toFixed(1) + '%)');
+            assert(Math.abs(waitErrMin) <= 3, 'เวลารถติดต้องต่างจากมิเตอร์จริงไม่เกิน 3 นาที (แอป ' + Math.round(stEnd.trafficSec) + ' วิ / มิเตอร์ ' + realWaitAll + ' วิ → ' + waitErrMin.toFixed(1) + ' นาที)');
+            return 'ก่อนล็อก (จอเปิด): ' + onKm.toFixed(2) + ' กม. · รอ ' + fmtClock(onTraffic) +
+                ' | หลังเบิกคืน: ' + stEnd.km.toFixed(2) + ' กม. · รอ ' + fmtClock(stEnd.trafficSec) +
+                ' | มิเตอร์จริง(จำลอง): ' + realKmAll.toFixed(2) + ' กม. · รอ ' + fmtClock(realWaitAll) +
+                ' | ผลต่าง ' + kmErr.toFixed(1) + '% · ' + waitErrMin.toFixed(1) + ' นาที';
+        });
+
+        renderSummary();
+        log('เสร็จ: ผ่าน ' + passCount + ' / ล้มเหลว ' + failCount, failures);
+    }
+
+    function fmtClock(sec) {
+        const s = Math.round(sec), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+        return (h > 0 ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(ss).padStart(2, '0');
+    }
+    function haversineKm(a, b) {
+        const R = 6371, dLat = (b.lat - a.lat) * Math.PI / 180, dLon = (b.lon - a.lon) * Math.PI / 180;
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(h));
+    }
+
+    document.getElementById('runBtn').addEventListener('click', () => { runAll(); });
+    document.getElementById('dbgBtn').addEventListener('click', () => {
+        const a = audit(), d = meterDiag(), st = tripState();
+        alert(JSON.stringify({ audit: a, meter: d, trip: st ? { km: st.km, trafficSec: st.trafficSec } : null }, null, 2));
+    });
+
+    window.addEventListener('load', () => { runAll(); });
+})();
+</script>
+</body>
+</html>
