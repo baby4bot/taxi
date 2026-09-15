@@ -1766,6 +1766,15 @@
         #txtPrevBackChip { position: fixed; left: 14px; bottom: 44px; z-index: 10090; display: none; align-items: center; gap: 6px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 999px; padding: 9px 14px 9px 11px; font-size: 12.5px; font-weight: 700; box-shadow: 0 10px 26px rgba(0,0,0,0.45); cursor: pointer; -webkit-tap-highlight-color: transparent; }
         #txtPrevBackChip:active { transform: scale(0.96); }
         #txtPrevBackChip .material-symbols-outlined { font-size: 18px; }
+        /* ✍️ บาร์แก้ข้อความจากหน้าที่กำลังดูอยู่ (ลอยล่างจอ · อยู่เหนือทุกหน้าต่าง) */
+        #txtInlineEdit { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 10100; width: min(470px, calc(100vw - 16px)); display: none; flex-direction: column; gap: 8px; padding: 10px 12px 11px; border-radius: 16px; background: rgba(16,20,28,0.97); border: 1px solid rgba(255,210,77,0.45); box-shadow: 0 14px 40px rgba(0,0,0,0.6); }
+        html.light #txtInlineEdit { background: rgba(255,255,255,0.98); border-color: rgba(31,111,235,0.35); box-shadow: 0 14px 40px rgba(0,0,0,0.18); }
+        #txtInlineEdit .tie-head { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-dim); }
+        #txtInlineEdit .tie-head b { color: var(--neon-yellow); white-space: nowrap; }
+        html.light #txtInlineEdit .tie-head b { color: #b45309; }
+        #txtInlineEdit .tie-row { display: flex; align-items: center; gap: 7px; }
+        #txtInlineEdit input { flex: 1; min-width: 0; font-size: 13px; padding: 10px 12px; }
+        #txtInlineEdit button { display: inline-flex; align-items: center; justify-content: center; }
 
         /* ===== 📜 ลิสต์ค้นหา (ที่โปรด/ประวัติ/ผลค้นหา) — เลื่อนให้เนียนทุกเครื่อง (แก้ 15 ก.ย. 69) =====
            กฎนี้ตั้งใจวาง “ท้ายไฟล์” เพื่อให้ชนะกฎ .dropdown-box/.history-header/.list-item ที่เขียนไว้ก่อนหน้า
@@ -7332,14 +7341,130 @@
     window.textEscAttr = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     // 🧺 เก็บค่าที่พิมพ์ค้างในช่องกรอกไว้ก่อนวาดลิสต์ใหม่ — เดินดูหน้าจออื่น/กรอง/ค้นหา แล้วกลับมา ข้อความที่พิมพ์ไว้ไม่หาย
     //    (ตอนบันทึก/รีเซ็ต/ล้างรายการ จะข้ามด้วย flag เพราะไม่อยากให้ค่าที่กำลังจะลบกลับมา)
+    // ===================== ✍️ แก้ข้อความจากหน้าที่กำลังดูอยู่ (ไม่ต้องกลับไปหาช่องกรอก) =====================
+    //  เปิดขึ้นเมื่อมีไฮไลต์อยู่ · พิมพ์แล้วเปลี่ยนบนจอทันที (แก้ในหน่วยความจำ) · กด “บันทึก” จึงเขียนขึ้นเซิร์ฟเวอร์
+    //  กติกาเดิมทั้งหมดยังอยู่: คีย์ = ข้อความต้นฉบับ · บันทึก = Admin + ยืนยันตัวตน · เว้นว่าง = กลับเป็นต้นฉบับ
+    window.txtInlineState = null;
+    window.txtInlineEl = (id) => document.getElementById(id);
+    window.txtInlineBuild = () => {
+        if (window.txtInlineEl('txtInlineEdit')) return;
+        const bar = document.createElement('div');
+        bar.id = 'txtInlineEdit';
+        bar.setAttribute('data-txt-skip', '1'); // ห้ามถูกจับเป็นข้อความที่แก้ได้
+        bar.innerHTML =
+            '<div class="tie-head"><span class="material-symbols-outlined" style="font-size:15px;">edit_note</span>' +
+                '<b id="tieWhere">หน้าจอ</b>' +
+                '<span id="tieOrig" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>' +
+                '<span id="tiePos" style="white-space:nowrap;"></span>' +
+                '<span id="tieClose" onclick="window.txtInlineClose(true)" title="ปิด (ไม่บันทึก)" style="cursor:pointer; color:#ff8a95; display:inline-flex; align-items:center;"><span class="material-symbols-outlined" style="font-size:17px;">close</span></span></div>' +
+            '<div class="tie-row">' +
+                '<input type="text" id="tieInput" oninput="window.txtInlineType(this.value)" onkeydown="if(event.key===\'Enter\'){window.txtInlineSave();}" style="text-align:left;">' +
+                '<button type="button" id="tieNext" onclick="window.txtInlineNext()" title="ดูจุดถัดไปของข้อความนี้" style="background:rgba(77,163,255,0.16); border:1px solid rgba(77,163,255,0.45); color:#7db8ff; border-radius:10px; padding:9px 11px; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:19px;">skip_next</span></button>' +
+                '<button type="button" id="tieClear" onclick="window.txtInlineClear()" title="ล้างค่าแก้ → กลับเป็นข้อความต้นฉบับ" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); color:#ffd24d; border-radius:10px; padding:9px 11px; cursor:pointer;"><span class="material-symbols-outlined" style="font-size:19px;">restart_alt</span></button>' +
+                '<button type="button" id="tieSave" onclick="window.txtInlineSave()" title="บันทึก (มีผลกับทุกคน)" style="background:var(--neon-green); border:none; color:#fff; border-radius:10px; padding:9px 13px; font-weight:700; cursor:pointer; white-space:nowrap;">บันทึก</button></div>' +
+            '<div id="tieHint" style="font-size:10.5px; color:var(--text-dim); line-height:1.5;">พิมพ์แล้วเห็นผลบนจอทันที — กด “บันทึก” เพื่อให้ทุกคนเห็นเหมือนกัน (เว้นว่าง = คืนต้นฉบับ)</div>';
+        document.body.appendChild(bar);
+    };
+    window.txtInlineOpen = (def, el, screen) => {
+        if (!window.isAdminNow || !window.isAdminNow()) return; // แก้ข้อความ = แอดมินเท่านั้น
+        window.txtInlineBuild();
+        const st = window.txtInlineState;
+        const sameKey = st && st.def === def;
+        const cur = (window.__textOvr || {})[def] || '';
+        if (!st) window.txtInlineState = { def: def, prev: cur, saved: false };
+        else if (!sameKey) { window.txtInlineState = { def: def, prev: cur, saved: false }; }
+        else { window.txtInlineState.saved = false; }
+        const bar = window.txtInlineEl('txtInlineEdit');
+        bar.style.display = 'flex';
+        window.txtInlineEl('tieWhere').textContent = '🖥 ' + (screen || window.textOvrScreenLabel(window.textOvrScreenKey(el)));
+        window.txtInlineEl('tieOrig').textContent = '“' + def + '”';
+        const arr = (window.__txtEls.get(def) || []);
+        window.txtInlineEl('tiePos').textContent = arr.length > 1 ? ((Number(window.__txtPrevIdx && window.__txtPrevIdx[def] ? window.__txtPrevIdx[def] : 1) - 1 + arr.length) % arr.length + 1) + '/' + arr.length : '';
+        const inp = window.txtInlineEl('tieInput');
+        inp.placeholder = '(เว้นว่าง = ต้นฉบับ)';
+        if (!sameKey || document.activeElement !== inp) inp.value = (window.__textOvr || {})[def] || '';
+        window.txtInlineEl('txtInlineEdit').style.display = 'flex';
+    };
+    window.txtInlineClose = (revert) => {
+        const bar = window.txtInlineEl('txtInlineEdit');
+        if (!bar) return;
+        const st = window.txtInlineState;
+        bar.style.display = 'none';
+        window.txtInlineState = null;
+        // ❌ ปิดโดยไม่ได้บันทึก = คืนค่าเดิมที่เห็นอยู่ก่อนเปิดบาร์ (กันจอค้างเป็นข้อความที่ไม่ได้บันทึก)
+        if (revert && st && !st.saved) {
+            try {
+                const cur = Object.assign({}, window.__textOvr || {});
+                if (st.prev) cur[st.def] = st.prev; else delete cur[st.def];
+                window.__textOvr = cur;
+                window.applyTextOverrides();
+            } catch (e) {}
+        }
+    };
+    window.txtInlineType = (val) => {
+        const st = window.txtInlineState; if (!st) return;
+        st.saved = false; // พิมพ์เพิ่มหลังบันทึกแล้ว = ยังไม่บันทึกอีก → ปิดบาร์ต้องคืนค่าเดิม
+        const v = String(val == null ? '' : val).trim();
+        const cur = Object.assign({}, window.__textOvr || {});
+        if (v && v !== st.def) cur[st.def] = v; else delete cur[st.def];
+        window.__textOvr = cur;
+        window.applyTextOverrides(); // เห็นผลบนจอทันที
+    };
+    window.txtInlineNext = () => {
+        const st = window.txtInlineState; if (!st) return;
+        // เก็บสิ่งที่พิมพ์ไว้ก่อน แล้ววนไปจุดถัดไป (กรอบทองย้ายที่) — ช่องกรอกเปลี่ยนตามค่าของจุดนั้น
+        window.txtInlineType(window.txtInlineEl('tieInput').value);
+        const def = st.def;
+        const keep = window.__textOvr; window.__textOvr = keep;
+        window.txtInlineState = null; // ให้ Open ตั้งค่าเริ่มต้นของจุดใหม่
+        window.__txtPrevIdx = window.__txtPrevIdx || {};
+        window.textPreviewShow(def);
+    };
+    window.txtInlineClear = () => {
+        const st = window.txtInlineState; if (!st) return;
+        window.txtInlineEl('tieInput').value = '';
+        window.txtInlineType('');
+        window.txtInlineEl('tieHint').textContent = 'ล้างค่าแล้ว — กด “บันทึก” เพื่อให้ทุกคนกลับไปใช้ข้อความต้นฉบับ';
+    };
+    window.txtInlineSave = async () => {
+        const st = window.txtInlineState; if (!st) return;
+        if (!window.isAdminNow || !window.isAdminNow()) return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
+        // ลำดับสำคัญ: เก็บ draft จากหน้ารวมก่อน (ข้ามข้อความที่อยู่ในบาร์) แล้วค่อยทับด้วยค่าที่พิมพ์ในบาร์
+        window.textEditHarvest();
+        window.txtInlineType(window.txtInlineEl('tieInput').value);
+        if (!(await window.requireReauth('ยืนยันเพื่อบันทึก “ข้อความ/หัวข้อในแอป” — ทุกคนจะเห็นข้อความใหม่นี้'))) return window.showToast('ยกเลิกการบันทึก — ยังไม่ได้ยืนยันตัวตน', true);
+        const btn = window.txtInlineEl('tieSave');
+        if (btn) { btn.disabled = true; btn.textContent = 'กำลังบันทึก...'; }
+        try {
+            const items = Object.assign({}, window.__textOvr || {});
+            await window.__fsTimeout(setDoc(doc(db, 'settings', 'app_texts'), { items: items, updatedAt: Date.now(), updatedBy: loggedInUserId }), 8000);
+            const changed = String(window.txtInlineEl('tieInput').value || '').trim();
+            window.__textOvr = items; window.textOvrCacheWrite(items);
+            window.applyTextOverrides();
+            // จำ “ค่าที่บันทึกล่าสุด” ไว้ — ถ้าพิมพ์ต่อแล้วปิดโดยไม่บันทึก ต้องกลับมาที่ค่านี้ ไม่ใช่ค่าเก่าก่อนเปิดบาร์
+            if (st) { st.saved = true; st.prev = (changed && changed !== st.def) ? changed : ''; }
+            try { await recordActivityLog(loggedInUserId, 'แก้ข้อความในแอป', 'อัปเดตข้อความ “' + st.def + '” → “' + (changed || st.def) + '”', 'security'); } catch (e) {}
+            window.showToast('บันทึกแล้ว — ทุกคนที่ใช้แอปเห็นข้อความนี้ทันที');
+            if (window.txtInlineEl('tieHint')) window.txtInlineEl('tieHint').textContent = 'บันทึกแล้ว ✓ — พิมพ์แก้ต่อได้เลยถ้าต้องการ';
+            // อัปเดตลิสต์ในหน้าแก้ข้อความ (ถ้าเปิดอยู่) ให้ตรงกับค่าที่บันทึก
+            try {
+                const t = document.getElementById('textEditModal');
+                if (t && getComputedStyle(t).display !== 'none') { window.__txtSkipHarvest = true; window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : ''); window.__txtSkipHarvest = false; }
+            } catch (e) {}
+        } catch (e) { window.showToast('บันทึกไม่สำเร็จ — ตรวจสัญญาณเน็ต', true); }
+        finally { if (btn) { btn.disabled = false; btn.textContent = 'บันทึก'; } }
+    };
+
     window.textEditHarvest = () => {
         if (window.__txtSkipHarvest) return 0;
         let n = 0;
         try {
             const cur = Object.assign({}, window.__textOvr || {});
             let touched = false;
+            // ⚠️ ข้ามข้อความที่กำลังแก้อยู่ในบาร์ลอย — ช่องในลิสต์ยังเป็นค่าเก่า/ว่าง ถ้าอ่านมาจะทับค่าที่เพิ่งพิมพ์
+            const skipDef = (window.txtInlineState && window.txtInlineState.def) || '';
             document.querySelectorAll('#textEditList input[data-def]').forEach(inp => {
-                const def = inp.getAttribute('data-def'); const v = (inp.value || '').trim();
+                const def = inp.getAttribute('data-def'); if (def === skipDef) return; const v = (inp.value || '').trim();
                 if (v && v !== def) { if (cur[def] !== v) { cur[def] = v; touched = true; n++; } }
                 else if (cur[def] !== undefined) { delete cur[def]; touched = true; n++; }
             });
@@ -7448,6 +7573,7 @@
     window.textPreviewUnmark = () => {
         window.textPreviewClearMark();
         window.textPreviewDropRaise();
+        try { window.txtInlineClose(true); } catch (e) {}
     };
     window.textPreviewMark = (el) => {
         window.textPreviewClearMark();
@@ -7481,6 +7607,9 @@
     };
     window.textEditPreview = (btn) => {
         const def = btn && btn.getAttribute ? btn.getAttribute('data-def') : '';
+        window.textPreviewShow(def);
+    };
+    window.textPreviewShow = (def) => {
         if (!def) return;
         // ข้อความเดียวกันอาจอยู่หลายที่ — กดตาซ้ำ = วนไปที่ถัดไป (เห็นกรอบทองย้ายที่ = รู้เองว่าไปที่อื่นแล้ว)
         const cands = (window.__txtEls && window.__txtEls.get(def)) || [];
@@ -7493,7 +7622,7 @@
         const overlay = el.closest('.modal-overlay');
         const inSide = !!el.closest('#sideMenuOverlay') || !!el.closest('#sideMenu');
         const teOpen = getComputedStyle(document.getElementById('textEditModal')).display !== 'none';
-        let screen = overlay ? (overlay.id ? overlay.id : 'หน้าต่าง') : (inSide ? 'เมนูข้าง' : 'หน้าหลัก');
+        let screen = overlay ? (overlay.id ? window.textOvrScreenLabel(overlay.id) : 'หน้าต่าง') : (inSide ? 'เมนูข้าง' : 'หน้าหลัก');
         if (overlay && overlay.id === 'textEditModal') {
             // อยู่ใน “หน้าแก้ข้อความ” เอง — ไม่ต้องเปิด/ปิดอะไร แค่ไฮไลต์
         } else if (overlay) {
@@ -7518,7 +7647,8 @@
         try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { try { el.scrollIntoView(); } catch (e2) {} }
         // ไฮไลต์ค้างไว้ให้เห็นว่าอยู่ส่วนไหน (ไม่ต้องมีป๊อปอัปแจ้งเตือนกวนจอ)
         const marked = window.textPreviewMark(el);
-        if (!marked) window.showToast('👁 ' + screen + ' — ข้อความนี้ยังถูกซ่อนอยู่ (ต้องเปิดเส้นทาง/เข้าหน้านั้นก่อน)', true);
+        if (marked) { try { window.txtInlineOpen(def, el, screen); } catch (e) {} }
+        else window.showToast('👁 ' + screen + ' — ข้อความนี้ยังถูกซ่อนอยู่ (ต้องเปิดเส้นทาง/เข้าหน้านั้นก่อน)', true);
     };
     window.openTextEditModal = async () => {
         if (!window.isAdminNow()) return window.showToast('เฉพาะแอดมินเท่านั้นที่แก้ข้อความในแอปได้', true);
@@ -12250,6 +12380,7 @@
         ['2026-09-15', '🔒 ด่านก่อน push: ต้องอัปเดตประวัติเวอร์ชันของวันนี้ก่อนทุกครั้ง (มีตัวตรวจอัตโนมัติ)'],
         ['2026-09-15', '🖥 เปลี่ยนชื่อเมนู “โควต้า Firestore” → “โควต้าการใช้งาน” (คุม TomTom + Firestore)'],
         ['2026-09-15', '👁 พรีวิวข้อความ: กรอบทองค้างจนปิดหน้าต่าง · ไม่มีป๊อปอัป · กดซ้ำดูจุดถัดไป'],
+        ['2026-09-15', '✍️ แก้ข้อความจากหน้าที่กำลังดูอยู่ได้เลย — พิมพ์แล้วเห็นผลทันที มีล้างค่า/จุดถัดไป'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
