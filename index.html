@@ -297,6 +297,16 @@
         .near-note { display: flex; align-items: center; gap: 6px; padding: 8px 15px; font-size: 11px; line-height: 1.5; color: var(--text-dim); background: rgba(56,189,248,0.07); border-bottom: 1px solid rgba(56,189,248,0.16); text-align: left; }
         .near-note .material-symbols-outlined { font-size: 15px !important; color: #7dd3fc; }
         .near-note b { color: #7dd3fc; font-weight: 700; }
+        /* 📍 แถวตัวกรอง “เฉพาะปลายทางใกล้ฉัน” (เปิด/ปิด + ตั้งระยะเอง) — อยู่บนสุดของลิสต์ค้นหา */
+        .near-filter-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .near-toggle { display: inline-flex; align-items: center; gap: 5px; font-family: inherit; font-size: 11.5px; font-weight: 700; color: var(--text-dim); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); border-radius: 99px; padding: 6px 11px; cursor: pointer; -webkit-tap-highlight-color: transparent; flex-shrink: 0; transition: background 0.15s, color 0.15s, transform 0.1s; }
+        .near-toggle .material-symbols-outlined { font-size: 15px !important; }
+        .near-toggle.on { color: #06283f; background: linear-gradient(135deg, #7dd3fc, #38bdf8); border-color: rgba(56,189,248,0.65); box-shadow: 0 2px 10px rgba(56,189,248,0.3); }
+        .near-toggle:active { transform: scale(0.95); }
+        .near-radius { font-family: inherit; font-size: 11.5px; font-weight: 700; color: #fff; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16); border-radius: 10px; padding: 6px 8px; cursor: pointer; flex-shrink: 0; }
+        .near-count { font-size: 10.5px; color: var(--text-dim); margin-left: auto; white-space: nowrap; text-align: right; line-height: 1.4; }
+        .near-empty { padding: 15px; text-align: center; font-size: 12.5px; color: var(--text-dim); line-height: 1.65; }
+        .near-empty .near-toggle { margin: 9px auto 0; }
         .list-item { padding: 16px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); text-align: left; font-size: 14px; display: flex; align-items: center; gap: 12px; transition: background-color 0.15s ease; }
         .list-item:hover { background: rgba(255,255,255,0.05); }
         .item-icon { font-size: 20px !important; color: var(--neon-green); text-shadow: 0 0 10px rgba(46, 204, 113, 0.4); flex-shrink: 0; }
@@ -8753,12 +8763,26 @@
         // 📏 เรียงใกล้สุดก่อน — ใช้ “ระยะตรง” คิดจากตำแหน่งอ้างอิง (ไม่ยิง routing เลย = ไม่กินโควตา)
         let sortedByDist = false;
         if (ref0) { favs = window.sortByNear(favs, ref0); h = window.sortByNear(h, ref0); sortedByDist = true; }
+        // 📍 กรองเฉพาะใกล้ (ถ้าเปิดอยู่ + รู้ตำแหน่ง) — ใช้ระยะตรง ⇒ ไม่ยิง routing
+        let hiddenNear = 0;
+        const nf = window.nearFilter || window.nearFilterRead();
+        const filterActive = !!(nf.on && nf.km > 0 && ref0);
+        if (filterActive) {
+            const within = (it) => (it && typeof it.lat === 'number' && typeof it.lon === 'number') ? distKm(ref0, { lat: it.lat, lon: it.lon }) <= nf.km : false;
+            const f2 = favs.filter(within), h2 = h.filter(within);
+            hiddenNear = (favs.length - f2.length) + (h.length - h2.length);
+            favs = f2; h = h2;
+        }
         let html = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ปลายทาง</span></div>`;
+        html += window.nearFilterRowHtml(ref0, hiddenNear);
         if (sortedByDist) html += `<div class="near-note"><span class="material-symbols-outlined">near_me</span><span>เรียงตามระยะใกล้สุดจากตำแหน่งของคุณ — จัดอันดับด้วย <b>ระยะตรง</b> (ตัวเลขบนป้ายยังเป็นระยะเส้นทางจริง)</span></div>`;
         // ❌ ไม่แสดงแถว “ตั้งตำแหน่งของฉัน” ในลิสต์ค้นหาอีก (ผู้ใช้สั่ง 15 ก.ย.) — การนำทางเริ่มจากตำแหน่งล่าสุดจริงอยู่แล้ว
         //    ตัวโค้ดเดิม (getUserPosManual / enterSetPosMode) ยังอยู่ → ค่าที่เคยตั้งไว้ยังใช้ได้เหมือนเดิม แค่ไม่มีปุ่มให้ตั้งจากตรงนี้
         if (!h.length && !favs.length) {
-            html += `<div style="padding:14px; text-align:center; color:var(--text-dim); font-size:12.5px;">พิมพ์ชื่อสถานที่เพื่อค้นหา — เช่น "เซ็นทรัล", "รพ.วิภา", "ลาดพร้าว 23"</div>`;
+            // 📍 ถ้าตัวกรองเป็นคนซ่อนทั้งหมด → บอกตรง ๆ พร้อมปุ่มปิดตัวกรอง (ไม่ใช่บอกว่า “ไม่มีข้อมูล” เฉย ๆ)
+            html += filterActive && hiddenNear > 0
+                ? `<div class="near-empty">ไม่มีปลายทางในระยะ ${fmtDist(nf.km)} — ซ่อนไป ${hiddenNear} รายการ<br><button class="near-toggle" onclick="window.nearFilterSetKm(0)"><span class="material-symbols-outlined">near_me</span> ปิดตัวกรอง (แสดงทั้งหมด)</button></div>`
+                : `<div style="padding:14px; text-align:center; color:var(--text-dim); font-size:12.5px;">พิมพ์ชื่อสถานที่เพื่อค้นหา — เช่น "เซ็นทรัล", "รพ.วิภา", "ลาดพร้าว 23"</div>`;
             $('historyList').innerHTML = html;
             $('suggestionList').style.display = 'none';
             $('historyList').style.display = 'block';
@@ -8912,6 +8936,40 @@
     // 💾 แคชระยะทางเส้นทางจริง (TomTom routing) — ใช้ป้าย กม. ในช่องค้นหาให้ตรงกับหน้าสรุปเส้นทาง
     //    (เดิมใช้เส้นตรง = ต่างกันหลายกม. เช่น ไปเซ็นทรัลเวสต์เกต badge 9.8 แต่เส้นทางจริง 15.15)
     //    key = จุดเริ่ม|ปลาย (ปัด 3 ตำแหน่ง ~100 ม.) + โหมดทางด่วน → ค่าซ้ำไม่ต้องยิง TomTom ซ้ำ (กันเผาโควตา)
+    // 📍 ตัวกรอง “เฉพาะปลายทางใกล้ฉัน” — ปุ่มเปิด/ปิด + ตั้งระยะเอง · เก็บในเครื่องนี้ (ไม่กินโควตา Firestore)
+    //    ใช้ “ระยะตรง” ในการตัดสิน → 0 คำขอ routing · km = 0 คือไม่จำกัด
+    const NEAR_FILTER_KEY = 'taxi_near_filter_v1';
+    window.nearFilterKmLabel = () => window.nearFilter.km > 0 ? fmtDist(window.nearFilter.km) : 'ไม่จำกัด';
+    window.nearFilterRead = () => {
+        try { const o = JSON.parse(localStorage.getItem(NEAR_FILTER_KEY) || 'null'); if (o && typeof o === 'object') return { on: !!o.on, km: Math.max(0, Number(o.km) || 0) }; } catch (e) {}
+        return { on: false, km: 5 }; // ค่าเริ่มต้น: ปิดไว้ — คนขับเป็นคนเปิดเอง
+    };
+    window.nearFilter = window.nearFilterRead();
+    window.nearFilterWrite = () => { try { localStorage.setItem(NEAR_FILTER_KEY, JSON.stringify(window.nearFilter)); } catch (e) {} };
+    window.nearFilterToggle = () => {
+        if (!window.nearFilter.km) window.nearFilter.km = 5; // จาก “ไม่จำกัด” → เปิดครั้งแรกเริ่มที่ 5 กม.
+        window.nearFilter.on = !window.nearFilter.on; window.nearFilterWrite();
+        window.showHistory();
+        window.showToast(window.nearFilter.on ? '📍 แสดงเฉพาะปลายทางในระยะ ' + window.nearFilterKmLabel() : '📍 แสดงปลายทางทั้งหมดแล้ว');
+    };
+    window.nearFilterSetKm = (v) => {
+        const k = Math.max(0, Number(v) || 0);
+        window.nearFilter.km = k; window.nearFilter.on = k > 0; // เลือกตัวเลข = เปิดใช้เลย · “ไม่จำกัด” = ปิด
+        window.nearFilterWrite(); window.showHistory();
+        window.showToast(k > 0 ? '📍 กรองเฉพาะปลายทางในระยะ ' + fmtDist(k) : '📍 ไม่จำกัดระยะแล้ว — แสดงทุกปลายทาง');
+    };
+    // แถวตัวกรอง (บนสุดของลิสต์): ปุ่มเปิด/ปิด + ตัวเลือกระยะ + จำนวนที่ถูกซ่อน
+    window.nearFilterRowHtml = (ref, hiddenCount) => {
+        const nf = window.nearFilter;
+        const active = !!(nf.on && nf.km > 0);
+        const opts = [1, 3, 5, 10, 20, 50].map(k => '<option value="' + k + '"' + (nf.km === k ? ' selected' : '') + '>' + (k < 1 ? k : k) + ' กม.</option>').join('') + '<option value="0"' + (!nf.km ? ' selected' : '') + '>ไม่จำกัด</option>';
+        const cnt = !active ? 'แสดงทุกปลายทาง'
+            : (!ref ? 'รอตำแหน่ง GPS…'
+                : (typeof hiddenCount === 'number' && hiddenCount > 0 ? 'ในระยะ ' + fmtDist(nf.km) + ' · ซ่อน ' + hiddenCount + ' รายการ' : 'ในระยะ ' + fmtDist(nf.km)));
+        return '<div class="near-filter-row"><button class="near-toggle' + (active ? ' on' : '') + '" onclick="event.stopPropagation(); window.nearFilterToggle()" title="แสดงเฉพาะปลายทางที่อยู่ใกล้คุณ (คำนวณจากระยะตรง — ไม่กินโควตา)"><span class="material-symbols-outlined">near_me</span> เฉพาะใกล้ฉัน</button>' +
+            '<select class="near-radius" onclick="event.stopPropagation();" onchange="window.nearFilterSetKm(this.value)" title="ตั้งระยะที่ถือว่าใกล้ — เลือกตัวเลข = เปิดใช้ทันที">' + opts + '</select>' +
+            '<span class="near-count" title="รายการที่ไม่มีพิกัดจะถูกซ่อนเมื่อเปิดตัวกรอง">' + cnt + '</span></div>';
+    };
     window.__routeKmCache = {};
     const routeKmKey = (slat, slon, dlat, dlon) => slat.toFixed(3) + '|' + slon.toFixed(3) + '|' + dlat.toFixed(3) + '|' + dlon.toFixed(3) + '|' + (window.isTollwayMode ? 1 : 0);
     // ดึงระยะทางเส้นทางจริง (แคชก่อน → ไม่มีค่อยยิง routing) — คืน null ถ้าไม่ได้ (ออฟไลน์/โควตา)
@@ -12850,6 +12908,8 @@
         ['2026-09-15', '📏 ที่โปรด/ประวัติล่าสุด เรียงใกล้สุดก่อน (จัดอันดับด้วยระยะตรง มีบรรทัดบอกผู้ใช้)'],
         ['2026-09-15', '⏱️ กันยิงเส้นทางซ้ำ: ตำแหน่งเดิมใน 90 วินาที ไม่ยิง routing อีก'],
         ['2026-09-15', '🐞 แก้ปุ่มลบในประวัติให้ลบถูกตัวหลังเรียงใหม่ (ส่งลำดับที่เก็บจริง)'],
+        ['2026-09-15', '📍 ตัวกรอง “เฉพาะใกล้ฉัน” บนสุดของลิสต์ค้นหา — เปิด/ปิด + เลือกระยะ 1–50 กม. หรือไม่จำกัด'],
+        ['2026-09-15', '📍 กรองด้วยระยะตรง ไม่กินโควตา · บอกจำนวนที่ซ่อน + ปุ่มปิดเมื่อไม่มีอะไรเหลือ'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
