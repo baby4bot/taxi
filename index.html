@@ -1240,7 +1240,19 @@
             background: rgba(255,210,77,0.1); border: 1px dashed rgba(255,210,77,0.45);
             border-radius: 12px; padding: 8px 12px; margin: 0 0 10px;
         }
-        .reorder-arming { box-shadow: inset 0 0 0 2px rgba(255,210,77,0.55); background: rgba(255,210,77,0.1); }
+        /* ⏳ กดค้างเข้าโหมดลาก: มีสัญญาณให้เห็นตั้งแต่ “เริ่มนับถอยหลัง” + แถบวิ่งจนสุด
+           (เดิมเงียบ 450 มิลลิวแรก ผู้ใช้เลยปล่อยมือก่อนครบเวลาแล้วคิดว่าไม่ติด)
+           ⚠️ ใช้ transform: scaleX() ไม่ใช่ width — ไม่ต้องคำนวณ layout ใหม่ทุกเฟรม (กันสะดุดแบบที่เพิ่งแก้ในลิสต์)
+           ⚠️ และ “ไม่แตะ touch-action” ที่นี่ — ท่าทางเลื่อนจอต้องไม่ถูกกระทบ */
+        .reorder-arming { position: relative; overflow: hidden; box-shadow: inset 0 0 0 2px rgba(255,210,77,0.55); background: rgba(255,210,77,0.1); }
+        .reorder-arming::after {
+            content: ''; position: absolute; left: 0; bottom: 0; height: 3px; width: 100%;
+            background: linear-gradient(90deg, #ffd24d, #ffb300);
+            transform-origin: left center; transform: scaleX(0);
+            animation: reorderArmFill var(--arm-ms, 450ms) linear forwards;
+            pointer-events: none;
+        }
+        @keyframes reorderArmFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
         /* รายการที่ลาก: ลอยตามนิ้ว/เมาส์ทันที (transform ตั้งจาก JS) — ตัวอื่นไหลเข้าที่ด้วย FLIP */
         /* transition: none สำคัญมาก — CSS .side-menu-item/.hub-item มี transition: 0.2s ถ้าไม่ปิด ตัว item จะไหลตามนิ้วช้า
            แล้ว getBoundingClientRect() อ่านตำแหน่งค้างกลาง animation → คำนวนสลับเพี้ยน (เด้งขึ้น/ลงบนสุด) */
@@ -5361,9 +5373,14 @@
     };
     window.__wireReorderDrag = (container, itemsSel, boxEl, saveKey) => {
         let pressT = null, pressStart = null, drag = null, lastXY = null;
+        // ⏳ กดค้างเข้าโหมดลาก = เงียบ 110 มิลลิว + นับถอยหลัง 450 มิลลิว = 560 มิลลิว (เดิม 900)
+        //    สั้นลงได้เพราะช่วงที่ต้อง “รอด” คือช่วงรอเท่านั้น — แต่ยังยาวกว่า “แตะ” (<200 มิลลิว) พอ
+        // 🖐️ เผื่อการขยับระหว่างกดค้างเป็น 18px (เดิม 10px) — ช่วยเมาส์ และจุดที่ไม่มีอะไรให้เลื่อน
+        //    ⚠️ ไม่ได้แลกมากับ “เลื่อนจอเสีย”: บนจอสัมผัส เบราว์เซอร์ยิง pointercancel ทันทีที่เริ่มลากจอจริง
+        const ARM_DELAY_MS = 110, ARM_MS = 450, ARM_MOVE_TOLERANCE_PX = 18;
         const keyOf = (el) => el.dataset.ordKey || el.id;
         const itemsOf = () => Array.from(container.querySelectorAll(itemsSel)).filter(el => getComputedStyle(el).display !== 'none');
-        const cancelPress = () => { if (pressT) { clearTimeout(pressT); pressT = null; } pressStart = null; container.querySelectorAll('.reorder-arming').forEach(a => a.classList.remove('reorder-arming')); };
+        const cancelPress = () => { if (pressT) { clearTimeout(pressT); pressT = null; } pressStart = null; container.querySelectorAll('.reorder-arming').forEach(a => { a.classList.remove('reorder-arming'); a.style.removeProperty('--arm-ms'); }); };
 
         // เริ่มลาก: รายการลอยตามนิ้ว/เมาส์ (transform ต่อเนื่อง) — ตัวอื่นไหลเข้าที่ด้วย FLIP
         const startDrag = (it, pointerId, clientY) => {
@@ -5454,19 +5471,26 @@
                 startDrag(it, e.pointerId, e.clientY);
                 return;
             }
-            // กดค้าง ~0.9 วิ (0.45+0.45) → เข้าโหมดลาก (เลื่อนนิ้วก่อนครบเวลา = ยกเลิก)
+            // กดค้าง 0.56 วิ (เงียบ 0.11 + นับถอยหลัง 0.45) → เข้าโหมดลาก (ขยับเกินเกณฑ์ก่อนครบเวลา = ยกเลิก)
             pressStart = { x: e.clientX, y: e.clientY };
             const heldPointerId = e.pointerId;
             pressT = setTimeout(() => {
                 if (window.__reorder) return;
+                // สัญญาณว่าเริ่มนับถอยหลังแล้ว: ขอบทอง + แถบวิ่ง + สั่นสั้น ๆ (ผู้ใช้จะรู้ว่าต้องกดต่ออีกนิด)
+                // รอ 110 มิลลิวค่อยโชว์ — กันแถบวูบวาบตอน “แตะเร็ว” หรือ “เริ่มลากเพื่อเลื่อนจอ”
                 it.classList.add('reorder-arming');
+                it.style.setProperty('--arm-ms', ARM_MS + 'ms');
+                try { navigator.vibrate && navigator.vibrate(8); } catch (err) {}
                 pressT = setTimeout(() => {
                     it.classList.remove('reorder-arming');
+                    it.style.removeProperty('--arm-ms');
                     window.enterReorderMode(container, itemsSel, keyOf, saveKey, boxEl);
+                    // 📳 สั่นยืนยันว่าเข้าโหมดลากแล้ว — คนขับไม่ต้องละสายตาจากถนน
+                    try { navigator.vibrate && navigator.vibrate(30); } catch (err) {}
                     // จับรายการที่กดค้างไว้เป็นตัวลากต่อทันที (ไม่ต้องปล่อยนิ้ว — ลากต่อได้เลย)
                     startDrag(it, heldPointerId, lastXY ? lastXY.y : pressStart.y);
-                }, 450);
-            }, 450);
+                }, ARM_MS);
+            }, ARM_DELAY_MS);
         });
         container.addEventListener('pointermove', (e) => {
             lastXY = { x: e.clientX, y: e.clientY };
@@ -5539,7 +5563,7 @@
                 if (targetPos !== drag.curIdx) moveTo(targetPos);
                 return;
             }
-            if (pressStart && (Math.abs(e.clientX - pressStart.x) > 10 || Math.abs(e.clientY - pressStart.y) > 10)) cancelPress();
+            if (pressStart && (Math.abs(e.clientX - pressStart.x) > ARM_MOVE_TOLERANCE_PX || Math.abs(e.clientY - pressStart.y) > ARM_MOVE_TOLERANCE_PX)) cancelPress();
         });
         container.addEventListener('pointerup', endDrag);
         container.addEventListener('pointercancel', endDrag);
@@ -11764,6 +11788,7 @@
         ['2026-09-15', '🖱️ แอดมินตั้งค่าแถบเลื่อนลิสต์ค้นหาได้เอง (โชว์/หนา/จาง) ใช้ร่วมกันทุกเครื่อง'],
         ['2026-09-15', '🔒 ล็อกไม่ให้เลือก/คัดลอกข้อความทั้งแอป (เว้นช่องกรอก) + ลากบนรูปแล้วเลื่อนหน้าจอได้'],
         ['2026-09-15', '🪟 แถบเลื่อนแบบเดียวกันคุม หน้าต่าง·เมนูข้าง·แถบแท็บไอคอนด้วย + เมนูข้างเลื่อนในตัวได้'],
+        ['2026-09-15', '⏳ กดค้างเข้าโหมดลากติดง่ายขึ้น — 0.56 วิ มีแถบนับถอยหลัง + สั่นบอก ไม่กระทบการเลื่อน'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
