@@ -584,11 +584,14 @@
         }
         .tz-toll-item .tz-toll-del { font-size: 13px; opacity: 0.95; cursor: pointer; }
         .tz-toll-item .tz-toll-del:active { opacity: 1; transform: scale(0.85); }
+        /* 📈 ป้ายราคาประเมินบนการ์ดค่าโดยสาร + บรรทัด "ที่มาของยอด" (มิเตอร์ + ที่เหลือ + ทางด่วน) */
+        .tz-est-wrap { position: absolute; bottom: 10px; right: 14px; z-index: 60; text-align: right; max-width: 74%; }
         .tz-est-fare {
-            position: absolute; bottom: 10px; right: 14px; z-index: 60;
             font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.92);
             text-shadow: 0 1px 3px rgba(0,0,0,0.25);
         }
+        .tz-est-break { font-size: 10.5px; font-weight: 600; line-height: 1.35; margin-top: 1px; color: rgba(255,255,255,0.85); text-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+        .tz-est-break:empty { display: none; }
         .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: var(--space-zoom); }
         .tz-info-col { flex: 1; text-align: center; min-width: 0; }
         .tz-info-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.08); }
@@ -1654,7 +1657,8 @@
             .tz-toll-list { top: 36px; left: 10px; }
             /* การ์ดค่าโดยสารจอมิเตอร์ขยาย — สูงเท่ากับการ์ดประเมินราคาหน้าแรกบนจอแคบ (186 content + 6 + 4 padding = 196px) */
             .tz-fare-card { min-height: 196px; }
-            .tz-est-fare { font-size: 13px; right: 12px; bottom: 10px; }
+            .tz-est-wrap { right: 12px; bottom: 10px; }
+            .tz-est-break { font-size: 10px; }
             #fareResetBtn { top: 4px; right: 6px; width: 22px; height: 22px; }
             #fareResetBtn .material-symbols-outlined { font-size: 14px; }
             #farePauseBtn { top: 4px; right: 6px; width: 22px; height: 22px; }
@@ -3375,7 +3379,10 @@
             <button onclick="window.toggleMeterPause()" id="zoomPauseBtn" class="tz-pause-btn running" style="display:none;" title="หยุดมิเตอร์ชั่วคราว"><span class="material-symbols-outlined">pause</span></button>
             <div class="tz-fare-title">• ค่าโดยสารเรียลไทม์ •</div>
             <div class="tz-fare-price-box"><span id="tzMeterPrice">35</span><span class="tz-fare-currency">฿</span></div>
-            <div id="tzEstFare" class="tz-est-fare">ประเมิน: -- ฿</div>
+            <div class="tz-est-wrap">
+                <div id="tzEstFare" class="tz-est-fare">ประเมิน: -- ฿</div>
+                <div id="tzEstBreak" class="tz-est-break"></div>
+            </div>
         </div>
         <div class="tz-info-box" id="tzInfoBox">
             <div class="tz-info-col"><div class="tz-info-label">เวลาโดยประมาณ</div><div id="tzEtaTime" class="tz-info-val" style="color: var(--neon-yellow);">-- นาที</div></div>
@@ -4941,6 +4948,25 @@
     window.getRouteTollTotal = () => {
         const t = window.currentTollInfo;
         return (destLoc && window.isTollwayMode && t && t.hasTolls && t.booths && t.booths.length > 0 && t.total > 0) ? t.total : 0;
+    };
+
+    // 🛣️ ค่าทางด่วน "ของเที่ยวนี้" ที่ต้องเอาไปรวมในราคาประเมิน
+    //    = ยอดที่คนขับตั้งไว้เอง (ปุ่ม + ทางด่วน) ถ้ามี → ไม่งั้นใช้ยอดประมาณของเส้นทางปัจจุบัน
+    //    ⚠️ ห้ามบวกพร้อมกัน 2 ทาง: ปุ่ม "+ ทางด่วน" เติมยอดจากเส้นทางให้อยู่แล้ว → จะกลายเป็นนับซ้ำ
+    window.getTripTollForEstimate = () => {
+        const manual = (window.surchargeList || []).reduce((s, i) => s + ((i.name === 'ค่าทางด่วน') ? (Number(i.amount) || 0) : 0), 0);
+        if (manual > 0) return { toll: manual, estimated: false };
+        const route = (typeof window.getRouteTollTotal === 'function') ? (window.getRouteTollTotal() || 0) : 0;
+        return { toll: route, estimated: route > 0 };
+    };
+
+    // 📈 วาดป้าย "ประเมิน: X ฿" + บรรทัดที่มาของยอด (ใช้ทั้งจอมิเตอร์เดินจริงและโหมดกรอกระยะเอง)
+    //    breakText = ข้อความที่มาของยอด · ส่ง '' หรือไม่ส่ง = ล้างบรรทัดนั้น
+    window.renderEstimateBadge = (breakText) => {
+        const el = $('tzEstFare');
+        if (el) el.innerText = (window.estimateFareAmt > 0 ? 'ประเมิน: ' + window.estimateFareAmt.toLocaleString('th-TH') + ' ฿' : 'ประเมิน: -- ฿');
+        const brk = $('tzEstBreak');
+        if (brk) brk.innerText = (window.estimateFareAmt > 0) ? (breakText || '') : '';
     };
 
     // แสดงยอดรวมทางด่วนจริงบนปุ่ม "+ ค่าทางด่วน" ในช่องประเมินราคา (เช่น "ทางด่วน 155฿") เมื่อเส้นทางมีทางด่วน
@@ -9826,7 +9852,17 @@
         let displayFare = 0;
         
         if (km > 0 || extraSurcharge > 0) { displayFare = window.baseFare + Math.floor(distFare / 2) * 2 + extraSurcharge; }
+        // 🛣️ ราคาประเมินต้องรวมค่าทางด่วนของเส้นทางปัจจุบันด้วย (โหมดกรอกระยะเอง — ยังไม่เดินมิเตอร์)
+        //    estimated = ยังไม่มี "ค่าทางด่วน" ที่คนขับตั้งเอง → ใช้ยอดประมาณของเส้นทาง (ยังไม่ถูกบวกใน extraSurcharge)
+        const _tollInfo = (typeof window.getTripTollForEstimate === 'function') ? window.getTripTollForEstimate() : { toll: 0, estimated: false };
+        const _tollAdd = _tollInfo.estimated ? _tollInfo.toll : 0;
+        if (displayFare > 0) displayFare += _tollAdd;
         window.estimateFareAmt = displayFare; // เก็บราคาประเมินไว้โชว์ในจอมอนิเตอร์/zoom
+        if (typeof window.renderEstimateBadge === 'function') {
+            window.renderEstimateBadge('ระยะ ' + km.toFixed(1) + ' กม. ≈' + (window.baseFare + Math.floor(distFare / 2) * 2).toLocaleString('th-TH')
+                + (_tollAdd > 0 ? ' + ทางด่วน ≈' + _tollAdd.toLocaleString('th-TH') : '')
+                + (extraSurcharge > 0 ? ' + ค่าเพิ่ม ' + extraSurcharge.toLocaleString('th-TH') : ''));
+        }
 
         $('farePrice').innerHTML = displayFare.toLocaleString('th-TH') + '<span style="font-size: 32px; font-weight:400;"> ฿</span>'; 
         let extraText = extraSurcharge > 0 ? ` (+พิเศษ ${extraSurcharge}฿)` : "";
@@ -10780,14 +10816,24 @@
         if (window.isManualRunning && destLoc) {
             const _estRemainKm = (typeof currentTrueRemainKm === 'number' && currentTrueRemainKm > 0) ? currentTrueRemainKm : 0;
             const _estRemainFare = Math.floor(window.calcThaiMeterDist(_estRemainKm) / 2) * 2;
-            window.estimateFareAmt = displayFare + _estRemainFare;
-            window.estimateFareParts = { meterNow: displayFare, remainKm: _estRemainKm, remainFare: _estRemainFare };
+            // 🛣️ ค่าทางด่วนของเส้นทางปัจจุบัน (หรือยอดที่คนขับตั้งเอง) — **รวมเข้าในยอดประเมินแล้ว**
+            //    จอเขียว (ค่าโดยสารเรียลไทม์) ยังเป็นมิเตอร์ล้วน · ยอดนี้คือ "คาดว่าจะจ่ายทั้งหมด"
+            const _estTollInfo = (typeof window.getTripTollForEstimate === 'function') ? window.getTripTollForEstimate() : { toll: 0, estimated: false };
+            const _estToll = _estTollInfo.toll || 0;
+            window.estimateFareAmt = displayFare + _estRemainFare + _estToll;
+            window.estimateFareParts = { meterNow: displayFare, remainKm: _estRemainKm, remainFare: _estRemainFare, toll: _estToll, tollEstimated: _estTollInfo.estimated, total: window.estimateFareAmt };
             const _estEl = $('tzEstFare');
             if (_estEl) {
-                const _estToll = (typeof window.getRouteTollTotal === 'function') ? (window.getRouteTollTotal() || 0) : 0;
-                window.estimateFareParts.toll = _estToll;
-                _estEl.title = 'มิเตอร์ ' + displayFare.toLocaleString('th-TH') + ' ฿ + อีก ' + _estRemainKm.toFixed(1) + ' กม. (ประมาณ ' + _estRemainFare.toLocaleString('th-TH') + ' ฿)'
-                    + (_estToll > 0 ? ' · ค่าทางด่วน ' + _estToll.toLocaleString('th-TH') + ' ฿ (ยังไม่รวมในยอดนี้)' : '');
+                _estEl.title = 'ยอดที่ต้องจ่ายทั้งหมด (ประมาณ)\n'
+                    + '• มิเตอร์ที่คิดแล้ว ' + displayFare.toLocaleString('th-TH') + ' ฿\n'
+                    + '• อีก ' + _estRemainKm.toFixed(1) + ' กม. ประมาณ ' + _estRemainFare.toLocaleString('th-TH') + ' ฿\n'
+                    + (_estToll > 0 ? '• ค่าทางด่วน' + (_estTollInfo.estimated ? ' (ประมาณจากเส้นทาง)' : ' (ตั้งไว้แล้ว)') + ' ' + _estToll.toLocaleString('th-TH') + ' ฿\n' : '')
+                    + '= ' + window.estimateFareAmt.toLocaleString('th-TH') + ' ฿';
+            }
+            if (typeof window.renderEstimateBadge === 'function') {
+                window.renderEstimateBadge('มิเตอร์ ' + displayFare.toLocaleString('th-TH')
+                    + ' + เหลือ ' + _estRemainKm.toFixed(1) + ' กม. ≈' + _estRemainFare.toLocaleString('th-TH')
+                    + (_estToll > 0 ? ' + ทางด่วน ' + (_estTollInfo.estimated ? '≈' : '') + _estToll.toLocaleString('th-TH') : ''));
             }
         }
 
@@ -11858,6 +11904,7 @@
         ['2026-09-15', '📈 ราคาประเมินคิดใหม่ทุกวินาที — สลับขึ้น/เลี่ยงทางด่วนแล้วตัวเลขขยับตามทันที'],
         ['2026-09-15', '🧭 ระยะ “เหลือ” อัปเดตต่อเนื่อง — snap ตำแหน่งบนเส้นทาง ไม่รอโพ API ทุก 2 นาที'],
         ['2026-09-15', '🗺️ Mini Map ไม่เด้งเองตอนเริ่มนำทาง — มีปุ่มสีฟ้าให้กดเปิดเอง (จำใจคนขับไว้ให้)'],
+        ['2026-09-15', '🛣️ ป้ายราคาประเมินรวมค่าทางด่วนของเส้นทางแล้ว + โชว์ที่มาของยอดใต้ป้าย'],
         ['2026-09-15', '🧭 Mini Map หันหัวขึ้น — รถชี้ขึ้นบน เส้นทางหมุนตามทิศรถไม่ใช่มุมทิศเหนือ'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
