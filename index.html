@@ -11372,6 +11372,7 @@
         ['2026-09-15', '✏️ ดินสอท้ายชื่อเมนูในโหมดลาก — กดแก้ชื่อ/คำอธิบายเมนูนั้นได้ทันที ไม่ต้องเปิดลิสต์ยาว'],
         ['2026-09-15', '✏️ ดินสอแก้ชื่อเมนูขึ้นในเมนูแฮมเบอร์เกอร์ด้วย (กดค้างเข้าโหมดลาก)'],
         ['2026-09-15', '🐞 แก้เมนู/ปุ่มแอดมินไม่โผล่ในเครื่องจริง — เช็คสิทธิ์ผิดตัวแปร (window.currentUserRole)'],
+        ['2026-09-15', '🔢 แอดมินสร้าง/ตั้ง PIN ให้สมาชิกได้เองในหน้าจัดการผู้ใช้ — เดิมดูได้อย่างเดียว'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -13407,6 +13408,8 @@
         const fmt = window.adminSecFmtDT, pill = window.adminSecPill, row = window.adminSecRow, chip = window.adminSecChip;
         const themeMap = { dark: 'มืด (กรมท่า)', oled: 'ดำ OLED (ประหยัดแบต)', light: 'สว่าง' };
         const onOff = (v) => (v === false ? 'ปิด' : 'เปิด');   // ไม่ระบุ = ค่าเริ่มต้นของแอป (เปิด)
+        const perms = (window.currentUserPerms ? window.currentUserPerms() : {}) || {};
+        const canReset = (window.isAdminNow ? window.isAdminNow() : currentUserRole === 'Admin') || perms.canEdit;
         let html = '';
         // 🔑 รหัสผ่าน
         html += row('password', 'รหัสผ่านบัญชี',
@@ -13423,6 +13426,18 @@
             html += row('dialpad', 'PIN ยืนยันรายการสำคัญ',
                 pill('ยังไม่ได้ตั้ง', 'off') + ' ตอนนี้แก้ข้อมูลสำคัญต้องพิมพ์รหัสผ่านเต็มทุกครั้ง',
                 'ลืม PIN ตั้งใหม่ได้เองที่ตั้งค่าโปรไฟล์ (ยืนยันด้วยรหัสผ่านบัญชี)');
+        }
+        // ✏️ ตั้ง PIN ใหม่ให้สมาชิก — แอดมินตั้ง/เปลี่ยนให้ได้ (แทนที่ PIN เดิมถ้ามี) ผ่านช่องด้านล่าง
+        if (canReset) {
+            html += '<div style="padding:9px 0 2px; border-top:1px dashed rgba(125,211,252,0.30);">' +
+                '<div style="font-size:12.5px; font-weight:700; color:#7dd3fc; margin-bottom:4px;"><span class="material-symbols-outlined" style="font-size:15px; vertical-align:-3px;">pin</span> ตั้ง PIN ใหม่ให้สมาชิก' + (u.pinHash ? ' (แทนที่ PIN เดิม)' : '') + '</div>' +
+                '<div style="display:flex; gap:8px; align-items:center;">' +
+                '<input type="text" id="adminSetPin1" inputmode="numeric" maxlength="6" placeholder="PIN 6 หลัก" style="flex:1; min-width:0; text-align:center; letter-spacing:6px; font-size:19px; font-weight:700; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:10px 4px; color:#fff; outline:none;" autocomplete="off" oninput="this.value=this.value.replace(/[^0-9]/g,\'\').slice(0,6)">' +
+                '<input type="text" id="adminSetPin2" inputmode="numeric" maxlength="6" placeholder="ยืนยันอีกครั้ง" style="flex:1; min-width:0; text-align:center; letter-spacing:6px; font-size:19px; font-weight:700; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:10px 4px; color:#fff; outline:none;" autocomplete="off" oninput="this.value=this.value.replace(/[^0-9]/g,\'\').slice(0,6)">' +
+                '</div>' +
+                '<div id="adminSetPinErr" style="display:none; color:#ff8a95; font-size:11.5px; line-height:1.4; margin:6px 0 0;"></div>' +
+                '<button onclick="window.adminSetMemberPin()" class="manual-timer-btn" style="width:100%; justify-content:center; background:rgba(56,189,248,0.85); color:#fff; font-size:13px; margin-top:8px;"><span class="material-symbols-outlined" style="font-size:18px;">pin</span> ' + (u.pinHash ? 'ตั้ง PIN ใหม่แทน PIN เดิม' : 'สร้าง PIN ให้สมาชิก') + ' (ต้องยืนยันตัวตนคุณก่อน)</button>' +
+                '</div>';
         }
         // 🔓 ปลดล็อกด้วยเครื่อง (WebAuthn) — เก็บในเครื่องเท่านั้น
         const devHas = (typeof window.devUnlockHas === 'function') ? window.devUnlockHas(u.uid) : false;
@@ -13442,8 +13457,6 @@
             chip('เต็มจออัตโนมัติ', onOff(u.autoFullscreen)),
             'ค่าที่ไม่ระบุ = ใช้ค่าเริ่มต้นของแอป (เปิด) · ปุ่ม “สั่น toast ทอง” กับ “เต็มจออัตโนมัติ” แอดมินล็อกให้ได้จากด้านบน');
         // 🪪 บัญชี
-        const perms = (window.currentUserPerms ? window.currentUserPerms() : {}) || {};
-        const canReset = (currentUserRole === 'Admin' || perms.canEdit);
         html += row('badge', 'บัญชี',
             (u.isBanned ? pill('ถูกระงับการใช้งาน', 'off') : pill('ใช้งานปกติ', 'on')) + ' สมัครเมื่อ ' + fmt(u.createdAt),
             'รหัสผู้ใช้ (uid): ' + window.adminSecEsc(u.uid));
@@ -13468,6 +13481,33 @@
             try { await recordActivityLog(uid, 'ผู้ดูแลระบบรีเซ็ต PIN', 'PIN ถูกยกเลิกโดย ' + (window.myCurrentDisplayName || 'ผู้ดูแลระบบ') + ' — ต้องตั้งใหม่ก่อนใช้ยืนยัน', 'security'); } catch (e) {}
             window.showToast('รีเซ็ต PIN ของ “' + whoSafe + '” แล้ว — สมาชิกต้องตั้ง PIN ใหม่');
         } catch (e) { window.showToast('รีเซ็ต PIN ไม่สำเร็จ — ตรวจสัญญาณเน็ต', true); }
+    };
+    // ตั้ง/เปลี่ยน PIN ของสมาชิกโดยแอดมิน — แฮช PBKDF2 แล้วเขียนทับ pinHash (ต้องยืนยันตัวตนแอดมินก่อน)
+    window.adminSetMemberPin = async () => {
+        const uid = document.getElementById('adminEditUid').value;
+        const u = (window.currentAdminUsers || []).find(x => x.uid === uid); if (!uid || !u) return;
+        const perms = window.currentUserPerms() || {};
+        if (!((window.isAdminNow ? window.isAdminNow() : currentUserRole === 'Admin') || perms.canEdit)) return window.showToast('คุณไม่มีสิทธิ์ตั้ง PIN ให้สมาชิก', true);
+        const p1 = String(((document.getElementById('adminSetPin1') || {}).value) || '').trim();
+        const p2 = String(((document.getElementById('adminSetPin2') || {}).value) || '').trim();
+        const errBox = document.getElementById('adminSetPinErr');
+        const showErr = (m) => { if (errBox) { errBox.textContent = m; errBox.style.display = 'block'; } };
+        if (!p1 || !p2) return showErr('กรุณากรอก PIN ให้ครบทั้ง 2 ช่อง');
+        const fmt = window.pinFormatError(p1); if (fmt) return showErr(fmt);
+        if (p1 !== p2) return showErr('PIN ทั้งสองช่องไม่ตรงกัน');
+        const who = (u.displayName || u.username || ''); const whoSafe = window.adminSecEsc(who);
+        if (!(await window.requireReauth('ตั้ง PIN ให้ “' + whoSafe + '” — ' + (u.pinHash ? 'จะแทนที่ PIN เดิม (สมาชิกต้องใช้ PIN ใหม่ทันที)' : 'สมาชิกจะใช้ PIN นี้ยืนยันรายการสำคัญได้เลย')))) return window.showToast('ยกเลิก — ยังไม่ได้ยืนยันตัวตน', true);
+        try {
+            const hash = await window.pwHash(p1); // PBKDF2 + salt ใหม่ทุกครั้ง ⇒ เลขจริงไม่มีในระบบ
+            await window.__fsTimeout(updateDoc(doc(db, 'users', uid), { pinHash: hash, pinSetAt: Date.now(), pinSetBy: loggedInUserId }), 8000);
+            u.pinHash = hash; u.pinSetAt = Date.now(); u.pinSetBy = loggedInUserId;
+            // ถ้าแอดมินตั้งให้ตัวเอง → อัปเดตแคช PIN ในเครื่องนี้ด้วย (ไม่งั้น PIN ใหม่ยังใช้ยืนยันไม่ได้)
+            if (uid === loggedInUserId && typeof window.pinCacheSet === 'function') window.pinCacheSet(uid, hash);
+            // สมาชิกเครื่องอื่น: บล็อกซิงก์แคช (ตอนแอปเขาสตรีมเอกสาร) จะเห็น pinHash ต่างจากแคชเก่า ⇒ ล้างแคชเองอัตโนมัติ
+            window.adminSecFill(u);
+            try { await recordActivityLog(uid, 'ผู้ดูแลระบบตั้ง PIN ให้', 'PIN ถูกตั้งใหม่โดย ' + (window.myCurrentDisplayName || 'ผู้ดูแลระบบ') + ' — สมาชิกใช้ PIN ใหม่ยืนยันได้เลย', 'security'); } catch (e) {}
+            window.showToast('ตั้ง PIN ให้ “' + whoSafe + '” แล้ว — สมาชิกใช้ PIN ใหม่ยืนยันได้ทันที');
+        } catch (e) { window.showToast('ตั้ง PIN ไม่สำเร็จ — ตรวจสัญญาณเน็ต', true); }
     };
 
     window.openAdminEditUser = (uid) => {
