@@ -185,6 +185,8 @@
         #googleLinkBtn.g-linked { background: #5b6472 !important; color: #cbd5e1 !important; opacity: 0.6; filter: grayscale(1); cursor: not-allowed !important; box-shadow: none !important; border: 1px solid rgba(255,255,255,0.12); }
         #googleLinkBtn.g-linked svg { opacity: 0.5; filter: grayscale(1); }
         #googleLinkBtn.g-linked:active { transform: none; }
+        /* 🔗 (17 ก.ย. 69) ปุ่มในการ์ด Google 2 ปุ่มอยู่บรรทัดเดียวกันบนจอแคบ — เดิม “ยกเลิกการผูก” ตัดขึ้นบรรทัดใหม่ */
+        #googleLinkBtn, #googleUnlinkBtn { white-space: nowrap; font-size: 15px; padding-left: 10px; padding-right: 10px; gap: 6px; }
 
         .cp-role-tag { display: inline-block; margin-top: 5px; padding: 3px 11px; border-radius: 999px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.2px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16); color: #c3cbdd; }
         .cp-role-tag.role-admin { background: rgba(255,210,77,0.14); border-color: rgba(255,210,77,0.45); color: #ffd24d; }
@@ -13735,6 +13737,9 @@
         ['2026-09-16', '🧹 ลบบัญชีแล้วล้างการผูก Google ให้ด้วย — Gmail นั้นสมัคร/ผูกใหม่ได้ทันที'],
         ['2026-09-16', '🧹 ผูก Google เจอลิงก์ค้างของบัญชีที่ถูกลบ = ล้างเอง + บอกชื่อเจ้าของเดิม'],
         ['2026-09-16', '🧹 แอดมินมีปุ่ม “ตรวจลิงก์ค้าง” ในหน้าจัดการผู้ใช้ — เห็นรายการก่อนลบ'],
+        ['2026-09-16', '🔓 ผูกบัญชี Google ไม่ต้องยืนยันรหัสผ่าน/PIN อีก — กดปุ่มเดียวจบ'],
+        ['2026-09-16', '🔒 ยกเลิกการผูก Google ได้เฉพาะแอดมิน — ผู้ใช้ตำแหน่งอื่นไม่เห็นปุ่ม'],
+        ['2026-09-16', '🧹 ลบบัญชี บอกล่วงหน้าว่าจะล้างการผูก Google ของบัญชีนั้นให้ด้วย'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -14991,8 +14996,9 @@
         // 🔒 กันการผูกซ้ำ: บัญชีที่เข้าด้วย Google อยู่แล้ว (authProvider='google') หรือผูกไว้แล้ว = ผูกเพิ่มไม่ได้
         const __li = window.__googleLinkInfo();
         if (__li.linked) return window.showToast(__li.uid ? 'บัญชีนี้ผูก Google ไว้แล้ว' : 'บัญชีนี้เข้าใช้ด้วย Google อยู่แล้ว — ผูกซ้ำไม่ได้', true);
-        const okRa = (typeof window.requireReauth === 'function') ? await window.requireReauth('ยืนยันเพื่อผูกบัญชีนี้กับ Google — ครั้งต่อไปจะกดปุ่มเดียวเข้าสู่ระบบได้') : true;
-        if (!okRa) return window.showToast('ยกเลิกการผูกบัญชี', true);
+        // 🔓 (17 ก.ย. 69) แอดมินสั่ง: “ผูก Gmail ไม่ต้องยืนยันรหัส PIN” — ตัดด่าน requireReauth ออก
+        //    เหตุผล: การผูกเพิ่มทางเข้าเป็นสิ่งที่ “เจ้าตัว” ตั้งใจกดจากหน้าโปรไฟล์ และ Google ก็ยืนยันตัวตนให้แล้วอีกรอบ
+        //    ⛔ ยังไม่ตัดด่านในเส้นทางที่ทำลาย/แก้ข้อมูล (ลบบัญชี · รีเซ็ต PIN · ลบรูป · แก้ข้อมูลสมาชิก) — ยังต้องยืนยันเสมอ
         const btn = document.getElementById('googleLinkBtn');
         if (btn) { btn.disabled = true; btn.style.opacity = '0.7'; }
         try {
@@ -15031,6 +15037,11 @@
         }
     };
     window.unlinkGoogleAccount = async () => {
+        // 🔒 (17 ก.ย. 69) ยกเลิกการผูก = **แอดมินเท่านั้น** (ผู้ใช้ตำแหน่งอื่นแอดมินต้องเป็นผู้ปลด → หรือลบบัญชี)
+        //    ⛔ เช็คที่ฟังก์ชันด้วย ไม่พึ่งการซ่อนปุ่ม (ปุ่มซ่อนได้ แต่ฟังก์ชันเรียกจาก console ก็ยังได้)
+        if (typeof window.isAdminNow === 'function' && !window.isAdminNow()) {
+            return window.showToast('ยกเลิกการผูก Google ทำได้เฉพาะแอดมิน — ถ้าต้องการปลด ให้ติดต่อแอดมิน', true);
+        }
         // 🔎 ใช้ uid จริงในการลบ authLink — ไม่มี uid = ลบไม่ได้ (บัญชีที่สร้างด้วย Google ไม่มีบันทึกฝั่งเครื่อง)
         const uid = window.__linkedGoogleUid();
         if (!uid) {
@@ -15099,9 +15110,12 @@
         if (li.linked) {
             // 🔒 ผูกแล้ว/ใช้ Google อยู่แล้ว → ปุ่มเทา กดไม่ได้ (ผู้ใช้ขอ 16 ก.ย. 69) · บัญชีที่สร้างด้วย Google ยกเลิกการผูกไม่ได้
             //    เพราะไม่มีรหัสผ่านตั้งไว้ — ยกเลิกแล้วจะเข้าระบบไม่ได้เลย
-            // ยกเลิกการผูกได้เมื่อ “รู้ uid จริง” และ “มีรหัสผ่านของตัวเองแล้ว” เท่านั้น
-            // ⛔ บัญชีที่สร้างด้วย Google (ยังไม่มีรหัสผ่าน) ยกเลิกไม่ได้ — ยกเลิกแล้วจะเข้าระบบไม่ได้เลย
-            const canUnlink = !!uid && (window.__hasAccountPassword === true);
+            // 🔒 (17 ก.ย. 69) แอดมินสั่ง: “ทุกตำแหน่งยกเว้นแอดมิน ยกเลิกการผูกไม่ได้”
+            //    ⇒ ต้องเป็น ① แอดมิน ② รู้ uid จริง ③ มีรหัสผ่านของตัวเอง (ไม่ใช่บัญชีที่สร้างด้วย Google)
+            //    ทางเดียวที่ผู้ใช้ทั่วไปจะถูกปลดการผูก = แอดมินลบบัญชีนั้น (ซึ่งล้าง authLink ให้ด้วย — ดู quickDeleteUser)
+            const __imAdmin = (typeof window.isAdminNow === 'function') ? window.isAdminNow() : false;
+            const canUnlink = !!uid && (window.__hasAccountPassword === true) && __imAdmin;
+            window.__canUnlinkGoogle = canUnlink;   // ให้ฟังก์ชันยกเลิกอ่านค่าชุดเดียวกัน (ไม่พึ่งปุ่มที่ซ่อนอยู่)
             if (li.linked && !uid) setTimeout(() => { window.__resolveGoogleUid().then(u => { if (u) { try { window.__refreshGoogleLinkUi(); } catch (e) {} } }); }, 50);
             st.innerHTML = (uid ? '✅ ผูกกับ Google แล้ว' : '✅ บัญชีนี้เข้าใช้ด้วย Google อยู่แล้ว')
                 + (email ? ' — <b>' + email + '</b>' : '')
@@ -15115,6 +15129,12 @@
                 linkBtn.title = 'บัญชีนี้ใช้ Google อยู่แล้ว — ผูกซ้ำไม่ได้';
             }
             if (unBtn) { unBtn.style.display = canUnlink ? 'flex' : 'none'; }
+            // บอกเหตุผลที่ไม่มีปุ่ม (ไม่งั้นผู้ใช้จะหาปุ่มไม่เจอแล้วคิดว่าเป็นบั๊ก)
+            if (!__imAdmin) {
+                st.innerHTML += '<br><span style="color:var(--text-dim);">🔒 การยกเลิกการผูก Google ทำได้เฉพาะ <b>แอดมิน</b> — ถ้าต้องการปลดการผูก ให้แอดมินเป็นผู้ดำเนินการ</span>';
+            } else if (!window.__hasAccountPassword) {
+                st.innerHTML += '<br><span style="color:var(--text-dim);">🔒 บัญชีที่สร้างด้วย Google ยกเลิกไม่ได้ (ยังไม่มีรหัสผ่าน — ยกเลิกแล้วจะเข้าระบบไม่ได้)</span>';
+            }
         } else {
             st.innerHTML = 'ยังไม่ได้ผูก · ผูกไว้จะล็อกอินได้ <b>2 ทาง</b> (ปุ่ม Google หรือ username/รหัสผ่านเดิม) — ต้องเปิด Google provider ที่ Firebase Console ก่อน';
             if (linkBtn) { linkBtn.style.display = 'flex'; linkBtn.disabled = false; linkBtn.classList.remove('g-linked'); linkBtn.style.opacity = ''; linkBtn.style.cursor = ''; linkBtn.title = 'ผูกบัญชีนี้กับ Google'; }
@@ -15970,7 +15990,14 @@
     window.quickDeleteUser = async (uid, userName) => {
         if(!window.currentUserPerms().canDelete) return window.showToast("คุณไม่มีสิทธิ์ลบผู้ใช้งาน", true);
         if(uid === loggedInUserId) return window.showToast("ไม่สามารถลบบัญชีตัวเองได้", true);
-        let isOk = await window.showCustomConfirm("ลบบัญชีผู้ใช้งาน", `ยืนยันการ 'ลบถาวร' บัญชี ${userName} ใช่หรือไม่?\nข้อมูลจะไม่สามารถกู้คืนได้`, "danger", "ลบข้อมูล");
+        // 🔗 บอกล่วงหน้าว่าถ้าบัญชีนี้ผูก Google ไว้ ระบบจะล้างการผูกให้ด้วย (ผู้ใช้สั่ง 17 ก.ย. 69)
+        let __gNote = '';
+        try {
+            const __u = (window.currentAdminUsers || []).find(x => String(x.uid) === String(uid));
+            const __gm = (__u && typeof window.__gmailInfo === 'function') ? window.__gmailInfo(__u) : null;
+            if (__gm && __gm.linked) __gNote = `\n\n🔗 บัญชีนี้ผูก Google ไว้${__gm.email ? ' (' + __gm.email + ')' : ''} — ระบบจะล้างการผูกให้ด้วย เพื่อให้ Gmail นั้นสมัครหรือผูกกับบัญชีอื่นได้`;
+        } catch (e) {}
+        let isOk = await window.showCustomConfirm("ลบบัญชีผู้ใช้งาน", `ยืนยันการ 'ลบถาวร' บัญชี ${userName} ใช่หรือไม่?\nข้อมูลจะไม่สามารถกู้คืนได้` + __gNote, "danger", "ลบข้อมูล");
         if(isOk) {
             // 🔐 ลบบัญชีถาวรย้อนกลับไม่ได้ → ขอยืนยันตัวตนด้วยรหัสผ่านก่อน (กันเครื่องที่ล็อกอินค้างไว้)
             if (!(await window.requireReauth('ยืนยันเพื่อ “ลบบัญชี” ' + (userName || '') + ' — กรอกรหัสผ่านของคุณ'))) return window.showToast("ยกเลิกการลบ — ยังไม่ได้ยืนยันตัวตน", true);
