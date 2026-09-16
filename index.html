@@ -13429,6 +13429,7 @@
         ['2026-09-16', '⚠️ เตือนบนการ์ด + แถบสรุปเมื่อบัญชี Google ยังไม่กรอกทะเบียน/เบอร์โทร'],
         ['2026-09-16', '👤 การ์ดสมาชิก: @username กับ “เข้าใช้ล่าสุด” อยู่บรรทัดเดียว วันเวลาชิดขวา'],
         ['2026-09-16', '🧹 หน้าจัดการผู้ใช้: เอาป้าย “ทะเบียนรถ” ออกทุกตำแหน่ง (รวมแอดมิน)'],
+        ['2026-09-16', '🧹 การ์ดสมาชิก: เหลือชื่อ/ไอดี/เวลา — รายละเอียด Gmail+ข้อมูลไม่ครบอยู่ปุ่มแก้ไข'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -15667,25 +15668,11 @@
                     //    · ข้อมูลทะเบียนยังอยู่ที่เดิม ไปดูได้ในหน้าต่าง “แก้ไขสมาชิก” (แถวข้อมูลบัญชี)
                     //    · 🔎 บั๊กที่ต้องระวัง: ระบบใช้ u.plateNo ตรวจ “ข้อมูลไม่ครบ” ของบัญชี Google ⇒ ห้ามลบ/แก้ค่านั้น แค่ไม่วาดป้าย
                     //    · ตัวแปร plateChip ถูกถอดออกทั้งตัว (ไม่ใช้ที่ไหนอีก) — ถ้าจะยกกลับ ให้สร้างป้ายนี้ใหม่ใน .admin-meta-row
-                    // 📧 (16 ก.ย. 69) บอกแอดมินว่าสมาชิกคนนี้สมัครผ่าน Gmail (หรือผูก Gmail ทีหลัง) + อีเมลอะไร
-                    //    อ่านจากข้อมูลบัญชีล้วน = 0 คำขอ · บัญชีรุ่นเก่าที่ยังไม่มีอีเมล → ปุ่ม “ดูอีเมล” ให้กดเอง (1 อ่าน)
-                    const _es = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-                    const _gi = (window.__gmailInfo ? window.__gmailInfo(u) : { linked: false });
-                    let gmailChip = '';
-                    if (_gi.linked) {
-                        const label = _gi.signup ? 'สมัครผ่าน Gmail' : 'ผูก Gmail';
-                        if (_gi.hasEmail) gmailChip = `<span class="admin-meta-chip admin-gmail-chip" title="${_gi.signup ? 'สมัครสมาชิก/เข้าใช้ด้วยบัญชี Google' : 'ผูกบัญชี Google ไว้กับบัญชีนี้ (ยังมีรหัสผ่านของตัวเอง)'}"><span class="material-symbols-outlined">mail</span>${label}: ${_es(_gi.email)}</span>`;
-                        else gmailChip = `<span class="admin-meta-chip admin-gmail-chip" title="บัญชีนี้เชื่อมกับ Google แต่ข้อมูลบัญชียังไม่มีอีเมล"><span class="material-symbols-outlined">mail</span>${label} <button onclick="event.stopPropagation(); window.adminFetchGmailEmail('${uid}')" style="background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.45); color:#7dd3fc; border-radius:8px; font-size:10.5px; padding:2px 7px; margin-left:4px; cursor:pointer;">ดูอีเมล</button></span>`;
-                    }
-                    // ⚠️ (16 ก.ย. 69) บัญชีที่เข้าแอปผ่าน Google แล้วยังกรอกข้อมูลไม่ครบ — เตือนบนการ์ดเลย ไม่ต้องเข้าไปดูรายคน
-                    let incompleteChip = '';
-                    if (_gi.linked) {
-                        const _missing = [];
-                        if (!String(u.plateNo || '').trim()) _missing.push('ทะเบียนรถ');
-                        if (!String(u.phoneNumber || '').trim()) _missing.push('เบอร์โทร');
-                        if (_missing.length) incompleteChip = `<span class="admin-meta-chip admin-incomplete-chip" title="บัญชีนี้เข้าแอปผ่าน Google แล้วยังกรอกข้อมูลไม่ครบ — แอปจะเด้งหน้าต้อนรับให้กรอกเอง"><span class="material-symbols-outlined">warning</span>ข้อมูลไม่ครบ: ${_missing.join(' · ')}</span>`;
-                    }
-                    html += `<div class="admin-user-card"><div class="admin-user-top">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">${safeUsername}</span><span class="admin-user-statusline" id="admin-status-${uid}">${statusHtml}</span>${lastLoginChip}</div></div>${(gmailChip || incompleteChip) ? `<div class="admin-meta-row">${gmailChip}${incompleteChip}</div>` : ''}</div></div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
+                    // 🧹 (16 ก.ย. 69) ย้ายข้อมูล “สมัครผ่าน Gmail/ผูก Gmail” + “ข้อมูลไม่ครบ” ไปอยู่เฉพาะในหน้าต่าง “แก้ไขสมาชิก” (adminSecFill)
+                    //    เหตุผลจากผู้ใช้: การ์ดในหน้ารายชื่อรกเกินไป และยังไงก็ต้องกด edit เพื่อดูรายละเอียดอยู่แล้ว
+                    //    · ตัวเลขสรุป + ตัวกรองด้านบน (แถบชิป “สมัครผ่าน Gmail / ผูก Gmail / ข้อมูลไม่ครบ”) ยังอยู่ครบ — กดกรองเพื่อหาคนที่ต้องการได้ทันที
+                    //    · ตัวแปร gmailChip / incompleteChip / _es / _gi ถูกถอดออกทั้งชุด ⇒ การ์ดเหลือ: รูป · ชื่อ+ตำแหน่ง · @ไอดี + เข้าใช้ล่าสุด
+                    html += `<div class="admin-user-card"><div class="admin-user-top">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">${safeUsername}</span><span class="admin-user-statusline" id="admin-status-${uid}">${statusHtml}</span>${lastLoginChip}</div></div></div></div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
                 });
         const box = document.getElementById('adminUserList'); if (!box) return;
         box.innerHTML = html || '<div style="padding: 20px; color: gray;">' + (_f === 'all' ? 'ไม่พบข้อมูล' : 'ไม่มีสมาชิกในกลุ่มที่กรองไว้ — กด “ทั้งหมด” เพื่อดูทุกคน') + '</div>';
@@ -15728,12 +15715,12 @@
             html += '<div style="margin-top:8px; display:flex; gap:8px; align-items:flex-start; background:rgba(241,196,15,0.10); border:1px solid rgba(241,196,15,0.38); border-radius:12px; padding:9px 11px;">' +
                 '<span class="material-symbols-outlined" style="font-size:18px; color:#ffd24d; flex-shrink:0;">notification_important</span>' +
                 '<div style="flex:1; min-width:0; font-size:11.5px; color:#ffdca8; line-height:1.6;">' +
-                '<b>มี ' + s.incomplete + ' บัญชีที่เข้าแอปผ่าน Google แล้วยังกรอกทะเบียนรถ/เบอร์โทรไม่ครบ</b> — แอปจะเด้งหน้าต้อนรับให้สมาชิกกรอกเองตอนเปิดแอป แต่ถ้าต้องการเร่ง แจ้งเขาให้เข้า “ตั้งค่าโปรไฟล์” หรือกดชิปด้านบนเพื่อดูรายชื่อ' +
+                '<b>มี ' + s.incomplete + ' บัญชีที่เข้าแอปผ่าน Google แล้วยังกรอกทะเบียนรถ/เบอร์โทรไม่ครบ</b> — แอปจะเด้งหน้าต้อนรับให้สมาชิกกรอกเองตอนเปิดแอป แต่ถ้าต้องการเร่ง แจ้งเขาให้เข้า “ตั้งค่าโปรไฟล์” หรือกดชิป “ข้อมูลไม่ครบ” ด้านบนเพื่อดูรายชื่อ (รายละเอียดต่อคนอยู่ในหน้าต่างแก้ไขสมาชิก)' +
                 '<div style="margin-top:6px;"><button onclick="window.adminUserFilterSet(\'incomplete\')" class="manual-timer-btn" style="padding:5px 12px; font-size:11.5px; background:rgba(241,196,15,0.85); color:#1a1a1a;"><span class="material-symbols-outlined" style="font-size:16px;">filter_alt</span> ดูเฉพาะ ' + s.incomplete + ' คนนี้</button></div>' +
                 '</div></div>';
         }
         if (s.noEmail) {
-            html += '<div style="margin-top:8px; font-size:11px; color:var(--text-dim); line-height:1.6;">ℹ️ อีก ' + s.noEmail + ' บัญชีเชื่อมกับ Google แต่ข้อมูลบัญชียังไม่มีอีเมล (บัญชีรุ่นเก่า) — กด “ดูอีเมล” ที่ชิปสีฟ้าของบัญชีนั้นเพื่อดึงมาแสดง (อ่าน 1 ครั้ง แล้วบันทึกกลับ)</div>';
+            html += '<div style="margin-top:8px; font-size:11px; color:var(--text-dim); line-height:1.6;">ℹ️ อีก ' + s.noEmail + ' บัญชีเชื่อมกับ Google แต่ข้อมูลบัญชียังไม่มีอีเมล (บัญชีรุ่นเก่า) — เปิดปุ่ม ✏️ แก้ไขของบัญชีนั้น แล้วกด “ดูอีเมล” ในแถว “บัญชี Google” เพื่อดึงมาแสดง (อ่าน 1 ครั้ง แล้วบันทึกกลับ)</div>';
         }
         if (cur !== 'all') {
             html += '<div style="margin-top:8px; font-size:11.5px; color:#7dd3fc; font-weight:600;">กำลังกรองอยู่: ' + ({ signup: 'สมัครผ่าน Gmail', linked: 'ผูก Gmail', incomplete: 'ข้อมูลไม่ครบ' }[cur] || cur) + ' — กด “ทั้งหมด” เพื่อยกเลิก</div>';
