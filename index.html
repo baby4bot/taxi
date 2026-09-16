@@ -8967,29 +8967,20 @@
         const man0 = window.getUserPosManual();
         const ref0 = lf0 || window.__lastUpos || (man0 && typeof man0.lat === 'number' ? Object.assign({}, man0, { at: Date.now(), src: 'manual' }) : null);
         // 📏 เรียงใกล้สุดก่อน — ใช้ “ระยะตรง” คิดจากตำแหน่งอ้างอิง (ไม่ยิง routing เลย = ไม่กินโควตา)
-        let sortedByDist = false;
-        if (ref0) { favs = window.sortByNear(favs, ref0); h = window.sortByNear(h, ref0); sortedByDist = true; }
-        // 📍 กรองเฉพาะใกล้ (ถ้าเปิดอยู่ + รู้ตำแหน่ง) — ใช้ระยะตรง ⇒ ไม่ยิง routing
-        let hiddenNear = 0;
-        const nf = window.nearFilter || window.nearFilterRead();
-        const filterActive = !!(nf.on && nf.km > 0 && ref0);
-        if (filterActive) {
-            const within = (it) => (it && typeof it.lat === 'number' && typeof it.lon === 'number') ? distKm(ref0, { lat: it.lat, lon: it.lon }) <= nf.km : false;
-            const f2 = favs.filter(within), h2 = h.filter(within);
-            hiddenNear = (favs.length - f2.length) + (h.length - h2.length);
-            favs = f2; h = h2;
-        }
+        if (ref0) { favs = window.sortByNear(favs, ref0); h = window.sortByNear(h, ref0); }
+        // ⛔ ซ่อน 3 บรรทัดบนสุดของลิสต์ค้นหาตามคำสั่งผู้ใช้ (16 ก.ย. 69):
+        //    ① แถบ “เฉพาะใกล้ฉัน / ไม่จำกัด”   ② บรรทัด “เรียงตามระยะใกล้สุดจากตำแหน่งของคุณ…”   ③ บรรทัด “ระยะทางคิดจากตำแหน่งปัจจุบัน…อัปเดต N วิ”
+        //    เหตุผลของผู้ใช้: การนำทาง/คิดราคาเริ่มจากพิกัดปัจจุบันอยู่แล้ว ⇒ บรรทัดพวกนี้ซ้ำซ้อน กินพื้นที่
+        //    ⚠️ พฤติกรรมยังอยู่ครบ: เรียงใกล้สุดก่อน (sortByNear) · คิดระยะจากพิกัดปัจจุบัน · ไม่ซ่อนปลายทางใด ๆ
+        //    · ตัวกรอง “เฉพาะใกล้ฉัน” ปิดถาวร (ไม่มี UI เปิด) — กันค่าเก่าในเครื่องของผู้ใช้เก่ามากรองลิสต์
+        //    · ฟังก์ชัน nearFilter* / posNoteHtml ยังอยู่ เรียกจากคอนโซล/เทสต์ได้ — แค่ไม่วาดลงลิสต์แล้ว
+        const hiddenNear = 0, filterActive = false;
         let html = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ปลายทาง</span></div>`;
-        html += window.nearFilterRowHtml(ref0, hiddenNear);
-        if (sortedByDist) html += `<div class="near-note"><span class="material-symbols-outlined">near_me</span><span>เรียงตามระยะใกล้สุดจากตำแหน่งของคุณ — จัดอันดับด้วย <b>ระยะตรง</b> (ตัวเลขบนป้ายเป็นระยะเส้นทางจริง)</span></div>`;
-        html += window.posNoteHtml(ref0); // 📍 บอกว่าใช้พิกัดไหน/อัปเดตเมื่อไหร่ + ปุ่มขอพิกัดใหม่
         // ❌ ไม่แสดงแถว “ตั้งตำแหน่งของฉัน” ในลิสต์ค้นหาอีก (ผู้ใช้สั่ง 15 ก.ย.) — การนำทางเริ่มจากตำแหน่งล่าสุดจริงอยู่แล้ว
         //    ตัวโค้ดเดิม (getUserPosManual / enterSetPosMode) ยังอยู่ → ค่าที่เคยตั้งไว้ยังใช้ได้เหมือนเดิม แค่ไม่มีปุ่มให้ตั้งจากตรงนี้
         if (!h.length && !favs.length) {
-            // 📍 ถ้าตัวกรองเป็นคนซ่อนทั้งหมด → บอกตรง ๆ พร้อมปุ่มปิดตัวกรอง (ไม่ใช่บอกว่า “ไม่มีข้อมูล” เฉย ๆ)
-            html += filterActive && hiddenNear > 0
-                ? `<div class="near-empty">ไม่มีปลายทางในระยะ ${fmtDist(nf.km)} — ซ่อนไป ${hiddenNear} รายการ<br><button class="near-toggle" onclick="window.nearFilterSetKm(0)"><span class="material-symbols-outlined">near_me</span> ปิดตัวกรอง (แสดงทั้งหมด)</button></div>`
-                : `<div style="padding:14px; text-align:center; color:var(--text-dim); font-size:12.5px;">พิมพ์ชื่อสถานที่เพื่อค้นหา — เช่น "เซ็นทรัล", "รพ.วิภา", "ลาดพร้าว 23"</div>`;
+            // ℹ️ ปลายทางว่าง = ไม่มีข้อมูลในเครื่อง (ไม่มีตัวกรองมาซ่อนอีกแล้ว — ถอดออก 16 ก.ย. 69)
+            html += `<div style="padding:14px; text-align:center; color:var(--text-dim); font-size:12.5px;">พิมพ์ชื่อสถานที่เพื่อค้นหา — เช่น "เซ็นทรัล", "รพ.วิภา", "ลาดพร้าว 23"</div>`;
             $('historyList').innerHTML = html;
             $('suggestionList').style.display = 'none';
             $('historyList').style.display = 'block';
@@ -9215,6 +9206,7 @@
         return { on: false, km: 5 }; // ค่าเริ่มต้น: ปิดไว้ — คนขับเป็นคนเปิดเอง
     };
     window.nearFilter = window.nearFilterRead();
+    window.nearFilter.on = false; // ⛔ ปิดถาวรตามคำสั่งผู้ใช้ (16 ก.ย. 69) — ไม่มี UI เปิดแล้ว จึงต้องไม่ให้ค่าเก่าในเครื่องมาซ่อนปลายทาง
     window.nearFilterWrite = () => { try { localStorage.setItem(NEAR_FILTER_KEY, JSON.stringify(window.nearFilter)); } catch (e) {} };
     window.nearFilterToggle = () => {
         if (!window.nearFilter.km) window.nearFilter.km = 5; // จาก “ไม่จำกัด” → เปิดครั้งแรกเริ่มที่ 5 กม.
@@ -13410,6 +13402,7 @@
         ['2026-09-16', '🛡 เตือนก่อนบันทึก: คำใหม่ที่บังชื่อสมาชิกเดิม — บอกชื่อ + ต้องกดซ้ำเพื่อยืนยัน'],
         ['2026-09-16', '📍 ที่โปรด/ประวัติใช้พิกัดปัจจุบันจริง — ไม่ทับเลขจริงด้วยค่าประมาณ + ปุ่มอัปเดตตำแหน่ง'],
         ['2026-09-16', '🧭 จุดเริ่มคิดราคาเลือกพิกัดใหม่สุด (มิเตอร์ vs แคชค้นหา) — เที่ยวจบไม่เริ่มจากจุดเก่า'],
+        ['2026-09-16', '🧹 เอาบรรทัดอธิบายบนลิสต์ค้นหาออก (กรองใกล้ฉัน · เรียงใกล้สุด · เวลาพิกัด)'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
