@@ -13036,6 +13036,7 @@
         ['2026-09-16', '🎞️ Mini Map ไหลต่อเนื่องเหมือน Google Maps — แผนที่เลื่อน/หมุนตามรถ ไม่กระตุกเป็นจังหวะ'],
         ['2026-09-16', '🧭 ลูกศรชี้ขึ้นบนเสมอ + ย้ายต่ำกว่ากึ่งกลางจอ ให้เห็นถนนข้างหน้ามากขึ้น'],
         ['2026-09-16', '🐞 แก้แผนที่ไม่หมุนตามรถตอนวิ่งเร็ว — เกณฑ์เดิมต้องขยับ 12 ม. ต่อครั้ง ทำให้ทิศค้าง'],
+        ['2026-09-16', '🎈 จุดบน Mini Map เลื่อนขึ้นตามระยะที่วิ่งจริง แล้วกล้องค่อยไล่ทันให้กลับมาที่เดิม'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -15862,6 +15863,13 @@
     var dispCar = null;      // พิกัดที่ใช้วาด (ไล่ตาม car แบบนุ่ม)
     var dispHead = 0;        // ทิศที่ใช้วาด (ไล่ตาม bearing แบบจำกัดอัตราการหมุน)
     var headAnchor = null;   // จุดอ้างอิงคำนวณทิศจาก GPS (ต้องขยับ ≥ 5–10 ม. ก่อนจึงยอมอัปเดตทิศ = ทิศนิ่ง)
+    // 🎈 “จุดเลื่อนตามแผนที่” (แบบ GPS นำทางทั่วไป): จุดค่อย ๆ เลื่อนขึ้นจอตามระยะที่วิ่งจริง
+    //    พอชนเพดาน → กล้องค่อย ๆ ไล่ทันให้จุดกลับมาที่จุดยึด (0.70 ของความสูงจอ) แล้วเริ่มนับใหม่
+    var crawlM = 0;            // เมตรที่ “จุด” เลื่อนไปข้างหน้าจุดยึดของจอ
+    var crawlCatch = false;    // false = กล้องนิ่ง (จุดเลื่อนขึ้น) · true = กล้องกำลังไล่ทัน (จุดเลื่อนลง)
+    var crawlPrev = null;      // ตำแหน่งที่วาดของเฟรมก่อน (ไว้คิดระยะที่เลื่อนจริง)
+    var CRAWL_MAX_FRAC = 0.34; // เพดานการเลื่อน = 34% ของความสูงจอ (จุดอยู่ระหว่าง 0.70 → 0.36 ของความสูง)
+    var CRAWL_CATCH_TAU = 0.8; // วินาที ของการไล่ทัน (ยิ่งมากยิ่งนุ่ม)
     var animId = 0, animLast = 0;
     var CAR_ANCHOR = 0.70;   // ตำแหน่งลูกศรบนจอ (0 = บนสุด · 1 = ล่างสุด) — เผื่อเห็นถนนข้างหน้า เหมือน Google Maps
 
@@ -16259,7 +16267,10 @@
         // ตำแหน่ง/ทิศ “ที่วาด” (ไล่ตามค่าจริงแบบนุ่ม) — ทำให้แผนที่ไหลต่อเนื่อง ไม่กระตุกเป็นจังหวะ
         var drawPos = dispCar || car;
         var head = dispCar ? dispHead : (bearing || 0);
-        var center = (!follow && panCenter) ? panCenter : (drawPos || (route.length ? { lat: route[0][0], lng: route[0][1] } : null));
+        // 🎈 จุดเลื่อนตามแผนที่: ตอนตามรถ กล้องถอยหลังไปตามทิศรถตามระยะ crawlM ⇒ จุดเลื่อนขึ้นจอเอง
+        var camPos = drawPos;
+        if (follow && !panCenter && drawPos && crawlM > 0.5) { camPos = offsetPointM(drawPos, head + 180, crawlM); }
+        var center = (!follow && panCenter) ? panCenter : (camPos || (route.length ? { lat: route[0][0], lng: route[0][1] } : null));
         // กันพิกัดเสีย (เช่น ค่าที่ยังไม่มา/เป็นข้อความ) → แผนที่จะได้ไม่หายทั้งบาน
         if (!center || !isFinite(center.lat) || !isFinite(center.lng)) { center = route.length ? { lat: route[0][0], lng: route[0][1] } : null; }
         if (!center) { return; }
@@ -16361,7 +16372,23 @@
         dispCar = car ? { lat: car.lat, lng: car.lng } : null;
         dispHead = bearing || 0;
         headAnchor = car ? { lat: car.lat, lng: car.lng } : null; // เริ่มนับทิศใหม่จากจุดนี้
+        crawlReset();  // 🎈 เริ่มตำแหน่งใหม่ = จุดกลับมาที่จุดยึด (ไม่ค้างเลื่อนจากที่เก่า)
     }
+    // เลื่อนพิกัดตามเข็มทิศ (องศา) เป็นระยะ (เมตร) — ใช้หาตำแหน่ง “กล้อง” ที่ถอยหลังรถไป
+    function offsetPointM(pos, deg, meters) {
+        var R = 6371000, br = deg * Math.PI / 180;
+        var dLat = (meters * Math.cos(br)) / R;
+        var dLng = (meters * Math.sin(br)) / (R * Math.cos(pos.lat * Math.PI / 180) || R);
+        return { lat: pos.lat + dLat * 180 / Math.PI, lng: pos.lng + dLng * 180 / Math.PI };
+    }
+    // 🎈 เพดานการเลื่อน (เมตร) คิดจากระดับซูมจริง — 34% ของความสูงจอ (ปรับเองตามซูม ไม่ต้องตั้งตายตัว)
+    function crawlMaxM() {
+        var zr = (smoothZoom === null) ? autoZoom(speedKmh) : smoothZoom;
+        var H = canvas.clientHeight || 168;
+        var mPerPx = 156543.03392 * Math.cos(((car ? car.lat : 13.75)) * Math.PI / 180) / Math.pow(2, zr);
+        return CRAWL_MAX_FRAC * H * mPerPx;
+    }
+    function crawlReset() { crawlM = 0; crawlCatch = false; crawlPrev = null; }
     function animKick() {
         if (animId) { return; }                       // กำลังวิ่งอยู่แล้ว
         if (!visible || pref.hidden || !car || !dispCar) { return; }
@@ -16382,6 +16409,25 @@
                 busy = true;
             } else if (dM > 0) { dispCar = { lat: car.lat, lng: car.lng }; }
         } else { dispCar = null; }
+        // 🎈 นับระยะที่ “จุด” เลื่อนจริงในเฟรมนี้ → กล้องนิ่งให้จุดเลื่อนขึ้นจนชนเพดาน แล้วค่อยไล่ทัน
+        if (follow && car) {
+            var curD = dispCar || car;
+            if (crawlPrev) {
+                // ❗ ห้ามใส่เงื่อนไข “mv > 0.4 ม.” ที่นี่ — ที่ 40 กม./ชม. แต่ละเฟรมขยับ ~0.18 ม. ⇒ ถูกกรองทิ้งหมด จุดจะไม่เลื่อน
+                //    กันสัญญาณแกว่งด้วย “ความเร็ว” ด้านล่างแทน (≤ 2 กม./ชม. = ไม่นับ)
+                var mv = Math.min(kmBetween(crawlPrev, curD) * 1000, 60);
+                if (!crawlCatch && mv > 0 && speedKmh >= 2) {
+                    crawlM += mv;
+                    if (crawlM >= crawlMaxM()) { crawlCatch = true; }
+                }
+            }
+            crawlPrev = { lat: curD.lat, lng: curD.lng };
+            if (crawlCatch) {
+                crawlM *= Math.exp(-dt / CRAWL_CATCH_TAU);
+                if (crawlM < 1.5) { crawlM = 0; crawlCatch = false; }
+                busy = true; // กำลังไล่ทัน → วาดต่อทุกเฟรม
+            }
+        } else { crawlPrev = null; }
         var df = ((bearing - dispHead + 540) % 360) - 180;
         if (Math.abs(df) > 0.2) {
             var st = (Math.abs(df) < 2) ? Math.abs(df) : Math.min(Math.abs(df), ANIM_HEAD_RATE * dt);
@@ -16505,6 +16551,7 @@
         resetTurnAlerts();
         alignHeadingToRoute(car); // 🧭 หันหัวตามทิศเส้นทางทันที (ก่อนรถขยับ GPS ยังไม่บอกทิศ)
         if (car) { snapAnim(); }  // เส้นทางใหม่ = เริ่มวาดจากตำแหน่งจริง (ไม่ไถลจากเที่ยวเก่า)
+        crawlReset();             // 🎈 เส้นทางใหม่ = จุดเริ่มที่จุดยึดเสมอ
         follow = true; panCenter = null; btnFollow.classList.add('on');
         if (pref.hidden) { canReopen = true; } // ซ่อนอยู่แต่มีเส้นทางแล้ว → ให้มีปุ่มเปิดคืน
         request(); chrome(); syncReopenBtns();
@@ -16600,7 +16647,9 @@
         var W = canvas.clientWidth || 168, H = canvas.clientHeight || 168;
         var zr = (smoothZoom === null) ? autoZoom(speedKmh) : smoothZoom;
         var z = Math.round(zr), zScale = Math.pow(2, zr - z);
-        var center = (!follow && panCenter) ? panCenter : pos;
+        var headDeg = ((dispCar ? dispHead : bearing) || 0);
+        var camPos = (follow && !panCenter && crawlM > 0.5) ? offsetPointM(pos, headDeg + 180, crawlM) : pos;
+        var center = (!follow && panCenter) ? panCenter : camPos;
         var c = proj(center.lat, center.lng, z);
         var ax = W / 2, ay = H * CAR_ANCHOR;
         var p = proj(pos.lat, pos.lng, z);
@@ -16622,6 +16671,7 @@
             dispHead: Math.round(dispHead),
             lagM: (dispCar && car) ? Math.round(kmBetween(dispCar, car) * 1000) : null,
             anchor: CAR_ANCHOR, animating: !!animId,
+            crawlM: Math.round(crawlM), crawlCatch: crawlCatch, crawlMaxM: Math.round(crawlMaxM()), // 🎈 การเลื่อนของจุด
             muted: navSoundMuted(),
             voice: (typeof window.navVoiceDebug === 'function') ? window.navVoiceDebug() : null,
             routeHeading: (function () { var h = routeHeadingAt(nearestIndex(car)); return h === null ? null : Math.round(h); })(),
@@ -16724,6 +16774,7 @@
         }
         panCenter = unproj(c.x - dx, c.y - dy, z);
         follow = false; btnFollow.classList.remove('on');
+        crawlReset(); // 🎈 ผู้ใช้ลากเอง = หยุดการเลื่อนของจุด (จุดยึดไม่ใช้แล้ว)
         request();
         e.preventDefault();
     });
@@ -16743,7 +16794,8 @@
     btnFollow.addEventListener('click', function (e) {
         e.stopPropagation();
         follow = true; panCenter = null; userZoom = null;
-        btnFollow.classList.add('on'); request();
+        crawlReset(); // 🎈 กลับมาโหมดตามรถ = จุดเริ่มที่จุดยึดใหม่
+        btnFollow.classList.add('on'); request(); animKick();
     });
     btnSize.addEventListener('click', function (e) {
         e.stopPropagation();
