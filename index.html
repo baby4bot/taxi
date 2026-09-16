@@ -3915,11 +3915,19 @@
     //    (2) ยอด km/เวลาในที่บันทึกถูกเขียนทับหรือค้างเก่า → ระยะทางที่วิ่งจริงหายไป
     let hiddenKmBase = 0, gapBasePos = null, gapHiddenAt = null, tripCaughtUpAt = null;
     let trafficCharging = false, lastFixSpeedKmh = null, lastStopFixAt = null; // กำลังคิดค่าเวลาจอด? / ความเร็วจาก GPS ล่าสุด / เวลา fix สุดท้ายที่ยืนยันจอดจริง
+    // ⏱️ ช่วงห่างปกติระหว่าง fix ที่ "ยืนยันว่าจอด" — ใช้เป็น "ผ่อนผัน" ตอนนับเวลารถติด (ดู advanceMeterTime)
+    //    ต้องปรับตามความถี่จริงของ GPS: fix ถี่ 1 วิ → ผ่อน 1 วิ (ตัดหางได้หมด) · fix ห่าง 4 วิ (เครื่องที่แช่แข็งเป็นช่วง) → ผ่อน 4 วิ (ไม่ให้เวลาจอดหาย)
+    let stopFixGapMs = 1000;
     // ⏳ ยอดเวลารถติดที่ "คิดไปก่อน" ตอนไม่มี fix ยืนยันเลย (GPS ตาย/ถูกกรองทั้งหมด) — จะถูกถอนคืนทันทีถ้าหลักฐานใหม่บอกว่ารถวิ่งจริง
     let staleAccruedSec = 0, staleBaseAt = null, staleBasePos = null;
     // ⚙️ ความเร็ว "ล้อหมุนจริง" ของเที่ยวนี้ (สะสมเฉพาะช่วงที่รถวิ่ง > 6 กม./ชม.) — ใช้เป็นความเร็วอ้างอิง
     //    ตอนประเมินเวลารถติดของช่วงที่แอปถูกปิด/ซ่อน (เดิมใช้ค่าตายตัว 65 กม./ชม. → เที่ยวในเมืองคิดเกินมหาศาล)
     let rollingKm = 0, rollingSec = 0;
+    // 🐌 "ระยะ/เวลาที่รถยังขยับแต่ช้ากว่า 6 กม./ชม." (คลาน) — สะสมคู่กับ rolling ตอนจอเปิด
+    //    ใช้แปลง "ระยะทางรวมของช่วงซ่อน" → (ระยะวิ่ง > 6 + ระยะคลาน ≤ 6) เพื่อหัก "เวลาวิ่ง" ให้ตรงกับที่มิเตอร์คิด
+    //    เหตุผล: ระยะที่คลานถูกนับเข้า km แล้ว แต่มิเตอร์คิด "เวลาคลาน" เป็นเวลารถติด → ถ้าเอาความเร็ววิ่ง (>6) ไปหาร
+    //    ระยะที่คลานด้วย จะหักเวลาวิ่งเกินจริง ⇒ เวลารถติดบวม (เคสจริง: มิเตอร์ 1:10:37 ↔ แอปมากกว่า)
+    let crawlKm = 0, crawlSec = 0;
     let lastPosTime = null, currentSpeedKmh = 0, currentTrueRemainKm = 0, currentTrueRemainSec = 0; 
     let hiddenGapStart = null, hiddenLastPos = null, hiddenTrafficBase = 0; // จดตอนแอปซ่อน/สลับแอป เพื่อเบิกเวลาจอด + ระยะทางที่หายกลับคืนเมื่อกลับมา; hiddenTrafficBase = trafficSeconds ตอนเริ่มซ่อน (อ้างอิงเบิก "exactly-once")
     // 🧊 ตรวจจับ "หน้าถูกแช่แข็ง/หน่วง" (ล็อกจอ/จอดับ ที่บางเบราว์เซอร์ไม่ยิง visibilitychange) — ตัวจับเวลา 1 วิถูกเรียกห่างกันผิดปกติ = หน้าไม่ได้อยู่หน้าจอจริง
@@ -4599,6 +4607,7 @@
         fixAgeSec: lastFixAtMs ? Math.round((Date.now() - lastFixAtMs) / 1000) : null,
         watchRestarts: gpsWatchRestarts, watchAlive: !!watchId,
         guessedSec: Math.round(staleSinceCatchUp),
+        lastModel: window.__gapModelLast || null,      // 🔎 หลักฐานที่ใช้ประเมินเวลารถติดของช่วงซ่อนรอบล่าสุด (via · moveSec · refKmh)
         trace: (window.__catchTrace || []).slice(-3)   // ร่องรอยการเบิกคืน 3 รอบล่าสุด: gapSec · fix · movedKm · stoppedWhole · ยอดที่เบิก
     });
     // ♻️ ล้างสถานะ "ช่วงซ่อน" หลังตัดสินใจครบรอบเท่านั้น (เดิมล้างก่อนตรวจ fix → fix ยังไม่นิ่งก็เสียช่วงนั้นไปเลย)
@@ -4663,7 +4672,11 @@
         if (!(movedKm >= 0)) return false;
         if (movedKm < 0.1) return true;
         const avgKmh = movedKm / (gapSec / 3600);
-        if (avgKmh <= 6) return true;
+        // 🔧 2026-09-16: เฉลี่ย ≤ 6 กม./ชม. แต่ "ขยับไกลเกินกรอบความคลาดเคลื่อนของ fix เอง" = มีการวิ่งจริงในช่วงนั้น
+        //    ห้ามเหมาว่า "จอดทั้งช่วง" เพราะจะ (1) นับเวลาวิ่งเป็นเวลารถติด — บวม (2) ทิ้งระยะทางที่วิ่งจริงไปด้วย
+        //    เคสจริง: จอดกินข้าว + วิ่งสั้น ๆ ตอนจอล็อก → ทั้งช่วงถูกนับเป็นจอด (แอปเกินมิเตอร์ ~10 นาที)
+        //    ยังคงเหมาเป็น "จอด" เมื่อการขยับอธิบายได้ด้วย GPS ลอย (ไม่เกิน 150 ม. หรือไม่เกิน 3 เท่าของค่าความคลาดเคลื่อน)
+        if (avgKmh <= 6) return movedKm * 1000 <= Math.max(150, (accM || 30) * 3);
         // 🔧 2026-09-14: เดิม "เฉลี่ย ≤ 12 กม./ชม. + fix หยาบ (> 40 ม.)" = เหมาเป็น "จอดทั้งช่วง"
         //    → ในเมืองที่รถคลาน 7-12 กม./ชม. แอปเบิกเวลาจอดทั้งช่วง (มิเตอร์จริงไม่คิดเวลารถติดตอนล้อหมุน)
         //    ตอนนี้ยอมรับเฉพาะเมื่อ "ขยับอยู่ในกรอบความคลาดเคลื่อนของ fix เอง" และไม่เกิน 150 ม.
@@ -4693,35 +4706,88 @@
     // ⚠️ ห้ามใช้ค่าคงที่ตัวเดียวเป็น "เวลาวิ่งโล่ง" ทุกกรณี (เคสจริง 14 ก.ย. 69: ล็อกจอทั้งเที่ยว 10.7 กม.
     //    มิเตอร์จริงรถติด 4:54 / แอปขึ้น 18:03 → 149 บาท แทน 113 เพราะค่าคงที่ 65 กม./ชม. สูงกว่า
     //    ความเร็วจริงในเมืองมาก ทุกวินาทีที่ช้ากว่า 65 จึงถูกนับเป็น "รถติด" ทั้งที่รถกำลังวิ่ง)
-    // - มี 2 ชั้นตามความเชื่อถือ: ① `gapNoTrafficSec` จาก TomTom (รู้ชนิดถนน) → ② ความเร็วล้อหมุนจริงของเที่ยวนี้
+    // - มี 2 หลักฐาน: ① `gapNoTrafficSec` จาก TomTom (รู้ชนิดถนน) + ② ความเร็วล้อหมุนจริงของเที่ยวนี้
     //   (rollingKm/rollingSec ที่วัดจาก GPS ของผู้ขับคนนี้ในเที่ยวนี้ — ทางด่วนวัดได้ ~70 ในเมืองวัดได้ ~28)
+    //   ⇒ ใช้ **ค่าที่มากกว่า** (หักเวลาวิ่งออกมากที่สุด) · ดูเหตุผล/บั๊กที่ต้องกันใน `estimateGapTrafficSec`
     // ⚠️ ห้ามกลับไปใช้สูตรเดิม "เฉลี่ย ≥ 30 กม./ชม. = ไม่ติด → คืน 0" — เป็นเหตุให้เวลารถติดช่วงปิดแอปหายทั้งช่วง
     //    (เคสจริง 13 ก.ย. 69: ไป-กลับอยุธยา 3:35 แอป 0:26 / มิเตอร์จริง 1:47:35 → ค่าโดยสาร 1151 แทนที่จะเป็น 1481)
     const GAP_REF_KMH_MIN = 15, GAP_REF_KMH_MAX = 90; // ขอบเขตความเร็วอ้างอิง (กันค่าเพี้ยนจาก GPS ตอนเปิดแอป)
-    // ⚙️ ความเร็ว "ล้อหมุน" ของเที่ยวนี้ (กม./ชม.) — คืน null เมื่อยังมีหลักฐานไม่พอ (ต้องมี ~1 นาที/0.5 กม.)
+    const GAP_REF_KMH_MIN_STRONG = 12; // ⭐ หลักฐานยาว (≥ 2 นาที · ≥ 1 กม.) → เชื่อความเร็วต่ำจริงได้ (ในเมืองจริงวิ่งได้ 12–15)
+    // ⚙️ ความเร็ว "ล้อหมุน" ของเที่ยวนี้ (กม./ชม.) — คืน null เมื่อยังมีหลักฐานไม่พอ
+    //    🔧 2026-09-16: ลดเกณฑ์จาก 60 วิ/0.5 กม. → 25 วิ/0.25 กม.
+    //    เพราะคนขับที่ "ล็อกจอบ่อย" จะมีช่วงจอเปิดสั้น ๆ ⇒ เดิมไม่ผ่านเกณฑ์ → ไม่มีอ้างอิงของตัวเอง
+    //    → ตกไปใช้ TomTom free-flow (เร็วเกินจริงในเมือง) = หักเวลาวิ่งน้อยไป → เวลารถติดบวม
     const gapRollingKmh = (opts) => {
         const rk = (opts && typeof opts.rollKm === 'number') ? opts.rollKm : rollingKm;
         const rs = (opts && typeof opts.rollSec === 'number') ? opts.rollSec : rollingSec;
-        if (!(rs >= 60 && rk >= 0.5)) return null;
-        return Math.min(GAP_REF_KMH_MAX, Math.max(GAP_REF_KMH_MIN, rk / (rs / 3600)));
+        if (!(rs >= 25 && rk >= 0.25)) return null;
+        const raw = rk / (rs / 3600);
+        // ค่าต่ำมากเชื่อได้เฉพาะเมื่อหลักฐานยาวพอ (sample สั้นอาจเพี้ยนเพราะ GPS) — นอกนั้นยกขึ้นเป็น 15
+        const minKmh = (rs >= 120 && rk >= 1) ? GAP_REF_KMH_MIN_STRONG : GAP_REF_KMH_MIN;
+        return Math.min(GAP_REF_KMH_MAX, Math.max(minKmh, raw));
+    };
+    // 🐌 สัดส่วน "ระยะที่คลาน" (≤ 6 กม./ชม.) ของเที่ยวนี้ — 0 = ไม่เคยคลาน (เที่ยวทางไกล/ถนนโล่ง)
+    const gapCrawlShare = (opts) => {
+        const ck = (opts && typeof opts.crawlKm === 'number') ? opts.crawlKm : crawlKm;
+        const rk = (opts && typeof opts.rollKm === 'number') ? opts.rollKm : rollingKm;
+        const tot = ck + rk;
+        if (!(tot >= 1)) return 0; // หลักฐานรวมยังน้อย → ไม่ใช้การชดเชย (กันตัวเลขจาก sample สั้น)
+        return Math.min(0.25, ck / tot); // ⛔ เพดาน 25% ของระยะ (กัน multiplier บวมเมื่อความเร็วคลานต่ำมาก)
+    };
+    // 🐌 ความเร็วเฉลี่ย "ขณะคลาน" (กม./ชม.) ของเที่ยวนี้ — null เมื่อหลักฐานยังน้อย
+    const gapCrawlKmh = (opts) => {
+        const ck = (opts && typeof opts.crawlKm === 'number') ? opts.crawlKm : crawlKm;
+        const cs = (opts && typeof opts.crawlSec === 'number') ? opts.crawlSec : crawlSec;
+        if (!(cs >= 60 && ck >= 0.2)) return null; // ต้องมีหลักฐานคลานจริง ~1 นาที/200 ม. ขึ้นไป
+        return Math.min(5.5, Math.max(2, ck / (cs / 3600))); // ความเร็วคลานจริงอยู่ในกรอบ 2–5.5 กม./ชม.
+    };
+    // ⏱️ เวลาที่ "ใช้เคลื่อนที่" ระยะ gapKm ตามหลักฐานของเที่ยวนี้ (ระยะวิ่ง > 6 + ระยะคลาน ≤ 6)
+    //    - ไม่เคยคลาน (share = 0) หรือไม่รู้ความเร็วคลาน → เหมือนเดิม (ระยะทั้งหมดคิดด้วยความเร็ววิ่ง)
+    //    - มีคลาน → ระยะส่วนนั้นใช้เวลาตามความเร็วคลานจริง (นานกว่าความเร็ววิ่ง) ⇒ หักเวลาวิ่งได้ตรงกับที่มิเตอร์คิด
+    const gapMoveSecOf = (gapKm, rollKmh, crawlShare, crawlKmh) => {
+        if (!(gapKm > 0) || rollKmh === null) return null;
+        if (!(crawlShare > 0) || crawlKmh === null) return gapKm / rollKmh * 3600;
+        return (gapKm * (1 - crawlShare) / rollKmh + gapKm * crawlShare / crawlKmh) * 3600;
     };
     // ช่วงปิดที่รถวิ่งเร็วกว่าอ้างอิง (ทางด่วนโล่ง) ก็ยังมีไฟแดง/ชะลอ/ด่าน อยู่บ้าง → อย่างต่ำ 3% ของช่วง (เฉพาะช่วง ≥ 2 นาที)
     const GAP_MIN_TRAFFIC_FRAC = 0.03;
     // ไม่มีข้อมูลอ้างอิงเลย (เที่ยวตายตั้งแต่ต้น + ออฟไลน์) → สมมติ 1 ใน 4 ของเวลาช่วงที่รถวิ่งเป็นเวลาจอด/คลาน
     const GAP_UNKNOWN_STOP_FRAC = 0.25;
+    // ⏱️ "เวลาที่รถยังวิ่งอยู่" ของช่วงซ่อน/ปิด = ใช้ค่าที่ "มากที่สุด" จากหลักฐานที่มี แล้วเวลารถติด = เวลาทั้งช่วง − เวลาวิ่ง
+    //    ① เวลาวิ่งโล่งจาก TomTom (`noTrafficTravelTimeInSeconds`) — รู้ชนิดถนน แต่ **ไม่รู้ไฟแดง/ทางแยก/ด่าน**
+    //       ⇒ สั้นกว่าที่รถทำได้จริงในเมืองเสมอ · ถ้าใช้ตัวนี้เป็นหลัก ส่วนต่างจะถูกนับเป็น "รถติด" ทุกครั้งที่ซ่อนจอ
+    //    ② ความเร็วล้อหมุนจริงของเที่ยวนี้ (`rollingKm/rollingSec` = ความเร็วเฉลี่ย **ขณะล้อหมุน** ของผู้ขับคนนี้)
+    //       ⇒ ตัวเดียวกับที่แอปใช้ตัดสิน "จอด/วิ่ง" สด ๆ จึงสอดคล้องกับยอดที่แอปนับตอนจอเปิด
+    //    ⚠️ บั๊กจริง 16 ก.ย. 69 (ผู้ใช้รายงาน): เปิดจอตลอด 1:12:02 / มิเตอร์จริง 1:10:37 แต่ "ล็อกจอบ้าง" ขึ้น 1:21:32
+    //       ต้นเหตุ = ช่วงซ่อนสั้น ๆ หลายสิบครั้ง (ปลดล็อกจอ/สลับแอป 1-2 นาที) แต่ละครั้ง ① สั้นกว่าเวลาวิ่งจริง → เก็บส่วนต่างเป็นรถติด
+    //    ⛔ ห้ามกลับไปใช้ ① เป็นหลักเพียงอย่างเดียว และห้ามกลับไปใช้ค่าคงที่ 65 กม./ชม. (บั๊ก 14 ก.ย. 69: 4:54 → 18:03)
     const estimateGapTrafficSec = (gapSec, gapKm, gapNoTrafficSec, refOpts) => {
         if (!(gapSec > 0)) return 0;
         const floorSec = (gapSec >= 120) ? Math.round(gapSec * GAP_MIN_TRAFFIC_FRAC) : 0;
         if (!(gapKm > 0)) return floorSec; // รู้แค่เวลาที่ผ่านไป ไม่รู้ระยะ → ใช้ค่าขั้นต่ำ (better than 0)
-        let est;
-        if (typeof gapNoTrafficSec === 'number' && gapNoTrafficSec > 0) {
-            est = gapSec - gapNoTrafficSec; // ① เวลาวิ่งโล่งจริงของช่วงนั้น (TomTom รู้ชนิดถนน)
-        } else {
-            const rollKmh = gapRollingKmh(refOpts);
-            // ② ความเร็วล้อหมุนจริงของเที่ยวนี้ (ไม่ใช่ค่าคงที่ 65) — เวลาที่เกินเวลาวิ่งโล่ง = เวลาจอด/คลาน
-            est = (rollKmh !== null) ? (gapSec - gapKm / rollKmh * 3600) : (gapSec * GAP_UNKNOWN_STOP_FRAC);
+        const refs = [];
+        if (typeof gapNoTrafficSec === 'number' && gapNoTrafficSec > 0) refs.push({ sec: gapNoTrafficSec, via: 'tomtom-freeflow' });
+        const rollKmh = gapRollingKmh(refOpts);
+        const crawlShare = gapCrawlShare(refOpts), crawlKmh = gapCrawlKmh(refOpts);
+        if (rollKmh !== null) {
+            // 🐌 หักเวลาด้วย "ระยะวิ่ง + ระยะคลาน" (ไม่ใช่ระยะทั้งหมดด้วยความเร็ววิ่ง) — ดู gapMoveSecOf
+            refs.push({ sec: gapMoveSecOf(gapKm, rollKmh, crawlShare, crawlKmh), via: (crawlShare > 0 && crawlKmh !== null) ? 'rolling+crawl' : 'rolling-speed' });
         }
-        return Math.max(floorSec, Math.min(Math.round(est), Math.round(gapSec)));
+        let est;
+        if (!refs.length) {
+            est = gapSec * GAP_UNKNOWN_STOP_FRAC; // ไม่มีข้อมูลอ้างอิงเลย (เที่ยวเพิ่งเริ่ม + ออฟไลน์) → สัดส่วนสำรอง
+        } else {
+            let best = refs[0];
+            for (let i = 1; i < refs.length; i++) { if (refs[i].sec > best.sec) best = refs[i]; }
+            est = gapSec - best.sec;
+            // 🔎 เก็บร่องรอยว่าใช้หลักฐานไหนตัดสิน (ตอบคำถาม "ทำไมเบิกเท่านี้" ได้โดยไม่ต้องเดา)
+            window.__gapModelLast = { at: Date.now(), gapSec: Math.round(gapSec), gapKm: Math.round(gapKm * 100) / 100, moveSec: Math.round(best.sec), ref: best.via, refKmh: rollKmh, crawlShareKm: Math.round(gapKm * crawlShare * 100) / 100, crawlKmh: crawlKmh === null ? null : Math.round(crawlKmh * 10) / 10 };
+        }
+        // ⛔ อย่าบวก "พื้น" 3% ทับค่าที่ประเมินได้จากหลักฐานจริงอยู่แล้ว
+        //    (เดิมบวกให้ทุกช่วง ≥ 2 นาที → ทุกครั้งที่ซ่อนจอคิดเกินเล็กน้อย สะสมเป็นนาที — ตรงกับอาการที่ผู้ใช้แจ้ง)
+        //    ใช้ floor เฉพาะเมื่อ "ไม่มีหลักฐานอะไรเลย" (สาขาข้างบนใช้สัดส่วนสำรองอยู่แล้ว จึงไม่ต้องบวกซ้ำ)
+        const floorApply = refs.length ? 0 : floorSec;
+        return Math.max(floorApply, Math.min(Math.round(est), Math.round(gapSec)));
     };
     // 📏 tryNoDestRouteKm: เที่ยวไม่มีปลายทาง — เบิกคืนระยะช่วงแอปปิด/ซ่อนด้วยเส้นทางถนนจริง
     // (TomTom route จากจุดก่อนปิด → จุดปัจจุบัน) แทนเส้นตรง×factor ที่ตัดมุมถนน (ระยะจริง > เส้นตรงเสมอ)
@@ -9648,7 +9714,18 @@
         if (typeof speedKmh !== 'number' || !(speedKmh >= 0)) return false;
         if (staleBaseAt !== null && pos) resolveStaleBill(pos, atMs || Date.now(), speedKmh); // ⏳ ยอดที่คิดไปก่อนต้องถูกตัดสินก่อนเปลี่ยนสถานะ
         trafficCharging = (speedKmh <= TRAFFIC_SPEED_KMH);
-        lastStopFixAt = trafficCharging ? (atMs || Date.now()) : null;
+        if (trafficCharging) {
+            const at = atMs || Date.now();
+            // 📏 เรียนรู้ช่วงห่างจริงระหว่าง fix ที่ยืนยัน "จอด" (สูงสุดแบบค่อย ๆ ลด — กันค่าผิดตัวเดียวค้างนานเกิน 20 fix)
+            if (lastStopFixAt !== null) {
+                const gapMs = at - lastStopFixAt;
+                if (gapMs > 50 && gapMs < 60000) stopFixGapMs = Math.min(15000, Math.max(200, Math.max(gapMs, stopFixGapMs * 0.9)));
+            }
+            lastStopFixAt = at;
+        } else {
+            lastStopFixAt = null;
+            stopFixGapMs = 1000; // หลุดช่วง "จอด" แล้ว → เริ่มเรียนรู้อัตราใหม่จาก fix ตัวถัดไป
+        }
         return true;
     };
     // ⏳ ตัดสินยอดที่ "คิดไปก่อน" ตอนไม่มี fix ยืนยันเลย (GPS ตาย/ถูกกรองทั้งหมด)
@@ -9703,16 +9780,42 @@
         hidden: !!document.hidden,
         rollingKm: Math.round(rollingKm * 100) / 100,
         rollingSec: Math.round(rollingSec),
-        rollingKmh: (() => { const v = gapRollingKmh(); return v === null ? null : Math.round(v * 10) / 10; })()
+        rollingKmh: (() => { const v = gapRollingKmh(); return v === null ? null : Math.round(v * 10) / 10; })(),
+        // 🐌 หลักฐาน "คลาน" (≤ 6 กม./ชม. แต่ยังขยับ) ของเที่ยวนี้ — ใช้หักเวลาวิ่งช่วงซ่อนให้ตรงกับมิเตอร์
+        crawlKm: Math.round(crawlKm * 100) / 100,
+        crawlSec: Math.round(crawlSec),
+        crawlSharePct: Math.round(gapCrawlShare() * 1000) / 10,
+        crawlKmh: (() => { const v = gapCrawlKmh(); return v === null ? null : Math.round(v * 10) / 10; })()
     });
     // 🔎 อ่านอย่างเดียว (ใช้ตรวจสอบ/เทสต์): โมเดลประเมินเวลารถติดของช่วงที่แอปปิด
     //    ตัวอย่าง: __gapModelDiag(780, 5, null) → ช่วงปิด 13 นาที วิ่ง 5 กม. เบิกกี่วินาที + ใช้อ้างอิงเท่าไร
-    window.__gapModelDiag = (gapSec, gapKm, gapNoTrafficSec, refOpts) => ({
-        billedSec: estimateGapTrafficSec(gapSec, gapKm, gapNoTrafficSec, refOpts),
-        refKmh: (() => { const v = gapRollingKmh(refOpts); return v === null ? null : Math.round(v * 10) / 10; })(),
-        via: (typeof gapNoTrafficSec === 'number' && gapNoTrafficSec > 0) ? 'tomtom-freeflow' : ((gapRollingKmh(refOpts) !== null) ? 'rolling-speed' : 'unknown-fraction'),
-        minTrafficFrac: GAP_MIN_TRAFFIC_FRAC, unknownStopFrac: GAP_UNKNOWN_STOP_FRAC
-    });
+    window.__gapModelDiag = (gapSec, gapKm, gapNoTrafficSec, refOpts) => {
+        const rollKmh = gapRollingKmh(refOpts);
+        const cShare = gapCrawlShare(refOpts), cKmh = gapCrawlKmh(refOpts);
+        const refs = [];
+        if (typeof gapNoTrafficSec === 'number' && gapNoTrafficSec > 0) refs.push({ sec: gapNoTrafficSec, via: 'tomtom-freeflow' });
+        if (rollKmh !== null) refs.push({ sec: gapMoveSecOf(gapKm, rollKmh, cShare, cKmh), via: (cShare > 0 && cKmh !== null) ? 'rolling+crawl' : 'rolling-speed' });
+        let best = null;
+        for (let i = 0; i < refs.length; i++) { if (!best || refs[i].sec > best.sec) best = refs[i]; }
+        return {
+            billedSec: estimateGapTrafficSec(gapSec, gapKm, gapNoTrafficSec, refOpts),
+            refKmh: rollKmh === null ? null : Math.round(rollKmh * 10) / 10,
+            via: best ? best.via : 'unknown-fraction',
+            moveSec: best ? Math.round(best.sec) : null, // เวลาวิ่งที่หักออก (ค่าที่มากที่สุดในบรรดาหลักฐาน)
+            candidates: refs.map(r => ({ via: r.via, sec: Math.round(r.sec) })),
+            // 🐌 หลักฐาน "คลาน" ของเที่ยวนี้ (ใช้แปลงระยะช่วงซ่อนเป็นเวลาวิ่ง+เวลาคลาน)
+            crawl: {
+                km: Math.round(((refOpts && typeof refOpts.crawlKm === 'number') ? refOpts.crawlKm : crawlKm) * 100) / 100,
+                sec: Math.round((refOpts && typeof refOpts.crawlSec === 'number') ? refOpts.crawlSec : crawlSec),
+                shareOfKm: Math.round(cShare * 1000) / 10,
+                kmh: cKmh === null ? null : Math.round(cKmh * 10) / 10,
+                kmInGap: Math.round(gapKm * cShare * 100) / 100,
+                secInGap: (cKmh === null) ? null : Math.round(gapKm * cShare / cKmh * 3600)
+            },
+            floorApplied: refs.length ? 0 : ((gapSec >= 120) ? Math.round(gapSec * GAP_MIN_TRAFFIC_FRAC) : 0),
+            minTrafficFrac: GAP_MIN_TRAFFIC_FRAC, unknownStopFrac: GAP_UNKNOWN_STOP_FRAC
+        };
+    };
     // ⏱️ เดินเวลามิเตอร์จากนาฬิกาจริง (Date.now) ไม่ใช่นับรอบ setInterval
     // => แม้เบราว์เซอร์ลดความถี่ตอนซ่อนหน้าต่าง เวลาก็ยังตรงกับมิเตอร์จริง ไม่เพี้ยน
     window.advanceMeterTime = (now) => {
@@ -9740,7 +9843,14 @@
             if (!freshEvidence && (document.hidden || hiddenGapStart !== null)) {
                 // ไม่นับอะไร — รอหลักฐาน (lastCalcTime ถูกตั้งท้ายฟังก์ชันอยู่แล้ว)
             } else if (freshEvidence) {
-                trafficSeconds += Math.min(deltaSec, 300);
+                // ⏱️ นับได้ถึง "หลักฐานล่าสุดที่ยืนยันว่าจอด" (+ผ่อน 2 วิ) — ไม่ใช่ถึง now
+                //    เพราะหลังรถออกตัวแล้วกว่าจะได้ fix ใหม่ หลักฐานเก่ายังสดอยู่ได้ถึง 15 วิ → ปลายทุกจุดจอดถูกนับเป็นรถติด
+                //    (วัดจากเคสจริง: เที่ยวจอเปิดตลอด แอปเกินมิเตอร์ ~1-2 นาที · fix ถี่ 1 วิ → เกินจุดจอดละ ~1 วิ)
+                //    fix ถี่ (1 วิ) → ยังนับครบ · fix ห่าง → หลักฐานเก่าถูกใช้ผ่านสาขา "ยังไม่ยืนยัน" ข้างล่างแทน (ไม่หาย)
+                //    "ผ่อน" = ช่วงห่างจริงระหว่าง fix ที่ยืนยันจอด (stopFixGapMs) — ไม่ใช่ค่าคงที่ เพื่อไม่ให้เวลาจอดหายในเครื่องที่ fix ห่าง
+                const claimEnd = Math.min(now, (lastStopFixAt || now) + stopFixGapMs);
+                const addSec = Math.min(deltaSec, Math.max(0, (claimEnd - lastCalcTime) / 1000), 300);
+                if (addSec > 0) trafficSeconds += addSec;
             } else {
                 const addSec = Math.min(deltaSec, 30);
                 if (staleBaseAt === null) { staleBaseAt = now; staleBasePos = lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null; }
@@ -9926,6 +10036,7 @@
             v: 1, savedAt: nowT, startTime: startTime,
             km: actualDrivenKm, trafficSec: trafficSeconds,
             rollingKm: rollingKm, rollingSec: rollingSec, // ⚙️ ความเร็วล้อหมุนสะสม (ไว้ประเมินช่วงที่แอปถูกปิดรอบถัดไป)
+            crawlKm: crawlKm, crawlSec: crawlSec, // 🐌 ระยะ/เวลาที่คลานสะสม (ไม่ให้หายเมื่อแอปถูกคิลกลางเที่ยว)
             remainKm: currentTrueRemainKm, remainSec: currentTrueRemainSec,
             lastPos: lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null, // เซฟตำแหน่งล่าสุดไว้ เบิกคืนตอนแอปถูกคิลแล้วเปิดใหม่
             lastPath: lastPath.slice(), // พิกัดเส้นทาง 2-3 จุดล่าสุด ไว้ประมาณระยะที่วิ่งช่วงแอปปิด (แทนเส้นตรงเส้นเดียว)
@@ -10117,6 +10228,7 @@
         // ⚙️ คืนความเร็วล้อหมุนสะสมของเที่ยวนี้จากที่บันทึกไว้ ก่อนประเมินช่วงที่แอปปิด
         //    (รอบนี้ยังไม่เรียก startMeterAndTracking — ถ้าไม่คืนตรงนี้ จะไม่มีอ้างอิงและใช้ค่าเดาแทน)
         if (typeof data.rollingKm === 'number' && typeof data.rollingSec === 'number') { rollingKm = data.rollingKm; rollingSec = data.rollingSec; }
+        if (typeof data.crawlKm === 'number' && typeof data.crawlSec === 'number') { crawlKm = data.crawlKm; crawlSec = data.crawlSec; } // 🐌 หลักฐาน "คลาน" ของเที่ยวนี้
         let caughtTimeSec = 0, caughtKm = 0, kmVia = 'straight';
         try {
             const pos = await getBestFix();
@@ -10404,6 +10516,7 @@
             actualDrivenKm = seed.km || 0;
             trafficSeconds = seed.trafficSec || 0;
             rollingKm = seed.rollingKm || 0; rollingSec = seed.rollingSec || 0; // ⚙️ คืนค่าความเร็วล้อหมุนสะสมของเที่ยวนี้
+            crawlKm = seed.crawlKm || 0; crawlSec = seed.crawlSec || 0; // 🐌 คืนค่าหลักฐาน "คลาน" ของเที่ยวนี้ด้วย
             window.isMeterPaused = !!seed.paused; // คงสถานะ "หยุดมิเตอร์ชั่วคราว" ไว้ ถ้าแอปตายตอนกำลังหยุด
             currentTrueRemainKm = seed.remainKm || 0;
             currentTrueRemainSec = seed.remainSec || 0;
@@ -10442,8 +10555,9 @@
             if (window.navMiniResume && (seed.dest || seed.routeCoords)) { try { window.navMiniResume(seed); } catch(e) {} }
             window.updateSurchargeUI();
         } else {
-            actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; trafficCharging = true; lastFixSpeedKmh = null;
+            actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; trafficCharging = true; lastFixSpeedKmh = null; stopFixGapMs = 1000;
             rollingKm = 0; rollingSec = 0; // ⚙️ เที่ยวใหม่ เริ่มวัดความเร็วล้อหมุนใหม่
+            crawlKm = 0; crawlSec = 0; // 🐌 เที่ยวใหม่ เริ่มวัด "ช่วงคลาน" ใหม่
             staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null; // เที่ยวใหม่ เริ่มนับยอด "ยังไม่ยืนยัน" ใหม่
             startTime = Date.now(); lastPosTime = startTime; lastCalcTime = startTime; lastStopFixAt = startTime;
             pauseLog = []; pauseOpenAt = null; window.isMeterPaused = false;
@@ -10591,7 +10705,9 @@
                     if (moving) {
                         actualDrivenKm += segKm;
                         // ⚙️ สะสมความเร็ว "ล้อหมุน" ของเที่ยวนี้ (ตัดช่วงจอด/คลานออก) → ใช้เป็นอ้างอิงประเมินช่วงที่แอปปิด
-                        if (currentSpeedKmh > TRAFFIC_SPEED_KMH) { rollingKm += segKm; rollingSec += Math.max(0, (now - lastPosTime) / 1000); }
+                        const __segSec = Math.max(0, (now - lastPosTime) / 1000);
+                        if (currentSpeedKmh > TRAFFIC_SPEED_KMH) { rollingKm += segKm; rollingSec += __segSec; }
+                        else if (currentSpeedKmh > 1) { crawlKm += segKm; crawlSec += __segSec; } // 🐌 คลาน 1–6 กม./ชม. (ไม่รวม 0 = จอดนิ่ง ซึ่งมิเตอร์คิดเวลารถติดให้อยู่แล้ว)
                         currentTrueRemainKm -= segKm;
                         if(currentTrueRemainKm < 0) currentTrueRemainKm = 0; 
                         lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
@@ -11750,7 +11866,7 @@
         try { window.__restoredDestInfo = null; } catch(e) {}
         try { window.__lastDestInfo = null; } catch(e) {}
         try { window.__cachedLatestDest = null; } catch(e) {}
-        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null; hiddenGapStart = null; hiddenLastPos = null; rollingKm = 0; rollingSec = 0; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; lastPath = []; catchUpLog = [];
+        lastCalcTime = null; kmCatchUpBusy = false; trafficCharging = false; lastFixSpeedKmh = null; lastStopFixAt = null; stopFixGapMs = 1000; staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null; hiddenGapStart = null; hiddenLastPos = null; rollingKm = 0; rollingSec = 0; crawlKm = 0; crawlSec = 0; nearDestInitRemain = 0; nearDestWarned = false; arriveAsked = false; lastPath = []; catchUpLog = [];
         tripCaughtUpAt = null; gapHiddenAt = null; gapBasePos = null; hiddenKmBase = 0; hiddenTrafficBase = 0; // 🧭 จบเที่ยว ล้างฐานหลักฐานช่วงซ่อน/ปิด
         window.isMeterPaused = false;
         window.updatePauseBtnUI();
@@ -12643,7 +12759,7 @@
     const chgTodayBuildStamp = () => chgTodayStr() + chgBuildSuffix();
     // ✅ อัปเดต APP_BUILD หลังจากฟังก์ชันถูกประกาศเสร็จ (แก้ Temporal Dead Zone — อ้างก่อนประกาศ)
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
-    const APP_RELEASE_DATE = '2026-09-15'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
+    const APP_RELEASE_DATE = '2026-09-16'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
     // 📋 ตารางประวัติเวอร์ชัน — ต้นทางเดียวของข้อความทุกหัวข้อ: [วันที่, ข้อความสรุปสั้น]
@@ -12847,7 +12963,7 @@
         ['2026-09-14', '🔓 เพิ่ม “ปลดล็อกด้วยเครื่อง” ใช้ Face ID / ลายนิ้วมือ / PIN เครื่อง แทน PIN ได้'],
         ['2026-09-14', '⚪ คีย์แพด PIN เปลี่ยนเป็นปุ่มวงกลม กดแล้วติดสี (เลขเขียว · ลบแดง)'],
         ['2026-09-14', '🛡️ หน้าจัดการผู้ใช้โชว์ข้อมูลบัญชีสมาชิก (รหัสผ่าน/PIN/การตั้งค่า) + รีเซ็ต PIN ให้ได้'],
-        // ---------- 15 ก.ย. 2569 · v1.2.15 (วันของ APP_RELEASE_DATE) ----------
+        // ---------- 15 ก.ย. 2569 · v1.2.15 (วันเก่า — ย้ายเข้าตารางถาวรแล้ว ดู CHG_SEED_META) ----------
         ['2026-09-15', '✏️ แอดมินแก้ข้อความ/หัวข้อในแอปได้เองทุกจุด (ไม่ต้องแก้โค้ด) + ค้นหา/รีเซ็ตได้'],
         ['2026-09-15', '🛡️ ข้อความที่แก้มีผลกับทุกคนทันที — ยืนยันตัวตนก่อนบันทึก และใช้ได้ตอนออฟไลน์'],
         ['2026-09-15', '✏️ ดินสอท้ายชื่อเมนูในโหมดลาก — กดแก้ชื่อ/คำอธิบายเมนูนั้นได้ทันที ไม่ต้องเปิดลิสต์ยาว'],
@@ -12910,6 +13026,16 @@
         ['2026-09-15', '🐞 แก้ปุ่มลบในประวัติให้ลบถูกตัวหลังเรียงใหม่ (ส่งลำดับที่เก็บจริง)'],
         ['2026-09-15', '📍 ตัวกรอง “เฉพาะใกล้ฉัน” บนสุดของลิสต์ค้นหา — เปิด/ปิด + เลือกระยะ 1–50 กม. หรือไม่จำกัด'],
         ['2026-09-15', '📍 กรองด้วยระยะตรง ไม่กินโควตา · บอกจำนวนที่ซ่อน + ปุ่มปิดเมื่อไม่มีอะไรเหลือ'],
+        ['2026-09-15', '⏱️ เวลารถติดช่วงล็อกจอ/สลับแอป หักด้วยความเร็วล้อหมุนจริงของเที่ยวนี้ — ไม่บวมเกินมิเตอร์'],
+        ['2026-09-15', '🚦 ช่วงล็อกจอที่มีทั้งจอดและวิ่งสั้น ๆ ไม่ถูกนับเป็น “จอดทั้งช่วง” แล้ว (ระยะทางก็ครบ)'],
+        ['2026-09-15', '🐞 จอเปิด: ตัดเวลารถติดที่เลยหลักฐานล่าสุดออก — ไม่กินปลายทุกจุดจอด'],
+        ['2026-09-15', '🐌 ล็อกจอในรถติด: หักเวลาวิ่งด้วยความเร็วคลานจริง (≤6 กม./ชม.) ไม่ใช่ความเร็ววิ่ง'],
+        ['2026-09-15', '⛔ ไม่บวกเวลารถติดสำรอง 3% ทับช่วงที่ประเมินได้จากหลักฐานจริงแล้ว'],
+        ['2026-09-15', '🔎 ใช้ความเร็วของคนขับเองเร็วขึ้น (25 วิ/0.25 กม.) แทนค่าอ้างอิงถนนที่เร็วเกินจริง'],
+        // ---------- 16 ก.ย. 2569 · v1.2.16 (วันของ APP_RELEASE_DATE) ----------
+        ['2026-09-16', '🎞️ Mini Map ไหลต่อเนื่องเหมือน Google Maps — แผนที่เลื่อน/หมุนตามรถ ไม่กระตุกเป็นจังหวะ'],
+        ['2026-09-16', '🧭 ลูกศรชี้ขึ้นบนเสมอ + ย้ายต่ำกว่ากึ่งกลางจอ ให้เห็นถนนข้างหน้ามากขึ้น'],
+        ['2026-09-16', '🐞 แก้แผนที่ไม่หมุนตามรถตอนวิ่งเร็ว — เกณฑ์เดิมต้องขยับ 12 ม. ต่อครั้ง ทำให้ทิศค้าง'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -12923,6 +13049,7 @@
         '2026-09-12': { v: '1.2.12', color: 0 },
         '2026-09-13': { v: '1.2.13', color: 0 },
         '2026-09-14': { v: '1.2.14', color: 0 },
+        '2026-09-15': { v: '1.2.15', color: 0 },
     };
     const chgShort = (t) => String(t == null ? '' : t).trim();
     const CHANGELOG_SEED = Object.keys(CHG_SEED_META).sort().map((d) => ({
@@ -15728,6 +15855,15 @@
     var turns = [];      // จุดเลี้ยวที่คำนวณจากรูปทรงเส้นทาง [{ i, km, delta }]
     var nextTurn = null; // จุดเลี้ยวถัดไปจากตำแหน่งรถ
     var CLIP_PAD = 0;    // 🧭 เผื่อขอบสำหรับการหมุนฉาก (heading-up) — กันเส้นทางถูกตัดที่มุมจอ
+    // 🎞️ การเคลื่อนที่แบบต่อเนื่อง (สไตล์ Google Maps)
+    //   ปัญหาเดิม: วาดตามพิกัด GPS ตรง ๆ → แผนที่ขยับ “เป็นจังหวะ” (รอ fix ถัดไป) และหมุนกระชากทีละ 30°
+    //             คนขับเห็นเป็น “จุดไม่เคลื่อนที่ตาม / แมปสะบัดซ้ายขวา”
+    //   วิธีใหม่: ไล่ “ตำแหน่ง/ทิศที่วาด” (dispCar/dispHead) เข้าหาค่าจริงทุกเฟรม แล้วหยุดเองเมื่อไล่ทัน
+    var dispCar = null;      // พิกัดที่ใช้วาด (ไล่ตาม car แบบนุ่ม)
+    var dispHead = 0;        // ทิศที่ใช้วาด (ไล่ตาม bearing แบบจำกัดอัตราการหมุน)
+    var headAnchor = null;   // จุดอ้างอิงคำนวณทิศจาก GPS (ต้องขยับ ≥ 5–10 ม. ก่อนจึงยอมอัปเดตทิศ = ทิศนิ่ง)
+    var animId = 0, animLast = 0;
+    var CAR_ANCHOR = 0.70;   // ตำแหน่งลูกศรบนจอ (0 = บนสุด · 1 = ล่างสุด) — เผื่อเห็นถนนข้างหน้า เหมือน Google Maps
 
     // ---------- คณิตแผนที่ ----------
     function proj(lat, lng, z) {
@@ -16120,22 +16256,28 @@
         }
         var z = Math.round(smoothZoom);            // ดึงกระเบื้องที่ “ระดับเต็มเลข” → แคชคงที่ ไม่ยิงถี่
         var zScale = Math.pow(2, smoothZoom - z);  // ขยายต่อเนื่องให้การซูมเนียน (ไม่กระโดดเป็นขั้น)
-        var center = (!follow && panCenter) ? panCenter : (car || (route.length ? { lat: route[0][0], lng: route[0][1] } : null));
+        // ตำแหน่ง/ทิศ “ที่วาด” (ไล่ตามค่าจริงแบบนุ่ม) — ทำให้แผนที่ไหลต่อเนื่อง ไม่กระตุกเป็นจังหวะ
+        var drawPos = dispCar || car;
+        var head = dispCar ? dispHead : (bearing || 0);
+        var center = (!follow && panCenter) ? panCenter : (drawPos || (route.length ? { lat: route[0][0], lng: route[0][1] } : null));
         // กันพิกัดเสีย (เช่น ค่าที่ยังไม่มา/เป็นข้อความ) → แผนที่จะได้ไม่หายทั้งบาน
         if (!center || !isFinite(center.lat) || !isFinite(center.lng)) { center = route.length ? { lat: route[0][0], lng: route[0][1] } : null; }
         if (!center) { return; }
         var c = proj(center.lat, center.lng, z);
-        var ox = W / 2 - c.x, oy = H / 2 - c.y;
+        // 📍 จุดยึดจอ: วางลูกศร/จุดอ้างอิงไว้ต่ำกว่ากึ่งกลาง (CAR_ANCHOR = 0.70) → เห็นถนนข้างหน้ามากขึ้น เหมือน Google Maps
+        //    ⚠️ ต้องใช้ค่าเดียวกันทั้งตอน “ตามรถ” และตอนลากเอง ไม่งั้นเริ่มลากแล้วภาพจะกระโดด
+        var anchorX = W / 2, anchorY = H * CAR_ANCHOR;
+        var ox = anchorX - c.x, oy = anchorY - c.y;
 
-        // 🧭 Heading-up: หมุนทั้งฉากกลับตามทิศรถ → “รถชี้ขึ้นบนเสมอ” และเส้นทางหมุนตามรถ
+        // 🧭 Heading-up: หมุนทั้งฉากกลับตามทิศรถ → “ลูกศรชี้ขึ้นบนเสมอ” และเส้นทาง/แผนที่หมุนตามรถ
         //    ⚠️ เดิมหมุนเฉพาะลูกศรรถ — ตัวแผนที่/เส้นทางยังหันทิศเหนือตาย → คนขับต้องคอยเทียบเอง
         //    เผื่อกระเบื้องเป็นแนวทแยง (rotPad) ไม่งั้นจะเห็นมุมดำหลังหมุน
-        var rotRad = ((bearing || 0) * Math.PI) / 180;
+        var rotRad = ((head || 0) * Math.PI) / 180;
         var rotPad = (Math.SQRT2 - 1) * Math.max(W, H) / 2 + 12;
         CLIP_PAD = rotPad / zScale; // เผื่อตัดเส้นทางให้พอดีกับพื้นที่ที่มองเห็นตอนซูมอยู่
         ctx.save();
-        // หมุน (heading-up) + ย่อ/ขยายต่อเนื่องรอบกลางจอ → ซูมเนียนโดยไม่ต้องโหลดกระเบื้องระดับใหม่ให้เบลอ
-        ctx.translate(W / 2, H / 2); ctx.rotate(-rotRad); ctx.scale(zScale, zScale); ctx.translate(-W / 2, -H / 2);
+        // หมุน (heading-up) + ย่อ/ขยายต่อเนื่องรอบ “จุดยึด” → ซูมเนียนและลูกศรอยู่กับที่ตลอด
+        ctx.translate(anchorX, anchorY); ctx.rotate(-rotRad); ctx.scale(zScale, zScale); ctx.translate(-anchorX, -anchorY);
 
         // กระเบื้องแผนที่
         var n = Math.pow(2, z), missing = false;
@@ -16157,7 +16299,7 @@
 
         // เส้นทาง: วิ่งแล้ว (เทา) + ที่เหลือ (น้ำเงิน ขอบขาว)
         if (route.length > 1) {
-            var idx = nearestIndex(car);
+            var idx = nearestIndex(drawPos || car); // ใช้ตำแหน่งที่วาด → ขอบเทา/น้ำเงินเลื่อนตามลูกศรเนียน ๆ
             drawLine(route.slice(0, idx + 1), 'rgba(255,255,255,.30)', 4.5 * k, ox, oy, z, W, H);
             var tail = route.slice(idx);
             drawLine(tail, 'rgba(255,255,255,.92)', 7 * k, ox, oy, z, W, H);
@@ -16186,15 +16328,15 @@
         }
 
         // รถ (ลูกศรชี้ทิศ)
-        if (car) {
-            var p = proj(car.lat, car.lng, z);
+        if (drawPos) {
+            var p = proj(drawPos.lat, drawPos.lng, z);
             ctx.save();
             ctx.translate(p.x + ox, p.y + oy);
             ctx.scale(k, k); // ลูกศรขนาดคงที่บนจอ ไม่บวมตอนซูมเข้า
             ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fillStyle = 'rgba(33,150,243,.22)'; ctx.fill();
             ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
             ctx.beginPath(); ctx.arc(0, 0, 6.1, 0, Math.PI * 2); ctx.fillStyle = '#2196f3'; ctx.fill();
-            ctx.rotate(bearing * Math.PI / 180);
+            ctx.rotate(head * Math.PI / 180); // หมุนตามทิศที่วาด (เท่ากับฉาก) → ลูกศรชี้ขึ้นบนเสมอ
             ctx.beginPath(); ctx.moveTo(0, -17); ctx.lineTo(6.2, -6.5); ctx.lineTo(0, -9.6); ctx.lineTo(-6.2, -6.5); ctx.closePath();
             ctx.fillStyle = '#ffffff'; ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1; ctx.fill(); ctx.stroke();
             ctx.restore();
@@ -16207,6 +16349,50 @@
     function request() {
         if (rafId) { return; }
         rafId = requestAnimationFrame(function () { rafId = 0; try { render(); } catch (e) {} });
+    }
+
+    // ---------- 🎞️ ตัวขับเคลื่อนการเคลื่อนที่แบบต่อเนื่อง ----------
+    //   ไล่ตำแหน่ง/ทิศ “ที่วาด” เข้าหาค่าจริงทุกเฟรม (~60 เฟรม/วิ) → แผนที่ไหลตามรถตลอด ไม่กระตุกเป็นจังหวะ
+    //   • จอดนิ่ง (≤3 กม./ชม.) และแกว่งไม่เกิน 8 ม. → ตามตรง (ไม่ไล่สัญญาณ GPS ที่แกว่ง = ไม่กินแบต)
+    //   • ไล่ทันแล้วหยุดเอง · เริ่มใหม่ทุกครั้งที่ได้พิกัดใหม่ / เปิดแผนที่
+    var ANIM_TAU = 0.5;       // วินาที — ยิ่งมากยิ่งไหลนุ่ม (แต่ตามช้าลงเล็กน้อย)
+    var ANIM_HEAD_RATE = 85;  // องศา/วินาที — เพดานความเร็วการหมุน (กันภาพสะบัดตอนเลี้ยว)
+    function snapAnim() {
+        dispCar = car ? { lat: car.lat, lng: car.lng } : null;
+        dispHead = bearing || 0;
+        headAnchor = car ? { lat: car.lat, lng: car.lng } : null; // เริ่มนับทิศใหม่จากจุดนี้
+    }
+    function animKick() {
+        if (animId) { return; }                       // กำลังวิ่งอยู่แล้ว
+        if (!visible || pref.hidden || !car || !dispCar) { return; }
+        animLast = 0; animId = requestAnimationFrame(animLoop);
+    }
+    function animLoop(ts) {
+        animId = 0;
+        var dt = animLast ? Math.min(0.3, (ts - animLast) / 1000) : 0.016; // แท็บถูกพัก → กันกระโดด
+        animLast = ts;
+        var busy = false;
+        if (car) {
+            if (!dispCar) { dispCar = { lat: car.lat, lng: car.lng }; }
+            var dM = kmBetween(dispCar, car) * 1000;
+            var parkSnap = (speedKmh < 3 && dM < 8);
+            if (dM > 0.4 && !parkSnap) {
+                var f = 1 - Math.exp(-dt / ANIM_TAU);
+                dispCar = { lat: dispCar.lat + (car.lat - dispCar.lat) * f, lng: dispCar.lng + (car.lng - dispCar.lng) * f };
+                busy = true;
+            } else if (dM > 0) { dispCar = { lat: car.lat, lng: car.lng }; }
+        } else { dispCar = null; }
+        var df = ((bearing - dispHead + 540) % 360) - 180;
+        if (Math.abs(df) > 0.2) {
+            var st = (Math.abs(df) < 2) ? Math.abs(df) : Math.min(Math.abs(df), ANIM_HEAD_RATE * dt);
+            dispHead = (dispHead + (df < 0 ? -st : st) + 360) % 360;
+            busy = true;
+        } else if (dispHead !== (bearing || 0)) { dispHead = bearing || 0; }
+        var zBefore = smoothZoom;
+        render();
+        if (Math.abs((smoothZoom || 0) - (zBefore || 0)) > 0.002) { busy = true; } // ยังซูมไม่นิ่ง → วาดต่อ
+        if (busy && visible && !pref.hidden) { animId = requestAnimationFrame(animLoop); }
+        else { animLast = 0; }
     }
 
     // ---------- ข้อความเหลือระยะ/เวลา ----------
@@ -16268,8 +16454,11 @@
         el.style.right = 'auto';
     }
     el.classList.toggle('big', !!pref.big);
-    function show() { if (pref.hidden) { return; } el.classList.add('show'); visible = true; place(); request(); chrome(); syncReopenBtns(); }
-    function hideNow() { visible = false; el.classList.remove('show'); syncReopenBtns(); }
+    function show() { if (pref.hidden) { return; } el.classList.add('show'); visible = true; place(); snapAnim(); request(); chrome(); syncReopenBtns(); animKick(); }
+    function hideNow() {
+        visible = false; el.classList.remove('show'); syncReopenBtns();
+        if (animId) { cancelAnimationFrame(animId); animId = 0; } animLast = 0; // 🎞️ หยุดตัวขับเคลื่อนตอนแผนที่ปิด (ไม่กินแบต)
+    }
 
     // ---------- ปุ่ม "เปิดแผนที่กลับมา" (โผล่เมื่อผู้ใช้กด ✕ ซ่อนแผนที่เองระหว่างเที่ยว) ----------
     //   ทำไมต้องมี: เดิมกด ✕ แล้วแผนที่หายถาวรจนกว่าจะเริ่มเที่ยวใหม่ → ตอนนี้มีปุ่มเปิดคืนในแถบสรุปเส้นทาง
@@ -16315,6 +16504,7 @@
         buildTurns();
         resetTurnAlerts();
         alignHeadingToRoute(car); // 🧭 หันหัวตามทิศเส้นทางทันที (ก่อนรถขยับ GPS ยังไม่บอกทิศ)
+        if (car) { snapAnim(); }  // เส้นทางใหม่ = เริ่มวาดจากตำแหน่งจริง (ไม่ไถลจากเที่ยวเก่า)
         follow = true; panCenter = null; btnFollow.classList.add('on');
         if (pref.hidden) { canReopen = true; } // ซ่อนอยู่แต่มีเส้นทางแล้ว → ให้มีปุ่มเปิดคืน
         request(); chrome(); syncReopenBtns();
@@ -16330,9 +16520,17 @@
             var jumped = d > 0.5;
             if (jumped) {
                 alignHeadingToRoute(car);
-            } else if (d > 0.012) {
-                // GPS ขยับจริง → ใช้ทิศจากพิกัด (หมุนเร็วขึ้นกว่าเดิม 0.5 แต่มีเพดาน 30°/ครั้ง → ตามทันตอนเลี้ยว)
-                turnToward(bearingTo(prev, car), 0.55, 30);
+                snapAnim(); // 🎞️ พิกัดกระโดดไกล (พิกัดเก่าค้าง/กลับเข้าแอป) → ตัดการไถล ใช้ตำแหน่งใหม่ทันที
+            } else if (speedKmh >= 6) {
+                // 🚗 วิ่งจริง (≥ 6 กม./ชม.) → ทิศจาก GPS เป็นค่าที่ถูกที่สุด
+                //    ⚠️ เดิมใช้เกณฑ์ “ขยับ ≥ 12 ม. ต่อครั้ง” → ที่ 40 กม./ชม. GPS 1 ครั้ง/วินาที ได้แค่ ~11 ม. ⇒ **ทิศไม่เคยอัปเดต**
+                //    แผนที่จึงไม่หมุนตามรถตอนเลี้ยว (ปัญหาเดียวกันที่คนขับเจอ) · ตอนนี้อิงจุดอ้างอิงที่ไกล≥ 5–10 ม. แทน
+                if (!headAnchor) { headAnchor = { lat: prev.lat, lng: prev.lng }; }
+                var needKm = (speedKmh < 20) ? 0.005 : 0.010; // วิ่งช้า → ใช้ช่วงสั้นลง ไม่งั้นทิศตามช้าเกิน
+                if (kmBetween(headAnchor, car) >= needKm) {
+                    turnToward(bearingTo(headAnchor, car), 0.7, 40);
+                    headAnchor = { lat: car.lat, lng: car.lng };
+                }
             } else if (shouldUseRouteHeading()) {
                 var rh = routeHeadingAt(nearestIndex(car));
                 if (rh !== null) { turnToward(rh, 0.35, 25); }
@@ -16340,9 +16538,10 @@
         } else if (shouldUseRouteHeading()) {
             alignHeadingToRoute(car);
         }
+        if (!dispCar) { snapAnim(); } // ครั้งแรกของเที่ยว → ตั้งต้นที่ตำแหน่งจริง (ไม่ไถลมาจากที่เก่า)
         syncReopenBtns(); // ตรวจทุกครั้งที่ได้พิกัด (เผื่อแถบสรุปเส้นทางเพิ่งโชว์ขึ้นมาทีหลัง)
         if (!visible || pref.hidden) { return; }
-        chrome(); request();
+        chrome(); request(); animKick(); // 🎞️ เริ่มไถลตำแหน่ง/ทิศแบบต่อเนื่อง
     };
     // รับพิกัดได้ทั้งแบบ {lat, lon} / {lat, lng} / [lat, lon] — กันได้ค่าเสีย (ทำให้แผนที่ขาว/ลอยผิดที่)
     function posOf(v) {
@@ -16367,6 +16566,7 @@
                 if (lp0 && (Math.abs(lp0.lat - lp.lat) > 1e-6 || Math.abs(lp0.lng - lp.lng) > 1e-6)) { bearing = bearingTo(lp0, lp); }
                 else { alignHeadingToRoute(car); } // ไม่มีทิศที่วิ่งมา → ยึดทิศของเส้นทาง
             }
+            snapAnim(); // 🎞️ กลับเข้าแอป = เริ่มวาดจากตำแหน่งจริงทันที (ไม่ไถลจากพิกัดเก่า)
             // 🗺️ กลับเข้าแอป/รีเฟรช = **เริ่มจากปิดเสมอ** (เหมือนเที่ยวใหม่) — ต้องกดปุ่ม 🗺️ เองทุกครั้ง
             //    ⚠️ เดิมบรรทัดนี้เป็น `pref.hidden = false` → รีเฟรช/กลับเข้าแอปแล้วแผนที่เด้งเอง
             pref.hidden = true;
@@ -16392,12 +16592,36 @@
     window.navMiniHasRoute = function () { return route.length > 1; };
     window.navMiniIsVisible = function () { return visible; };
     // ตัวช่วยตรวจสอบสถานะ Mini Map (ใช้ตอนทดสอบ/แก้ปัญหา)
+    // ตำแหน่งบนจอที่ “ลูกศรรถถูกวาดจริง” (คำนวณสูตรเดียวกับ render) — ใช้ตรวจตอนทดสอบ/แก้ปัญหา
+    //   ตอนตามรถ ต้องได้ (ความกว้าง/2 , ความสูง × CAR_ANCHOR) เสมอ · ลากเอง → ขยับตามนิ้ว 1:1
+    window.navMiniCarScreen = function () {
+        var pos = dispCar || car;
+        if (!pos) { return null; }
+        var W = canvas.clientWidth || 168, H = canvas.clientHeight || 168;
+        var zr = (smoothZoom === null) ? autoZoom(speedKmh) : smoothZoom;
+        var z = Math.round(zr), zScale = Math.pow(2, zr - z);
+        var center = (!follow && panCenter) ? panCenter : pos;
+        var c = proj(center.lat, center.lng, z);
+        var ax = W / 2, ay = H * CAR_ANCHOR;
+        var p = proj(pos.lat, pos.lng, z);
+        var x = p.x + (ax - c.x), y = p.y + (ay - c.y);
+        var r = -(((dispCar ? dispHead : bearing) || 0) * Math.PI / 180);
+        var dx = x - ax, dy = y - ay;
+        return { x: Math.round((ax + dx * Math.cos(r) - dy * Math.sin(r)) * 10) / 10,
+                 y: Math.round((ay + dx * Math.sin(r) + dy * Math.cos(r)) * 10) / 10,
+                 anchor: { x: Math.round(ax), y: Math.round(ay) }, W: W, H: H, follow: follow };
+    };
     window.navMiniDebug = function () {
         return {
             visible: visible, follow: follow, hidden: !!pref.hidden, big: !!pref.big,
             hasRoute: route.length, routeKm: Math.round(routeKm * 1000) / 1000,
             car: car ? { lat: car.lat, lng: car.lng } : null,
             bearing: Math.round(bearing), speedKmh: speedKmh,
+            // 🎞️ สถานะการเคลื่อนที่แบบต่อเนื่อง (ใช้ตรวจตอนทดสอบ): ตำแหน่ง/ทิศที่ “วาดจริง” + ระยะที่ยังตามไม่ทัน
+            dispCar: dispCar ? { lat: Math.round(dispCar.lat * 1e6) / 1e6, lng: Math.round(dispCar.lng * 1e6) / 1e6 } : null,
+            dispHead: Math.round(dispHead),
+            lagM: (dispCar && car) ? Math.round(kmBetween(dispCar, car) * 1000) : null,
+            anchor: CAR_ANCHOR, animating: !!animId,
             muted: navSoundMuted(),
             voice: (typeof window.navVoiceDebug === 'function') ? window.navVoiceDebug() : null,
             routeHeading: (function () { var h = routeHeadingAt(nearestIndex(car)); return h === null ? null : Math.round(h); })(),
@@ -16429,6 +16653,7 @@
             else if (sLat && sLon && dLat && dLon) { window.navMiniSetRoute([[sLat, sLon], [dLat, dLon]], destLabel); }
             if (sLat && sLon) { car = { lat: sLat, lng: sLon }; }
             alignHeadingToRoute(car); // 🧭 ให้แผนที่หันหัวขึ้นตั้งแต่เริ่มนำทาง (ไม่รอให้รถขยับ)
+            snapAnim();               // 🎞️ เที่ยวใหม่ = เริ่มวาดจากจุดเริ่มจริง (ไม่ไถลจากเที่ยวเก่า)
             follow = true; panCenter = null;
             if (pref.hidden) { canReopen = true; hideNow(); syncReopenBtns(); } // ยังไม่โชว์ + ติดปุ่มเปิดคืน
             else { show(); request(); }
@@ -16490,8 +16715,10 @@
         if (!base) { return; }
         var c = proj(base.lat, base.lng, z);
         // 🧭 แผนที่หมุนอยู่ (heading-up) → แปลงท่าลากจากพิกัดจอเป็นพิกัดแผนที่ก่อน ไม่งั้นลากแล้วแผนที่เลื่อนคนละทางกับนิ้ว
-        if (bearing) {
-            var br = bearing * Math.PI / 180, cs = Math.cos(br), sn = Math.sin(br);
+        //    ใช้ “ทิศที่วาดจริง” (dispHead) ให้ตรงกับภาพบนจอขณะหมุนอยู่
+        var dragHead = dispCar ? dispHead : bearing;
+        if (dragHead) {
+            var br = dragHead * Math.PI / 180, cs = Math.cos(br), sn = Math.sin(br);
             var rdx = dx * cs - dy * sn, rdy = dx * sn + dy * cs;
             dx = rdx; dy = rdy;
         }
