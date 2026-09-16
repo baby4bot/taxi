@@ -1386,6 +1386,25 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/changelog-check.ps1
 > ⚠️ **กับดักเวลาเขียนชุดทดสอบ:** ใน CSS มี `transition: 0.2s` ⇒ อ่าน `getComputedStyle` ทันทีหลังสลับ `disabled`/`checked`
 > จะได้ค่าเก่า (opacity ยังเป็น 1 · ก้านยังขาว) — ต้องรอ ≥ 300 ms ก่อนวัดค่า จึงจะเห็น 0.42 / `rgb(203,213,225)`
 
+#### 🤖 ด่านตรวจอัตโนมัติ: `tests/switch-check.ps1` (เพิ่ม 16 ก.ย. 2569)
+
+กันช่องติ๊กหลุดกลับเข้ามาในแอป (ผู้ใช้ขอให้ทุกปุ่มเปิด/ปิดเป็นสวิตช์) — รันเดี่ยว ๆ ได้ หรือเป็นส่วนหนึ่งของ `tests/pre-push.ps1`
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/switch-check.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/switch-check.ps1 -Index "index - 200 ....html"
+```
+
+| กติกาที่บังคับ | รายละเอียด |
+|---|---|
+| ช่องติ๊กทุกตัวต้องเป็นสวิตช์ | ต้องมีรูปแบบ `<input type="checkbox" …><span class="app-slider"></span>` **ติดกันทันที** ไม่งั้น FAIL พร้อมบอกบรรทัด + id |
+| สวิตช์ต้องมีก้านครบ | จำนวน `class="app-switch"` ต้องเท่ากับ `class="app-slider"` (ลืมก้าน = กล่องเทาเปล่า) |
+| ข้อยกเว้นต้องเขียนไว้ | รายการที่อนุญาตให้เป็นช่องติ๊กได้: `editOledToggle` (ตัวช่วยที่ซ่อนอยู่) · `txt-bulk-item` (ช่อง “เลือกรายการ” ในลิสต์หลายรายการ) — ต้องระบุ**เหตุผล**ในไฟล์เสมอ |
+| รายงานเป็นไทย | `tests/switch-check-report.txt` (UTF-8) — บอกบรรทัด + โค้ดที่หลุด |
+
+> ⚠️ **ไฟล์ `tests/switch-check.ps1` ต้องมี BOM (UTF-8 with BOM)** เพราะมีข้อความไทยในตัวแปรเหตุผล — ถ้าลบ BOM ออก
+> PowerShell 5.1 จะอ่าน .ps1 เป็น ANSI แล้ว**ทั้งไฟล์พัง (ParserError)** · สคริปต์อื่นในโฟลเดอร์ `tests/` เป็น ASCII ล้วนจึงไม่ต้องมี BOM
+
 ### 🔴 กติกาก่อน push ทุกครั้ง (ห้ามข้าม) — ผู้ใช้สั่งย้ำ 15 ก.ย. 2569
 
 > “ก่อนจะพุชทุกครั้งให้ทำการอัปเดตเวอร์ชันก่อน แล้วก็พุชขึ้นทุกครั้ง”

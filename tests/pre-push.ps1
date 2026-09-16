@@ -103,7 +103,30 @@ if (Test-Path $checker) {
   Fail "tests/changelog-check.ps1 missing"
 }
 
-# --- 3) the repo copy must match the file you tested ------------------------
+# --- 3) every on/off control must be a sliding pill -------------------------
+#   (the owner asked 16 Sep 2026: bare checkboxes read badly on a phone in the
+#    car, so every switch in the app is .app-switch; this step stops one from
+#    creeping back in. Leftovers are reported line by line.)
+$switchChecker = Resolve-FromRoot 'tests/switch-check.ps1'
+if (Test-Path $switchChecker) {
+  $sOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $switchChecker -Index $Index 2>&1 | Out-String
+  $sBad = @($sOut -split "`r?`n" | Where-Object { $_ -match '^\[FAIL\]' })
+  if ($sBad.Count) {
+    Fail 'switch-check not clean -> every on/off control must be an .app-switch pill'
+    foreach ($l in $sBad) { Say ('        ' + $l.Trim()) }
+    Say  '       (a raw <input type="checkbox"> the driver sees: turn it into a pill, or allow-list it in tests/switch-check.ps1 with a reason)'
+    Say  '       (full Thai detail: tests/switch-check-report.txt)'
+  } else {
+    $sCount = ([regex]::Match($sOut, 'checkbox inputs\s*:\s*(\d+)')).Groups[1].Value
+    $sPills = ([regex]::Match($sOut, 'app-switch pills\s*:\s*(\d+)')).Groups[1].Value
+    $sAllow = ([regex]::Match($sOut, 'allowed special\s*:\s*(\d+)')).Groups[1].Value
+    Pass ("switch-check: $sPills sliding pill(s), $sCount checkbox input(s) total, 0 raw ($sAllow allow-listed)")
+  }
+} else {
+  Fail 'tests/switch-check.ps1 missing'
+}
+
+# --- 4) the repo copy must match the file you tested ------------------------
 $repoCopy = Join-Path $root (Join-Path $Repo 'index.html')
 if (Test-Path $repoCopy) {
   $a = (Get-FileHash $indexPath -Algorithm MD5).Hash
