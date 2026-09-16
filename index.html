@@ -2487,6 +2487,8 @@
             <div id="rpFareTotal" style="font-size:24px; font-weight:700; color:white; white-space:nowrap;">0 ฿</div>
         </div>
 
+        <div id="rpTrafficRow" style="display:none; background: rgba(56,189,248,0.10); border:1px solid rgba(56,189,248,0.35); color:#7dd3fc; border-radius:12px; padding:7px 10px; font-size:12.5px; margin:-8px 0 14px; text-align:left;"></div>
+
         <div class="custom-confirm-actions">
             <button class="btn-cc-cancel" onclick="window.closeRoutePreview()" title="ปิดหน้าต่างนี้ ยังไม่เริ่มมิเตอร์">ดูอย่างเดียว</button>
             <button class="btn-cc-ok" onclick="window.startTripFromPreview()" style="background: linear-gradient(135deg,#2ecc71,#27ae60); display:flex; align-items:center; justify-content:center; gap:6px; font-size:15px;">
@@ -4810,6 +4812,70 @@
         const floorApply = refs.length ? 0 : floorSec;
         return Math.max(floorApply, Math.min(Math.round(est), Math.round(gapSec)));
     };
+    // 🚦 ประมาณ “เวลารถติดที่มิเตอร์จะคิดเงินจริง” ของเส้นทางที่ยังไม่วิ่ง (หน้าสรุปเส้นทาง · ราคาประเมินบนหน้าหลัก)
+    //    มิเตอร์คิดเวลาต่อเมื่อรถ “จอดหรือวิ่ง ≤ 6 กม./ชม.” เท่านั้น — ไม่ได้คิดทุกนาทีที่ช้ากว่าถนนโล่ง
+    //    ต้นทาง: sectionType=traffic ของ TomTom → แต่ละช่วงมี `effectiveSpeedInKmh` (ความเร็วเฉลี่ยจริงของช่วงนั้น)
+    //    หลักการ: ช่วงจราจรความเร็วเฉลี่ย v = ส่วนผสมของ “คลาน c” กับ “วิ่งปกติ m” ⇒ สัดส่วนเวลาที่คลาน = (m − v)/(m − c)
+    //           v ≤ c = คลานทั้งช่วง (คิดเต็ม) · v ≥ m = ไม่มีเวลาที่มิเตอร์จะคิด
+    //           ตรวจกับข้อมูลจริง: eff 5 กม./ชม. → 100% · eff 12 → 70% · eff 28 → 0%
+    //    ⚠️ ถ้าไม่มีช่วงจราจรให้ใช้ (TomTom ไม่ส่งมา) → ใช้ครึ่งหนึ่งของ `trafficDelayInSeconds` (ยอดดีเลย์รวม)
+    //       ยังดีกว่าไม่คิดเวลาเลย และไม่ต้องเรียก API เพิ่ม (คำขอเดิม)
+    window.METER_CRAWL_KMH = 5;   // ความเร็ว “คลาน” อ้างอิง (มิเตอร์คิดเวลาที่ ≤ 6)
+    window.METER_MOVE_KMH = 28;   // ความเร็ว “วิ่งปกติในเมือง” อ้างอิง (วัดจากเที่ยวจริงในเมือง ~28 กม./ชม.)
+    // 🚦 เวลาที่ “ช้ากว่าถนนโล่ง” แต่ TomTom ไม่ได้จัดเป็นช่วงจราจร (ช่วงนี้คือไฟแดง/ต่อแถว/ชะลอ) — มิเตอร์คิดเวลาตอน“หยุด/คลาน”
+    //    ใช้ครึ่งหนึ่งเป็นเวลาที่ถูกคิด: อีกครึ่งคือช่วงออกตัว–ชะลอ (ความเร็ว 6–20 กม./ชม. = มิเตอร์ไม่คิด)
+    //    ตรวจกับข้อมูลจริง: เที่ยวในเมือง 10.7 กม. มิเตอร์จริงคิดเวลารถติด 4:54 (≈ 0.46 นาที/กม.) → เส้นทางเมือง 15 กม. ≈ 6–7 นาที
+    window.PLAN_STOP_SHARE = 0.5;
+    window.__planTrafficOf = (route, coords, freeSecOverride) => {
+        const out = { sec: 0, km: 0, via: 'none', jamSec: 0, extraSec: 0 };
+        try {
+            const sum = (route && route.summary) || {};
+            const secs = ((route && route.sections) || []).filter(s => s.sectionType === 'TRAFFIC');
+            const C = window.METER_CRAWL_KMH, M = window.METER_MOVE_KMH;
+            let jamSec = 0, jamKm = 0, jamDelay = 0;
+            if (secs.length && Array.isArray(coords) && coords.length >= 2 && typeof calcGPS === 'function') {
+                const cum = [0]; // ระยะสะสมตามเส้นทาง (เมตร)
+                for (let i = 1; i < coords.length; i++) {
+                    const a = coords[i - 1], b = coords[i];
+                    cum.push(cum[i - 1] + (calcGPS(a[0], a[1], b[0], b[1]) * 1000));
+                }
+                const at = (n) => cum[Math.max(0, Math.min(cum.length - 1, n | 0))];
+                secs.forEach(s => {
+                    const m = Math.max(0, at(s.endPointIndex) - at(s.startPointIndex));
+                    jamDelay += Number(s.delayInSeconds) || 0;
+                    if (!(m > 0)) return;
+                    let v = Number(s.effectiveSpeedInKmh);
+                    if (!(v > 0)) {
+                        // ไม่บอกความเร็ว → ประมาณจากดีเลย์ของช่วงนั้น (เวลาช่วง = เวลาวิ่งโล่ง + ดีเลย์)
+                        const dSec = Number(s.delayInSeconds) || 0;
+                        const freeSec = (m / 1000) / M * 3600;
+                        const totSec = freeSec + dSec;
+                        v = totSec > 0 ? (m / 1000) / (totSec / 3600) : M;
+                    }
+                    const share = Math.max(0, Math.min(1, (M - v) / (M - C)));
+                    if (share <= 0) return;
+                    jamSec += ((m / 1000) / Math.max(1, v) * 3600) * share;
+                    jamKm += m / 1000;
+                });
+                if (jamKm > 0) out.via = 'tomtom-traffic';
+            }
+            // 🚦 ส่วนที่เหลือ: เวลาที่ใช้จริง − เวลาถนนโล่ง − ดีเลย์ที่จัดเป็นช่วงจราจรแล้ว = ไฟแดง/ต่อแถว/ชะลอ
+            const actualSec = Number(sum.travelTimeInSeconds) || 0;
+            const freeSec = Number(freeSecOverride) || Number(sum.noTrafficTravelTimeInSeconds) || 0;
+            const rawExtra = freeSec > 0 ? Math.max(0, actualSec - freeSec)
+                                          : (Number(sum.trafficDelayInSeconds) || 0);
+            const extraSec = Math.max(0, rawExtra - jamDelay);
+            out.jamSec = Math.round(jamSec); out.extraSec = Math.round(extraSec * window.PLAN_STOP_SHARE);
+            out.sec = Math.round(jamSec + extraSec * window.PLAN_STOP_SHARE);
+            out.km = Math.round(jamKm * 10) / 10;
+            out.freeSec = freeSec ? Math.round(freeSec) : 0;
+            if (out.sec > 0) out.via = freeSec > 0 ? (out.via === 'none' ? 'freeflow-gap' : 'traffic+freeflow-gap') : (out.via === 'none' ? 'delay-half' : 'traffic+delay');
+            // กันค่าบวมเกินจริง: เวลารถติดที่วางแผนไว้ห้ามเกิน 60% ของเวลาช่วงที่รถไม่วิ่งเต็มสปีด
+            const cap = actualSec > 0 ? actualSec : 0;
+            if (cap > 0) out.sec = Math.min(out.sec, Math.round(cap * 0.6));
+        } catch (e) { out.via = 'error'; }
+        return out;
+    };
     // 📏 tryNoDestRouteKm: เที่ยวไม่มีปลายทาง — เบิกคืนระยะช่วงแอปปิด/ซ่อนด้วยเส้นทางถนนจริง
     // (TomTom route จากจุดก่อนปิด → จุดปัจจุบัน) แทนเส้นตรง×factor ที่ตัดมุมถนน (ระยะจริง > เส้นตรงเสมอ)
     // ⭐สำคัญต่อ "เวลารถติด" ด้วย: route คืน noTrafficSec (เวลาวิ่งโล่งของช่วงปิด) → คิดเวลารถติดได้ตรงกว่าการเดาจากความเร็วเฉลี่ย
@@ -5528,7 +5594,12 @@
             // โหมดขึ้นด่วน: fastest + ให้ใช้ทางด่วนได้ → ระบบเลือกทางด่วนจริง ๆ
             const avoidParam = window.isTollwayMode ? '' : '&avoid=tollRoads';
             const routeType = 'fastest';
-            const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=${routeType}&routeRepresentation=polyline&language=th-TH&sectionType=toll&instructionsType=text${avoidParam}`;
+            // sectionType=toll = ช่วงทางด่วนเก็บเงิน (คิดค่าผ่านทาง)
+            // sectionType=traffic = ช่วงจราจร (มี effectiveSpeedInKmh = ความเร็วเฉลี่ยจริงในช่านั้น) → ใช้ประเมิน "เวลารถติดที่จะถูกคิดเงิน"
+            // computeTravelTimeFor=all → ได้ noTrafficTravelTimeInSeconds (เวลาถนนโล่ง) มาใช้กับ “ราคาประเมินตอนวางแผน”
+            //    ⚠️ ห้ามส่งค่านี้เข้า gap model (เวลารถติดช่วงล็อกจอ) เพราะมันเป็นหลักฐานฝั่ง “วิ่งเร็ว” → เวลารถติดจะขาด
+            //    (บั๊กจริง 16 ก.ย. 69: แอปคิดเวลารถติด 0:26 ขณะมิเตอร์จริง 1:47:35) — ดู noTrafficSec ที่ตั้งเป็น null ด้านล่าง
+            const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=${routeType}&routeRepresentation=polyline&language=th-TH&sectionType=toll&sectionType=traffic&computeTravelTimeFor=all&instructionsType=text${avoidParam}`;
             
             let res = await fetch(url);
             countTomTomCall('route'); // นับรอบที่ถึงเซิร์ฟเวอร์จริง (สำเร็จหรือโดนจำกัดโควตาก็ใช้สิทธิ์ไปแล้ว) — ถัง Routing
@@ -5551,7 +5622,10 @@
             let r = data.routes[0];
             let km = r.summary.lengthInMeters / 1000;
             let sec = r.summary.travelTimeInSeconds; // รวมรถติดจริงแล้ว (trafficDelayInSeconds คือเวลาที่เสียไปกับรถติด)
-            let noTrafficSec = (typeof r.summary.noTrafficTravelTimeInSeconds === 'number' && r.summary.noTrafficTravelTimeInSeconds > 0) ? r.summary.noTrafficTravelTimeInSeconds : null; // ⏱️ เวลาวิ่งถนนโล่ง (ไม่มีรถติด) — ใช้ประเมินเวลารถติดช่วงแอปปิด/ซ่อน
+            // ⛔ ค่า noTrafficSec ต้องคงเป็น null เสมอ (เหมือนก่อนเพิ่มพารามิเตอร์นี้) — ไม่งั้น gap model ตอนล็อกจอจะเปลี่ยนพฤติกรรมเงียบ ๆ
+            //    เก็บเวลาถนนโล่งไว้ที่ planFreeSec ซึ่งใช้เฉพาะ “ราคาประเมินตอนวางแผน” (ดู __planTrafficOf)
+            let noTrafficSec = null;
+            let planFreeSec = (typeof r.summary.noTrafficTravelTimeInSeconds === 'number' && r.summary.noTrafficTravelTimeInSeconds > 0) ? r.summary.noTrafficTravelTimeInSeconds : null;
             
             // ดึงพิกัดเส้นทาง (TomTom คืน polyline ใช้ decode ฟังก์ชันเดิมได้)
             let coords = [];
@@ -5567,12 +5641,14 @@
 
             // คำนวณค่าทางด่วนจากเส้นทางจริง (ต้องขอ sectionType=toll)
             let tollInfo = window.calcTollsFromSections(r, coords);
+            // 🚦 เวลารถติดที่ "มิเตอร์จะคิดเงิน" ของเส้นทางนี้ (จากช่วงจราจรจริง — ไม่กินโควตาเพิ่ม เป็นคำขอเดิม)
+            let plan = window.__planTrafficOf(r, coords, planFreeSec);
             if (window.isTollwayMode) {
-                return { km, sec, noTrafficSec, coords, tolls: tollInfo };
+                return { km, sec, noTrafficSec, coords, tolls: tollInfo, planTrafficSec: plan.sec, planJamKm: plan.km, planJamSec: plan.jamSec, planExtraSec: plan.extraSec, planTrafficVia: plan.via };
             } else {
                 // ⚠️ ค่า hasTolls:false ตรงนี้เป็นค่าที่ “ระบบตั้งขึ้นเอง” เพราะโหมดเลี่ยงทางด่วนสั่ง avoid=tollRoads ไปแล้ว
                 //    → avoided:true = “ยังไม่รู้จริงว่ามีทางด่วนไหม” ห้ามเอาไปตัดสินว่าสลับเป็นขึ้นทางด่วนไม่ได้
-                return { km, sec, noTrafficSec, coords, tolls: { hasTolls: false, booths: [], total: 0, avoided: true } };
+                return { km, sec, noTrafficSec, coords, tolls: { hasTolls: false, booths: [], total: 0, avoided: true }, planTrafficSec: plan.sec, planJamKm: plan.km, planJamSec: plan.jamSec, planExtraSec: plan.extraSec, planTrafficVia: plan.via };
             }
         } catch(e) { console.error(e); }
         return null;
@@ -9464,6 +9540,7 @@
         const at = $('smallArrivalTime'); if (at) at.innerText = '--:--';
         const r = $('driveRemain'); if (r) r.innerText = '0.00';
         window.hideMap(); // ลบเส้นทาง/แผนที่เก่าออก
+        window.clearPlanTraffic(); // 🚦 ไม่มีจุดหมาย = ใช้เวลารถติดที่วางแผนไว้ไม่ได้
         window.updateFareEstimation(0);
         window.checkAppStatus();
         window.updateClearDestBtn();
@@ -9514,7 +9591,9 @@
                     }
                 }
                 // 🚦 ยังไม่เริ่มมิเตอร์/นำทางอัตโนมัติ — จดข้อมูลเส้นทางนี้ไว้รอ (จุดเริ่ม/ปลาย/พิกัด) ให้ modal "สรุปเส้นทาง" ใช้ตอนกดปุ่มเริ่ม
-                window.__pendingRouteStart = { sLat, sLon, dLat, dLon, name, km: route.km, sec: route.sec, coords: route.coords || [] };
+                // 🚦 เวลารถติดที่วางแผนไว้ (มิเตอร์จะคิดเงินช่วง ≤ 6 กม./ชม.) — ใช้บวกในราคาประเมินให้ตรงกับที่มิเตอร์จะคิดจริง
+                window.setPlanTraffic(route.planTrafficSec, route.planJamKm, route.planTrafficVia, route.planJamSec, route.planExtraSec);
+                window.__pendingRouteStart = { sLat, sLon, dLat, dLon, name, km: route.km, sec: route.sec, coords: route.coords || [], trafficSec: window.__planTrafficSec || 0, jamKm: window.__planJamKm || 0, trafficVia: window.__planTrafficVia || '' };
                 window.processRoute(currentTrueRemainKm, currentTrueRemainSec, name);
                 if (label) window.showToast(label, false);
                 return true;
@@ -9608,14 +9687,41 @@
                 tollRow.style.display = 'none';
             }
         }
-        // ราคาโดยประมาณตามมิเตอร์ (ฐาน + ระยะทาง) + ทางด่วนถ้าเลือกขึ้น
+        // 💰 ราคาโดยประมาณตามมิเตอร์ = ค่าแรก + ระยะทาง + “เวลารถติดที่วางแผนไว้” (+ ทางด่วนถ้าเลือกขึ้น)
+        //    ⚠️ เดิมคิดแค่ระยะทาง ⇒ ประเมินต่ำกว่ามิเตอร์จริงทุกครั้งที่เส้นทางมีช่วงรถช้า/จอด
+        //    (เคสจริง 16 ก.ย. 69: 15.18 กม./32 นาที → คิดระยะอย่างเดียว 129 ฿ แต่มีเวลารถติดที่มิเตอร์จะคิดด้วย)
         const distFare = window.calcThaiMeterDist(km);
-        const meterFare = window.baseFare + Math.floor(distFare / 2) * 2;
+        const tSec = (typeof window.planTrafficForEstimate === 'function') ? window.planTrafficForEstimate() : 0;
+        const tMin = Math.max(0, Math.round(tSec / 60));
+        const timeFare = tSec * (3.0 / 60);
+        const meterFare = window.baseFare + Math.floor((distFare + timeFare) / 2) * 2;
         const total = meterFare + tollTotal;
         if (el('rpFareDetail')) el('rpFareDetail').innerText = (tollTotal > 0)
-            ? 'มิเตอร์ ' + meterFare.toLocaleString('th-TH') + ' ฿ + ทางด่วน ' + tollTotal.toLocaleString('th-TH') + ' ฿'
-            : 'ค่าแรก ' + window.baseFare + ' ฿ + ตามระยะทาง';
+            ? ('มิเตอร์ ' + meterFare.toLocaleString('th-TH') + ' ฿' + (tMin > 0 ? ' (รวมรถติด ~' + tMin + ' น.)' : '') + ' + ทางด่วน ' + tollTotal.toLocaleString('th-TH') + ' ฿')
+            : (tMin > 0
+                ? ('ค่าแรก ' + window.baseFare + ' ฿ + ระยะทาง + รถติด ~' + tMin + ' น.')
+                : ('ค่าแรก ' + window.baseFare + ' ฿ + ตามระยะทาง'));
         if (el('rpFareTotal')) el('rpFareTotal').innerText = total.toLocaleString('th-TH') + ' ฿';
+        // 🚦 แถวอธิบายที่มาของเวลารถติด (แสดงเฉพาะเมื่อมีช่วงจราจรที่ถูกคิดเงิน)
+        const trRow = el('rpTrafficRow');
+        if (trRow) {
+            if (tSec >= 30) {
+                const jamKm = Number(window.__planJamKm) || 0;
+                const jamMin = Math.max(0, Math.round((Number(window.__planJamSec) || 0) / 60));
+                const extraMin = Math.max(0, Math.round((Number(window.__planExtraSec) || 0) / 60));
+                const parts = [];
+                if (jamMin > 0) parts.push('ช่วงรถติด ' + jamMin + ' น.');
+                if (extraMin > 0) parts.push('ไฟแดง/ต่อแถว ' + extraMin + ' น.');
+                trRow.style.display = 'block';
+                trRow.innerHTML = '🚦 ประมาณเวลารถติด <b>~' + tMin + ' นาที</b>'
+                    + (parts.length ? ' (' + parts.join(' + ') + ')' : '')
+                    + (jamKm > 0 ? ' · ช่วงช้า ' + jamKm.toFixed(1) + ' กม.' : '')
+                    + '<br>มิเตอร์คิดเวลานี้ 3 ฿/นาที ตอนความเร็ว ≤ 6 กม./ชม. → <b>+' + Math.round(timeFare) + ' ฿</b>'
+                    + ' <span style="color:var(--text-dim);">(ประมาณจากข้อมูลจราจรจริงก่อนออกเดินทาง)</span>';
+            } else {
+                trRow.style.display = 'none';
+            }
+        }
     };
     // เริ่มมิเตอร์จริงจากหน้าสรุป (คนขับยืนยันแล้ว) — เดินตาม flow เดิม: เริ่มมิเตอร์ + เตรียม navigation (แผนที่ถูกปิดใช้งาน = แค่แสดงราคา/ข้อมูล)
     window.startTripFromPreview = () => {
@@ -9664,6 +9770,9 @@
                 window.currentTollInfo = route.tolls || null;
                 window.invalidateRouteBase(); // 🧭 เปลี่ยนเส้นจากหน้าสรุป → ตั้งฐานระยะใหม่
                 p.km = route.km; p.sec = route.sec; p.coords = route.coords || [];
+                // 🚦 เส้นใหม่ = เวลารถติดใหม่ → อัปเดตราคาประเมิน (เส้นทางด่วนมักรถติดน้อยกว่า)
+                window.setPlanTraffic(route.planTrafficSec, route.planJamKm, route.planTrafficVia, route.planJamSec, route.planExtraSec);
+                p.trafficSec = window.__planTrafficSec || 0; p.jamKm = window.__planJamKm || 0; p.trafficVia = window.__planTrafficVia || '';
                 $('kmInput').value = route.km.toFixed(2);
                 window.updateFareEstimation(route.km);
                 window.updateTollDisplay();
@@ -10796,12 +10905,39 @@
         return f; 
     };
     
+    // 🚦 เวลารถติด “ที่วางแผนไว้” ของเส้นทางที่เลือกไว้ (จากหน้าสรุปเส้นทาง) — ใช้บวกในราคาประเมิน
+    //    เหตุผล (ผู้ใช้แจ้ง 16 ก.ย. 69): เส้นทาง 15.18 กม./32 นาที ถ้าคิดแค่ระยะทางจะได้ 129 ฿
+    //    แต่ระหว่างนั้นมีเวลาที่รถช้า/จอด ซึ่งมิเตอร์คิดเงินด้วย ⇒ ประเมินต่ำกว่ามิเตอร์จริงเสมอ
+    //    ⚠️ ใช้เฉพาะ “ตอนวางแผน” (ยังไม่เริ่มมิเตอร์) — ระหว่างเที่ยวมิเตอร์นับจริงอยู่แล้ว ใส่ซ้ำจะกลายเป็นบวกสองรอบ
+    window.__planTrafficSec = 0;   // วินาทีที่คาดว่าจะถูกคิดเป็นเวลารถติด
+    window.__planJamKm = 0;        // ระยะทางของช่วงจราจร (ไว้แสดงที่มา)
+    window.__planTrafficVia = '';   // ที่มาของค่า: tomtom-traffic · delay-half
+    window.setPlanTraffic = (sec, km, via, jamSec, extraSec) => {
+        window.__planTrafficSec = Math.max(0, Math.round(Number(sec) || 0));
+        window.__planJamKm = Math.max(0, Number(km) || 0);
+        window.__planTrafficVia = via || '';
+        window.__planJamSec = Math.max(0, Math.round(Number(jamSec) || 0));
+        window.__planExtraSec = Math.max(0, Math.round(Number(extraSec) || 0));
+        window.__manualKmEdit = false; // มีเส้นทางจริงแล้ว → กลับมาใช้เวลารถติดของเส้นทาง
+        return window.__planTrafficSec;
+    };
+    window.clearPlanTraffic = () => { window.__planTrafficSec = 0; window.__planJamKm = 0; window.__planTrafficVia = ''; window.__planJamSec = 0; window.__planExtraSec = 0; };
+    // ค่าเวลารถติดที่ “ควรบวกในราคาประเมินตอนนี้” (0 = ไม่ต้องบวก)
+    window.planTrafficForEstimate = () => {
+        if (window.isManualRunning) return 0;         // ระหว่างเที่ยว: มิเตอร์นับจริงแล้ว ห้ามบวกยอดวางแผนซ้ำ
+        if (window.__manualKmEdit) return 0;          // ผู้ใช้พิมพระยะทางเอง = ไม่มีเส้นทางวางแผน
+        return Math.max(0, window.__planTrafficSec || 0);
+    };
     window.updateFareEstimation = (km) => { 
         let distFare = window.calcThaiMeterDist(km); 
         let extraSurcharge = window.surchargeList.reduce((sum, item) => sum + item.amount, 0);
         let displayFare = 0;
+        // 🚦 มีเส้นทางวางแผน → คิดเวลารถติดนำมาบวกในสูตรมิเตอร์ให้เหมือนตอนวิ่งจริง (อัตราเดียวกับมิเตอร์: 3.0 ฿/นาที)
+        const _planT = (typeof window.planTrafficForEstimate === 'function') ? window.planTrafficForEstimate() : 0;
+        window.estimatePlanTrafficSec = _planT;
+        const _timeFare = _planT * (3.0 / 60);
         
-        if (km > 0 || extraSurcharge > 0) { displayFare = window.baseFare + Math.floor(distFare / 2) * 2 + extraSurcharge; }
+        if (km > 0 || extraSurcharge > 0) { displayFare = window.baseFare + Math.floor((distFare + _timeFare) / 2) * 2 + extraSurcharge; }
         // 🛣️ ราคาประเมินต้องรวมค่าทางด่วนของเส้นทางปัจจุบันด้วย (โหมดกรอกระยะเอง — ยังไม่เดินมิเตอร์)
         //    estimated = ยังไม่มี "ค่าทางด่วน" ที่คนขับตั้งเอง → ใช้ยอดประมาณของเส้นทาง (ยังไม่ถูกบวกใน extraSurcharge)
         const _tollInfo = (typeof window.getTripTollForEstimate === 'function') ? window.getTripTollForEstimate() : { toll: 0, estimated: false };
@@ -10858,7 +10994,7 @@
         const km = parseFloat(document.getElementById('kmInput').value) || 0;
         m.disabled = km <= 0;
     };
-    window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; window.updateKmStepper(); window.updateFareEstimation(km); window.checkAppStatus(); const est = parseFloat(window.estimateFareAmt || 0); window.setFareProgressPct(est > 0 ? est : (km > 0 ? (window.calcThaiMeterFare(km) + window.baseFare) : 0)); };
+    window.manualInputChange = () => { let km = parseFloat($('kmInput').value) || 0; window.__manualKmEdit = true; window.clearPlanTraffic(); window.updateKmStepper(); window.updateFareEstimation(km); window.checkAppStatus(); const est = parseFloat(window.estimateFareAmt || 0); window.setFareProgressPct(est > 0 ? est : (km > 0 ? (window.calcThaiMeterFare(km) + window.baseFare) : 0)); };
 
     // 📤 คิวซิงก์เที่ยว (กันเที่ยวหายตอนเน็ตหลุด/ปิดแอปทันที)
     //    หลักการ: "เก็บลงคิวก่อน → ค่อยส่งขึ้น Firestore" แล้วลบออกจากคิวเมื่อส่งสำเร็จเท่านั้น
@@ -13138,6 +13274,7 @@
         ['2026-09-16', '🐞 แก้แผนที่ไม่หมุนตามรถตอนวิ่งเร็ว — เกณฑ์เดิมต้องขยับ 12 ม. ต่อครั้ง ทำให้ทิศค้าง'],
         ['2026-09-16', '🎈 จุดบน Mini Map เลื่อนขึ้นตามระยะที่วิ่งจริง แล้วกล้องค่อยไล่ทันให้กลับมาที่เดิม'],
         ['2026-09-16', '⚙️ กล้องตามจุดด้วยความเร็วคงที่ (นุ่มขึ้น) + แอดมินตั้งช่วงการเลื่อนของจุดเองได้'],
+        ['2026-09-16', '💰 ราคาประเมินคิด “เวลารถติด” ของเส้นทางด้วย (ช่วงรถติด + ไฟแดง) ไม่ใช่แค่ระยะทาง'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
