@@ -1330,7 +1330,10 @@
         .admin-role-badge.role-manager { background: rgba(52,152,219,0.16); color: #7db3ff; border: 1px solid rgba(52,152,219,0.45); }
         .admin-role-badge.role-user { background: rgba(255,255,255,0.07); color: #c3cbdd; border: 1px solid rgba(255,255,255,0.18); }
         .admin-role-badge.role-custom { background: rgba(139,92,246,0.15); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.45); }
-        .admin-user-sub { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #8a93a8; margin-top: 3px; }
+        /* 👤 (16 ก.ย. 69) บรรทัด @username + “เข้าใช้ล่าสุด” อยู่บรรทัดเดียวกัน (วันที่ชิดขวา) — wrap ได้ถ้าจอแคบมาก */
+        .admin-user-sub { display: flex; align-items: center; gap: 10px; row-gap: 4px; flex-wrap: wrap; font-size: 12.5px; color: #8a93a8; margin-top: 3px; }
+        .admin-user-sub .admin-user-uname { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .admin-lastlogin-chip { margin-left: auto; }
         .admin-user-uname { color: #aab3c7; }
         .admin-user-statusline { display: inline-flex; align-items: center; }
         .admin-meta-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
@@ -13424,6 +13427,7 @@
         ['2026-09-16', '📧 หน้าจัดการผู้ใช้บอกว่าใครสมัครผ่าน Gmail + อีเมล และปุ่มดูอีเมลบัญชีรุ่นเก่า'],
         ['2026-09-16', '📊 แถบสรุป/กรองในหน้าจัดการผู้ใช้: ทั้งหมด · สมัครผ่าน Gmail · ผูก Gmail · ข้อมูลไม่ครบ'],
         ['2026-09-16', '⚠️ เตือนบนการ์ด + แถบสรุปเมื่อบัญชี Google ยังไม่กรอกทะเบียน/เบอร์โทร'],
+        ['2026-09-16', '👤 การ์ดสมาชิก: @username กับ “เข้าใช้ล่าสุด” อยู่บรรทัดเดียว วันเวลาชิดขวา'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -15628,7 +15632,9 @@
                     const formatDate = (timestamp) => { if(!timestamp) return "-"; const d = new Date(timestamp); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
                     const roleKey = u.role || 'User';
                     const roleBadge = `<span class="admin-role-badge role-${window.roleClassKey(roleKey)}">${window.roleLabelShort(roleKey)}</span>`;
-                    const lastLoginChip = u.lastLoginAt ? `<span class="admin-meta-chip"><span class="material-symbols-outlined">lightbulb</span>เข้าใช้ล่าสุด: ${formatDate(u.lastLoginAt)}</span>` : '';
+                    // 👤 ให้ “เข้าใช้ล่าสุด” ไปอยู่บรรทัดเดียวกับ @username และชิดขวา (margin-left:auto จากคลาส admin-lastlogin-chip)
+                    //    📱 แบบสั้น (ไอคอน + วันเวลา) — ชื่อเต็ม “เข้าใช้ล่าสุด: …” อยู่ใน title เพราะบรรทัดนี้ต้องอยู่ร่วมกับ @username บนจอแคบ
+                    const lastLoginChip = u.lastLoginAt ? `<span class="admin-meta-chip admin-lastlogin-chip" title="เข้าใช้ล่าสุด: ${formatDate(u.lastLoginAt)}"><span class="material-symbols-outlined">lightbulb</span>${formatDate(u.lastLoginAt)}</span>` : '';
                     let safePhoto = u.photoURL && u.photoURL.length > 10 ? u.photoURL : window.DEFAULT_AVATAR; let safeRole = u.role || 'User';
                     // ชื่อ/ชื่อผู้ใช้ที่แสดงบนการ์ด — เดิมถ้าเอกสารไม่มีทั้ง displayName และ username จะโชว์ "undefined" และโชว์ "@" เปล่า ๆ
                     let safeName = window.fmtUname(u); let safeUsername = window.fmtAtUname(u);
@@ -15675,7 +15681,7 @@
                         if (!String(u.phoneNumber || '').trim()) _missing.push('เบอร์โทร');
                         if (_missing.length) incompleteChip = `<span class="admin-meta-chip admin-incomplete-chip" title="บัญชีนี้เข้าแอปผ่าน Google แล้วยังกรอกข้อมูลไม่ครบ — แอปจะเด้งหน้าต้อนรับให้กรอกเอง"><span class="material-symbols-outlined">warning</span>ข้อมูลไม่ครบ: ${_missing.join(' · ')}</span>`;
                     }
-                    html += `<div class="admin-user-card"><div class="admin-user-top">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">${safeUsername}</span><span class="admin-user-statusline" id="admin-status-${uid}">${statusHtml}</span></div></div><div class="admin-meta-row">${lastLoginChip}${gmailChip}${incompleteChip}${plateChip}</div></div></div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
+                    html += `<div class="admin-user-card"><div class="admin-user-top">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">${safeUsername}</span><span class="admin-user-statusline" id="admin-status-${uid}">${statusHtml}</span>${lastLoginChip}</div></div>${(gmailChip || incompleteChip || plateChip) ? `<div class="admin-meta-row">${gmailChip}${incompleteChip}${plateChip}</div>` : ''}</div></div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
                 });
         const box = document.getElementById('adminUserList'); if (!box) return;
         box.innerHTML = html || '<div style="padding: 20px; color: gray;">' + (_f === 'all' ? 'ไม่พบข้อมูล' : 'ไม่มีสมาชิกในกลุ่มที่กรองไว้ — กด “ทั้งหมด” เพื่อดูทุกคน') + '</div>';
