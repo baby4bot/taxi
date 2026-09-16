@@ -2987,6 +2987,12 @@
         .menu-item-edit { background: rgba(255,210,77,0.14); border: 1px solid rgba(255,210,77,0.45); color: var(--neon-yellow); width: 24px; height: 24px; border-radius: 50%; padding: 0; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
         .menu-item-edit:hover { background: rgba(255,210,77,0.28); }
         .side-menu-item .menu-item-edit { width: 21px; height: 21px; margin-left: 7px; vertical-align: middle; opacity: 0.9; }
+        /* 🔀 (16 ก.ย. 69) ปุ่ม “ย้ายไปหัวข้อ…” ท้ายเมนูในโหมดลาก — ทางเลือกสำหรับคนที่ลากไม่ถนัด
+           ⚠️ ต้องไม่ใช้คลาส .menu-item-edit เพราะ wireMenuEditors() ใช้คลาสนั้นหาดินสอที่มีอยู่แล้ว (จะทับกัน) */
+        .hub-item-move { background: rgba(125,211,252,0.14); border: 1px solid rgba(125,211,252,0.5); color: #7dd3fc; width: 26px; height: 26px; border-radius: 50%; padding: 0; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+        .hub-item-move:hover { background: rgba(125,211,252,0.3); }
+        html.light .hub-item-move { background: rgba(3,105,161,0.12); border-color: rgba(3,105,161,0.45); color: #0369a1; }
+        html.light .hub-item-move:hover { background: rgba(3,105,161,0.22); }
         html.light .menu-item-edit { background: rgba(176,124,0,0.12); border-color: rgba(176,124,0,0.45); color: #8a6a00; }
         html.light .menu-item-edit:hover { background: rgba(176,124,0,0.22); }
         html.light .side-menu-item .menu-item-edit { background: rgba(176,124,0,0.16); color: #7a5c00; }
@@ -3433,6 +3439,7 @@
 <div id="textEditModal" class="modal-overlay" style="z-index: 10045;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('textEditModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>แก้ไขข้อความ / หัวข้อ</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetTextOverrides()" title="รีเซ็ตทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('textEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 8px; line-height:1.65;">แก้ชื่อหัวข้อ ป้าย ปุ่ม และคำอธิบายในแอปได้เอง — <b>ไม่ต้องแก้โค้ด</b> · บันทึกแล้วมีผลกับ <b>ทุกคนที่ใช้แอป</b>ทันที<br>บรรทัดบน = ข้อความต้นฉบับ (แก้ไม่ได้) · ช่องกรอก = ข้อความที่อยากให้แสดง (เว้นว่าง = ใช้ต้นฉบับ) · <b>ข้อความที่เหมือนกันจะเปลี่ยนพร้อมกันทุกจุด</b> — ตัวเลข/เปอร์เซ็นต์ระบบข้ามให้อัตโนมัติ</p><div style="position:relative; margin:0 4px 8px;"><input type="text" id="textEditSearch" placeholder="ค้นหาข้อความ…" oninput="window.renderTextEditList(this.value)" style="width:100%; text-align:left; padding-left:38px;"><span class="material-symbols-outlined" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:19px; color:var(--text-dim);">search</span></div><div style="margin:0 4px 8px;"><select id="textEditScreenFilter" class="txt-screen-sel" onchange="window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : '')" title="เลือกดูเฉพาะข้อความที่อยู่ในหน้าจอนั้น"><option value="">ทุกหน้าจอ</option></select></div><div style="margin:0 4px 10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><button type="button" id="textEditOnlyEdited" class="txt-onlyedited" onclick="window.textEditToggleOnlyEdited()" title="แสดงเฉพาะข้อความที่แอดมินแก้ไว้ — ไม่ใช่ต้นฉบับ">✏️ ดูเฉพาะที่แก้ไว้ <span class="n" id="textEditOnlyEditedN">0</span></button><button type="button" id="textEditBulkRevert" class="txt-row-btn danger" onclick="window.openTxtBulkRevert()" title="ย้อนทุกข้อความที่แก้ไว้กลับเป็นข้อความต้นฉบับ — ติ๊กเลือกทีละรายการได้"><span class="material-symbols-outlined" style="font-size:16px;">settings_backup_restore</span> คืนค่าต้นฉบับทั้งหมด</button><span style="font-size:11px; color:var(--text-dim);">แถวที่มีป้าย ✏️ = ไม่ใช่ต้นฉบับ · 🕒 = ยังไม่บันทึก</span></div><div id="textEditStats" style="font-size:11.5px; color:var(--text-dim); margin:0 6px 8px; line-height:1.6;"></div><div id="textEditList" style="min-height:200px;"></div></div><div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveTextEditBtn" onclick="window.saveTextOverrides()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color:#fff;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกทั้งหมด</button></div></div></div>
 <div id="txtBulkRevertModal" class="modal-overlay" style="z-index: 10050;"><div class="modal-box standard-box" data-txt-skip onclick="event.stopPropagation()"><div class="modal-header"><h3>↺ คืนค่าข้อความต้นฉบับ</h3><button class="btn-close-floating" onclick="window.closeTxtBulkRevert()"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 16px 16px; text-align: left;"><div id="txtBulkIntro" style="font-size:12px; color:var(--text-dim); line-height:1.65; margin-bottom:10px;"></div><div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:9px;"><button type="button" class="txt-row-btn" onclick="window.txtBulkSelectAll(true)">✓ เลือกทั้งหมด</button><button type="button" class="txt-row-btn" onclick="window.txtBulkSelectAll(false)">ไม่เลือก</button><span id="txtBulkCountText" style="font-size:11.5px; color:var(--text-dim); align-self:center;"></span></div><div id="txtBulkList" style="max-height:42vh; overflow:auto;"></div><div style="margin-top:10px; font-size:11px; color:var(--text-dim); line-height:1.6;">การคืนค่ามีผลกับ <b>ทุกคนที่ใช้แอป</b> ทันที (ต้องยืนยันตัวตนก่อน) — ข้อความที่พิมพ์ค้างไว้แต่ยังไม่บันทึกจะถูกล้างไปด้วย</div><div style="display:flex; gap:8px; margin-top:12px;"><button class="manual-timer-btn" style="background:rgba(255,255,255,0.08); color:var(--text-dim); padding:0 14px;" onclick="window.closeTxtBulkRevert()">ยกเลิก</button><button id="txtBulkApplyBtn" class="manual-timer-btn" style="background:#ff4d5e; flex:1; justify-content:center; color:#fff;" onclick="window.txtBulkApply()">↺ คืนค่าที่เลือก</button></div></div></div></div>
 <div id="itemTextEditModal" class="modal-overlay" style="z-index: 10046;"><div class="modal-box standard-box" data-txt-skip onclick="event.stopPropagation()"><div class="modal-header"><h3 id="itemTextEditTitle">แก้ข้อความเมนู</h3><button class="btn-close-floating" onclick="window.toggleModal('itemTextEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><div id="itemTextEditWho" style="font-size:12.5px; color:var(--neon-yellow); font-weight:700; margin-bottom:10px; word-break:break-word;"></div><label for="itemTextTitle" style="text-align:left;">ชื่อเมนูที่แสดงบนจอ</label><div id="itemTextOrigTitle" style="font-size:11px; color:var(--text-dim); margin:2px 0 6px; word-break:break-word;"></div><input type="text" id="itemTextTitle" maxlength="60" placeholder="เว้นว่าง = ใช้ข้อความต้นฉบับ" style="width:100%; text-align:left; margin-bottom:12px;" onkeydown="if(event.key==='Enter') window.saveHubItemText()"><label for="itemTextDesc" style="text-align:left;">คำอธิบายใต้เมนู</label><div id="itemTextOrigDesc" style="font-size:11px; color:var(--text-dim); margin:2px 0 6px; word-break:break-word;"></div><input type="text" id="itemTextDesc" maxlength="140" placeholder="เว้นว่าง = ใช้ข้อความต้นฉบับ" style="width:100%; text-align:left; margin-bottom:10px;" onkeydown="if(event.key==='Enter') window.saveHubItemText()"><div id="itemTextEditNote" style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:14px;"></div><div style="display:flex; gap:8px;"><button class="manual-timer-btn" style="background:rgba(255,255,255,0.08); color:var(--text-dim); padding:0 12px;" onclick="window.clearHubItemText()" title="ล้างข้อความที่แก้ไว้ของเมนูนี้ (กลับเป็นต้นฉบับ)"><span class="material-symbols-outlined" style="font-size:18px;">restart_alt</span> คืนต้นฉบับ</button><button class="manual-timer-btn" style="background: var(--neon-green); flex:1; justify-content:center; color:#fff;" onclick="window.saveHubItemText()"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div></div>
+<div id="hubMoveCatModal" class="modal-overlay" style="z-index: 10045;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><div class="modal-header"><h3>ย้ายไปหัวข้อ…</h3><button class="btn-close-floating" onclick="window.toggleModal('hubMoveCatModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><div id="hubMoveCatItemName" style="font-size: 12.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 10px;"></div><div id="hubMoveCatList"></div><div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-top: 10px;">ย้ายได้โดยไม่ต้องลาก — กด <b>“ปิด” โหมดลาก</b> เพื่อบันทึกและซิงก์ให้ทุกเครื่อง · ถ้ายังไม่มีหัวข้อที่ต้องการ กด “สร้างหัวข้อใหม่” ในโหมดลากก่อน</div></div></div></div>
 <div id="hubCatEditModal" class="modal-overlay" style="z-index: 10040;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="hubCatEditTitle">หัวข้อใหม่</h3><button class="btn-close-floating" onclick="window.toggleModal('hubCatEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><label style="text-align:left;">ชื่อหัวข้อ</label><input type="text" id="hubCatNameInput" maxlength="40" placeholder="เช่น 🚕 งานรถ / 🧾 ใบเสร็จ" style="width: 100%; margin-bottom: 10px; text-align: left;" onkeydown="if(event.key==='Enter') window.saveHubCat()"><div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 14px;">ตั้งชื่อแล้วลากเมนูไปวางในหัวข้อนี้ได้เลย — <b>หัวข้อที่ไม่มีเมนูจะถูกซ่อนเอง</b> (กลับมาเมื่อมีเมนูวางอยู่)<br>ใส่ emoji นำหน้าได้ เช่น 📁 · เก็บในเครื่องนี้ ไม่กินโควตา</div><button class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: #fff;" onclick="window.saveHubCat()"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกหัวข้อ</button></div></div></div>
 
 <div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควต้าการใช้งาน</h3><button id="quotaRefreshBtn" onclick="window.refreshQuotaMonitor()" title="ดึงยอดใหม่จากเซิร์ฟเวอร์" style="display:inline-flex; align-items:center; gap:4px; background:rgba(77,163,255,0.15); border:1px solid rgba(77,163,255,0.4); color:#7db8ff; border-radius:99px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s; position:absolute; right:58px; top:50%; transform:translateY(-50%);"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span>รีเฟรช</button><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">แอปนี้กินโควตา 2 ระบบ: <b style="color:#fff;">TomTom</b> (ค้นหา + คำนวณเส้นทาง — ด้านบนสุด) และ <b style="color:#fff;">Firestore</b> (ฐานข้อมูล — ด้านล่าง) · Firestore = จำนวน อ่าน / เขียน / ลบ ที่ทุกบัญชี (ID) ใช้ Firestore วันนี้รวมกันทั้งระบบ <b style="color:#fff;">(ทุกเครื่องส่งยอดขึ้นเซิร์ฟเวอร์ทุก 10 นาที / ตอนปิดแอป</b> — แสดงยอดรวมทุก ID + เหลือเท่าไหร่ และแยกตาม ID ชื่อโปรไฟล์) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ฟีเจอร์ที่ฟังข้อมูลสดแบบเรียลไทม์จะกินโควตาอ่านตามจำนวนเครื่องที่เปิดดูพร้อมกัน)</div></div></div></div>
@@ -5752,7 +5759,7 @@
         });
         const hint = document.createElement('div');
         hint.className = 'reorder-hint';
-        hint.innerHTML = '🔀 <b>ลากสลับ / ข้ามหัวข้อ</b> — จับเมนูแล้วลากขึ้น/ลงหรือลากไปหัวข้ออื่น (ไม่จำกัดจำนวน) · จับ <b>ที่จับในหัวข้อ</b> แล้วลากเพื่อย้ายหัวข้อเอง หรือกด ▲▼ · คลิกพื้นที่ว่างเพื่อจบและบันทึก';
+        hint.innerHTML = '🔀 <b>ลากสลับ / ข้ามหัวข้อ</b> — จับเมนูแล้วลากขึ้น/ลงหรือลากไปหัวข้ออื่น (ไม่จำกัดจำนวน · ค้างที่ขอบจอ = จอเลื่อนเอง) · <b>ลากไม่ถนัด?</b> กดปุ่ม 🔀 ท้ายเมนูแล้วเลือกหัวข้อปลายทาง · จับ <b>ที่จับในหัวข้อ</b> เพื่อย้ายหัวข้อเอง หรือกด ▲▼ · คลิกพื้นที่ว่างเพื่อจบและบันทึก';
         // 🧩 หน้าตั้งค่าการใช้งาน: เพิ่มปุ่มสร้างหัวข้อใหม่ + วาดใหม่ให้หัวข้อที่ว่างโชว์ช่อง “วางเมนูที่นี่”
         if (boxEl && boxEl.id === 'settingsHubModal') {
             const addBtn = document.createElement('button');
@@ -5988,6 +5995,8 @@
             if (e.pointerType === 'mouse' && e.button !== 0) return;
             // ✏️ ปุ่มดินสอแก้ข้อความเมนู → ไม่เริ่มลาก/ไม่เข้าโหมดลาก (แอดมินกดแก้ได้ทันที ในโหมดลาก)
             if (e.target.closest && e.target.closest('.menu-item-edit')) return;
+            // 🔀 ปุ่ม “ย้ายไปหัวข้อ…” → ไม่เริ่มลาก/ไม่เข้าโหมดลาก ให้ปุ่มทำงานทันที
+            if (e.target.closest && e.target.closest('.hub-item-move')) return;
             // 🖐️ หัวข้อในหน้าตั้งค่าการใช้งาน: ในโหมดลาก จับที่จับหัวข้อแล้วลากขึ้น–ลงได้ทันที (ไม่ต้องกดค้าง)
             if (boxEl && boxEl.id === 'settingsHubModal' && window.__reorder && window.__reorder.container === container && !drag) {
                 const lbl = e.target.closest && e.target.closest('.hub-cat-label');
@@ -6146,6 +6155,8 @@
             if (!window.__reorder || window.__reorder.boxEl !== boxEl) return;
             // ✏️ ปุ่มดินสอแก้ข้อความเมนู → ปล่อยให้ปุ่มทำงาน (ต้องเช็คก่อนตัวเมนู ไม่งั้นคลิกจะถูกกลืน)
             if (e.target.closest('.menu-item-edit')) return;
+            // 🔀 ปุ่ม “ย้ายไปหัวข้อ…” → ปล่อยให้ปุ่มทำงาน (ก่อนเช็คตัวเมนู ไม่งั้นคลิกถูกกลืน)
+            if (e.target.closest('.hub-item-move')) return;
             const it = e.target.closest(itemsSel);
             if (it) { e.stopPropagation(); e.preventDefault(); return; }
             // 🧩 ปุ่มแก้ชื่อ/ลบหัวข้อ + ช่อง "วางเมนูที่นี่" → ไม่ต้องจบโหมดลาก (ให้ปุ่มทำงานตามปกติ)
@@ -8327,8 +8338,90 @@
             const admin = window.canEditAppTexts(); // ✏️ ปุ่มดินสอ = ต้องมีสิทธิ์แก้ข้อความในแอป (เดิมแอดมินเท่านั้น)
             window.menuEditTargets().forEach(t => {
                 window.wireMenuEditors(t.wrap, t.itemsSel, t.titleSel, !!rc && admin && rc.container === t.wrap);
+                // 🔀 ปุ่ม “ย้ายไปหัวข้อ…” — เฉพาะหน้าตั้งค่าการใช้งานในโหมดลาก (เท่ากับสิทธิ์ที่ “ลาก” ได้)
+                if (t.wrap === window.hubWrap()) {
+                    window.wireHubMoveButtons(t.wrap, t.itemsSel, !!rc && rc.container === t.wrap && !!rc.boxEl && rc.boxEl.id === 'settingsHubModal');
+                }
             });
         } catch (e) {}
+    };
+    // 🔀 (16 ก.ย. 69) “ย้ายไปหัวข้อ…” — ทางเลือกสำหรับคนที่ลากไม่ถนัด
+    //    เดิมการย้ายเมนูข้ามหัวข้อมีทางเดียวคือ “ลาก” ซึ่งล้มเหลวเมื่อเมาส์/นิ้วสั่น หรือหัวข้อปลายทางอยู่นอกจอ
+    //    ⚠️ ตัวย้ายทำงานผ่าน applyHubLayout({ catOf, order }) เท่านั้น ⇒ การบันทึกยังเป็นเส้นทางเดียวกับการลาก
+    //       (exitReorderMode(true) → hubSaveCatsFromDom + ลำดับเมนู) จึงไม่มีทางที่ค่าที่เห็นกับค่าที่บันทึกต่างกัน
+    window.__hubMoveItemEl = null;
+    window.wireHubMoveButtons = (wrap, itemsSel, allow) => {
+        if (!wrap) return 0;
+        let n = 0;
+        wrap.querySelectorAll(itemsSel).forEach(el => {
+            const old = el.querySelector('.hub-item-move');
+            if (!allow) { if (old) old.remove(); return; }
+            if (old) { n++; return; }
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'hub-item-move';
+            b.title = 'ย้ายเมนูนี้ไปหัวข้ออื่น (ไม่ต้องลาก)';
+            b.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;">drive_file_move</span>';
+            // กันโหมดลาก/คลิกเมนูแย่งเหตุการณ์ — ปุ่มต้องทำงานได้ในโหมดลาก
+            b.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+            b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); window.hubMoveToCatOpen(el); });
+            const grip = el.querySelector('.reorder-grip'); // วางก่อนที่จับลาก → อ่านปุ่มง่าย
+            if (grip) el.insertBefore(b, grip); else el.appendChild(b);
+            n++;
+        });
+        return n;
+    };
+    window.hubMoveCatLabel = (catId) => {
+        const c = window.hubCatsRead().filter(x => x.cat === catId)[0];
+        return (c && c.label) || 'ไม่ระบุ';
+    };
+    window.hubMoveToCatOpen = (itemEl) => {
+        const wrap = window.hubWrap(); if (!wrap || !itemEl) return;
+        window.__hubMoveItemEl = itemEl;
+        const cur = itemEl.dataset.cat || '';
+        const nameEl = document.getElementById('hubMoveCatItemName');
+        if (nameEl) {
+            // ⚠️ ต้องอ่านจากข้อความต้นฉบับ (hubItemOrigText) ไม่ใช่ textContent
+            //    เพราะ textContent จะลากเอาข้อความในปุ่มดินสอ/ชิป มาด้วย (เจอจริง: “แก้ไขข้อความ / หัวข้อในแอปedit”)
+            const title = itemEl.querySelector('.hub-item-title');
+            const t = title ? String(window.hubItemOrigText(title) || '').trim() : '';
+            nameEl.innerHTML = 'เมนู: <b>' + _hubEsc(t || window.hubIdOf(itemEl)) + '</b><br>ตอนนี้อยู่ในหัวข้อ “' + _hubEsc(window.hubMoveCatLabel(cur)) + '” — เลือกหัวข้อปลายทาง';
+        }
+        const list = document.getElementById('hubMoveCatList');
+        if (!list) return;
+        list.innerHTML = '';
+        window.hubCatsRead().forEach(c => {
+            const isCur = c.cat === cur;
+            const count = Array.from(wrap.querySelectorAll('.hub-item')).filter(x => (x.dataset.cat || '') === c.cat).length;
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'manual-timer-btn';
+            b.style.cssText = 'width: 100%; justify-content: center; margin-bottom: 8px;' + (isCur ? ' opacity: 0.5;' : '');
+            b.disabled = isCur;
+            b.textContent = (isCur ? '✔ ' : '↪ ') + (c.label || c.cat) + ' (' + count + ')' + (isCur ? ' · หัวข้อปัจจุบัน' : '');
+            if (!isCur) b.addEventListener('click', (e) => { e.stopPropagation(); window.hubMoveToCatPick(c.cat); });
+            list.appendChild(b);
+        });
+        window.toggleModal('hubMoveCatModal', true);
+    };
+    window.hubMoveToCatPick = (catId) => {
+        window.toggleModal('hubMoveCatModal', false);
+        const el = window.__hubMoveItemEl; const wrap = window.hubWrap();
+        if (!el || !wrap || !catId) return;
+        const id = window.hubIdOf(el);
+        if ((el.dataset.cat || '') === catId) return;
+        // 📐 ลำดับใหม่: แทรก “ต่อท้ายหัวข้อปลายทาง” (ตำแหน่งที่คาดเดาได้ — ไม่ใช่กลางหัวข้อแบบสุ่ม)
+        const others = Array.from(wrap.querySelectorAll('.hub-item')).filter(x => x !== el);
+        const order = others.map(x => window.hubIdOf(x));
+        let pos = order.length;
+        others.forEach((x, i) => { if ((x.dataset.cat || '') === catId) pos = i + 1; });
+        order.splice(pos, 0, id);
+        el.dataset.cat = catId; // ให้ hubSaveCatsFromDom ตอนออกโหมดอ่านค่าใหม่ได้ทันที
+        const catOf = {}; catOf[id] = catId;
+        try { window.applyHubLayout({ catOf: catOf, order: order }); } catch (e) {}
+        try { if (typeof window.refreshMenuEditButtons === 'function') window.refreshMenuEditButtons(); } catch (e) {}
+        try { window.showToast('ย้ายเมนูไปหัวข้อ “' + window.hubMoveCatLabel(catId) + '” แล้ว — กดพื้นที่ว่างเพื่อบันทึก'); } catch (e) {}
+        try { navigator.vibrate && navigator.vibrate(20); } catch (e) {}
     };
     // ชื่อเดิม (เรียกจาก applyHubLayout) — ให้ตัวใหม่จัดการทั้งสองที่
     window.hubWireItemEditors = () => window.refreshMenuEditButtons();
@@ -13582,6 +13675,7 @@
         ['2026-09-16', '🖐️ ลาก “หัวข้อ” ในหน้าตั้งค่าการใช้งานได้เอง — ย้ายทั้งหัวข้อพร้อมเมนูข้างใน'],
         ['2026-09-16', '⬆️⬇️ ปุ่ม ▲▼ + ✏️ ท้ายหัวข้อ — ย้ายลำดับ/เปลี่ยนชื่อหัวข้อ สำหรับเครื่องที่ลากไม่ถนัด'],
         ['2026-09-16', '📜 ลากเมนู/หัวข้อค้างที่ขอบจอ = จอเลื่อนเอง — ย้ายข้ามหัวข้อได้ทุกอัน'],
+        ['2026-09-16', '🔀 ปุ่ม “ย้ายไปหัวข้อ…” ท้ายเมนูในโหมดลาก — ย้ายโดยไม่ต้องลาก พร้อมนับเมนู'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
