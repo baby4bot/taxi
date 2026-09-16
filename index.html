@@ -13825,6 +13825,7 @@
         ['2026-09-16', '🗺️ ไม่มีสิทธิ์ = ไม่โหลดแผนที่เลย (ไม่มีเสียง/ไม่มีปุ่มเปิดคืน) ประหยัดโควตาจริง'],
         ['2026-09-16', '🗺️ หน้าตั้งค่ามินิแมพมีปุ่ม “เปิดมินิแมพให้บัญชีของฉัน” พร้อมบอกที่มาของสิทธิ์'],
         ['2026-09-16', '🐞 เปิดแอปใหม่ไม่ขึ้น “PIN ถูกรีเซ็ตโดยผู้ดูแลระบบ” ปลอมอีก — แยก ไม่รู้ค่า/ว่างจริง'],
+        ['2026-09-16', '⌨️ บนคอมพิวเตอร์กด ESC ปิดหน้าต่างบนสุดได้ เหมือนกดกากบาท'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -14941,6 +14942,41 @@
         else if (e.key === 'Backspace') { e.preventDefault(); window.pinPadPress('del'); }
         else if (e.key === 'Escape') { window.pinPadClose(); }
     });
+    // ⌨️ (17 ก.ย. 69) ปุ่ม ESC บนคอมพิวเตอร์ = ปิดหน้าต่างบนสุด เหมือนกดกากบาท (ผู้ใช้ขอ — ไม่ต้องเลื่อนเมาส์ไปหาปุ่ม)
+    //    ปิดด้วย toggleModal() ซึ่งเป็นทางเดียวกับปุ่มปิดของแต่ละหน้าต่าง (ไม่เขียนตรรกะปิดซ้ำ)
+    //    ข้อยกเว้นที่ต้องใช้ทางของตัวเอง:
+    //      · กล่องที่มีคำตอบผูกอยู่ (Promise) → ต้อง “กดปุ่มยกเลิกของมันจริง ๆ” ไม่งั้นโค้ดที่รอผลค้าง (sysCustomConfirm · sysReauth)
+    //      · กล่องตั้ง PIN → pinSetupClose() (คืนคำตอบว่ายกเลิกให้ด้วย)
+    //      · หน้าจอที่ต้องกรอกให้จบ/ห้ามปิด → loginOverlay · welcomeSetupModal
+    window.__escCloseTop = () => {
+        const pad = document.getElementById('pinPad');
+        if (pad && getComputedStyle(pad).display !== 'none') { try { window.pinPadClose(); } catch (e) {} return 'pinPad'; }
+        const menu = document.getElementById('sideMenuOverlay');
+        const menuOpen = !!(menu && menu.style.display !== 'none' && menu.style.opacity !== '0');
+        // 2 คลาสคือกล่องทุกแบบในแอป: .modal-overlay (40 กล่อง) + .custom-confirm-overlay (5 กล่อง เช่น ยืนยันตัวตน/สรุปเส้นทาง)
+        const os = Array.from(document.querySelectorAll('.modal-overlay, .custom-confirm-overlay')).filter(el => el && el.id && getComputedStyle(el).display !== 'none');
+        const zOf = (el) => { const z = parseInt(getComputedStyle(el).zIndex, 10); return isNaN(z) ? 0 : z; };
+        let top = null, best = -1;
+        os.forEach((el, i) => { const k = zOf(el) * 1000 + i; if (k > best) { best = k; top = el; } });
+        // เมนูแฮมเบอร์เกอร์อยู่ชั้นบนสุดของตัวเอง (z 9000+) — ถ้าเปิดค้างไว้ให้ปิดก่อนหน้าต่าง
+        if (menuOpen && (!top || zOf(menu) > zOf(top))) { try { window.toggleSideMenu(false); } catch (e) {} return 'sideMenu'; }
+        if (!top) return '';
+        if (top.id === 'loginOverlay' || top.id === 'welcomeSetupModal') return ''; // หน้าจอที่ต้องกรอกให้จบ — ห้ามปิดด้วย ESC
+        // ปิดแบบ “เหมือนกดปุ่มกากบาทของหน้าต่างนั้นจริง ๆ” → ใช้ปุ่มปิด/ปุ่มยกเลิกของกล่องเอง
+        // จำเป็นเพราะบางกล่องต้องล้างสถานะต่อ (เช่น ปุ่ม X ของสรุปเส้นทางเรียก closeRoutePreview ที่ล้างเส้นทางรอเริ่ม)
+        const btn = top.querySelector('.btn-close-floating') || top.querySelector('.btn-cc-cancel');
+        if (btn) { try { btn.click(); } catch (e) {} return top.id; }
+        try { window.toggleModal(top.id, false); } catch (e) {}
+        return top.id;
+    };
+    // ใช้เฟสจับก่อน (capture) เพื่อให้ ESC ที่ปิด “แป้นตัวเลข” ไม่ลอดไปปิดหน้าต่างที่ซ่อนอยู่ข้างหลังในจังหวะเดียวกัน
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' && e.key !== 'Esc') return;
+        const t = e.target;
+        if (t && String(t.tagName || '').toUpperCase() === 'SELECT') return; // ให้เบราว์เซอร์ปิดดรอปดาวน์ของ select เอง
+        let closed = ''; try { closed = window.__escCloseTop() || ''; } catch (err) {}
+        if (closed) { try { e.preventDefault(); e.stopPropagation(); } catch (err) {} }
+    }, true);
     // ผูกคีย์แพดกับช่อง PIN — แตะช่องไหน คีย์แพดเด้งของช่องนั้น
     window.pinBindFields = () => {
         const f1 = document.getElementById('pinNew1'); const f2 = document.getElementById('pinNew2');
