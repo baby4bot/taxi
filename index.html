@@ -13824,6 +13824,7 @@
         ['2026-09-16', '🗺️ แอดมินเปิดมินิแมพตามยศที่ตั้งค่าสิทธิ์ · เฉพาะบางคนเปิดในหน้าแก้ไขสมาชิก'],
         ['2026-09-16', '🗺️ ไม่มีสิทธิ์ = ไม่โหลดแผนที่เลย (ไม่มีเสียง/ไม่มีปุ่มเปิดคืน) ประหยัดโควตาจริง'],
         ['2026-09-16', '🗺️ หน้าตั้งค่ามินิแมพมีปุ่ม “เปิดมินิแมพให้บัญชีของฉัน” พร้อมบอกที่มาของสิทธิ์'],
+        ['2026-09-16', '🐞 เปิดแอปใหม่ไม่ขึ้น “PIN ถูกรีเซ็ตโดยผู้ดูแลระบบ” ปลอมอีก — แยก ไม่รู้ค่า/ว่างจริง'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -14285,8 +14286,28 @@
             try {
                 if (typeof window.pinCacheGet === 'function') {
                     const cachedPin = window.pinCacheGet(loggedInUserId);
-                    if (data.pinHash) { if (cachedPin !== data.pinHash) window.pinCacheSet(loggedInUserId, data.pinHash); }
-                    else if (cachedPin) { window.pinCacheSet(loggedInUserId, ''); window.showToast('PIN ของบัญชีนี้ถูกรีเซ็ตโดยผู้ดูแลระบบ — ตั้ง PIN ใหม่ได้ที่ตั้งค่าโปรไฟล์', true); }
+                    // 🐞 (17 ก.ย. 69) ต้องแยก “ไม่รู้ค่า” ออกจาก “รู้ว่าว่าง”:
+                    //    __applyUserDocUI ถูกเรียกด้วยสำเนาในเครื่องด้วย (ตอนบูต) ซึ่ง “ไม่มีฟิลด์ pinHash”
+                    //    ของเดิมอ่านค่าว่างแล้วเหมาว่าแอดมินรีเซ็ต → ล้าง PIN ในเครื่องทิ้ง + เด้งเตือนทุกครั้งที่เปิดแอป
+                    //    (แล้วสตรีมจริงก็เติมแคชกลับ ⇒ เปิดครั้งถัดไปเด้งอีก = วนไม่จบ)
+                    //    ตอนนี้: อัปเดต/เตือนเฉพาะเมื่อข้อมูล “บอกชัด” ว่ามีหรือไม่มี PIN เท่านั้น
+                    const knowsPin = !!(data && data.pinHash !== undefined);
+                    if (knowsPin) {
+                        if (data.pinHash) {
+                            if (cachedPin !== data.pinHash) window.pinCacheSet(loggedInUserId, data.pinHash);
+                        } else if (cachedPin) {
+                            window.pinCacheSet(loggedInUserId, '');   // เซิร์ฟเวอร์ว่างจริง → ล้างแคชในเครื่องนี้
+                            // 🔔 เตือนเฉพาะ “การรีเซ็ตของผู้ดูแลระบบ” จริง (มี pinResetAt ที่ยังไม่เคยเตือน)
+                            //    ถ้าผู้ใช้ลบ PIN เอง (ไม่มี pinResetAt) = ไม่ต้องเตือน
+                            const seenKey = 'taxi_pin_reset_seen_' + loggedInUserId;
+                            const at = Number(data.pinResetAt || 0);
+                            let seen = 0; try { seen = Number(localStorage.getItem(seenKey) || 0); } catch (e) {}
+                            if (at > seen) {
+                                try { localStorage.setItem(seenKey, String(at)); } catch (e) {}
+                                window.showToast('PIN ของบัญชีนี้ถูกรีเซ็ตโดยผู้ดูแลระบบ — ตั้ง PIN ใหม่ได้ที่ตั้งค่าโปรไฟล์', true);
+                            }
+                        }
+                    }
                 }
             } catch (e) {}
             if (typeof window.maybeShowResumeBanner === 'function') window.maybeShowResumeBanner();
