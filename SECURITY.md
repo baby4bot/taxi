@@ -92,9 +92,11 @@ firebase deploy --only firestore:rules
 | 12 | `settings/menuOrder` | ลำดับเมนูส่วนกลาง (`side` · `hub` · `hubCats` · `hubItemCat`) | เขียนได้ |
 | 13 | `settings/ui_prefs` | แถบเลื่อน/ธีมของหน้าจอ (`sbOn` · `sbW` · `sbA`) | เขียนได้ |
 | 14 | `settings/permission_config` · `settings/app_config` (+ `appConfig` เดิม) · `settings/toast_messages` | ตั้งค่าสิทธิ์ · สวิตช์บันทึกกิจกรรม · ข้อความแจ้งเตือน | เขียนได้ |
-| 15 | `system/service_data` | รายการ Portal / บริการ (`categories`) | เขียนได้ |
+| 15 | `settings/reserved_usernames` | รายการ **ไอดีต้องห้าม** (`list` = บรรทัดละคำ · เติม `!` = ตรงเป๊ะเท่านั้น) + `selfChange` (จำนวนครั้งที่ตั้งไอดีเองได้ · 0 = ล็อก) | เขียนได้ (ควรเป็นแอดมิน — ดู `firestore-auth.rules`) |
+| 16 | `system/service_data` | รายการ Portal / บริการ (`categories`) | เขียนได้ |
 
-ℹ️ **ค่าที่ตรวจกับของจริงบนเซิร์ฟเวอร์ (15 ก.ย. 2569):** เอกสารใน `settings` มี 9 ใบ — `app_config` · `app_texts` · `changelog` · `loading_screen` · `menuOrder` · `permission_config` · `roles` · `toast_messages` · `ui_prefs` (ครบตามตาราง)
+ℹ️ **ค่าที่ตรวจกับของจริงบนเซิร์ฟเวอร์ (17 ก.ย. 2569):** เอกสารใน `settings` มี **10 ใบ** — `app_config` · `appConfig` · `app_texts` · `changelog` · `loading_screen` · `menuOrder` · `permission_config` · `reserved_usernames` · `roles` · `toast_messages` · `ui_prefs` (ครบตามตาราง — `reserved_usernames` เพิ่งสร้างครบ 32 คำ เมื่อ 17 ก.ย. 2569 ก่อนหน้านั้นแอปอ่านได้ 404 ทุกครั้งที่เปิด)
+⚠️ **กติกาที่วางอยู่จริงบนโปรเจกต์ตอนนี้ยัง “ไม่ตรงไฟล์”** — ทดสอบเมื่อ 17 ก.ย. 2569: เขียน `settings/__rules_probe_zzz` (docId ที่ไม่อยู่ในรายการที่อนุญาต) **ผ่าน** ⇒ ของจริงยังเปิดกว้างกว่าทั้ง `firestore.rules` และ `firestore-auth.rules` ในโฟลเดอร์นี้ · ต้องเปลี่ยนไปใช้ `firestore-auth.rules` ในคอนโซลก่อน จึงจะได้กติกา docId ที่เขียนไว้ที่นี่
 ℹ️ **กติกาเดิม (ก่อน 15 ก.ย.) ยังไม่ครบ** — ไม่มี `app_texts` · `loading_screen` · `ui_prefs` และไม่รู้จักฟิลด์ `calib` ในเที่ยว
 ⇒ ถ้าใครวางกติกาเก่าไว้ **การบันทึกข้อความ/อัปโหลดหน้าจอโหลด/ค่าเทียบมิเตอร์จะถูกปฏิเสธ** — ให้ใช้ไฟล์นี้ฉบับล่าสุดเสมอ
 ℹ️ ฟิลด์ที่แอปเขียนได้สองรูปแบบ (`menuOrder` เป็น object ผ่าน SDK หรือ JSON string ผ่าน REST) กติกาต้องยอมรับทั้งคู่ — ใช้ตัวช่วย `shapeOk()`

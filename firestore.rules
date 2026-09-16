@@ -141,11 +141,14 @@ service cloud.firestore {
     // ─────────────────────────── ⚙️ เอกสารตั้งค่าระบบ ───────────────────────────
     // เขียนได้เฉพาะเอกสารที่แอปใช้จริง และห้ามลบทั้งเอกสาร
     // ⚠️ รายชื่อนี้คือ "ทุกเอกสารใน settings ที่แอปเขียน" — ถ้าแอปเพิ่มเอกสารใหม่ ต้องเพิ่มที่นี่ ไม่งั้นบันทึกไม่ผ่าน
+    //    ตรวจกับโค้ดจริง 16 ก.ย. 69: appConfig · app_config · app_texts · changelog · loading_screen · menuOrder ·
+    //    permission_config · reserved_usernames · roles · toast_messages · ui_prefs (ครบ 11 ใบ — reserved_usernames เคยตกหล่น)
     match /settings/{docId} {
       allow read: if true;
       allow create, update: if
         docId in ['roles', 'changelog', 'toast_messages', 'app_config', 'appConfig',
-                  'permission_config', 'menuOrder', 'app_texts', 'loading_screen', 'ui_prefs'] &&
+                  'permission_config', 'menuOrder', 'app_texts', 'loading_screen', 'ui_prefs',
+                  'reserved_usernames'] &&
         maxKeys(80) &&
         listLe('entries', 600) &&                        // ประวัติเวอร์ชันรายวัน (การ์ดวันละใบ + bullet)
         mapLe('items', 600) &&                           // ข้อความที่แอดมินแก้ (app_texts) / สิทธิ์ (roles)
@@ -153,7 +156,8 @@ service cloud.firestore {
         shapeOk('side', 20000, 500) &&                   // settings/menuOrder (array ผ่าน SDK · JSON string ผ่าน REST)
         shapeOk('hub', 40000, 500) &&
         shapeOk('hubCats', 20000, 200) &&
-        shapeOk('hubItemCat', 20000, 200);
+        shapeOk('hubItemCat', 20000, 200) &&
+        strLe('list', 4000) && numBetween('selfChange', 0, 999);   // settings/reserved_usernames: รายการ “บรรทัดละคำ” + จำนวนครั้งที่ตั้งไอดีเองได้
       allow delete: if false;
     }
     match /system/{docId} {

@@ -138,16 +138,19 @@ service cloud.firestore {
     // อ่านได้ทุกคนที่ล็อกอิน (แอปต้องใช้เรท/สิทธิ์/เมนู/ข้อความ) · เขียนได้เฉพาะแอดมิน/ผู้จัดการ
     // ยกเว้น settings/changelog → ทุกคนช่วยอัปเดตได้ (แอปเขียนเองหลังล็อกอินทุกครั้ง)
     // ⚠️ รายชื่อ docId ต้องครบเท่าที่แอปเขียน: roles · changelog · toast_messages · app_config · appConfig ·
-    //    permission_config · menuOrder · app_texts · loading_screen · ui_prefs
+    //    permission_config · menuOrder · app_texts · loading_screen · ui_prefs · reserved_usernames
+    //    (reserved_usernames = “ไอดีต้องห้าม” เขียนโดยแอดมินเท่านั้น — ดูเงื่อนไข isStaff() ด้านล่าง)
     match /settings/{docId} {
       allow read: if signedIn();
       allow create, update: if
         docId in ['roles', 'changelog', 'toast_messages', 'app_config', 'appConfig',
-                  'permission_config', 'menuOrder', 'app_texts', 'loading_screen', 'ui_prefs'] &&
+                  'permission_config', 'menuOrder', 'app_texts', 'loading_screen', 'ui_prefs',
+                  'reserved_usernames'] &&
         maxKeys(80) &&
         listLe('entries', 600) && mapLe('items', 600) && strLe('image', 900000) &&
         shapeOk('side', 20000, 500) && shapeOk('hub', 40000, 500) &&
-        shapeOk('hubCats', 20000, 200) && shapeOk('hubItemCat', 20000, 200) && (
+        shapeOk('hubCats', 20000, 200) && shapeOk('hubItemCat', 20000, 200) &&
+        strLe('list', 4000) && numBetween('selfChange', 0, 999) && (   // settings/reserved_usernames (ไอดีต้องห้าม)
           isStaff() ||
           (docId == 'changelog' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['entries', 'syncedHash']))
         );
