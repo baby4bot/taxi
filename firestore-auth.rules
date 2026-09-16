@@ -162,6 +162,20 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─────────────────────── 🔗 การผูกบัญชี Google (authLink) ───────────────────────
+    // authLink/{googleUid} = { docId, email, linkedAt } — ดัชนี “Google บัญชีนี้เป็นของบัญชีแอปไหน”
+    // ⚠️ ต้อง “อนุญาตลบ” ไว้เสมอ — แอปลบตอน ① ปลดลิงก์เอง ② แอดมินลบบัญชี ③ ล้างลิงก์ค้าง
+    //    ถ้าห้ามลบ: บัญชีที่ถูกลบจะทิ้งลิงก์ค้าง ⇒ Gmail นั้นสมัคร/ผูกกับบัญชีใหม่ไม่ได้ตลอดกาล
+    match /authLink/{uid} {
+      allow read: if signedIn();
+      // ผูก/แก้: เจ้าของลิงก์ หรือแอดมิน/ผู้จัดการ
+      allow create, update: if signedIn() && (isStaff() || request.resource.data.docId == request.auth.uid) &&
+        maxKeys(10) && strLe('docId', 60) && strLe('email', 200) &&
+        numBetween('linkedAt', 1000000000000, 9999999999999);
+      // ลบ: เจ้าของลิงก์ หรือแอดมิน/ผู้จัดการ (ปลดลิงก์ · ลบบัญชี · ล้างลิงก์ค้าง)
+      allow delete: if signedIn() && (isStaff() || resource.data.docId == request.auth.uid);
+    }
+
     // ─────────────────────────── 🚫 ที่เหลือทั้งหมด: ปฏิเสธ ───────────────────────────
     match /{document=**} {
       allow read, write: if false;

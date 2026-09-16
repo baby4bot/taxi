@@ -13732,6 +13732,9 @@
         ['2026-09-16', '🔗 แอดมินผูก Google ได้เอง — การ์ดสมาชิกบอกว่าผูกได้ทุกตำแหน่ง + ปุ่มพาไปโปรไฟล์'],
         ['2026-09-16', '🛡 ไอดีต้องห้าม 32 คำขึ้นเซิร์ฟเวอร์แล้ว — เปิดแอปไม่มี 404 อีก'],
         ['2026-09-16', '🐞 โปรไฟล์ไม่โชว์อีเมล Google ของบัญชีอื่นอีก — เช็คเจ้าของค่าในเครื่องก่อนใช้'],
+        ['2026-09-16', '🧹 ลบบัญชีแล้วล้างการผูก Google ให้ด้วย — Gmail นั้นสมัคร/ผูกใหม่ได้ทันที'],
+        ['2026-09-16', '🧹 ผูก Google เจอลิงก์ค้างของบัญชีที่ถูกลบ = ล้างเอง + บอกชื่อเจ้าของเดิม'],
+        ['2026-09-16', '🧹 แอดมินมีปุ่ม “ตรวจลิงก์ค้าง” ในหน้าจัดการผู้ใช้ — เห็นรายการก่อนลบ'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -14998,7 +15001,18 @@
             const uid = r.user.uid;
             const prev = await window.__fsRestGetDoc('authLink/' + uid).catch(() => null);
             if (prev && prev.docId && String(prev.docId) !== String(loggedInUserId)) {
-                return window.showToast('Google บัญชีนี้ผูกกับบัญชีอื่นอยู่แล้ว (' + (prev.email || '') + ') — เลือกบัญชี Google อื่น', true);
+                // 🔎 (17 ก.ย. 69) 🐞 ของเดิมปฏิเสธทันที โดยไม่เช็คว่า “บัญชีปลายทางยังมีจริงไหม”
+                //    ⇒ ลบบัญชีที่มี Gmail นั้นแล้ว authLink ค้างอยู่ = ผูกใหม่ไม่ได้ตลอดกาล (เคสจริงจากผู้ใช้)
+                //    ∴ อ่านปลายทางก่อน: ไม่มีเอกสาร (404) หรือเป็นเอกสารผี (ว่างเปล่า/ไม่มี username) = ลิงก์ค้าง → ล้างแล้วผูกต่อ
+                let owner = null;
+                try { owner = await window.__fsTimeout(window.__fsRestGet(prev.docId), 6000); } catch (e) { owner = null; }
+                const ghost = window.__isGhostUserDoc(owner);
+                if (!ghost) {
+                    return window.showToast('Google บัญชีนี้ผูกกับบัญชีอื่นอยู่แล้ว (' + (prev.email || '') + (owner.username ? ' · @' + owner.username : '') + ') — เลือกบัญชี Google อื่น', true);
+                }
+                try { await window.__fsRestDeleteDoc('authLink/' + uid); } catch (e) {}
+                try { await window.__fsTimeout(recordActivityLog(loggedInUserId, 'ล้างลิงก์ Google ค้าง', 'authLink ของ ' + (prev.email || uid) + ' ชี้ไปบัญชีที่ถูกลบแล้ว — ล้างอัตโนมัติก่อนผูกกับบัญชีนี้', 'security'), 4000); } catch (e) {}
+                window.showToast('พบลิงก์ค้างของบัญชีที่ถูกลบไปแล้ว — ล้างให้อัตโนมัติแล้ว กำลังผูกให้บัญชีนี้…');
             }
             await window.__fsRestPatchDoc('authLink/' + uid, { docId: loggedInUserId, email: r.user.email || '', linkedAt: Date.now() });
             // เก็บลง “บัญชีผู้ใช้” ด้วย (ไม่ใช่แค่ localStorage) → เครื่องอื่นที่ล็อกอินบัญชีเดียวกันจะเห็นสถานะผูกถูกต้อง
@@ -15414,6 +15428,93 @@
         if (!res.ok) throw new Error('REST query authLink failed ' + res.status);
         const arr = await res.json();
         return (Array.isArray(arr) ? arr : []).filter(x => x && x.document).map(x => ({ id: decodeURIComponent(x.document.name.split('/').pop()), email: (window.__fsFieldsToObj(x.document.fields) || {}).email || '' }));
+    };
+    // 🔗 (17 ก.ย. 69) หา “ทุก” authLink ที่ชี้มาที่บัญชีนี้ — ของเดิมมีแต่ query limit 1 ใช้ตอนลบบัญชีไม่ได้
+    //    ⇒ ลบบัญชีแล้ว authLink ไม่ถูกล้าง → Gmail นั้น “ค้าง” จนสมัคร/ผูกใหม่ไม่ได้ (เคสจริงจากผู้ใช้)
+    window.__googleLinksOf = async (docId) => {
+        const out = [];
+        try {
+            const res = await fetch(`${__fsBase}:runQuery?key=${__FS_KEY}`, { method: 'POST', headers: await window.__fsHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'authLink' }], where: { fieldFilter: { field: { fieldPath: 'docId' }, op: 'EQUAL', value: { stringValue: String(docId) } } }, limit: 10 } }) });
+            if (res.ok) {
+                const arr = await res.json();
+                (Array.isArray(arr) ? arr : []).forEach(x => {
+                    if (!x || !x.document) return;
+                    const f = window.__fsFieldsToObj(x.document.fields) || {};
+                    out.push({ googleUid: decodeURIComponent(x.document.name.split('/').pop()), email: f.email || '', docId: f.docId || '' });
+                });
+            }
+        } catch (e) {}
+        // เผื่อ authLink ตกหล่น/ฟิลด์ docId หาย → ใช้ googleUid ที่เก็บบนเอกสารบัญชีเป็นเบาะแสเพิ่ม
+        try {
+            const u = (window.currentAdminUsers || []).find(x => String(x.uid) === String(docId));
+            if (u && u.googleUid && !out.some(x => x.googleUid === String(u.googleUid))) out.push({ googleUid: String(u.googleUid), email: u.googleEmail || u.email || '', docId: String(docId) });
+        } catch (e) {}
+        return out;
+    };
+    // 👻 เอกสาร “ผี” = ไม่มีเอกสารเลย (404) หรือมีอยู่แต่ไม่มีข้อมูลบัญชีอะไรเลย
+    //    ใช้ตัดสิน “ลิงก์ค้าง” แบบระวังตัว: บัญชีจริงต้องมี username หรือ displayName หรือ createdAt อย่างน้อยหนึ่งอย่าง
+    //    ⛔ ห้ามใช้เงื่อนไขหลวมกว่า “ไม่มี username” เฉย ๆ — บัญชีจริงบางบัญชีอาจยังว่าง username ได้
+    window.__isGhostUserDoc = (d) => (!d || (!String(d.username || '').trim() && !String(d.displayName || '').trim() && !d.createdAt));
+    // 🧹 ล้างการผูก Google ของ “บัญชีนี้” — ใช้ตอนลบบัญชีและตอนล้างลิงก์ค้าง
+    //    ⛔ ปลอดภัยด้วยการ “อ่านของจริงก่อนลบ” : ลบเฉพาะ authLink ที่ docId ตรงกับบัญชีเป้าหมายจริง ๆ
+    window.__cleanupGoogleLinks = async (docId) => {
+        if (!docId) return 0;
+        const links = await window.__googleLinksOf(docId);
+        let n = 0;
+        for (const l of links) {
+            if (!l || !l.googleUid) continue;
+            try {
+                // อ่านของจริงก่อนลบ — ลบเฉพาะเมื่อ “รู้แน่” ว่าชี้มาที่บัญชีนี้
+                let cur = null, missing = false;
+                try { cur = await window.__fsRestGetDoc('authLink/' + l.googleUid); }
+                catch (e) { missing = /\b404\b/.test(String((e && e.message) || e)); }
+                // ⛔ อ่านไม่ได้เพราะเน็ต/ไม่ใช่ 404 = “ไม่รู้จริง” → ข้ามไว้ ปลอดภัยกว่าลบพลาด
+                if (!missing && (!cur || String(cur.docId) !== String(docId))) continue;
+                try { await window.__fsRestDeleteDoc('authLink/' + l.googleUid); n++; }
+                catch (e) { if (/\b404\b/.test(String((e && e.message) || e))) n++; }   // ลบไปแล้ว/หายไป = ถือว่าล้างแล้ว
+            } catch (e) {}
+        }
+        return n;
+    };
+    // 🧹 (17 ก.ย. 69) เครื่องมือแอดมิน: ตรวจ/ล้าง “ลิงก์ Google ค้าง”
+    //    ลิงก์ค้าง = authLink ที่ชี้ไปบัญชีที่ถูกลบไปแล้ว หรือเอกสารผี (ว่าง/ไม่มี username)
+    //    ผลเสียถ้าไม่ล้าง: Gmail นั้นสมัครใหม่/ผูกกับบัญชีอื่นไม่ได้ (แจ้ง “ผูกกับบัญชีอื่นอยู่แล้ว”)
+    //    ⛔ อ่านเฉพาะตอนแอดมินกดเอง + ข้ามบัญชีที่มีในรายชื่อที่โหลดอยู่แล้ว (ไม่ยิงอ่านซ้ำ) + ยืนยันก่อนลบ
+    window.adminScanStaleGoogleLinks = async () => {
+        try { if (!window.currentUserPerms().canReset) return window.showToast('คุณไม่มีสิทธิ์ตรวจลิงก์ค้าง', true); } catch (e) { return; }
+        const btn = document.getElementById('staleGmailScanBtn');
+        const old = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = 'กำลังตรวจ…'; }
+        try {
+            const res = await fetch(`${__fsBase}:runQuery?key=${__FS_KEY}`, { method: 'POST', headers: await window.__fsHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'authLink' }], limit: 200 } }) });
+            if (!res.ok) throw new Error('scan failed ' + res.status);
+            const arr = await res.json();
+            const rows = (Array.isArray(arr) ? arr : []).filter(x => x && x.document).map(x => {
+                const f = window.__fsFieldsToObj(x.document.fields) || {};
+                return { googleUid: decodeURIComponent(x.document.name.split('/').pop()), docId: String(f.docId || ''), email: f.email || '' };
+            });
+            const known = new Set((window.currentAdminUsers || []).map(x => String(x.uid)));
+            const stale = [];
+            for (const r of rows) {
+                if (!r.docId) { stale.push(r); continue; }
+                if (known.has(r.docId)) continue;   // อยู่ในรายชื่อที่โหลดอยู่ = บัญชียังมีจริง → ไม่ต้องยิงอ่าน
+                const doc = await window.__fsTimeout(window.__fsRestGet(r.docId), 6000).catch(() => null);
+                if (window.__isGhostUserDoc(doc)) stale.push(r);
+            }
+            if (!stale.length) { return window.showToast('ตรวจ ' + rows.length + ' ลิงก์แล้ว — ไม่พบลิงก์ค้าง ✅'); }
+            const ok = await window.showCustomConfirm('ล้างลิงก์ Google ค้าง',
+                'พบ ' + stale.length + ' ลิงก์ที่ชี้ไปบัญชีที่ถูกลบ/ว่างเปล่า:\n' +
+                stale.slice(0, 8).map(s => '• ' + (s.email || s.googleUid) + ' → ' + (s.docId || '(ไม่มี docId)')).join('\n') +
+                (stale.length > 8 ? '\n… และอีก ' + (stale.length - 8) + ' รายการ' : '') +
+                '\n\nล้างทั้งหมดใช่ไหม? (Gmail เหล่านั้นจะสมัคร/ผูกกับบัญชีใหม่ได้อีกครั้ง)', 'danger', 'ล้างลิงก์ค้าง');
+            if (!ok) return;
+            let n = 0;
+            for (const s of stale) { try { await window.__fsRestDeleteDoc('authLink/' + s.googleUid); n++; } catch (e) {} }
+            window.showToast(n ? ('ล้างลิงก์ค้างแล้ว ' + n + ' รายการ — สมัคร/ผูก Gmail เหล่านั้นได้แล้ว ✅') : 'ล้างไม่สำเร็จ — ตรวจเน็ตแล้วลองใหม่', !n);
+            // ⏱ มีเพดานเวลา — ถ้าเน็ตค้าง ต้องไม่ทำให้ปุ่มค้างอยู่ที่ “กำลังตรวจ…” ตลอด
+            try { await window.__fsTimeout(recordActivityLog(loggedInUserId, 'ล้างลิงก์ Google ค้าง', 'ล้าง ' + n + ' รายการ จาก ' + rows.length + ' ลิงก์ที่ตรวจ', 'security'), 4000); } catch (e) {}
+        } catch (e) { window.showToast('ตรวจลิงก์ค้างไม่สำเร็จ — ตรวจเน็ตแล้วลองใหม่', true); }
+        finally { if (btn) { btn.disabled = false; btn.innerHTML = old || '🧹 ตรวจลิงก์ค้าง'; } }
     };
     // ⛔ อ่านไม่ได้ = ถือว่า “ใช้สิทธิ์แล้ว” (fail-closed) — ปลอดภัยกว่าการปล่อยให้ตั้งชื่อได้เมื่ออ่านค่าไม่ได้
     window.__usernameChangeUsed = () => {
@@ -15873,7 +15974,17 @@
         if(isOk) {
             // 🔐 ลบบัญชีถาวรย้อนกลับไม่ได้ → ขอยืนยันตัวตนด้วยรหัสผ่านก่อน (กันเครื่องที่ล็อกอินค้างไว้)
             if (!(await window.requireReauth('ยืนยันเพื่อ “ลบบัญชี” ' + (userName || '') + ' — กรอกรหัสผ่านของคุณ'))) return window.showToast("ยกเลิกการลบ — ยังไม่ได้ยืนยันตัวตน", true);
-            try { await deleteDoc(doc(db, "users", uid)); window.showToast("ลบบัญชีเรียบร้อย"); } catch(e) { window.showToast("เกิดข้อผิดพลาดในการลบข้อมูล", true); }
+            try {
+                // 🔗 (17 ก.ย. 69) 🐞 ลบบัญชีแล้ว authLink (ดัชนี “Google นี้ผูกกับใคร”) ไม่ถูกล้าง
+                //    ⇒ Gmail นั้น “ค้าง” — สมัครใหม่/ผูกกับบัญชีอื่นไม่ได้ (แจ้ง “Google บัญชีนี้ผูกกับบัญชีอื่นอยู่แล้ว”)
+                //    ∴ ล้างลิงก์ก่อนลบเอกสารบัญชี และบอกจำนวนที่ล้างให้เห็นชัด
+                const cleared = await window.__cleanupGoogleLinks(uid);
+                await deleteDoc(doc(db, "users", uid));
+                window.showToast(cleared ? ("ลบบัญชีเรียบร้อย · ล้างการผูก Google " + cleared + " รายการ — Gmail นั้นสมัครใหม่ได้แล้ว") : "ลบบัญชีเรียบร้อย");
+                try { if (typeof window.__paintAdminUsers === 'function') window.__paintAdminUsers(); } catch (e) {}
+                // ⏱ บันทึกร่องรอยทีหลัง + มีเพดานเวลา — ออฟไลน์/เน็ตค้าง = อย่าให้ toast ไม่ขึ้นเสียที
+                try { await window.__fsTimeout(recordActivityLog(loggedInUserId, 'ลบบัญชีผู้ใช้', 'ลบ ' + (userName || uid) + (cleared ? ' · ล้างการผูก Google ' + cleared + ' รายการ' : ' · ไม่มีการผูก Google ค้างอยู่'), 'security'), 4000); } catch (e) {}
+            } catch(e) { window.showToast("เกิดข้อผิดพลาดในการลบข้อมูล", true); }
         }
     };
 
@@ -16859,7 +16970,8 @@
                        ' ' + (_gi.hasEmail ? '<b style="color:#7dd3fc;">' + window.adminSecEsc(_gi.email) + '</b>' : '<span style="color:var(--text-dim);">ยังไม่ทราบอีเมลในข้อมูลบัญชี</span>' + (canReset ? ' <button onclick="window.adminFetchGmailEmail(\'' + window.adminSecEsc(u.uid) + '\')" style="background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.45); color:#7dd3fc; border-radius:8px; font-size:11px; padding:3px 9px; cursor:pointer;">ดูอีเมล</button>' : '')))
                     : (pill('ยังไม่ได้ผูก Google', 'idle') + ' <span style="color:var(--text-dim);">เข้าแอปด้วย username/รหัสผ่านอยู่' + (__myOwnCard ? ' (บัญชีของคุณเอง)' : '') + '</span>' +
                        (__myOwnCard ? ' <button onclick="window.toggleModal(\'adminMenuModal\', false); window.toggleModal(\'profileModal\', true);" style="background:rgba(125,211,252,0.16); border:1px solid rgba(125,211,252,0.45); color:#7dd3fc; border-radius:8px; font-size:11px; padding:3px 9px; cursor:pointer;">ไปผูกที่หน้าโปรไฟล์ของฉัน</button>' : '')),
-                '↳ ผูก Google ได้<b>ทุกตำแหน่ง</b> — แอดมิน · ผู้จัดการ · ผู้ใช้ · ยศอื่นที่สร้างเพิ่ม: ให้เจ้าตัวกด “ผูกบัญชี Google” ที่หน้าโปรไฟล์ของ<b>เขาเอง</b> · ผูกแล้วเข้าได้ 2 ทาง (ปุ่ม Google หรือ username/รหัสผ่านเดิม) · แอดมินผูกแทนจากตรงนี้ไม่ได้ เพราะต้องยืนยันด้วยบัญชี Google ของเจ้าตัว');
+                '↳ ผูก Google ได้<b>ทุกตำแหน่ง</b> — แอดมิน · ผู้จัดการ · ผู้ใช้ · ยศอื่นที่สร้างเพิ่ม: ให้เจ้าตัวกด “ผูกบัญชี Google” ที่หน้าโปรไฟล์ของ<b>เขาเอง</b> · ผูกแล้วเข้าได้ 2 ทาง (ปุ่ม Google หรือ username/รหัสผ่านเดิม) · แอดมินผูกแทนจากตรงนี้ไม่ได้ เพราะต้องยืนยันด้วยบัญชี Google ของเจ้าตัว'
+                + (canReset ? ' <button id="staleGmailScanBtn" onclick="window.adminScanStaleGoogleLinks()" title="หา authLink ที่ชี้ไปบัญชีที่ถูกลบแล้ว/ว่างเปล่า — Gmail เหล่านี้จะสมัครหรือผูกใหม่ไม่ได้จนกว่าจะล้าง" style="background:rgba(251,146,60,0.16); border:1px solid rgba(251,146,60,0.45); color:#fdba74; border-radius:8px; font-size:11px; padding:3px 9px; cursor:pointer;">🧹 ตรวจลิงก์ค้าง</button>' : ''));
         } catch (e) {}
         // 🪪 บัญชี
         html += row('badge', 'บัญชี',
