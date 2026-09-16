@@ -261,6 +261,9 @@
 | หน้าเข้าสู่ระบบ → **“ดำเนินการต่อด้วย Google”** | ครั้งแรก = **สร้างบัญชีให้อัตโนมัติ** (ผู้ใช้ทั่วไป) แล้วเข้าสู่ระบบให้เลย · ครั้งต่อไปเข้า **บัญชีเดิม** |
 | หน้าโปรไฟล์ → การ์ด **“บัญชี Google (ทางเลือกล็อกอิน)”** | ผูก/ยกเลิกการผูกได้เอง (ยกเลิกต้องยืนยันด้วย PIN) · สถานะอ่านจาก **บัญชีผู้ใช้** จึงเห็นถูกต้องทุกเครื่อง |
 | บัญชีเดิมหลังผูก Google | **เข้าได้ 2 ทางเสมอ** — ปุ่ม Google หรือ username/รหัสผ่านเดิม (ระบบไม่ลบรหัสผ่าน) |
+| ลูกค้าใหม่ที่สมัครด้วย Google | เด้ง **หน้าต้อนรับ 3 ขั้น** อัตโนมัติ: ชื่อ/ทะเบียนรถ/เบอร์โทร (บังคับ) → ตั้งรหัสผ่าน (ข้ามได้) → สรุป username + วิธีเข้าใช้ 2 ทาง · **ยังไม่ครบ = กดเริ่มมิเตอร์ไม่ได้** |
+| บัญชีที่ยังไม่มีรหัสผ่าน | หน้าต่างรหัสผ่านเปลี่ยนเป็น **“ตั้งรหัสผ่าน”** (ไม่ถามรหัสเดิม) |
+| ปุ่ม “ผูกบัญชี Google” | ถ้าบัญชีนี้ผูกอยู่แล้ว ปุ่มจะขึ้นจาง **กดไม่ได้** (กันสับสน) |
 | บัญชีถูกระงับ | บล็อกพร้อมข้อความบอกชัด |
 
 **กลไก (อ่านก่อนแก้โค้ด)**
@@ -269,7 +272,8 @@
 - **uid ของ Google → เอกสาร `authLink/{uid}` = `{ docId, email, linkedAt }`** แล้วทุกอย่างเดินโฟลว์เดิม (`users/{docId}` · PIN · สิทธิ์ · บันทึกการเข้าใช้งาน) — บัญชีเดียวกับระบบ username/รหัสผ่าน ไม่มีระบบคู่ขนาน
 - `users/{docId}` จะเก็บ `authProvider: 'google'` · `authLinked: true` · `googleUid` · `googleEmail` · **`password: ''`** ⇒ บัญชีที่**สร้าง**ด้วย Google ล็อกอินด้วยรหัสผ่านไม่ได้ (ตั้ง PIN/รหัสผ่านทีหลังได้) — แต่บัญชี**เดิมที่ผูก** Google ยังมีรหัสผ่านเดิมอยู่ครบ
 - `localStorage.taxi_google_uid` เป็นข้อมูล **รายเครื่อง** จึงมี `taxi_google_for` (uid เจ้าของ) กำกับ — เครื่องที่ใช้ร่วมกันสลับบัญชีจะไม่เห็นของคนก่อน
-- ฟังก์ชัน: `__googleSignIn()` · `__resolveGoogleAccount()` · `__completeGoogleLogin()` · `__finishLogin()` (แกนเดิมที่ใช้ร่วมกับ username/รหัสผ่าน) · `linkGoogleAccount()` · `unlinkGoogleAccount()` · `__refreshGoogleLinkUi()` · `__socialErrMsg()` · `__inSocialWebview()`
+- ฟังก์ชัน: `__googleSignIn()` · `__resolveGoogleAccount()` · `__completeGoogleLogin()` · `__enterAppAsUser()` (แกนเดิมที่ใช้ร่วมกับ username/รหัสผ่าน) · `linkGoogleAccount()` · `unlinkGoogleAccount()` · `__linkedGoogleUid()` · `__refreshGoogleLinkUi()` · `__socialErrMsg()` · `__inSocialWebview()`
+- หน้าต้อนรับครั้งแรก: `__needsWelcomeSetup()` · `openWelcomeSetup()` · `saveWelcomeProfile()` · `saveWelcomePassword()` / `skipWelcomePassword()` · `closeWelcomeSetup()` · `__maybeWelcomeSetup()` (เรียกท้ายการล็อกอินทุกทาง + ด่านกันเริ่มมิเตอร์)
 - **ยังไม่เปิด** provider ในคอนโซล = กดปุ่มแล้วขึ้นข้อความไทยบอกให้ไปเปิด (ไม่พัง ไม่ค้าง)
 - เบราว์เซอร์ในแอป LINE/Facebook ล็อกอิน Google ไม่ได้ (Google บล็อก webview) — โค้ดตรวจและเตือนให้เปิดใน Chrome/Safari
 - ขั้นตอนเปิด provider ในคอนโซล + กับดักทั้งหมด: ดู **[FIREBASE-AUTH.md](FIREBASE-AUTH.md) หัวข้อ 10**
