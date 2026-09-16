@@ -485,6 +485,10 @@
 
         .modal-content-scroll { padding: 20px; flex: 1; overflow-y: auto; overflow-x: hidden; -ms-overflow-style: none; scrollbar-width: none; text-align: center; }
         .modal-content-scroll::-webkit-scrollbar { display: none; }
+        /* 🗂 แถบแท็บหมวดหมู่ในหน้าตั้งค่าการใช้งาน — อยู่แนวนอน จึงต้องคุม scrollbar-height ด้วย
+           ใช้ระบบแถบเลื่อนชุดเดียวกับหน้าต่าง (html.sb-off / --sb-w / --sb-a) → ยามค่าตรงตามที่แอดมินตั้ง */
+        .hub-tabs { -ms-overflow-style: none; scrollbar-width: none; }
+        .hub-tabs::-webkit-scrollbar { display: none; }
 
         .modal-box.standard-box { background: #1a1a1a; border: 1px solid #333; border-radius: 20px; padding: 30px 20px; width: 90%; max-width: 400px; text-align: center; position: relative; transform: scale(0.9); animation: popIn 0.3s forwards; }
 
@@ -1878,30 +1882,30 @@
               → ต้องถอยกลับเป็น auto ในบล็อกนี้ก่อน ไม่งั้นความหนาที่แอดมินตั้งจะไม่มีผลเลย (ห้ามตั้ง thin ที่นี่!)
               Firefox ไม่รองรับ ::-webkit-scrollbar → ตั้ง scrollbar-width/color ใน @supports ด้านล่าง */
         @media (hover: hover) and (pointer: fine) {
-            :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs) { scrollbar-width: auto; }
+            :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs, .hub-tabs) { scrollbar-width: auto; }
             /* ตั้งทั้ง width และ height = ใช้ค่าเดียวคุมได้ทั้งกล่องเลื่อนแนวตั้งและแถบแท็บแนวนอน */
-            :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs)::-webkit-scrollbar {
+            :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs, .hub-tabs)::-webkit-scrollbar {
                 display: block; width: var(--sb-w, 10px); height: var(--sb-w, 10px);
             }
-            :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs)::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
-            :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs)::-webkit-scrollbar-thumb {
+            :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs, .hub-tabs)::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
+            :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs, .hub-tabs)::-webkit-scrollbar-thumb {
                 background: rgba(255, 210, 77, var(--sb-a, 0.5)); border-radius: 10px;
                 border: 2px solid transparent; background-clip: padding-box;
             }
-            :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs)::-webkit-scrollbar-thumb:hover {
+            :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs, .hub-tabs)::-webkit-scrollbar-thumb:hover {
                 background: rgba(255, 210, 77, calc(var(--sb-a, 0.5) + 0.2)); background-clip: padding-box;
             }
-            html.sb-off :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs)::-webkit-scrollbar { display: none; width: 0; height: 0; }
+            html.sb-off :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs, .hub-tabs)::-webkit-scrollbar { display: none; width: 0; height: 0; }
             /* ธีมสว่าง: ทองอ่อนบนพื้นขาวมองเห็นยาก → ใช้ทองเข้ม (#b07c00 = --neon-yellow ของโหมดสว่าง) */
-            html.light :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs)::-webkit-scrollbar-thumb { background: rgba(176, 124, 0, calc(var(--sb-a, 0.5) + 0.15)); }
-            html.light :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs)::-webkit-scrollbar-thumb:hover { background: rgba(176, 124, 0, calc(var(--sb-a, 0.5) + 0.3)); }
-            html.light :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs)::-webkit-scrollbar-track { background: rgba(18, 26, 48, 0.08); }
+            html.light :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs, .hub-tabs)::-webkit-scrollbar-thumb { background: rgba(176, 124, 0, calc(var(--sb-a, 0.5) + 0.15)); }
+            html.light :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs, .hub-tabs)::-webkit-scrollbar-thumb:hover { background: rgba(176, 124, 0, calc(var(--sb-a, 0.5) + 0.3)); }
+            html.light :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs, .hub-tabs)::-webkit-scrollbar-track { background: rgba(18, 26, 48, 0.08); }
         }
         @supports (-moz-appearance: none) {
             @media (hover: hover) and (pointer: fine) {
-                :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs) { scrollbar-width: thin; scrollbar-color: rgba(255, 210, 77, var(--sb-a, 0.5)) rgba(255, 255, 255, 0.06); }
-                html.light :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs) { scrollbar-color: rgba(176, 124, 0, calc(var(--sb-a, 0.5) + 0.15)) rgba(18, 26, 48, 0.08); }
-                html.sb-off :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs) { scrollbar-width: none; }
+                :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs, .hub-tabs) { scrollbar-width: thin; scrollbar-color: rgba(255, 210, 77, var(--sb-a, 0.5)) rgba(255, 255, 255, 0.06); }
+                html.light :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs, .hub-tabs) { scrollbar-color: rgba(176, 124, 0, calc(var(--sb-a, 0.5) + 0.15)) rgba(18, 26, 48, 0.08); }
+                html.sb-off :is(.dropdown-box, .modal-content-scroll, .tracker-zoom-box, .side-menu-items, #iconPickerMatTabs, .hub-tabs) { scrollbar-width: none; }
             }
         }
         /* ===== 🔒 ล็อกการเลือก/คัดลอกข้อความทั้งแอป + ให้ลากบนรูปแล้วเลื่อนหน้าจอได้ (15 ก.ย. 69) =====
@@ -2979,6 +2983,18 @@
         .hub-cat-label .hub-cat-btn:hover { opacity: 1; }
         .hub-cat-label .hub-cat-btn.danger { color: #ff8a95; }
         .hub-drop-empty { border: 1px dashed rgba(255,210,77,0.5); border-radius: 14px; padding: 13px; margin-bottom: 4px; text-align: center; color: rgba(255,210,77,0.9); font-size: 12.5px; background: rgba(255,210,77,0.05); }
+        /* 🗂 (16 ก.ย. 69) แท็บหมวดหมู่บนสุดของหน้าตั้งค่าการใช้งาน — จิ้มชิปแล้วเห็นเฉพาะหัวข้อนั้น ไม่ต้องเลื่อนยาว */
+        .hub-tabs { display: flex; align-items: center; gap: 7px; overflow-x: auto; white-space: nowrap; padding: 4px 12px 8px; touch-action: pan-x; }
+        .hub-tab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px; border-radius: 999px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10); color: var(--text-dim); font-family: 'Kanit'; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: 0.15s; max-width: 62vw; }
+        .hub-tab .n { font-size: 10.5px; font-weight: 700; padding: 0 7px; border-radius: 999px; background: rgba(255,255,255,0.10); flex-shrink: 0; }
+        .hub-tab.on { background: rgba(255,210,77,0.15); border-color: rgba(255,210,77,0.45); color: var(--neon-yellow); }
+        .hub-tab.on .n { background: rgba(255,210,77,0.20); color: var(--neon-yellow); }
+        .hub-tab:active { transform: scale(0.96); }
+        html.light .hub-tab { background: rgba(18,26,48,0.05); border-color: rgba(18,26,48,0.12); }
+        html.light .hub-tab.on { background: rgba(176,124,0,0.12); border-color: rgba(176,124,0,0.45); color: #8a6a00; }
+        /* ซ่อนตามแท็บด้วย attribute [hidden] เท่านั้น — กันชนกับ display ที่สิทธิ์/โหมดลากตั้งไว้ */
+        #settingsHubModal .hub-item[hidden], #settingsHubModal .hub-cat-label[hidden], #settingsHubModal .hub-drop-empty[hidden] { display: none !important; }
+        /* 🗂 (16 ก.ย. 69) แท็บ 2 แถบในหน้าจัดการผู้ใช้งาน ใช้คลาสเดียวกันกับแท็บหน้าตั้งค่า (.hub-tabs/.hub-tab) — ไม่ต้องมี CSS ซ้ำ */
         html.light .hub-cat-label .hub-cat-btn { color: #8a6a00; }
         html.light .hub-cat-label .hub-cat-btn.danger { color: #b3202f; }
         html.light .hub-drop-empty { border-color: rgba(176,124,0,0.45); color: #8a6a00; background: rgba(176,124,0,0.06); }
@@ -3418,13 +3434,13 @@
             #homeOledBtn { left: 12px; bottom: 10px; width: 28px; height: 28px; }
         }
 </style>
-<div id="settingsHubModal" class="modal-overlay" style="z-index: 10003;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">ตั้งค่าการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('settingsHubModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:6px 12px;">
+<div id="settingsHubModal" class="modal-overlay" style="z-index: 10003;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">ตั้งค่าการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('settingsHubModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="hubTabs" class="hub-tabs" style="display:none;"></div><div class="modal-content-scroll" style="text-align:left; padding:6px 12px;">
 <div class="hub-cat-label" data-cat="cat-alerts">📢 ศูนย์แจ้งเตือน</div>
 <div id="hubNotifCenterItem" class="hub-item" data-cat="cat-alerts" onclick="window.openNotifCenter()"><div class="hub-item-icon" style="background:rgba(241,196,15,0.14); color:var(--neon-yellow);"><span class="material-symbols-outlined" style="font-size:24px;">notifications_active</span></div><div class="hub-item-body"><div class="hub-item-title">ศูนย์แจ้งเตือน <span id="hubNotifBadge" style="display:none; background:rgba(255,210,77,0.16); border:1px solid rgba(255,210,77,0.45); color:#ffd24d; border-radius:999px; font-size:10.5px; font-weight:700; padding:1px 8px; margin-left:5px; vertical-align:middle;"></span></div><div class="hub-item-desc">รวมเรื่องที่ต้องรู้ไว้ที่เดียว — สมาชิกใหม่ · คำขอสิทธิ์ · เที่ยวที่ยังไม่ขึ้นเซิร์ฟเวอร์ (แตะแล้วจัดการได้เลย)</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 <div class="hub-cat-label" data-cat="cat-members">👥 สมาชิก / สิทธิ์</div>
-<div id="hubAdminItem" class="hub-item" data-cat="cat-members" style="display:none;" onclick="window.toggleModal('adminMenuModal', true);"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">manage_accounts</span></div><div class="hub-item-body"><div class="hub-item-title">จัดการผู้ใช้งาน</div><div class="hub-item-desc">เพิ่ม / แก้ไข / ลบสมาชิก ดูทะเบียนรถ และประวัติการใช้งาน</div></div><span id="hubPermReqBadge" class="perm-req-count" style="display:none;"></span><span class="material-symbols-outlined hub-chevron">chevron_right</span></div><div id="hubNewUsersItem" class="hub-item" data-cat="cat-members" style="display:none;" onclick="window.openNewUsers()"><div class="hub-item-icon" style="background:rgba(46,204,113,0.13); color:#7bed9f;"><span class="material-symbols-outlined" style="font-size:24px;">person_add</span></div><div class="hub-item-body"><div class="hub-item-title" style="color:#7bed9f;">สมาชิกใหม่ <span id="hubNewUsersBadge" style="display:none; background:rgba(123,237,159,0.15); border:1px solid rgba(123,237,159,0.35); color:#7bed9f; border-radius:999px; font-size:10.5px; font-weight:700; padding:1px 8px; margin-left:5px; vertical-align:middle;"></span></div><div class="hub-item-desc">ดูว่าใครสมัครเข้ามาใหม่ — แยกตามวัน พร้อมชื่อ/เวลา/บทบาท</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
+<div id="hubAdminItem" class="hub-item" data-cat="cat-members" style="display:none;" onclick="window.toggleModal('adminMenuModal', true);"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">manage_accounts</span></div><div class="hub-item-body"><div class="hub-item-title">จัดการผู้ใช้งาน</div><div class="hub-item-desc">เพิ่ม / แก้ไข / ลบสมาชิก ดูทะเบียนรถ และประวัติการใช้งาน</div></div><span id="hubPermReqBadge" class="perm-req-count" style="display:none;"></span><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 <div id="hubRoleItem" class="hub-item" data-cat="cat-members" style="display:none;" onclick="window.openRoleSettingsModal();"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">admin_panel_settings</span></div><div class="hub-item-body"><div class="hub-item-title">ตั้งค่าสิทธิ์การใช้งาน</div><div class="hub-item-desc">กำหนดสิทธิ์ของแต่ละตำแหน่ง (Role) เช่น ผู้จัดการ / ผู้ใช้ทั่วไป</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
-<div id="hubReservedItem" class="hub-item" data-cat="cat-members" style="display:none;" onclick="window.openReservedNamesModal()"><div class="hub-item-icon" style="background:rgba(255,107,107,0.14); color:#ff8a8a;"><span class="material-symbols-outlined" style="font-size:24px;">block</span></div><div class="hub-item-body"><div class="hub-item-title">ไอดีต้องห้าม (กันเลียนแบบแอดมิน)</div><div class="hub-item-desc">คำที่ห้ามตั้งเป็นชื่อผู้ใช้ เช่น admin / support / manager — เพิ่ม/ลบเองได้ พร้อมช่องลองพิมพ์</div></div><span id="hubReservedCount" style="font-size:11.5px; color:var(--text-dim); margin-right:6px;"></span><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
+<div id="hubReservedItem" class="hub-item" data-cat="cat-members" style="display:none;" onclick="window.openReservedNamesModal()"><div class="hub-item-icon" style="background:rgba(255,107,107,0.14); color:#ff8a8a;"><span class="material-symbols-outlined" style="font-size:24px;">block</span></div><div class="hub-item-body"><div class="hub-item-title">ไอดีต้องห้าม</div><div class="hub-item-desc">ห้ามตั้งชื่อเลียนแบบแอดมิน — admin / support / manager · เพิ่ม/ลบเองได้ + ช่องลองพิมพ์</div></div><span id="hubReservedCount" style="font-size:11.5px; color:var(--text-dim); margin-right:6px;"></span><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 <div class="hub-cat-label" data-cat="cat-notify">🔔 การแจ้งเตือน</div>
 <div id="hubToastItem" class="hub-item" data-cat="cat-notify" style="display:none;" onclick="window.openToastMsgModal();"><div class="hub-item-icon"><span class="material-symbols-outlined" style="font-size:24px;">notifications</span></div><div class="hub-item-body"><div class="hub-item-title">จัดการข้อความแจ้งเตือน</div><div class="hub-item-desc">แก้ไขข้อความ / รูปไอคอน / ระยะเวลาแสดงผลของ toast ทั้งหมดในแอป</div></div><span class="material-symbols-outlined hub-chevron">chevron_right</span></div>
 <div class="hub-cat-label" data-cat="cat-system">⚙️ บริการ / ระบบ</div>
@@ -3439,14 +3455,16 @@
 <div id="textEditModal" class="modal-overlay" style="z-index: 10045;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('textEditModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>แก้ไขข้อความ / หัวข้อ</h3><button class="btn-action-floating" style="right: 60px;" onclick="window.resetTextOverrides()" title="รีเซ็ตทั้งหมดกลับเป็นต้นฉบับ"><span class="material-symbols-outlined">restart_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('textEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 8px; line-height:1.65;">แก้ชื่อหัวข้อ ป้าย ปุ่ม และคำอธิบายในแอปได้เอง — <b>ไม่ต้องแก้โค้ด</b> · บันทึกแล้วมีผลกับ <b>ทุกคนที่ใช้แอป</b>ทันที<br>บรรทัดบน = ข้อความต้นฉบับ (แก้ไม่ได้) · ช่องกรอก = ข้อความที่อยากให้แสดง (เว้นว่าง = ใช้ต้นฉบับ) · <b>ข้อความที่เหมือนกันจะเปลี่ยนพร้อมกันทุกจุด</b> — ตัวเลข/เปอร์เซ็นต์ระบบข้ามให้อัตโนมัติ</p><div style="position:relative; margin:0 4px 8px;"><input type="text" id="textEditSearch" placeholder="ค้นหาข้อความ…" oninput="window.renderTextEditList(this.value)" style="width:100%; text-align:left; padding-left:38px;"><span class="material-symbols-outlined" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:19px; color:var(--text-dim);">search</span></div><div style="margin:0 4px 8px;"><select id="textEditScreenFilter" class="txt-screen-sel" onchange="window.renderTextEditList(document.getElementById('textEditSearch') ? document.getElementById('textEditSearch').value : '')" title="เลือกดูเฉพาะข้อความที่อยู่ในหน้าจอนั้น"><option value="">ทุกหน้าจอ</option></select></div><div style="margin:0 4px 10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><button type="button" id="textEditOnlyEdited" class="txt-onlyedited" onclick="window.textEditToggleOnlyEdited()" title="แสดงเฉพาะข้อความที่แอดมินแก้ไว้ — ไม่ใช่ต้นฉบับ">✏️ ดูเฉพาะที่แก้ไว้ <span class="n" id="textEditOnlyEditedN">0</span></button><button type="button" id="textEditBulkRevert" class="txt-row-btn danger" onclick="window.openTxtBulkRevert()" title="ย้อนทุกข้อความที่แก้ไว้กลับเป็นข้อความต้นฉบับ — ติ๊กเลือกทีละรายการได้"><span class="material-symbols-outlined" style="font-size:16px;">settings_backup_restore</span> คืนค่าต้นฉบับทั้งหมด</button><span style="font-size:11px; color:var(--text-dim);">แถวที่มีป้าย ✏️ = ไม่ใช่ต้นฉบับ · 🕒 = ยังไม่บันทึก</span></div><div id="textEditStats" style="font-size:11.5px; color:var(--text-dim); margin:0 6px 8px; line-height:1.6;"></div><div id="textEditList" style="min-height:200px;"></div></div><div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="saveTextEditBtn" onclick="window.saveTextOverrides()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color:#fff;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกทั้งหมด</button></div></div></div>
 <div id="txtBulkRevertModal" class="modal-overlay" style="z-index: 10050;"><div class="modal-box standard-box" data-txt-skip onclick="event.stopPropagation()"><div class="modal-header"><h3>↺ คืนค่าข้อความต้นฉบับ</h3><button class="btn-close-floating" onclick="window.closeTxtBulkRevert()"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 16px 16px; text-align: left;"><div id="txtBulkIntro" style="font-size:12px; color:var(--text-dim); line-height:1.65; margin-bottom:10px;"></div><div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:9px;"><button type="button" class="txt-row-btn" onclick="window.txtBulkSelectAll(true)">✓ เลือกทั้งหมด</button><button type="button" class="txt-row-btn" onclick="window.txtBulkSelectAll(false)">ไม่เลือก</button><span id="txtBulkCountText" style="font-size:11.5px; color:var(--text-dim); align-self:center;"></span></div><div id="txtBulkList" style="max-height:42vh; overflow:auto;"></div><div style="margin-top:10px; font-size:11px; color:var(--text-dim); line-height:1.6;">การคืนค่ามีผลกับ <b>ทุกคนที่ใช้แอป</b> ทันที (ต้องยืนยันตัวตนก่อน) — ข้อความที่พิมพ์ค้างไว้แต่ยังไม่บันทึกจะถูกล้างไปด้วย</div><div style="display:flex; gap:8px; margin-top:12px;"><button class="manual-timer-btn" style="background:rgba(255,255,255,0.08); color:var(--text-dim); padding:0 14px;" onclick="window.closeTxtBulkRevert()">ยกเลิก</button><button id="txtBulkApplyBtn" class="manual-timer-btn" style="background:#ff4d5e; flex:1; justify-content:center; color:#fff;" onclick="window.txtBulkApply()">↺ คืนค่าที่เลือก</button></div></div></div></div>
 <div id="itemTextEditModal" class="modal-overlay" style="z-index: 10046;"><div class="modal-box standard-box" data-txt-skip onclick="event.stopPropagation()"><div class="modal-header"><h3 id="itemTextEditTitle">แก้ข้อความเมนู</h3><button class="btn-close-floating" onclick="window.toggleModal('itemTextEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><div id="itemTextEditWho" style="font-size:12.5px; color:var(--neon-yellow); font-weight:700; margin-bottom:10px; word-break:break-word;"></div><label for="itemTextTitle" style="text-align:left;">ชื่อเมนูที่แสดงบนจอ</label><div id="itemTextOrigTitle" style="font-size:11px; color:var(--text-dim); margin:2px 0 6px; word-break:break-word;"></div><input type="text" id="itemTextTitle" maxlength="60" placeholder="เว้นว่าง = ใช้ข้อความต้นฉบับ" style="width:100%; text-align:left; margin-bottom:12px;" onkeydown="if(event.key==='Enter') window.saveHubItemText()"><label for="itemTextDesc" style="text-align:left;">คำอธิบายใต้เมนู</label><div id="itemTextOrigDesc" style="font-size:11px; color:var(--text-dim); margin:2px 0 6px; word-break:break-word;"></div><input type="text" id="itemTextDesc" maxlength="140" placeholder="เว้นว่าง = ใช้ข้อความต้นฉบับ" style="width:100%; text-align:left; margin-bottom:10px;" onkeydown="if(event.key==='Enter') window.saveHubItemText()"><div id="itemTextEditNote" style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-bottom:14px;"></div><div style="display:flex; gap:8px;"><button class="manual-timer-btn" style="background:rgba(255,255,255,0.08); color:var(--text-dim); padding:0 12px;" onclick="window.clearHubItemText()" title="ล้างข้อความที่แก้ไว้ของเมนูนี้ (กลับเป็นต้นฉบับ)"><span class="material-symbols-outlined" style="font-size:18px;">restart_alt</span> คืนต้นฉบับ</button><button class="manual-timer-btn" style="background: var(--neon-green); flex:1; justify-content:center; color:#fff;" onclick="window.saveHubItemText()"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div></div>
-<div id="hubMoveCatModal" class="modal-overlay" style="z-index: 10045;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><div class="modal-header"><h3>ย้ายไปหัวข้อ…</h3><button class="btn-close-floating" onclick="window.toggleModal('hubMoveCatModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><div id="hubMoveCatItemName" style="font-size: 12.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 10px;"></div><div id="hubMoveCatList"></div><div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-top: 10px;">ย้ายได้โดยไม่ต้องลาก — กด <b>“ปิด” โหมดลาก</b> เพื่อบันทึกและซิงก์ให้ทุกเครื่อง · ถ้ายังไม่มีหัวข้อที่ต้องการ กด “สร้างหัวข้อใหม่” ในโหมดลากก่อน</div></div></div></div>
+<div id="hubMoveCatModal" class="modal-overlay" style="z-index: 10045;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><div class="modal-header"><h3>ย้ายไปหัวข้อ…</h3><button class="btn-close-floating" onclick="window.toggleModal('hubMoveCatModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><div id="hubMoveCatItemName" style="font-size: 12.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 10px;"></div><div id="hubMoveCatList"></div><div style="margin-top: 2px;"><button id="hubMoveCatNewBtn" class="manual-timer-btn" style="width: 100%; justify-content: center; margin-bottom: 8px; background: rgba(255,210,77,0.16); color: #ffd24d; border: 1px solid rgba(255,210,77,0.45);" onclick="window.hubMoveCatNewToggle(true)"><span class="material-symbols-outlined" style="font-size: 18px;">add</span> สร้างหัวข้อใหม่แล้วย้ายไปเลย</button><div id="hubMoveCatNewBox" style="display: none;"><input type="text" id="hubMoveCatNewInput" maxlength="40" placeholder="เช่น 🚕 งานรถ / 🧾 ใบเสร็จ" style="width: 100%; margin-bottom: 8px; text-align: left;" onkeydown="if(event.key==='Enter'){event.preventDefault();window.hubMoveCatCreateAndMove();}"><div style="display: flex; gap: 8px;"><button class="manual-timer-btn" style="flex: 1; justify-content: center; background: var(--neon-green); color: #fff;" onclick="window.hubMoveCatCreateAndMove()"><span class="material-symbols-outlined" style="font-size: 18px;">save</span> สร้างและย้าย</button><button class="manual-timer-btn" style="flex: 1; justify-content: center;" onclick="window.hubMoveCatNewToggle(false)">ยกเลิก</button></div></div></div><div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-top: 10px;">ย้ายได้โดยไม่ต้องลาก — กด <b>“ปิด” โหมดลาก</b> เพื่อบันทึกและซิงก์ให้ทุกเครื่อง</div></div></div></div>
 <div id="hubCatEditModal" class="modal-overlay" style="z-index: 10040;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="hubCatEditTitle">หัวข้อใหม่</h3><button class="btn-close-floating" onclick="window.toggleModal('hubCatEditModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><label style="text-align:left;">ชื่อหัวข้อ</label><input type="text" id="hubCatNameInput" maxlength="40" placeholder="เช่น 🚕 งานรถ / 🧾 ใบเสร็จ" style="width: 100%; margin-bottom: 10px; text-align: left;" onkeydown="if(event.key==='Enter') window.saveHubCat()"><div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 14px;">ตั้งชื่อแล้วลากเมนูไปวางในหัวข้อนี้ได้เลย — <b>หัวข้อที่ไม่มีเมนูจะถูกซ่อนเอง</b> (กลับมาเมื่อมีเมนูวางอยู่)<br>ใส่ emoji นำหน้าได้ เช่น 📁 · เก็บในเครื่องนี้ ไม่กินโควตา</div><button class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: #fff;" onclick="window.saveHubCat()"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกหัวข้อ</button></div></div></div>
 
 <div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควต้าการใช้งาน</h3><button id="quotaRefreshBtn" onclick="window.refreshQuotaMonitor()" title="ดึงยอดใหม่จากเซิร์ฟเวอร์" style="display:inline-flex; align-items:center; gap:4px; background:rgba(77,163,255,0.15); border:1px solid rgba(77,163,255,0.4); color:#7db8ff; border-radius:99px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s; position:absolute; right:58px; top:50%; transform:translateY(-50%);"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span>รีเฟรช</button><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">แอปนี้กินโควตา 2 ระบบ: <b style="color:#fff;">TomTom</b> (ค้นหา + คำนวณเส้นทาง — ด้านบนสุด) และ <b style="color:#fff;">Firestore</b> (ฐานข้อมูล — ด้านล่าง) · Firestore = จำนวน อ่าน / เขียน / ลบ ที่ทุกบัญชี (ID) ใช้ Firestore วันนี้รวมกันทั้งระบบ <b style="color:#fff;">(ทุกเครื่องส่งยอดขึ้นเซิร์ฟเวอร์ทุก 10 นาที / ตอนปิดแอป</b> — แสดงยอดรวมทุก ID + เหลือเท่าไหร่ และแยกตาม ID ชื่อโปรไฟล์) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ฟีเจอร์ที่ฟังข้อมูลสดแบบเรียลไทม์จะกินโควตาอ่านตามจำนวนเครื่องที่เปิดดูพร้อมกัน)</div></div></div></div>
 
-<div id="adminMenuModal" class="modal-overlay" style="z-index: 10004;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('adminMenuModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>ระบบจัดการผู้ใช้งาน</h3><button id="adminGlobalLogsBtn" class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><button id="permReqBanner" class="perm-req-banner" style="display: none;" onclick="window.openPermRequests()"></button>
+<div id="adminMenuModal" class="modal-overlay" style="z-index: 10004;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('adminMenuModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>ระบบจัดการผู้ใช้งาน</h3><button id="adminGlobalLogsBtn" class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div>
+                    <!-- 🗂 (16 ก.ย. 69) 2 แท็บในหน้าจัดการผู้ใช้งาน (ตามคำสั่งผู้ใช้): จัดการผู้ใช้งาน · สมาชิกใหม่ — ป้าย “ใหม่ N” อยู่บนแท็บเอง -->
+                    <div id="adminUserTabs" class="hub-tabs" style="display:none;"><button type="button" id="adminTabUsers" class="hub-tab on" onclick="window.adminPanelTab('users')"><span class="material-symbols-outlined" style="font-size:15px;">manage_accounts</span>จัดการผู้ใช้งาน<span class="n" id="adminTabUsersN" style="display:none;"></span></button><button type="button" id="adminTabNew" class="hub-tab" style="display:none;" onclick="window.adminPanelTab('newusers')"><span class="material-symbols-outlined" style="font-size:15px;">person_add</span>สมาชิกใหม่<span class="n" id="hubNewUsersBadge" style="display:none; color:#7bed9f; background:rgba(123,237,159,0.18);"></span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><button id="permReqBanner" class="perm-req-banner" style="display: none;" onclick="window.openPermRequests()"></button>
                     <!-- 📊 (16 ก.ย. 69) แถบสรุป/ตัวกรองวิธีสมัคร + เตือนบัญชี Google ที่ข้อมูลไม่ครบ — วาดจาก __paintAdminUserInsight() เท่านั้น (ไม่กินโควตา) -->
-                    <div id="adminUserInsight" style="padding: 8px 12px 0; text-align: left;"></div><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div id="loginLogToggleRow" style="display:none; padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><div style="display:flex; align-items:center; justify-content:space-between; gap:12px;"><div style="flex:1; min-width:0;"><div style="font-size:13px; color:#fff; font-weight:600;">บันทึก log ล็อกอิน / ล็อกเอาต์ (ย้ายไปตั้งค่าสิทธิ์ → บันทึกประวัติ)</div><div style="font-size:11px; color:#9aa3b5; margin-top:2px; line-height:1.5;">เปิด = เขียน log 2 จุด (ประวัติผู้ใช้ + global_logs) ทุกล็อกอิน/เอาต์ · ปิด = ประหยัดโควตา (แนะนำ)</div></div><label class="app-switch"><input type="checkbox" id="logLoginLogoutToggle" onchange="window.toggleLoginLogLogging(this.checked)"><span class="app-slider"></span></label></div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
+                    <div id="adminPanelUsers" style="display:flex; flex-direction:column; flex:1; min-height:0;"><div id="adminUserInsight" style="padding: 8px 12px 0; text-align: left;"></div><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div id="loginLogToggleRow" style="display:none; padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><div style="display:flex; align-items:center; justify-content:space-between; gap:12px;"><div style="flex:1; min-width:0;"><div style="font-size:13px; color:#fff; font-weight:600;">บันทึก log ล็อกอิน / ล็อกเอาต์ (ย้ายไปตั้งค่าสิทธิ์ → บันทึกประวัติ)</div><div style="font-size:11px; color:#9aa3b5; margin-top:2px; line-height:1.5;">เปิด = เขียน log 2 จุด (ประวัติผู้ใช้ + global_logs) ทุกล็อกอิน/เอาต์ · ปิด = ประหยัดโควตา (แนะนำ)</div></div><label class="app-switch"><input type="checkbox" id="logLoginLogoutToggle" onchange="window.toggleLoginLogLogging(this.checked)"><span class="app-slider"></span></label></div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div><div id="adminPanelNewUsers" style="display:none; flex-direction:column; flex:1; min-height:0;"><div id="adminNewUsersBody" class="modal-content-scroll" style="text-align: left; padding: 12px;"><div style="color: var(--text-dim); text-align: center; padding: 20px; line-height:1.7;">ดูว่าใครสมัครเข้ามาใหม่ — แยกตามวัน พร้อมชื่อ เวลา และบทบาท<br><span style="font-size:12px;">รายชื่อจะโหลดให้ทันทีเมื่อเข้าหน้านี้</span></div></div><div style="padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.05); display:flex; gap:8px;"><button onclick="window.adminLoadNewUsers(true)" class="manual-timer-btn" style="flex:1; justify-content:center; background:#5b6472; color:#fff;"><span class="material-symbols-outlined" style="font-size:19px;">refresh</span> โหลดข้อมูลใหม่</button></div></div></div></div>
 
 <div id="permRequestsModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.toggleModal('permRequestsModal', false)" title="กลับ"><span class="material-symbols-outlined">arrow_back</span>กลับ</button><h3 style="color: var(--neon-yellow);">คำขอสิทธิ์เพิ่ม</h3><button class="btn-close-floating" onclick="window.toggleModal('permRequestsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">รายชื่อสมาชิกที่ขอสิทธิ์เพิ่ม — กด <b style="color:#4ade80;">อนุมัติสิทธิ์</b> เพื่อให้สิทธิ์ที่ขอกับสมาชิกทันที (ไม่เปลี่ยนตำแหน่ง — ผู้ขอจะเห็นแจ้งเตือนตอนเปิดแอป) หรือกด <b style="color:#ff8a95;">ปฏิเสธ</b> เพื่อไม่ให้สิทธิ์</p><div id="permReqListBody" style="min-height: 150px;"></div></div></div></div>
 
@@ -5746,6 +5764,8 @@
     };
     window.enterReorderMode = (container, itemsSel, keyOf, saveKey, boxEl) => {
         window.exitReorderMode(false);
+        // 🗂 หน้าตั้งค่าการใช้งาน: ล้างตัวกรองแท็บก่อนนับ “เมนูลากได้” (ไม่งั้นจะลากได้เฉพาะแท็บที่เปิดอยู่)
+        if (boxEl && boxEl.id === 'settingsHubModal') { try { window.hubTabClearHidden(); } catch (e) {} }
         const visible = Array.from(container.querySelectorAll(itemsSel)).filter(el => getComputedStyle(el).display !== 'none');
         if (visible.length < 2) return;
         window.__reorder = { container, itemsSel, keyOf, saveKey, boxEl };
@@ -8375,9 +8395,38 @@
         const c = window.hubCatsRead().filter(x => x.cat === catId)[0];
         return (c && c.label) || 'ไม่ระบุ';
     };
+    // ➕ สร้างหัวข้อใหม่แล้วย้ายเมนูเข้าไปเลย (ขั้นตอนเดียว) — ไม่ต้องปิดหน้าต่างไปสร้างหัวข้อที่อื่นก่อน
+    //    ⚠️ สร้างหัวข้อ ⇒ ต้อง hubCatsWrite ก่อนเรียก hubMoveToCatPick เพราะตัวย้ายอ่านรายชื่อหัวข้อจากที่นั่น
+    window.hubMoveCatNewToggle = (on) => {
+        const box = document.getElementById('hubMoveCatNewBox');
+        const btn = document.getElementById('hubMoveCatNewBtn');
+        if (!box) return;
+        box.style.display = on ? '' : 'none';
+        if (btn) btn.style.display = on ? 'none' : '';
+        if (on) {
+            const inp = document.getElementById('hubMoveCatNewInput');
+            if (inp) { inp.value = ''; setTimeout(() => { try { inp.focus(); } catch (e) {} }, 80); }
+        }
+    };
+    window.hubMoveCatCreateAndMove = () => {
+        const inp = document.getElementById('hubMoveCatNewInput');
+        const name = String((inp && inp.value) || '').trim();
+        if (!name) return window.showToast('ใส่ชื่อหัวข้อก่อนครับ', true);
+        const list = window.hubCatsRead();
+        // กันชื่อซ้ำแบบไม่สนตัวพิมพ์/ช่องว่างหัวท้าย — ไม่งั้นจะได้ 2 หัวข้อชื่อเหมือนกันแล้วสับสน
+        if (list.some(c => String(c.label || '').trim().toLowerCase() === name.toLowerCase())) {
+            return window.showToast('มีหัวข้อชื่อนี้อยู่แล้ว — เลือกจากรายการด้านบนได้เลย', true);
+        }
+        const id = 'cat-custom-' + Date.now();
+        list.push({ cat: id, label: name, custom: true });
+        window.hubCatsWrite(list);
+        window.hubMoveToCatPick(id); // ย้าย + ปิดหน้าต่าง + วาดใหม่
+        try { window.showToast('สร้างหัวข้อ “' + name + '” แล้วย้ายเมนูเข้าไป — กดพื้นที่ว่างเพื่อบันทึก'); } catch (e) {}
+    };
     window.hubMoveToCatOpen = (itemEl) => {
         const wrap = window.hubWrap(); if (!wrap || !itemEl) return;
         window.__hubMoveItemEl = itemEl;
+        window.hubMoveCatNewToggle(false); // เปิดใหม่ทุกครั้ง = กลับสู่โหมดเลือกจากรายการ
         const cur = itemEl.dataset.cat || '';
         const nameEl = document.getElementById('hubMoveCatItemName');
         if (nameEl) {
@@ -12692,7 +12741,11 @@
         // รายการย่อยในหน้าต่างตั้งค่าการใช้งาน — ซ่อน/แสดงตามสิทธิ์จริงของแต่ละหมวด
         const hubAdminItem = document.getElementById('hubAdminItem'); if (hubAdminItem) hubAdminItem.style.display = showAdminMenu ? 'flex' : 'none';
         // 🆕 สมาชิกใหม่ — โชว์พร้อมเมนูจัดการผู้ใช้ (ใช้สิทธิ์ canViewUsers ชุดเดียวกัน) + อัปเดตป้าย "วันนี้ N คน"
-        const hubNewUsersItem = document.getElementById('hubNewUsersItem'); if (hubNewUsersItem) hubNewUsersItem.style.display = showAdminMenu ? 'flex' : 'none';
+        // 🗂 แท็บ “สมาชิกใหม่” ในหน้าจัดการผู้ใช้งาน (16 ก.ย. 69) — โชว์เฉพาะคนที่ “ดูรายชื่อสมาชิกได้จริง” เท่านั้น
+        const canNewUsersTab = (typeof window.newUsersCanView === 'function') ? window.newUsersCanView() : showAdminMenu;
+        const adminTabNewEl = document.getElementById('adminTabNew'); if (adminTabNewEl) adminTabNewEl.style.display = canNewUsersTab ? 'inline-flex' : 'none';
+        const adminUserTabsEl = document.getElementById('adminUserTabs'); if (adminUserTabsEl) adminUserTabsEl.style.display = (canNewUsersTab && showAdminMenu) ? 'flex' : 'none';
+        if (!canNewUsersTab && window.__adminTab === 'newusers') { try { window.adminPanelTab('users'); } catch (e) {} }
         if (typeof window.refreshNewUsersBadge === 'function') window.refreshNewUsersBadge();
         // 📢 ศูนย์แจ้งเตือน — โชว์พร้อมเมนูตั้งค่าการใช้งาน (คนขับที่มีเมนูนี้ก็มีเรื่อง “เที่ยวรอซิงก์” ของตัวเอง) + อัปเดตป้ายตัวเลข
         const hubNotifCenterItem = document.getElementById('hubNotifCenterItem'); if (hubNotifCenterItem) hubNotifCenterItem.style.display = canNotifMenu ? 'flex' : 'none';
@@ -12770,11 +12823,77 @@
     window.hubCatsWrite = (a) => { try { localStorage.setItem(HUB_CATS_KEY, JSON.stringify(a || [])); } catch (e) {} };
     window.hubItemCatRead = () => { try { const m = JSON.parse(localStorage.getItem(HUB_ITEMCAT_KEY) || '{}'); return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {}; } catch (e) { return {}; } };
     window.hubItemCatWrite = (m) => { try { localStorage.setItem(HUB_ITEMCAT_KEY, JSON.stringify(m || {})); } catch (e) {} };
+    // 🗂 (16 ก.ย. 69) แท็บหมวดหมู่บนสุดของหน้าตั้งค่าการใช้งาน — จิ้มชิปแล้วเห็นเฉพาะหัวข้อนั้น ไม่ต้องเลื่อนยาว
+    //    · ชิปสร้างจากหัวข้อจริงในเครื่องนี้ + นับ “เมนูที่ผู้ใช้คนนี้เห็นได้จริง” (สิทธิ์คุม display อยู่แล้ว)
+    //    · ซ่อน/โชว์ด้วย attribute [hidden] เท่านั้น (CSS บังคับ !important) — ไม่ทับ display ที่สิทธิ์/โหมดลากตั้งไว้
+    const HUB_TAB_KEY = 'hub_tab_v1';
+    const HUB_TAB_ALL = '__all';
+    window.__hubTab = null;
+    window.__hubTabPreReorder = null; // 🗂 แท็บที่ใช้อยู่ก่อนเข้าโหมดลาก — กลับมาใช้เดิมตอนออก
+    window.hubTabRead = () => { try { return localStorage.getItem(HUB_TAB_KEY) || ''; } catch (e) { return ''; } };
+    window.hubTabWrite = (t) => { try { localStorage.setItem(HUB_TAB_KEY, String(t || '')); } catch (e) {} };
+    window.hubTabInReorder = () => { const w = window.hubWrap(); return !!(w && window.__reorder && window.__reorder.container === w); };
+    // 🧹 ล้างตัวกรองแท็บ (ถอด [hidden] ที่เราติดไว้) — ห้ามใช้ selector กว้างกว่าของ hub
+    window.hubTabClearHidden = () => { try { document.querySelectorAll('#settingsHubModal .hub-item[hidden], #settingsHubModal .hub-cat-label[hidden], #settingsHubModal .hub-drop-empty[hidden]').forEach(el => el.removeAttribute('hidden')); } catch (e) {} };
+    // นับเมนูที่ “ผู้ใช้คนนี้มีสิทธิ์เห็น” ในหัวข้อหนึ่ง ๆ
+    //    ⚠️ ต้องอิง inline display (สิทธิ์ตั้งไว้) ไม่ใช่ getComputedStyle — ไม่งั้นตอนเลือกแท็บอยู่
+    //    เมนูของหัวข้ออื่นจะติด [hidden] ของแท็บเอง แล้วนับได้ 0 ⇒ ชิปของหัวข้อนั้นหายไปจนกดไม่ได้
+    window.hubTabSeen = (cat) => Array.from(document.querySelectorAll('#settingsHubModal .hub-item')).filter(el => (el.dataset.cat || '') === cat && el.style.display !== 'none').length;
+    window.hubSyncTabs = () => {
+        try {
+            const wrap = window.hubWrap(); if (!wrap) return;
+            const bar = document.getElementById('hubTabs'); if (!bar) return;
+            const inReorder = window.hubTabInReorder();
+            const defs = window.hubCatsRead().map(c => ({ cat: c.cat, label: String(c.label || c.cat), n: window.hubTabSeen(c.cat) })).filter(d => d.n > 0 || inReorder);
+            // 🗂 โหมดลากต้องเห็นทุกหัวข้อ (จะได้ลากข้ามกลุ่มได้) — แต่จำแท็บเดิมไว้ ค่อยกลับมาตอนออกโหมด
+            let cur = window.__hubTab || window.hubTabRead() || '';
+            if (inReorder) { if (cur && cur !== HUB_TAB_ALL) window.__hubTabPreReorder = cur; cur = HUB_TAB_ALL; }
+            else if (window.__hubTabPreReorder) { cur = window.__hubTabPreReorder; window.__hubTabPreReorder = null; }
+            if (cur !== HUB_TAB_ALL && !defs.some(d => d.cat === cur)) cur = defs.length ? defs[0].cat : HUB_TAB_ALL;
+            window.__hubTab = cur;
+            const total = Array.from(document.querySelectorAll('#settingsHubModal .hub-item')).filter(el => el.style.display !== 'none').length;
+            if (!defs.length) { bar.style.display = 'none'; bar.innerHTML = ''; }
+            else {
+                bar.style.display = 'flex';
+                let html = '<button type="button" class="hub-tab' + (cur === HUB_TAB_ALL ? ' on' : '') + '" onclick="window.hubTabPick(\'' + HUB_TAB_ALL + '\')"><span class="material-symbols-outlined" style="font-size:15px;">apps</span>ทั้งหมด<span class="n">' + total + '</span></button>';
+                defs.forEach(d => { html += '<button type="button" class="hub-tab' + (cur === d.cat ? ' on' : '') + '" onclick="window.hubTabPick(\'' + String(d.cat).replace(/'/g, '') + '\')">' + _hubEsc(d.label) + '<span class="n">' + d.n + '</span></button>'; });
+                bar.innerHTML = html;
+                // 🧭 ให้ชิปที่เลือกอยู่เห็นเสมอ — เลื่อนเฉพาะ “แถบนี้” (ไม่ใช้ scrollIntoView ที่อาจลากหน้าจอ/หน้าต่างไปด้วย)
+                const on = bar.querySelector('.hub-tab.on');
+                if (on && on.getBoundingClientRect) {
+                    try {
+                        const r = on.getBoundingClientRect(), br = bar.getBoundingClientRect();
+                        if (r.left < br.left) bar.scrollLeft -= (br.left - r.left) + 8;
+                        else if (r.right > br.right) bar.scrollLeft += (r.right - br.right) + 8;
+                    } catch (e) {}
+                }
+            }
+            window.hubApplyTab();
+        } catch (e) {}
+    };
+    window.hubTabPick = (cat) => {
+        window.__hubTab = cat || HUB_TAB_ALL;
+        window.hubTabWrite(window.__hubTab);
+        window.hubSyncTabs();
+        try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) {}
+        window.showToast(window.__hubTab === HUB_TAB_ALL ? 'แสดงทุกหัวข้อ' : 'แสดงเฉพาะหัวข้อที่เลือก');
+    };
+    window.hubApplyTab = () => {
+        try {
+            const wrap = window.hubWrap(); if (!wrap) return;
+            const cur = window.hubTabInReorder() ? HUB_TAB_ALL : (window.__hubTab || HUB_TAB_ALL);
+            wrap.querySelectorAll('.hub-item, .hub-cat-label, .hub-drop-empty').forEach(el => {
+                if (cur === HUB_TAB_ALL || (el.dataset.cat || '') === cur) el.removeAttribute('hidden');
+                else el.setAttribute('hidden', '');
+            });
+        } catch (e) {}
+    };
     // ✍️ วาดหน้าตั้งค่าใหม่ทั้งหน้า: เรียงหัวข้อ → ใส่เมนูของหัวข้อนั้นตามลำดับ
     //    model (ตอนลาก) = { catOf: { id: cat }, order: [id, ...] } · ไม่ส่ง = อ่านจาก localStorage
     window.applyHubLayout = (model) => {
         try {
             const wrap = window.hubWrap(); if (!wrap) return;
+            try { window.hubTabClearHidden(); } catch (e) {} // 🗂 ล้างตัวกรองแท็บก่อนนับ/วาด (ไม่งั้นหัวข้อที่นับได้จะกลายเป็น 0)
             const cats = window.hubCatsRead(); // ⚠️ จับหัวข้อตั้งต้นก่อนย้าย DOM
             const items = Array.from(wrap.querySelectorAll('.hub-item'));
             if (!items.length) return;
@@ -12831,6 +12950,8 @@
             wrap.appendChild(frag);
             // ✏️ โหมดลาก (แอดมิน) → เติมปุ่มดินสอท้ายชื่อเมนูทุกตัว / โหมดปกติ → ถอดออกให้หมด
             if (typeof window.hubWireItemEditors === 'function') window.hubWireItemEditors();
+            // 🗂 วาดแท็บหมวดหมู่ใหม่ทุกครั้งที่หน้าถูกวาด (นับจากเมนูที่ผู้ใช้คนนี้เห็นจริง)
+            try { window.hubSyncTabs(); } catch (e) {}
         } catch (e) {}
     };
     // 💾 บันทึกว่าเมนูไหนอยู่หัวข้อไหน (ตอนจบโหมดลาก)
@@ -13676,6 +13797,10 @@
         ['2026-09-16', '⬆️⬇️ ปุ่ม ▲▼ + ✏️ ท้ายหัวข้อ — ย้ายลำดับ/เปลี่ยนชื่อหัวข้อ สำหรับเครื่องที่ลากไม่ถนัด'],
         ['2026-09-16', '📜 ลากเมนู/หัวข้อค้างที่ขอบจอ = จอเลื่อนเอง — ย้ายข้ามหัวข้อได้ทุกอัน'],
         ['2026-09-16', '🔀 ปุ่ม “ย้ายไปหัวข้อ…” ท้ายเมนูในโหมดลาก — ย้ายโดยไม่ต้องลาก พร้อมนับเมนู'],
+        ['2026-09-16', '➕ สร้างหัวข้อใหม่แล้วย้ายเมนูเข้าไปได้ในขั้นตอนเดียวจากหน้าต่าง “ย้ายไปหัวข้อ…”'],
+        ['2026-09-16', '🏷️ เมนู “ไอดีต้องห้าม” ชื่อสั้นลงอยู่บรรทัดเดียว — ความหมายย้ายไปบรรทัดคำอธิบาย'],
+        ['2026-09-16', '🗂️ หน้าตั้งค่ามีแท็บหมวดหมู่ด้านบน — จิ้มดูเฉพาะหัวข้อนั้น พร้อมจำนวนเมนู'],
+        ['2026-09-16', '👤 หน้าจัดการผู้ใช้งานมี 2 แท็บ — จัดการผู้ใช้งาน · สมาชิกใหม่ (ไม่ต้องเปิดหน้าต่างซ้อน)'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -15819,6 +15944,11 @@
     };
 
     window.handleAdminModalState = (isOpen) => {
+        // 🗂 เปิดหน้าต่างครั้งใหม่ → กลับไปแท็บ “จัดการผู้ใช้งาน” เสมอ
+        //    (ถ้าเปิดค้างอยู่แล้ว — เช่น applyPermissionsUI เรียกซ้ำ — ให้อยู่แท็บเดิม อย่าเปลี่ยนให้ผู้ใช้)
+        const _admWasOpen = !!window.__adminModalOpenState;
+        window.__adminModalOpenState = !!isOpen;
+        if (isOpen && !_admWasOpen) { try { window.adminPanelTab('users'); } catch (e) {} }
         if(isOpen) {
             
             let isGod = currentUserRole === "Admin"; let myPerms = isGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
@@ -15869,6 +15999,8 @@
             noEmail: _all.filter((u) => { const g = __gk(u); return g.linked && !g.hasEmail; }).length
         };
         _stats.gmail = _stats.signup + _stats.linkedOnly;
+        // 🗂 ตัวเลขบนแท็บ “จัดการผู้ใช้งาน” — รู้อทันทีว่าลิสต์โหลดครบหรือยัง
+        try { const _tn = document.getElementById('adminTabUsersN'); if (_tn) { _tn.textContent = _stats.total; _tn.style.display = _stats.total ? 'inline-block' : 'none'; } } catch (e) {}
         const _f = String(window.adminUserFilter || 'all');
         const _pred = { all: () => true, signup: (u) => __gk(u).signup, linked: (u) => __gk(u).linked, incomplete: __incomplete };
         const list = (_pred[_f] || _pred.all) ? _all.filter(_pred[_f] || _pred.all) : _all;
@@ -16036,10 +16168,32 @@
         const snap = await window.__fsTimeout(getDocs(collection(db, 'users')), 10000);
         return snap.docs.map(d => Object.assign({ uid: d.id }, d.data()));
     };
-    window.openNewUsers = async (force) => {
-        if (!window.newUsersCanView()) return window.showToast('คุณไม่มีสิทธิ์ดูรายชื่อสมาชิกใหม่', true);
-        window.toggleModal('newUsersModal', true);
-        const body = document.getElementById('newUsersBody');
+    // 🗂 กล่องที่ต้องวาดรายชื่อ “สมาชิกใหม่” — หลักคือแท็บในหน้าจัดการผู้ใช้งาน · #newUsersBody ของหน้าต่างเดิมเป็นทางถอย
+    window.__newUsersBody = () => {
+        const panel = document.getElementById('adminPanelNewUsers');
+        const box = document.getElementById('adminMenuModal');
+        if (panel && box && getComputedStyle(box).display !== 'none' && panel.style.display !== 'none') return document.getElementById('adminNewUsersBody');
+        return document.getElementById('newUsersBody');
+    };
+    // 🗂 สลับ 2 แท็บในหน้าจัดการผู้ใช้งาน: 'users' = จัดการผู้ใช้งาน · 'newusers' = สมาชิกใหม่
+    window.__adminTab = 'users';
+    window.adminPanelTab = (which) => {
+        const t = (which === 'newusers') ? 'newusers' : 'users';
+        window.__adminTab = t;
+        const pU = document.getElementById('adminPanelUsers'), pN = document.getElementById('adminPanelNewUsers');
+        if (pU) pU.style.display = (t === 'users') ? 'flex' : 'none';
+        if (pN) pN.style.display = (t === 'newusers') ? 'flex' : 'none';
+        const bU = document.getElementById('adminTabUsers'), bN = document.getElementById('adminTabNew');
+        if (bU) bU.classList.toggle('on', t === 'users');
+        if (bN) bN.classList.toggle('on', t === 'newusers');
+        // 📋 หมายเหตุ: หน้านี้ใช้ localStorage ไม่กี่ค่า — จำแท็บล่าสุดไว้ในหน่วยความจำเท่านั้น (เปิดหน้าต่างใหม่ = กลับแท็บแรก)
+        if (t === 'newusers' && typeof window.adminLoadNewUsers === 'function') window.adminLoadNewUsers(false);
+    };
+    // 📋 โหลด/วาดรายชื่อสมาชิกใหม่ — เรียกจากแท็บและปุ่ม “โหลดข้อมูลใหม่”
+    //    ไม่ force = ใช้รายชื่อที่อยู่ในเครื่องก่อน (ลิสต์ของผู้ใช้ฟังอยู่แล้ว) ⇒ ไม่กินโควตาอ่านซ้ำ
+    window.adminLoadNewUsers = async (force) => {
+        if (!window.newUsersCanView()) return;
+        const body = window.__newUsersBody();
         if (body) body.innerHTML = '<div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div>';
         try {
             const users = await window.__newUsersLoadList(force);
@@ -16048,8 +16202,16 @@
             window.renderNewUsers(users, dates);
             window.markSignupsSeen(); // 🔕 เปิดดูรายชื่อแล้ว = รับรู้แล้ว → ล้างป้าย "ใหม่ N"
         } catch (e) {
-            if (body) body.innerHTML = '<div style="color: var(--accent-red); text-align: center; padding: 20px; line-height: 1.6;">โหลดข้อมูลไม่สำเร็จ<br><span style="font-size: 12px; color: var(--text-dim);">' + _nuEsc((e && e.message) || e) + '</span></div>';
+            const b2 = window.__newUsersBody();
+            if (b2) b2.innerHTML = '<div style="color: var(--accent-red); text-align: center; padding: 20px; line-height: 1.6;">โหลดข้อมูลไม่สำเร็จ<br><span style="font-size: 12px; color: var(--text-dim);">' + _nuEsc((e && e.message) || e) + '</span></div>';
         }
+    };
+    // 🔎 ทางเข้าเดียวของ “สมาชิกใหม่” (เมนูด้านข้าง · ศูนย์แจ้งเตือน · toast) — เปิดหน้าจัดการผู้ใช้งานแล้วสลับไปแท็บสมาชิกใหม่
+    window.openNewUsers = async (force) => {
+        if (!window.newUsersCanView()) return window.showToast('คุณไม่มีสิทธิ์ดูรายชื่อสมาชิกใหม่', true);
+        window.toggleModal('adminMenuModal', true);
+        window.adminPanelTab('newusers');
+        window.adminLoadNewUsers(force);
     };
     // แถวสมาชิก 1 คน (ใช้คลาสชุดเดียวกับหน้าจัดการผู้ใช้ เพื่อให้หน้าตาเหมือนกัน)
     window.__newUserRowHTML = (u, at, allowSetDate) => {
@@ -16070,14 +16232,15 @@
         return '<div class="admin-user-card"><div class="admin-user-top"><img class="admin-avatar" src="' + photo + '"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">' + name + roleBadge + '</div><div class="admin-user-sub"><span class="admin-user-uname">' + uname + '</span></div></div><div class="admin-meta-row">' + timeChip + manualChip + lastChip + phoneChip + plateChip + bannedChip + '</div></div></div>' + setBtn + '</div>';
     };
     window.renderNewUsers = (users, dates) => {
-        const body = document.getElementById('newUsersBody'); if (!body) return;
+        const body = window.__newUsersBody(); if (!body) return;
         const list = users || [];
         const rows = list.map(u => ({ u: u, at: (dates && dates[u.uid]) ? dates[u.uid] : null }));
         const known = rows.filter(r => r.at).sort((a, b) => b.at - a.at);
         const unknown = rows.filter(r => !r.at).sort((a, b) => String((a.u && a.u.username) || '').localeCompare(String((b.u && b.u.username) || '')));
         const t0 = _nuStartOfDay(Date.now()), DAY = 86400000;
-        const stat = (label, val, color) => '<div style="flex: 1; min-width: 72px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 14px; padding: 9px 8px; text-align: center;"><div style="font-size: 21px; font-weight: 800; color: ' + color + '; font-variant-numeric: tabular-nums;">' + val + '</div><div style="font-size: 10.5px; color: var(--text-dim); margin-top: 2px; line-height: 1.3;">' + label + '</div></div>';
-        let html = '<div style="display: flex; gap: 8px; margin-bottom: 10px;">'
+        const stat = (label, val, color) => '<div style="min-width: 0; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 14px; padding: 9px 6px; text-align: center;"><div style="font-size: 21px; font-weight: 800; color: ' + color + '; font-variant-numeric: tabular-nums;">' + val + '</div><div style="font-size: 10.5px; color: var(--text-dim); margin-top: 2px; line-height: 1.3;">' + label + '</div></div>';
+        // 📐 4 ช่องเท่ากันพอดีกรอบ — grid + minmax(0,1fr) กันช่องสุดท้ายล้นออกนอกกรอบ (เดิม flex แล้วล้นในจอแคบ)
+        let html = '<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px;">'
             + stat('วันนี้', known.filter(r => r.at >= t0).length, '#7bed9f')
             + stat('7 วันล่าสุด', known.filter(r => r.at >= t0 - 6 * DAY).length, '#4da3ff')
             + stat('30 วันล่าสุด', known.filter(r => r.at >= t0 - 29 * DAY).length, '#ffd24d')
