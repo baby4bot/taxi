@@ -3278,6 +3278,10 @@
         /* 📧 ชิป Gmail ในหน้าจัดการผู้ใช้ — ฟ้าสว่าง ตัดกับชิปอื่นที่เหลือง/เทา */
         .admin-gmail-chip { color: #7dd3fc !important; background: rgba(56,189,248,0.14) !important; border-color: rgba(56,189,248,0.42) !important; }
         .admin-gmail-chip .material-symbols-outlined { color: #7dd3fc !important; }
+        /* ⚠️ ชิปเตือน “ข้อมูลไม่ครบ” ของบัญชี Google ในหน้าจัดการผู้ใช้ */
+        .admin-incomplete-chip { color: #ffd24d !important; background: rgba(241,196,15,0.16) !important; border-color: rgba(241,196,15,0.50) !important; }
+        .admin-incomplete-chip .material-symbols-outlined { color: #ffd24d !important; }
+        html.light .admin-incomplete-chip { color: #7a5b00 !important; background: rgba(241,196,15,0.20) !important; border-color: rgba(160,120,0,0.40) !important; }
         html.light .admin-gmail-chip { color: #075985 !important; background: rgba(14,165,233,0.12) !important; border-color: rgba(14,165,233,0.40) !important; }
         html.light .admin-gmail-chip .material-symbols-outlined { color: #075985 !important; }
         html.light .admin-actions-row { border-top-color: rgba(18,26,48,0.12); }
@@ -3423,7 +3427,9 @@
 
 <div id="quotaMonitorModal" class="modal-overlay" style="z-index: 10025;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('quotaMonitorModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">โควต้าการใช้งาน</h3><button id="quotaRefreshBtn" onclick="window.refreshQuotaMonitor()" title="ดึงยอดใหม่จากเซิร์ฟเวอร์" style="display:inline-flex; align-items:center; gap:4px; background:rgba(77,163,255,0.15); border:1px solid rgba(77,163,255,0.4); color:#7db8ff; border-radius:99px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s; position:absolute; right:58px; top:50%; transform:translateY(-50%);"><span class="material-symbols-outlined" style="font-size:16px;">refresh</span>รีเฟรช</button><button class="btn-close-floating" onclick="window.toggleModal('quotaMonitorModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 12px; line-height:1.6;">แอปนี้กินโควตา 2 ระบบ: <b style="color:#fff;">TomTom</b> (ค้นหา + คำนวณเส้นทาง — ด้านบนสุด) และ <b style="color:#fff;">Firestore</b> (ฐานข้อมูล — ด้านล่าง) · Firestore = จำนวน อ่าน / เขียน / ลบ ที่ทุกบัญชี (ID) ใช้ Firestore วันนี้รวมกันทั้งระบบ <b style="color:#fff;">(ทุกเครื่องส่งยอดขึ้นเซิร์ฟเวอร์ทุก 10 นาที / ตอนปิดแอป</b> — แสดงยอดรวมทุก ID + เหลือเท่าไหร่ และแยกตาม ID ชื่อโปรไฟล์) เทียบกับโควตาฟรี <b style="color:#fff;">อ่าน 50,000 / เขียน 20,000 / ลบ 20,000 ครั้งต่อวัน</b> — ถ้าแตะ 100% แอปจะเริ่มค้าง/ล็อกอินไม่ได้จนกว่าโควตาจะรีเซ็ต (เที่ยงคืน PST ≈ บ่าย 2-3 โมงไทย)</p><div id="quotaMonitorBody" style="min-height: 120px;"></div><div style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.6;">📌 ตัวเลขแม่นยำที่สุดคือใน <b>Firebase Console → Firestore → Usage</b> (หน่วง ~1 วัน) — การ์ดนี้ช่วยดูว่า<b>ฟีเจอร์ไหนกินโควตาเยอะสุด</b> เพื่อวางแผนลด (เช่น ฟีเจอร์ที่ฟังข้อมูลสดแบบเรียลไทม์จะกินโควตาอ่านตามจำนวนเครื่องที่เปิดดูพร้อมกัน)</div></div></div></div>
 
-<div id="adminMenuModal" class="modal-overlay" style="z-index: 10004;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('adminMenuModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>ระบบจัดการผู้ใช้งาน</h3><button id="adminGlobalLogsBtn" class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><button id="permReqBanner" class="perm-req-banner" style="display: none;" onclick="window.openPermRequests()"></button><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div id="loginLogToggleRow" style="display:none; padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><div style="display:flex; align-items:center; justify-content:space-between; gap:12px;"><div style="flex:1; min-width:0;"><div style="font-size:13px; color:#fff; font-weight:600;">บันทึก log ล็อกอิน / ล็อกเอาต์ (ย้ายไปตั้งค่าสิทธิ์ → บันทึกประวัติ)</div><div style="font-size:11px; color:#9aa3b5; margin-top:2px; line-height:1.5;">เปิด = เขียน log 2 จุด (ประวัติผู้ใช้ + global_logs) ทุกล็อกอิน/เอาต์ · ปิด = ประหยัดโควตา (แนะนำ)</div></div><label class="app-switch"><input type="checkbox" id="logLoginLogoutToggle" onchange="window.toggleLoginLogLogging(this.checked)"><span class="app-slider"></span></label></div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
+<div id="adminMenuModal" class="modal-overlay" style="z-index: 10004;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('adminMenuModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>ระบบจัดการผู้ใช้งาน</h3><button id="adminGlobalLogsBtn" class="btn-action-floating" style="right: 60px;" onclick="window.viewGlobalLogs()" title="ดูประวัติการใช้งานรวม"><span class="material-symbols-outlined">list_alt</span></button><button class="btn-close-floating" onclick="window.toggleModal('adminMenuModal', false)"><span class="material-symbols-outlined">close</span></button></div><p id="adminRoleNotice" style="font-size: 12px; color: var(--neon-yellow); margin-top: 10px; text-align: center; display: none;">* สิทธิ์การใช้งานถูกควบคุมโดยผู้ดูแลระบบ</p><button id="permReqBanner" class="perm-req-banner" style="display: none;" onclick="window.openPermRequests()"></button>
+                    <!-- 📊 (16 ก.ย. 69) แถบสรุป/ตัวกรองวิธีสมัคร + เตือนบัญชี Google ที่ข้อมูลไม่ครบ — วาดจาก __paintAdminUserInsight() เท่านั้น (ไม่กินโควตา) -->
+                    <div id="adminUserInsight" style="padding: 8px 12px 0; text-align: left;"></div><div id="adminUserList" class="modal-content-scroll" style="text-align: left; padding: 10px;"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลดข้อมูล...</div></div><div id="loginLogToggleRow" style="display:none; padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><div style="display:flex; align-items:center; justify-content:space-between; gap:12px;"><div style="flex:1; min-width:0;"><div style="font-size:13px; color:#fff; font-weight:600;">บันทึก log ล็อกอิน / ล็อกเอาต์ (ย้ายไปตั้งค่าสิทธิ์ → บันทึกประวัติ)</div><div style="font-size:11px; color:#9aa3b5; margin-top:2px; line-height:1.5;">เปิด = เขียน log 2 จุด (ประวัติผู้ใช้ + global_logs) ทุกล็อกอิน/เอาต์ · ปิด = ประหยัดโควตา (แนะนำ)</div></div><label class="app-switch"><input type="checkbox" id="logLoginLogoutToggle" onchange="window.toggleLoginLogLogging(this.checked)"><span class="app-slider"></span></label></div></div><div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05);"><button id="adminAddUserBtn" onclick="window.openAdminAddUser()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">person_add</span> เพิ่มผู้ใช้งานใหม่</button></div></div></div>
 
 <div id="permRequestsModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.toggleModal('permRequestsModal', false)" title="กลับ"><span class="material-symbols-outlined">arrow_back</span>กลับ</button><h3 style="color: var(--neon-yellow);">คำขอสิทธิ์เพิ่ม</h3><button class="btn-close-floating" onclick="window.toggleModal('permRequestsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:10px;"><p style="font-size:12px; color:var(--text-dim); margin:4px 6px 10px; line-height:1.6;">รายชื่อสมาชิกที่ขอสิทธิ์เพิ่ม — กด <b style="color:#4ade80;">อนุมัติสิทธิ์</b> เพื่อให้สิทธิ์ที่ขอกับสมาชิกทันที (ไม่เปลี่ยนตำแหน่ง — ผู้ขอจะเห็นแจ้งเตือนตอนเปิดแอป) หรือกด <b style="color:#ff8a95;">ปฏิเสธ</b> เพื่อไม่ให้สิทธิ์</p><div id="permReqListBody" style="min-height: 150px;"></div></div></div></div>
 
@@ -13416,6 +13422,8 @@
         ['2026-09-16', '🚫 เอาปุ่มดินสอหน้า “ชื่อผู้ใช้” ออกถ้าแก้ไม่ได้อยู่แล้ว — บัญชี Google/ไอดีล็อกถาวร'],
         ['2026-09-16', '🔵 ช่อง “ชื่อผู้ใช้ (ใช้ล็อกอิน)” เป็นสีฟ้าสว่าง เด่นชัดขึ้น (ทั้งธีมมืด/สว่าง)'],
         ['2026-09-16', '📧 หน้าจัดการผู้ใช้บอกว่าใครสมัครผ่าน Gmail + อีเมล และปุ่มดูอีเมลบัญชีรุ่นเก่า'],
+        ['2026-09-16', '📊 แถบสรุป/กรองในหน้าจัดการผู้ใช้: ทั้งหมด · สมัครผ่าน Gmail · ผูก Gmail · ข้อมูลไม่ครบ'],
+        ['2026-09-16', '⚠️ เตือนบนการ์ด + แถบสรุปเมื่อบัญชี Google ยังไม่กรอกทะเบียน/เบอร์โทร'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -15597,8 +15605,24 @@
     window.__paintAdminUsers = () => {
         const isGod = currentUserRole === "Admin";
         const myPerms = isGod ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
+        // 📊 (16 ก.ย. 69) สรุป/กรองตามวิธีสมัคร + หาบัญชี Google ที่ข้อมูลโปรไฟล์ไม่ครบ — คิดจากรายชื่อในเครื่องล้วน (0 คำขอ)
+        const _all = window.currentAdminUsers || [];
+        const __gk = (u) => (window.__gmailInfo ? window.__gmailInfo(u) : { linked: false, signup: false, hasEmail: false });
+        const __incomplete = (u) => { const g = __gk(u); if (!g.linked) return false; const pl = String(u.plateNo || '').trim(), ph = String(u.phoneNumber || '').trim(); return (!pl || !ph); };
+        const _stats = {
+            total: _all.length,
+            signup: _all.filter((u) => __gk(u).signup).length,
+            linkedOnly: _all.filter((u) => { const g = __gk(u); return g.linked && !g.signup; }).length,
+            incomplete: _all.filter(__incomplete).length,
+            noEmail: _all.filter((u) => { const g = __gk(u); return g.linked && !g.hasEmail; }).length
+        };
+        _stats.gmail = _stats.signup + _stats.linkedOnly;
+        const _f = String(window.adminUserFilter || 'all');
+        const _pred = { all: () => true, signup: (u) => __gk(u).signup, linked: (u) => __gk(u).linked, incomplete: __incomplete };
+        const list = (_pred[_f] || _pred.all) ? _all.filter(_pred[_f] || _pred.all) : _all;
+        window.__adminUserCounts = _stats;
         let html = '';
-        (window.currentAdminUsers || []).forEach((u) => {
+        list.forEach((u) => {
                     let uid = u.uid; let statusHtml = '';
                     if(u.isBanned) { statusHtml = '<span class="status-dot status-banned"></span><span style="color:var(--accent-red)">ถูกระงับ (Ban)</span>'; }
                     const formatDate = (timestamp) => { if(!timestamp) return "-"; const d = new Date(timestamp); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
@@ -15643,12 +15667,22 @@
                         if (_gi.hasEmail) gmailChip = `<span class="admin-meta-chip admin-gmail-chip" title="${_gi.signup ? 'สมัครสมาชิก/เข้าใช้ด้วยบัญชี Google' : 'ผูกบัญชี Google ไว้กับบัญชีนี้ (ยังมีรหัสผ่านของตัวเอง)'}"><span class="material-symbols-outlined">mail</span>${label}: ${_es(_gi.email)}</span>`;
                         else gmailChip = `<span class="admin-meta-chip admin-gmail-chip" title="บัญชีนี้เชื่อมกับ Google แต่ข้อมูลบัญชียังไม่มีอีเมล"><span class="material-symbols-outlined">mail</span>${label} <button onclick="event.stopPropagation(); window.adminFetchGmailEmail('${uid}')" style="background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.45); color:#7dd3fc; border-radius:8px; font-size:10.5px; padding:2px 7px; margin-left:4px; cursor:pointer;">ดูอีเมล</button></span>`;
                     }
-                    html += `<div class="admin-user-card"><div class="admin-user-top">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">${safeUsername}</span><span class="admin-user-statusline" id="admin-status-${uid}">${statusHtml}</span></div></div><div class="admin-meta-row">${lastLoginChip}${gmailChip}${plateChip}</div></div></div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
+                    // ⚠️ (16 ก.ย. 69) บัญชีที่เข้าแอปผ่าน Google แล้วยังกรอกข้อมูลไม่ครบ — เตือนบนการ์ดเลย ไม่ต้องเข้าไปดูรายคน
+                    let incompleteChip = '';
+                    if (_gi.linked) {
+                        const _missing = [];
+                        if (!String(u.plateNo || '').trim()) _missing.push('ทะเบียนรถ');
+                        if (!String(u.phoneNumber || '').trim()) _missing.push('เบอร์โทร');
+                        if (_missing.length) incompleteChip = `<span class="admin-meta-chip admin-incomplete-chip" title="บัญชีนี้เข้าแอปผ่าน Google แล้วยังกรอกข้อมูลไม่ครบ — แอปจะเด้งหน้าต้อนรับให้กรอกเอง"><span class="material-symbols-outlined">warning</span>ข้อมูลไม่ครบ: ${_missing.join(' · ')}</span>`;
+                    }
+                    html += `<div class="admin-user-card"><div class="admin-user-top">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">${safeUsername}</span><span class="admin-user-statusline" id="admin-status-${uid}">${statusHtml}</span></div></div><div class="admin-meta-row">${lastLoginChip}${gmailChip}${incompleteChip}${plateChip}</div></div></div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
                 });
         const box = document.getElementById('adminUserList'); if (!box) return;
-        box.innerHTML = html || '<div style="padding: 20px; color: gray;">ไม่พบข้อมูล</div>';
+        box.innerHTML = html || '<div style="padding: 20px; color: gray;">' + (_f === 'all' ? 'ไม่พบข้อมูล' : 'ไม่มีสมาชิกในกลุ่มที่กรองไว้ — กด “ทั้งหมด” เพื่อดูทุกคน') + '</div>';
+        if (typeof window.__paintAdminUserInsight === 'function') window.__paintAdminUserInsight(_stats);
 
-        if (myPerms.canEdit) {
+        // ⚠️ การลากสลับลำดับใช้ “ลำดับที่แสดง” เทียบกับ “ลำดับที่เก็บจริง” ⇒ เปิดเฉพาะตอนแสดงทั้งหมด (ไม่กรอง) ไม่งั้นลากแล้วสลับผิดคน
+        if (myPerms.canEdit && _f === 'all') {
                     if (typeof Sortable !== 'undefined') {
                         if(window.adminSortable) { window.adminSortable.destroy(); }
                         window.adminSortable = new Sortable(box, { animation: 150, delay: 200, delayOnTouchOnly: true, handle: '.drag-handle', ghostClass: 'sortable-ghost',
@@ -15659,8 +15693,42 @@
                                 try { await batch.commit(); } catch(e) { window.showToast("อัปเดตลำดับล้มเหลว", true); }
                             }
                         });
-                    }
+                    } else if (window.adminSortable) { try { window.adminSortable.destroy(); window.adminSortable = null; } catch (e) {} }
+        } else if (window.adminSortable) { try { window.adminSortable.destroy(); window.adminSortable = null; } catch (e) {} }
+    };
+    // 📊 แถบสรุป + ตัวกรองในหน้าจัดการผู้ใช้ — แสดงจำนวนตามวิธีสมัคร/ความครบของข้อมูล และเตือนบัญชี Google ที่ยังไม่กรอกครบ
+    //    กดชิป = กรองลิสต์เฉพาะกลุ่มนั้น (กดชิปเดิมซ้ำ = กลับเป็นทั้งหมด) · ทำงานในหน่วยความจำล้วน ไม่ยิงเน็ต
+    window.adminUserFilter = window.adminUserFilter || 'all';
+    window.adminUserFilterSet = (f) => {
+        window.adminUserFilter = (String(window.adminUserFilter || 'all') === String(f)) ? 'all' : String(f || 'all');
+        try { window.__paintAdminUsers(); } catch (e) {}
+    };
+    window.__paintAdminUserInsight = (s) => {
+        const bar = document.getElementById('adminUserInsight'); if (!bar) return;
+        s = s || {};
+        const cur = String(window.adminUserFilter || 'all');
+        const chip = (key, icon, text, color, bg, bd) => '<button onclick="window.adminUserFilterSet(\'' + key + '\')" title="' + (key === 'all' ? 'แสดงทุกคน' : 'กรองเฉพาะกลุ่มนี้ (กดซ้ำเพื่อยกเลิก)') + '" style="display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:999px; font-size:11.5px; font-weight:600; cursor:pointer; white-space:nowrap; color:' + color + '; background:' + ((cur === key) ? 'rgba(56,189,248,0.30)' : bg) + '; border:1px solid ' + ((cur === key) ? '#7dd3fc' : bd) + ';"><span class="material-symbols-outlined" style="font-size:15px;">' + icon + '</span>' + text + '</button>';
+        let html = '<div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">';
+        html += chip('all', 'groups', 'ทั้งหมด ' + (s.total || 0), '#e6edf7', 'rgba(255,255,255,0.07)', 'rgba(255,255,255,0.16)');
+        html += chip('signup', 'mail', 'สมัครผ่าน Gmail ' + (s.signup || 0), '#7dd3fc', 'rgba(56,189,248,0.14)', 'rgba(56,189,248,0.42)');
+        html += chip('linked', 'link', 'ผูก Gmail ' + (s.linkedOnly || 0), '#c4b5fd', 'rgba(167,139,250,0.14)', 'rgba(167,139,250,0.42)');
+        if (s.incomplete) html += chip('incomplete', 'warning', 'ข้อมูลไม่ครบ ' + s.incomplete, '#ffd24d', 'rgba(241,196,15,0.16)', 'rgba(241,196,15,0.50)');
+        html += '</div>';
+        if (s.incomplete) {
+            html += '<div style="margin-top:8px; display:flex; gap:8px; align-items:flex-start; background:rgba(241,196,15,0.10); border:1px solid rgba(241,196,15,0.38); border-radius:12px; padding:9px 11px;">' +
+                '<span class="material-symbols-outlined" style="font-size:18px; color:#ffd24d; flex-shrink:0;">notification_important</span>' +
+                '<div style="flex:1; min-width:0; font-size:11.5px; color:#ffdca8; line-height:1.6;">' +
+                '<b>มี ' + s.incomplete + ' บัญชีที่เข้าแอปผ่าน Google แล้วยังกรอกทะเบียนรถ/เบอร์โทรไม่ครบ</b> — แอปจะเด้งหน้าต้อนรับให้สมาชิกกรอกเองตอนเปิดแอป แต่ถ้าต้องการเร่ง แจ้งเขาให้เข้า “ตั้งค่าโปรไฟล์” หรือกดชิปด้านบนเพื่อดูรายชื่อ' +
+                '<div style="margin-top:6px;"><button onclick="window.adminUserFilterSet(\'incomplete\')" class="manual-timer-btn" style="padding:5px 12px; font-size:11.5px; background:rgba(241,196,15,0.85); color:#1a1a1a;"><span class="material-symbols-outlined" style="font-size:16px;">filter_alt</span> ดูเฉพาะ ' + s.incomplete + ' คนนี้</button></div>' +
+                '</div></div>';
         }
+        if (s.noEmail) {
+            html += '<div style="margin-top:8px; font-size:11px; color:var(--text-dim); line-height:1.6;">ℹ️ อีก ' + s.noEmail + ' บัญชีเชื่อมกับ Google แต่ข้อมูลบัญชียังไม่มีอีเมล (บัญชีรุ่นเก่า) — กด “ดูอีเมล” ที่ชิปสีฟ้าของบัญชีนั้นเพื่อดึงมาแสดง (อ่าน 1 ครั้ง แล้วบันทึกกลับ)</div>';
+        }
+        if (cur !== 'all') {
+            html += '<div style="margin-top:8px; font-size:11.5px; color:#7dd3fc; font-weight:600;">กำลังกรองอยู่: ' + ({ signup: 'สมัครผ่าน Gmail', linked: 'ผูก Gmail', incomplete: 'ข้อมูลไม่ครบ' }[cur] || cur) + ' — กด “ทั้งหมด” เพื่อยกเลิก</div>';
+        }
+        bar.innerHTML = html;
     };
     /* 📡 ตัวฟังรายชื่อผู้ใช้ (users) — แยกออกมาเพื่อ “อุ่นเครื่อง” ล่วงหน้าได้
        เดิม: สมัครตัวฟังใหม่ทุกครั้งที่เปิดหน้าต่างจัดการผู้ใช้ → snapshot แรกมาจากแคชมีไม่ครบ = ช่วงลิสต์ว่าง
