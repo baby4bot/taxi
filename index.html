@@ -8963,7 +8963,9 @@
         let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]').map((it, i) => Object.assign({ __i: i }, it));
         let favs = window.getFavorites();
         // 📏 ตำแหน่งอ้างอิงสำหรับป้ายระยะทาง — ใช้ค่าที่มีอยู่แล้วในเครื่อง (ไม่รอ GPS ไม่กินโควตา) แล้วค่อยอัปเดตด้วยตำแหน่งจริงด้านล่าง
-        const ref0 = freshLastPos() || window.__lastUpos || window.getUserPosManual() || null;
+        const lf0 = freshLastPos();
+        const man0 = window.getUserPosManual();
+        const ref0 = lf0 || window.__lastUpos || (man0 && typeof man0.lat === 'number' ? Object.assign({}, man0, { at: Date.now(), src: 'manual' }) : null);
         // 📏 เรียงใกล้สุดก่อน — ใช้ “ระยะตรง” คิดจากตำแหน่งอ้างอิง (ไม่ยิง routing เลย = ไม่กินโควตา)
         let sortedByDist = false;
         if (ref0) { favs = window.sortByNear(favs, ref0); h = window.sortByNear(h, ref0); sortedByDist = true; }
@@ -8979,7 +8981,8 @@
         }
         let html = `<div class="history-header"><span><span class="material-symbols-outlined">history</span> ปลายทาง</span></div>`;
         html += window.nearFilterRowHtml(ref0, hiddenNear);
-        if (sortedByDist) html += `<div class="near-note"><span class="material-symbols-outlined">near_me</span><span>เรียงตามระยะใกล้สุดจากตำแหน่งของคุณ — จัดอันดับด้วย <b>ระยะตรง</b> (ตัวเลขบนป้ายยังเป็นระยะเส้นทางจริง)</span></div>`;
+        if (sortedByDist) html += `<div class="near-note"><span class="material-symbols-outlined">near_me</span><span>เรียงตามระยะใกล้สุดจากตำแหน่งของคุณ — จัดอันดับด้วย <b>ระยะตรง</b> (ตัวเลขบนป้ายเป็นระยะเส้นทางจริง)</span></div>`;
+        html += window.posNoteHtml(ref0); // 📍 บอกว่าใช้พิกัดไหน/อัปเดตเมื่อไหร่ + ปุ่มขอพิกัดใหม่
         // ❌ ไม่แสดงแถว “ตั้งตำแหน่งของฉัน” ในลิสต์ค้นหาอีก (ผู้ใช้สั่ง 15 ก.ย.) — การนำทางเริ่มจากตำแหน่งล่าสุดจริงอยู่แล้ว
         //    ตัวโค้ดเดิม (getUserPosManual / enterSetPosMode) ยังอยู่ → ค่าที่เคยตั้งไว้ยังใช้ได้เหมือนเดิม แค่ไม่มีปุ่มให้ตั้งจากตรงนี้
         if (!h.length && !favs.length) {
@@ -9008,12 +9011,15 @@
         // 📏 ตำแหน่งจริง (แคช 2 นาที — ไม่ยิง GPS ซ้ำถ้าเพิ่งได้) → อัปเดตป้ายระยะตรงก่อน แล้วยกระดับเป็นระยะเส้นทางจริงเฉพาะ 6 แถวแรก
         //    ถ้าตอนวาดครั้งนี้ยังไม่มีตำแหน่งเลย (เลยยังไม่เรียง) → เรียงใหม่ให้ครั้งเดียวเมื่อได้ตำแหน่งจริง
         try {
-            getUserPos().then((u) => {
+            // ⏱️ ลิสต์นี้ใช้ “พิกัดสด” ได้เลย: ยอมรับแคชเก่าไม่เกิน 20 วิ เท่านั้น (เดิม 2 นาที ⇒ ตอนขับเพี้ยนได้เกิน 1 กม.)
+            getUserPos({ maxAgeMs: POS_TTL_FAST_MS }).then((u) => {
                 if (!u) return;
-                if (!ref0) {
-                    const k = u.lat.toFixed(3) + '|' + u.lon.toFixed(3);
-                    if (window.__histReSortedWith !== k) { window.__histReSortedWith = k; window.__lastUpos = u; window.showHistory(); return; }
-                }
+                window.__lastUpos = u;
+                // 🧭 ถ้าพิกัดจริง “ต่างจากพิกัดที่ใช้เรียงตอนวาด” (ย้ายเกิน ~150 ม.) → เรียงและวาดใหม่หนึ่งครั้ง
+                //    (เดิมเรียงใหม่เฉพาะกรณีที่ตอนวาดยังไม่มีพิกัดเลย ⇒ พิกัดเก่าค้างเป็นตัวจัดลำดับ)
+                const k = u.lat.toFixed(3) + '|' + u.lon.toFixed(3);
+                const refKey = ref0 ? (ref0.lat.toFixed(3) + '|' + ref0.lon.toFixed(3)) : '';
+                if (k !== refKey && window.__histReSortedWith !== k) { window.__histReSortedWith = k; window.showHistory(); return; }
                 window.__refreshLocRowDistances(u, 'historyList');
             }).catch(() => {});
         } catch (e) {}
@@ -9108,25 +9114,85 @@
     // แคชตำแหน่งผู้ใช้ 2 นาที — ขอ GPS ครั้งเดียว ใช้ซ้ำทั้งตอนค้นหา/เรียงผล/คำนวณระยะ (ลดการเรียก API + กันเบราว์เซอร์ขอสิทธิ์บ่อย)
     let cachedUserPos = null;
     let cachedUserPosAt = 0;
-    const getUserPos = () => {
-        if (cachedUserPos && (Date.now() - cachedUserPosAt) < 120000) return Promise.resolve(cachedUserPos);
-        // 🧪 test hook — จำลองตำแหน่งผู้ใช้ (ใช้ใน preview ที่ GPS ถูกบล็อก + เทสต์อัตโนมัติ)
-        if (window.__testUserPos && typeof window.__testUserPos.lat === 'number') { cachedUserPos = window.__testUserPos; cachedUserPosAt = Date.now(); return Promise.resolve(cachedUserPos); }
+    // ⏱️ อายุที่ยอมรับของตำแหน่งผู้ใช้: เดิม 2 นาที ⇒ ตอนขับรถตำแหน่งอ้างอิงอาจเก่าเกิน 1 กม.
+    //    แบ่งเป็น 2 ระดับ: ใช้ซ้ำเร็ว ๆ (20 วิ — ระยะทาง/เรียงลำดับที่คนขับเห็น) · ใช้ซ้ำได้นานสุด 30 วิ (งานอื่น)
+    const POS_TTL_FAST_MS = 20000;
+    const POS_TTL_MS = 30000;
+    const GEO_FAIL_COOLDOWN_MS = 15000; // GPS ล้มเหลว → หยุดพัก 15 วิ แล้วลองใหม่ (เดิมพังแล้วปิด GPS ไปทั้งเซสชัน)
+    // 🧯 ตำแหน่งสำรองเมื่อยังไม่ได้ GPS สด — ติดป้าย src มาด้วยเพื่อให้ UI บอกความจริงได้ว่าตัวเลขคิดจากอะไร
+    const posFallback = () => {
+        const lf = freshLastPos();
+        if (lf) return lf; // src = 'last' (fix จากมิเตอร์/แผนที่ ≤3 นาที)
+        // 🧯 ไม่มี GPS สด → เลือกระหว่าง “แคชล่าสุด” กับ “ตำแหน่งที่ตั้งเอง” ตามเวลาที่ใหม่กว่า แล้วติดป้ายให้ตรงความจริง
+        //    (ห้ามคืนแคชเก่าโดยไม่บอกอายุ — เดิมคืนเลย ทำให้เลขดูเหมือนคิดจากพิกัดปัจจุบัน)
+        const cAge = Date.now() - (cachedUserPosAt || 0);
+        const cPos = (cachedUserPos && typeof cachedUserPos.lat === 'number')
+            ? Object.assign({}, cachedUserPos, { at: cachedUserPosAt || cachedUserPos.at || 0, src: (cAge <= POS_TTL_MS ? 'cache' : 'stale') }) : null;
+        const m = window.getUserPosManual();
+        const mPos = (m && typeof m.lat === 'number') ? Object.assign({}, m, { at: Number(m.at) || 0, src: 'manual' }) : null;
+        if (cPos && mPos) return cPos.at >= mPos.at ? cPos : mPos;
+        return cPos || mPos || null;
+    };
+    // 📍 ตำแหน่งปัจจุบันจริง — opts.maxAgeMs = อายุที่ยอมรับได้ · opts.force = ข้ามแคช (ใช้ตอนกด “อัปเดต”)
+    const getUserPos = (opts) => {
+        const maxAge = (opts && typeof opts.maxAgeMs === 'number') ? opts.maxAgeMs : POS_TTL_MS;
+        const force = !!(opts && opts.force);
+        // 🧪 test hook — จำลองตำแหน่งผู้ใช้ (ใช้ใน preview ที่ GPS ถูกบล็อก + เทสต์อัตโนมัติ) · ต้องมาก่อนแคช ไม่งั้นเทสต์จะเห็นพิกัดเก่า
+        if (window.__testUserPos && typeof window.__testUserPos.lat === 'number') { cachedUserPos = Object.assign({ src: 'gps' }, window.__testUserPos); cachedUserPosAt = Date.now(); return Promise.resolve(cachedUserPos); }
+        if (!force && cachedUserPos && (Date.now() - cachedUserPosAt) < maxAge) return Promise.resolve(cachedUserPos);
         // GPS เคยล้มเหลวในเซสชันนี้ (เช่น คอม/แอปไม่มี GPS) → ข้ามรอ GPS ตรงไปใช้ตำแหน่งที่ตั้งเอง/ล่าสุดทันที
-        if (window.__geoFailedOnce) { const lf0 = freshLastPos(); return Promise.resolve(lf0 || window.getUserPosManual() || null); }
+        // GPS เพิ่งล้มเหลว (ภายใน cooldown) → ไม่รอซ้ำในรอบนี้ ใช้ค่าล่าสุดไปก่อน แล้วรอบหน้าลองใหม่เอง
+        if (window.__geoFailAt && (Date.now() - window.__geoFailAt) < GEO_FAIL_COOLDOWN_MS) return Promise.resolve(posFallback());
         return new Promise((resolve) => {
-            if (!navigator.geolocation) { const lf = freshLastPos(); resolve(lf || window.getUserPosManual() || null); return; }
+            if (!navigator.geolocation) { window.__geoFailAt = Date.now(); resolve(posFallback()); return; }
             navigator.geolocation.getCurrentPosition(
-                (pos) => { cachedUserPos = { lat: pos.coords.latitude, lon: pos.coords.longitude, at: Date.now() }; cachedUserPosAt = cachedUserPos.at; resolve(cachedUserPos); },
-                () => { window.__geoFailedOnce = true; const lf = freshLastPos(); resolve(lf || window.getUserPosManual() || null); },
-                { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+                (pos) => { cachedUserPos = { lat: pos.coords.latitude, lon: pos.coords.longitude, at: Date.now(), src: 'gps' }; cachedUserPosAt = cachedUserPos.at; window.__geoFailAt = 0; window.__geoFailedOnce = false; resolve(cachedUserPos); },
+                () => { window.__geoFailAt = Date.now(); window.__geoFailedOnce = true; resolve(posFallback()); },
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
             );
         });
     };
+    window.__getUserPos = (opts) => getUserPos(opts); // 🧪 เปิดให้เทสต์/คอนโซลเรียกได้ (ไม่ใช้ในงานจริง)
+    // 🔄 ปุ่ม “อัปเดตตำแหน่ง” ในลิสต์ค้นหา — ล้างแคชแล้วขอกลาง GPS ใหม่ทันที (คนขับกดเองได้เมื่อตัวเลขดูไม่ตรง)
+    window.refreshMyPos = async () => {
+        cachedUserPos = null; cachedUserPosAt = 0; window.__geoFailAt = 0;
+        try { window.__histReSortedWith = null; } catch (e) {}
+        const u = await getUserPos({ force: true, maxAgeMs: 0 });
+        if (u) { window.__lastUpos = u; window.showHistory(); window.showToast('📍 ใช้ตำแหน่งปัจจุบันล่าสุดแล้ว' + (u.src === 'gps' ? ' (GPS)' : ' (ตำแหน่งสำรอง)')); }
+        else window.showToast('ยังไม่ได้ตำแหน่ง GPS — ตรวจสิทธิ์ตำแหน่ง/สัญญาณแล้วลองอีกครั้ง', true);
+    };
     // 🕒 fix GPS ล่าสุดจากมิเตอร์/แผนที่ (สด ≤ 3 นาที) — ใช้เป็นตำแหน่งอ้างอิงได้โดยไม่ต้องรอ GPS ใหม่ (กันพลาดตอน GPS สัญญาณอ่อน)
-    const freshLastPos = () => (lastPos && lastPosTime && (Date.now() - lastPosTime) < 180000) ? { lat: lastPos.lat, lon: lastPos.lon, at: Date.now() } : null;
+    // @param at = เวลาของ fix จริง (ไม่ใช่เวลาที่เรียกอ่าน) — ใช้บอกผู้ใช้ว่า “ตัวเลขนี้คิดจากตำแหน่งเมื่อกี่วินาทีที่แล้ว”
+    const freshLastPos = () => (lastPos && lastPosTime && (Date.now() - lastPosTime) < 180000) ? { lat: lastPos.lat, lon: lastPos.lon, at: lastPosTime, src: 'last' } : null;
     const distKm = (a, b) => { const R = 6371; const dLat = (b.lat - a.lat) * Math.PI / 180; const dLon = (b.lon - a.lon) * Math.PI / 180; const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2; return 2 * R * Math.asin(Math.sqrt(h)); };
     const fmtDist = (km) => km < 1 ? Math.round(km * 1000) + ' ม.' : km.toFixed(1) + ' กม.';
+    // 🧷 ตัวเดียวที่เขียนค่าลงป้ายระยะทาง — ข้อความ/คลาส/สี/title ต้องตรงกันเสมอ
+    //    บั๊กเดิม (16 ก.ย. 69): เขียนแค่ textContent ⇒ ระยะตรง “≈7.0 กม.” ไปอยู่ในป้ายสไตล์สีน้ำเงิน/คำอธิบาย “ระยะทางเส้นทางจริง” ⇒ คนขับอ่านเป็นเลขจริง
+    const paintDistBadge = (badge, km, isReal) => {
+        if (!badge) return;
+        badge.textContent = (isReal ? '' : '≈') + fmtDist(km);
+        badge.className = 'dist-badge' + (isReal ? '' : ' approx');
+        badge.style.color = isReal ? '#38bdf8' : '#94a3b8';
+        badge.style.background = isReal ? 'rgba(56,189,248,0.12)' : 'rgba(148,163,184,0.10)';
+        badge.style.borderColor = isReal ? 'rgba(56,189,248,0.25)' : 'rgba(148,163,184,0.25)';
+        badge.title = isReal
+            ? 'ระยะทางเส้นทางจริง (ผ่านถนน) จากตำแหน่งปัจจุบัน — ตรงกับหน้าสรุปเส้นทาง'
+            : 'ระยะตรง (≈) จากตำแหน่งปัจจุบัน — ยังไม่ได้คำนวณเส้นทางจริง (ตัวเลขจริงจะมาแทนที่) · แตะปลายทางเพื่อดูระยะ/ราคาจริง';
+    };
+    window.__paintDistBadge = paintDistBadge;
+    // 📍 บรรทัดบอก “ตัวเลขนี้คิดจากตำแหน่งไหน เมื่อกี่วินาทีที่แล้ว” + ปุ่มขอตำแหน่งใหม่
+    //    ทำไม: คนขับต้องรู้ว่าลิสต์คิดจากพิกัดปัจจุบันจริง ไม่ใช่ตำแหน่งเก่าจากเที่ยวที่จบไปแล้ว/ตำแหน่งที่ตั้งเองในเครื่อง
+    window.posNoteHtml = (ref) => {
+        const ageMs = (ref && ref.at) ? Math.max(0, Date.now() - ref.at) : null;
+        const src = (ref && ref.src) || '';
+        const ageTxt = (ageMs === null) ? '' : (ageMs < 60000 ? Math.round(ageMs / 1000) + ' วิ' : Math.round(ageMs / 60000) + ' นาที');
+        const warn = !ref || src === 'manual' || src === 'stale' || (ageMs !== null && ageMs > 60000);
+        const label = !ref ? 'ยังไม่มีพิกัดปัจจุบัน — เปิด GPS แล้วกดอัปเดต'
+            : (src === 'manual' ? 'ใช้ “ตำแหน่งที่ตั้งเอง” ไว้ (ไม่ใช่พิกัดปัจจุบัน) — กดอัปเดตเพื่อกลับมาใช้ GPS'
+            : (src === 'stale' ? 'พิกัดล่าสุดที่มีเก่า ' + ageTxt + ' — กดอัปเดตเพื่อใช้พิกัดปัจจุบัน'
+            : 'ใช้พิกัดปัจจุบัน · อัปเดต ' + ageTxt + 'ที่แล้ว'));
+        return '<div class="near-note"' + (warn ? ' style="color:#ffc46b;"' : '') + '><span class="material-symbols-outlined">my_location</span><span>ระยะทางคิดจาก<b>ตำแหน่งปัจจุบันของคุณ</b> (' + label + ')</span><button class="near-toggle" onclick="event.stopPropagation(); window.refreshMyPos()" title="ขอตำแหน่งปัจจุบันใหม่เดี๋ยวนี้"><span class="material-symbols-outlined">refresh</span> อัปเดต</button></div>';
+    };
     // 📏 เรียงรายการตามระยะใกล้สุดจากตำแหน่งอ้างอิง — ใช้ “ระยะตรง” (haversine) เท่านั้น = ฟรี ไม่กินโควตา routing
     //    รายการที่ไม่มีพิกัด (lat/lon ไม่ใช่ตัวเลข) ไปท้ายสุดเสมอ เหมือนเดิมเวลาเทียบ
     window.sortByNear = (arr, upos) => {
@@ -9202,13 +9268,7 @@
                 if (!badge) continue;
                 const dlat = parseFloat(row.dataset.dlat), dlon = parseFloat(row.dataset.dlon);
                 const km = await window.__getRouteKm(dlat, dlon, upos.lat, upos.lon);
-                if (km && km > 0) {
-                    badge.textContent = fmtDist(km);
-                    // แปลงจาก “ระยะตรง (ประมาณ)” เป็นระยะทางเส้นทางจริง
-                    badge.classList.remove('approx');
-                    badge.style.color = '#38bdf8'; badge.style.background = 'rgba(56,189,248,0.12)'; badge.style.borderColor = 'rgba(56,189,248,0.25)';
-                    badge.title = 'ระยะทางเส้นทางจริง (ผ่านถนน) จากตำแหน่งคุณ — ตรงกับหน้าสรุปเส้นทาง';
-                }
+                if (km && km > 0) paintDistBadge(badge, km, true); // แปลงจาก “ระยะตรง (ประมาณ)” ทางเดียว — ข้อความ+สไตล์พร้อมกัน
             }
         };
         await Promise.all([worker(), worker(), worker()]);
@@ -9231,17 +9291,21 @@
             const box = document.getElementById(boxId || 'historyList');
             if (!box || !upos) return;
             const rows = box.querySelectorAll('.list-item[data-dlat]');
-            // 1) ระยะตรง — ฟรี อัปเดตได้ทุกครั้งที่มีตำแหน่งใหม่
+            // 1) เขียนค่าที่ “ดีที่สุดของตำแหน่งนี้” ลงป้าย — มีระยะเส้นทางจริงในแคชแล้วห้ามทับด้วยค่าประมาณ
+            //    (บั๊กเดิม: ทับค่า 10.4 กม. ด้วย ≈7.0 กม. ทุกครั้งที่ตำแหน่งจริงมาถึง ⇒ คนขับเห็นเลขสั้นกว่าจริง)
+            let anyApprox = false;
             rows.forEach(row => {
                 const b = row.querySelector('.dist-badge'); if (!b) return;
-                const km = distKm(upos, { lat: parseFloat(row.dataset.dlat), lon: parseFloat(row.dataset.dlon) });
-                b.textContent = '≈' + fmtDist(km);
+                const dlat = parseFloat(row.dataset.dlat), dlon = parseFloat(row.dataset.dlon);
+                const real = window.__routeKmCache[routeKmKey(upos.lat, upos.lon, dlat, dlon)];
+                if (typeof real === 'number' && real > 0) paintDistBadge(b, real, true);
+                else { paintDistBadge(b, distKm(upos, { lat: dlat, lon: dlon }), false); anyApprox = true; }
             });
-            // 2) ยกระดับเป็นระยะเส้นทางจริง — จำกัด 6 แถวแรก “และ” ไม่ยิงซ้ำสำหรับตำแหน่งเดิมภายใน 90 วิ
-            //    เหตุผล: กดสลับโปรด/เปิดลิสต์ซ้ำ จะวาดลิสต์ใหม่ทุกครั้ง — ถ้าไม่กันไว้จะยิง routing ซ้ำโดยไม่จำเป็น
+            // 2) ยกระดับเป็นระยะเส้นทางจริง — จำกัด 6 แถวแรก (คุมโควตา routing)
+            //    ⏱️ แต่ถ้ายังเหลือป้ายที่โชว์ค่าประมาณอยู่ → ลดเวลารอจาก 90 วิ เหลือ 20 วิ (เดิมรอ 90 วิ จนเห็นเลข ≈ ค้าง)
             const ukey = (boxId || 'historyList') + '|' + upos.lat.toFixed(3) + '|' + upos.lon.toFixed(3) + '|' + rows.length;
             const last = window.__distUpgradeLog[ukey] || 0;
-            if (Date.now() - last < 90000) return;
+            if (Date.now() - last < (anyApprox ? POS_TTL_FAST_MS : 90000)) return;
             window.__distUpgradeLog[ukey] = Date.now();
             await window.__upgradeDistBadges(upos, box, 6); // ⛔ จำกัด 6 แถว = กันโควตา routing บวม
         } catch (e) {}
@@ -9344,7 +9408,7 @@
                 list.style.display = 'block';
                 window.updateClearDestBtn(); // เปิดผลค้นหา → ปุ่ม × โผล่พร้อมกัน
                 // ดึงตำแหน่งผู้ใช้ (แคช 2 นาที) → ส่ง near= ให้ TomTom เรียงผลใกล้ฉันก่อน + เรียงซ้ำฝั่งเรา
-                const upos = await getUserPos();
+                const upos = await getUserPos({ maxAgeMs: POS_TTL_FAST_MS }); // พิกัดสดสำหรับเรียงผลใกล้ฉัน (เก่าไม่เกิน 20 วิ)
                 window.__lastUpos = upos || null;
                 if (seq !== searchSeq) return; // มีคำค้นใหม่กว่า → ทิ้งผลเก่า (กัน response เก่ามาเขียนทับ)
                 const near = upos ? `&near=${upos.lat},${upos.lon}` : '';
@@ -9593,15 +9657,20 @@
         // 🧪 test hook — จำลองตำแหน่งผู้ใช้ (ใช้ใน preview ที่ GPS ถูกบล็อก + เทสต์อัตโนมัติ)
         if (window.__testUserPos && typeof window.__testUserPos.lat === 'number') return window.__testUserPos;
         const lf = freshLastPos();
+        const cp = (cachedUserPos && typeof cachedUserPos.lat === 'number' && (Date.now() - cachedUserPosAt) < POS_TTL_MS)
+            ? Object.assign({}, cachedUserPos, { src: cachedUserPos.src || 'cache' }) : null;
+        // 🕒 เลือก “อันที่ใหม่กว่า” ระหว่าง fix จากมิเตอร์/แผนที่ กับแคชจากตอนค้นหา
+        //    เดิมคืน fix มิเตอร์ก่อนเสมอ ⇒ ถ้าเที่ยวจบไปแล้วและ fix เก่ากว่าแคชอืน 1-3 นาที ราคาประเมินจะเริ่มจากจุดเก่า
+        if (lf && cp) return (lf.at >= cp.at) ? lf : cp;
         if (lf) return lf;
-        if (cachedUserPos && (Date.now() - cachedUserPosAt) < 120000) return cachedUserPos;
-        if (!window.__geoFailedOnce && navigator.geolocation) {
+        if (cp) return cp;
+        if (navigator.geolocation && (!window.__geoFailAt || (Date.now() - window.__geoFailAt) > GEO_FAIL_COOLDOWN_MS)) {
             try {
                 const pos = await new Promise((resolve) => {
                     navigator.geolocation.getCurrentPosition(
                         (p) => resolve(p),
-                        () => { window.__geoFailedOnce = true; resolve(null); },
-                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+                        () => { window.__geoFailAt = Date.now(); window.__geoFailedOnce = true; resolve(null); },
+                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
                     );
                 });
                 if (pos) return { lat: pos.coords.latitude, lon: pos.coords.longitude, at: Date.now() };
@@ -13339,6 +13408,8 @@
         ['2026-09-16', '🚫 แอดมินเพิ่ม/ลบคำไอดีต้องห้ามเองได้ + ช่องลองพิมพ์ชื่อดูผลทันที'],
         ['2026-09-16', '🧩 ตั้งรายการได้ทั้งแบบ “ตรงเป๊ะ” และ “ครอบคลุม” — บันทึกแล้วทุกบัญชีใช้ร่วมกัน'],
         ['2026-09-16', '🛡 เตือนก่อนบันทึก: คำใหม่ที่บังชื่อสมาชิกเดิม — บอกชื่อ + ต้องกดซ้ำเพื่อยืนยัน'],
+        ['2026-09-16', '📍 ที่โปรด/ประวัติใช้พิกัดปัจจุบันจริง — ไม่ทับเลขจริงด้วยค่าประมาณ + ปุ่มอัปเดตตำแหน่ง'],
+        ['2026-09-16', '🧭 จุดเริ่มคิดราคาเลือกพิกัดใหม่สุด (มิเตอร์ vs แคชค้นหา) — เที่ยวจบไม่เริ่มจากจุดเก่า'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
