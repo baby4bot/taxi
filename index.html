@@ -13428,6 +13428,7 @@
         ['2026-09-16', '📊 แถบสรุป/กรองในหน้าจัดการผู้ใช้: ทั้งหมด · สมัครผ่าน Gmail · ผูก Gmail · ข้อมูลไม่ครบ'],
         ['2026-09-16', '⚠️ เตือนบนการ์ด + แถบสรุปเมื่อบัญชี Google ยังไม่กรอกทะเบียน/เบอร์โทร'],
         ['2026-09-16', '👤 การ์ดสมาชิก: @username กับ “เข้าใช้ล่าสุด” อยู่บรรทัดเดียว วันเวลาชิดขวา'],
+        ['2026-09-16', '🧹 หน้าจัดการผู้ใช้: เอาป้าย “ทะเบียนรถ” ออกทุกตำแหน่ง (รวมแอดมิน)'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -15662,7 +15663,10 @@
                     if(canViewThisLog) { logsBtn = `<button onclick="window.viewUserLogs('${uid}', '${safeName}')" class="action-icon-btn icon-log" title="ประวัติ"><span class="material-symbols-outlined" style="font-size:26px;">history</span></button>`; }
                     if(canDeleteThisUser) { deleteBtn = `<button onclick="window.quickDeleteUser('${uid}', '${safeName}')" class="action-icon-btn icon-del" title="ลบผู้ใช้"><span class="material-symbols-outlined" style="font-size:26px;">delete</span></button>`; }
 
-                    const plateChip = (u.plateNo && u.plateNo.trim()) ? `<span class="admin-meta-chip"><span class="material-symbols-outlined">directions_car</span>ทะเบียน: ${u.plateNo.trim()}</span>` : '';
+                    // 🚫 (16 ก.ย. 69) ไม่แสดง “ทะเบียนรถ” บนการ์ดในหน้าจัดการผู้ใช้อีก (ผู้ใช้สั่ง — รกทุกตำแหน่ง รวมแอดมิน)
+                    //    · ข้อมูลทะเบียนยังอยู่ที่เดิม ไปดูได้ในหน้าต่าง “แก้ไขสมาชิก” (แถวข้อมูลบัญชี)
+                    //    · 🔎 บั๊กที่ต้องระวัง: ระบบใช้ u.plateNo ตรวจ “ข้อมูลไม่ครบ” ของบัญชี Google ⇒ ห้ามลบ/แก้ค่านั้น แค่ไม่วาดป้าย
+                    //    · ตัวแปร plateChip ถูกถอดออกทั้งตัว (ไม่ใช้ที่ไหนอีก) — ถ้าจะยกกลับ ให้สร้างป้ายนี้ใหม่ใน .admin-meta-row
                     // 📧 (16 ก.ย. 69) บอกแอดมินว่าสมาชิกคนนี้สมัครผ่าน Gmail (หรือผูก Gmail ทีหลัง) + อีเมลอะไร
                     //    อ่านจากข้อมูลบัญชีล้วน = 0 คำขอ · บัญชีรุ่นเก่าที่ยังไม่มีอีเมล → ปุ่ม “ดูอีเมล” ให้กดเอง (1 อ่าน)
                     const _es = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15681,7 +15685,7 @@
                         if (!String(u.phoneNumber || '').trim()) _missing.push('เบอร์โทร');
                         if (_missing.length) incompleteChip = `<span class="admin-meta-chip admin-incomplete-chip" title="บัญชีนี้เข้าแอปผ่าน Google แล้วยังกรอกข้อมูลไม่ครบ — แอปจะเด้งหน้าต้อนรับให้กรอกเอง"><span class="material-symbols-outlined">warning</span>ข้อมูลไม่ครบ: ${_missing.join(' · ')}</span>`;
                     }
-                    html += `<div class="admin-user-card"><div class="admin-user-top">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">${safeUsername}</span><span class="admin-user-statusline" id="admin-status-${uid}">${statusHtml}</span>${lastLoginChip}</div></div>${(gmailChip || incompleteChip || plateChip) ? `<div class="admin-meta-row">${gmailChip}${incompleteChip}${plateChip}</div>` : ''}</div></div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
+                    html += `<div class="admin-user-card"><div class="admin-user-top">${dragHandleHtml}<img class="admin-avatar" src="${safePhoto}"><div class="admin-user-body"><div class="admin-user-head"><div class="admin-user-name">${safeName}${roleBadge}</div><div class="admin-user-sub"><span class="admin-user-uname">${safeUsername}</span><span class="admin-user-statusline" id="admin-status-${uid}">${statusHtml}</span>${lastLoginChip}</div></div>${(gmailChip || incompleteChip) ? `<div class="admin-meta-row">${gmailChip}${incompleteChip}</div>` : ''}</div></div><div class="admin-actions-row">${callBtnHtml}${quickBanBtn}${logsBtn}${editBtnHtml}${deleteBtn}</div></div>`;
                 });
         const box = document.getElementById('adminUserList'); if (!box) return;
         box.innerHTML = html || '<div style="padding: 20px; color: gray;">' + (_f === 'all' ? 'ไม่พบข้อมูล' : 'ไม่มีสมาชิกในกลุ่มที่กรองไว้ — กด “ทั้งหมด” เพื่อดูทุกคน') + '</div>';
