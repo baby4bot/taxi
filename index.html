@@ -13289,6 +13289,9 @@
         ['2026-09-16', '⚙️ กล้องตามจุดด้วยความเร็วคงที่ (นุ่มขึ้น) + แอดมินตั้งช่วงการเลื่อนของจุดเองได้'],
         ['2026-09-16', '💰 ราคาประเมินคิด “เวลารถติด” ของเส้นทางด้วย (ช่วงรถติด + ไฟแดง) ไม่ใช่แค่ระยะทาง'],
         ['2026-09-16', '🔐 ล็อกอิน/สมัครด้วยบัญชี Google ได้ในคลิกเดียว — บัญชีเดิมผูก Google ได้ในหน้าโปรไฟล์'],
+        ['2026-09-16', '🔗 ผูก Google แล้วเข้าได้ 2 ทาง — ปุ่ม Google หรือรหัสผ่านเดิม ใช้ได้ทุกเครื่อง'],
+        ['2026-09-16', '🌐 สถานะการผูก Google จำไว้ที่บัญชี — เปลี่ยนเครื่อง/ล็อกอินใหม่ก็เห็นว่าผูกแล้ว'],
+        ['2026-09-16', '🐞 บัญชีที่สมัครด้วย Google บันทึก “สมัครสมาชิก” ลงประวัติแล้ว — แอดมินเห็นการสมัครใหม่'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -13583,7 +13586,7 @@
                 try {
                     const cacheKey = 'taxi_user_cache_' + (loggedInUserId || localStorage.getItem('taxi_user_id') || '');
                     const toCache = {};
-                    ['username','role','displayName','phoneNumber','photoURL','qrCodeURL','taxiType','tollwayMode','companyName','plateNo','killIdleCapMin','vibrateGold','toastSound','navVoice','autoResume','autoFullscreen','extraPerms','menuOrder','themeMode','oledMode'].forEach(k => {
+                    ['username','role','displayName','phoneNumber','photoURL','qrCodeURL','taxiType','tollwayMode','companyName','plateNo','killIdleCapMin','vibrateGold','toastSound','navVoice','autoResume','autoFullscreen','extraPerms','menuOrder','themeMode','oledMode','googleUid','googleEmail','authProvider','authLinked'].forEach(k => {
                         if (data[k] !== undefined) toCache[k] = data[k];
                     });
                     toCache.__cachedAt = Date.now();
@@ -14497,7 +14500,8 @@
         try { newId = (await window.__fsTimeout(addDoc(collection(db, 'users'), regData), 8000)).id; }
         catch (e) { newId = await window.__fsRestAdd('users', regData); }
         try { await window.__fsRestPatchDoc('authLink/' + uid, { docId: newId, email: email, linkedAt: Date.now() }); } catch (e) {}
-        try { window.__fsTimeout(recordActivityLog(newId, 'สมัครสมาชิก', 'สร้างบัญชีด้วย Google — ' + (email || uid), 'signup', regData.displayName), 5000).catch(()=>{}); } catch (e) {}
+        // ⚠️ ห้ามเขียน log “สมัครสมาชิก” ตรงนี้ — ตอนนี้ยังไม่ล็อกอิน (loggedInUserId ว่าง) recordActivityLog จะข้ามเงียบ ๆ
+        //    → แอดมินจะไม่เห็นว่ามีคนสมัครเข้ามา และการแจ้งเตือน “สมาชิกใหม่” ไม่เด้ง ⇒ ย้ายไปเขียนหลังเข้าแอปแล้ว (__completeGoogleLogin)
         return { docId: newId, ud: regData, created: true };
     };
     window.loginWithGoogle = async () => {
@@ -14524,6 +14528,10 @@
         try { localStorage.setItem('taxi_google_uid', fbUser.uid); } catch (e) {}
         const acc = await window.__resolveGoogleAccount(fbUser);
         await window.__enterAppAsUser(acc.docId, acc.ud, acc.created ? 'สมัครสมาชิกด้วย Google' : 'เข้าสู่ระบบด้วย Google');
+        // 🔔 บันทึก “สมัครสมาชิก” หลังเข้าแอปแล้ว (ตอนนี้ loggedInUserId มีค่าแล้ว) — แอดมินเห็นในศูนย์แจ้งเตือน + วันสมัครย้อนหลัง
+        if (acc.created) {
+            try { window.__fsTimeout(recordActivityLog(acc.docId, 'สมัครสมาชิก', 'สร้างบัญชีด้วย Google — ' + (fbUser.email || fbUser.uid), 'signup', acc.ud.displayName), 5000).catch(()=>{}); } catch (e) {}
+        }
         try { window.toggleModal('loginOverlay', false); } catch (e) {}
         window.showToast(acc.created ? 'สร้างบัญชีด้วย Google สำเร็จ! ยินดีต้อนรับ' : 'เข้าสู่ระบบด้วย Google สำเร็จ!');
     };
@@ -14543,9 +14551,12 @@
                 return window.showToast('Google บัญชีนี้ผูกกับบัญชีอื่นอยู่แล้ว (' + (prev.email || '') + ') — เลือกบัญชี Google อื่น', true);
             }
             await window.__fsRestPatchDoc('authLink/' + uid, { docId: loggedInUserId, email: r.user.email || '', linkedAt: Date.now() });
-            try { await window.__fsWriteFields(loggedInUserId, { authProvider: 'google', authLinked: true, email: r.user.email || '' }, 6000); } catch (e) {}
+            // เก็บลง “บัญชีผู้ใช้” ด้วย (ไม่ใช่แค่ localStorage) → เครื่องอื่นที่ล็อกอินบัญชีเดียวกันจะเห็นสถานะผูกถูกต้อง
+            try { await window.__fsWriteFields(loggedInUserId, { authProvider: 'google', authLinked: true, email: r.user.email || '', googleUid: uid, googleEmail: r.user.email || '' }, 6000); } catch (e) {}
             localStorage.setItem('taxi_google_uid', uid);
             localStorage.setItem('taxi_google_email', r.user.email || '');
+            localStorage.setItem('taxi_google_for', String(loggedInUserId || '')); // 🔒 จำว่า Google นี้ผูกกับบัญชีไหน (กันสลับบัญชีบนเครื่องเดียวกัน)
+            try { const ck = 'taxi_user_cache_' + (loggedInUserId || ''); const c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c) { c.googleUid = uid; c.googleEmail = r.user.email || ''; c.authLinked = true; c.authProvider = 'google'; localStorage.setItem(ck, JSON.stringify(c)); } } catch (e) {}
             window.__refreshGoogleLinkUi();
             window.showToast('ผูกบัญชี Google แล้ว — ครั้งต่อไปกดปุ่มเดียวเข้าสู่ระบบ 🎉');
             try { window.addChangelogEntry && window.addChangelogEntry('ผูกบัญชี Google กับบัญชีนี้'); } catch (e) {}
@@ -14556,17 +14567,30 @@
         }
     };
     window.unlinkGoogleAccount = async () => {
-        const uid = localStorage.getItem('taxi_google_uid') || '';
+        const uid = window.__linkedGoogleUid();
         if (!uid) return window.showToast('บัญชีนี้ยังไม่ได้ผูก Google', true);
         const okRa = (typeof window.requireReauth === 'function') ? await window.requireReauth('ยืนยันเพื่อยกเลิกการผูก Google จากบัญชีนี้') : true;
         if (!okRa) return;
         try {
             await window.__fsRestDeleteDoc('authLink/' + uid);
-            localStorage.removeItem('taxi_google_uid'); localStorage.removeItem('taxi_google_email');
-            try { await window.__fsWriteFields(loggedInUserId, { authProvider: 'password', authLinked: false }, 6000); } catch (e) {}
+            localStorage.removeItem('taxi_google_uid'); localStorage.removeItem('taxi_google_email'); localStorage.removeItem('taxi_google_for');
+            try { await window.__fsWriteFields(loggedInUserId, { authProvider: 'password', authLinked: false, googleUid: '', googleEmail: '' }, 6000); } catch (e) {}
+            try { const ck = 'taxi_user_cache_' + (loggedInUserId || ''); const c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c) { c.googleUid = ''; c.googleEmail = ''; c.authLinked = false; c.authProvider = 'password'; localStorage.setItem(ck, JSON.stringify(c)); } } catch (e) {}
             window.__refreshGoogleLinkUi();
             window.showToast('ยกเลิกการผูก Google แล้ว — ยังล็อกอินด้วย username/รหัสผ่านได้ตามเดิม');
         } catch (e) { window.showToast('ยกเลิกไม่สำเร็จ — ตรวจเน็ตแล้วลองใหม่', true); }
+    };
+    // 🔎 ใครคือ Google ที่ผูกกับ “บัญชีนี้” — อ่านจากบัญชีผู้ใช้ (ใช้ได้ทุกเครื่อง) · เครื่องนี้เป็นเพียงสำรอง
+    //    ⚠️ ห้ามคืนค่าจาก localStorage ถ้าเจ้าของไม่ใช่บัญชีที่ล็อกอินอยู่ — เครื่องเดียวกันสลับบัญชีได้
+    window.__linkedGoogleUid = () => {
+        const me = loggedInUserId || localStorage.getItem('taxi_user_id') || '';
+        try {
+            const raw = localStorage.getItem('taxi_user_cache_' + me);
+            if (raw) { const c = JSON.parse(raw); return (c && c.googleUid) ? String(c.googleUid) : ''; } // มีข้อมูลบัญชีนี้แล้ว → เชื่อมัน (ว่าง = ไม่ผูก)
+        } catch (e) {}
+        const uid = localStorage.getItem('taxi_google_uid') || '';
+        const owner = localStorage.getItem('taxi_google_for') || '';
+        return (uid && owner && String(owner) === String(me)) ? uid : '';
     };
     // แสดงสถานะการผูกในหน้าโปรไฟล์ (เรียกทุกครั้งที่เปิดโปรไฟล์)
     window.__refreshGoogleLinkUi = () => {
@@ -14574,14 +14598,20 @@
         const linkBtn = document.getElementById('googleLinkBtn');
         const unBtn = document.getElementById('googleUnlinkBtn');
         if (!st) return;
-        const uid = localStorage.getItem('taxi_google_uid') || '';
-        const email = localStorage.getItem('taxi_google_email') || '';
+        let uid = window.__linkedGoogleUid();
+        let email = localStorage.getItem('taxi_google_email') || '';
+        try {
+            const ck = 'taxi_user_cache_' + (loggedInUserId || localStorage.getItem('taxi_user_id') || '');
+            const c = JSON.parse(localStorage.getItem(ck) || 'null');
+            if (c && c.googleUid && String(c.googleUid) === String(uid)) email = c.googleEmail || c.email || email;
+        } catch (e) {}
+        if (uid) { try { localStorage.setItem('taxi_google_uid', uid); localStorage.setItem('taxi_google_email', email); } catch (e) {} }
         if (uid) {
-            st.innerHTML = '✅ ผูกกับ Google แล้ว' + (email ? ' — <b>' + email + '</b>' : '') + ' · กดปุ่ม “ดำเนินการต่อด้วย Google” ในหน้าเข้าสู่ระบบได้เลย';
+            st.innerHTML = '✅ ผูกกับ Google แล้ว' + (email ? ' — <b>' + email + '</b>' : '') + ' · เข้าได้ <b>2 ทาง</b>: ปุ่ม Google หรือ username/รหัสผ่านเดิม (และใช้ได้ทุกเครื่องที่ล็อกอินบัญชีนี้)';
             if (linkBtn) { linkBtn.style.display = 'none'; }
             if (unBtn) { unBtn.style.display = 'flex'; }
         } else {
-            st.innerHTML = 'ยังไม่ได้ผูก · ผูกไว้จะล็อกอินครั้งต่อไปได้ในคลิกเดียว (บัญชีนี้ยังต้องมีรหัสผ่านเดิมอยู่) — ต้องเปิด Google provider ที่ Firebase Console ก่อน';
+            st.innerHTML = 'ยังไม่ได้ผูก · ผูกไว้จะล็อกอินได้ <b>2 ทาง</b> (ปุ่ม Google หรือ username/รหัสผ่านเดิม) — ต้องเปิด Google provider ที่ Firebase Console ก่อน';
             if (linkBtn) { linkBtn.style.display = 'flex'; }
             if (unBtn) { unBtn.style.display = 'none'; }
         }
@@ -14757,7 +14787,7 @@
             // 🔐 ออกจากระบบจริง (ไม่ใช่ระบบไล่ออก) → ล้างการผูก Google ของเครื่องนี้ + ออกจาก session ของ Firebase Auth
             //    เพื่อไม่ให้เครื่องที่ใช้ร่วมกันเห็นชื่อบัญชี Google ของคนก่อน
             if (!forced) {
-                localStorage.removeItem('taxi_google_uid'); localStorage.removeItem('taxi_google_email');
+                localStorage.removeItem('taxi_google_uid'); localStorage.removeItem('taxi_google_email'); localStorage.removeItem('taxi_google_for');
                 try { const { m, auth } = await window.__getFirebaseAuth(); await m.signOut(auth); } catch (e) {}
                 try { const h = document.getElementById('googleLoginHint'); if (h) h.innerHTML = 'ครั้งแรกจะ <b>สร้างบัญชีให้อัตโนมัติ</b> (สิทธิ์ผู้ใช้ทั่วไป) · ถ้ามีบัญชีเดิมอยู่แล้ว ให้กด “ผูกบัญชี Google” ในหน้าโปรไฟล์'; } catch (e) {}
             } if(myUserUnsub) myUserUnsub(); tollModeLoadedForUser = false; myExtraPerms = {}; window.__permNoticeChecked = false; if (typeof window.resetPermReqCheck === 'function') window.resetPermReqCheck();
