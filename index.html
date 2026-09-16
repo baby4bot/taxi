@@ -2969,6 +2969,13 @@
         .hub-cat-label { display: flex; align-items: center; gap: 8px; }
         .hub-cat-label .hub-cat-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .hub-cat-label .hub-cat-btn { background: none; border: none; padding: 0 3px; cursor: pointer; color: var(--neon-yellow); line-height: 1; opacity: 0.85; display: inline-flex; align-items: center; }
+        /* 🖐️ (16 ก.ย. 69) หัวข้อในหน้าตั้งค่าการใช้งานลากได้เอง — ที่จับ + ปุ่ม ▲▼ แสดงในโหมดลากเท่านั้น */
+        .hub-cat-label .hub-cat-grip { display: none; cursor: grab; color: var(--neon-yellow); touch-action: none; flex-shrink: 0; opacity: 0.9; }
+        .hub-cat-label .hub-cat-grip .material-symbols-outlined { font-size: 17px; }
+        .reorder-mode .hub-cat-label { touch-action: none; }
+        .reorder-mode .hub-cat-label .hub-cat-grip { display: inline-flex; align-items: center; }
+        .hub-cat-label.hub-cat-dragging { background: rgba(255,210,77,0.16); border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(255,210,77,0.45); }
+        html.light .hub-cat-label .hub-cat-grip { color: #8a6a00; }
         .hub-cat-label .hub-cat-btn:hover { opacity: 1; }
         .hub-cat-label .hub-cat-btn.danger { color: #ff8a95; }
         .hub-drop-empty { border: 1px dashed rgba(255,210,77,0.5); border-radius: 14px; padding: 13px; margin-bottom: 4px; text-align: center; color: rgba(255,210,77,0.9); font-size: 12.5px; background: rgba(255,210,77,0.05); }
@@ -5745,7 +5752,7 @@
         });
         const hint = document.createElement('div');
         hint.className = 'reorder-hint';
-        hint.innerHTML = '🔀 <b>ลากสลับ / ข้ามหัวข้อ</b> — จับเมนูแล้วลากขึ้น/ลงหรือลากไปหัวข้ออื่น · คลิกพื้นที่ว่างเพื่อจบและบันทึก';
+        hint.innerHTML = '🔀 <b>ลากสลับ / ข้ามหัวข้อ</b> — จับเมนูแล้วลากขึ้น/ลงหรือลากไปหัวข้ออื่น (ไม่จำกัดจำนวน) · จับ <b>ที่จับในหัวข้อ</b> แล้วลากเพื่อย้ายหัวข้อเอง หรือกด ▲▼ · คลิกพื้นที่ว่างเพื่อจบและบันทึก';
         // 🧩 หน้าตั้งค่าการใช้งาน: เพิ่มปุ่มสร้างหัวข้อใหม่ + วาดใหม่ให้หัวข้อที่ว่างโชว์ช่อง “วางเมนูที่นี่”
         if (boxEl && boxEl.id === 'settingsHubModal') {
             const addBtn = document.createElement('button');
@@ -5818,6 +5825,9 @@
     };
     window.__wireReorderDrag = (container, itemsSel, boxEl, saveKey) => {
         let pressT = null, pressStart = null, drag = null, lastXY = null;
+        // 🖐️ (16 ก.ย. 69) ลาก “หัวข้อ” ในหน้าตั้งค่าการใช้งาน — ย้ายทั้งหัวข้อ (พร้อมเมนูข้างใน) ขึ้น–ลงได้เอง
+        //    เดิมหัวข้อเรียงตามลิสต์ที่บันทึกเท่านั้น ลากไม่ได้ → ผู้ใช้ย้ายหัวข้อไม่ได้เลย
+        let catDrag = null;
         // ⏳ กดค้างเข้าโหมดลาก = เงียบ 110 มิลลิว + นับถอยหลัง 450 มิลลิว = 560 มิลลิว (เดิม 900)
         //    สั้นลงได้เพราะช่วงที่ต้อง “รอด” คือช่วงรอเท่านั้น — แต่ยังยาวกว่า “แตะ” (<200 มิลลิว) พอ
         // 🖐️ เผื่อการขยับระหว่างกดค้างเป็น 18px (เดิม 10px) — ช่วยเมาส์ และจุดที่ไม่มีอะไรให้เลื่อน
@@ -5832,7 +5842,8 @@
             // curIdx = ตำแหน่งที่ item นี้จะถูกแทรกในรายการ others (เท่ากับ index ในรายการเต็ม)
             // ใช้ index ใน itemsOf() ไม่ใช่ others.indexOf(it) ซึ่งได้ -1 เสมอ → ไม่เด้ง/กระโดดตอนลากแรก
             const curIdx = itemsOf().indexOf(it);
-            drag = { item: it, startY: clientY, lastY: clientY, staticShift: 0, cat: it.dataset.cat || '', curIdx, hubSig: '' };
+            drag = { item: it, startY: clientY, lastY: clientY, staticShift: 0, cat: it.dataset.cat || '', curIdx, hubSig: '', pid: pointerId };
+            updateAutoScroll(clientY);
             it.classList.add('reorder-dragging');
             it.style.zIndex = '60';
             try { it.setPointerCapture(pointerId); } catch (err) {}
@@ -5891,6 +5902,14 @@
             });
         };
         const endDrag = () => {
+            // 🖐️ จบการลากหัวข้อ → บันทึก + วาดใหม่ + ซิงก์ (กันหัวข้อค้างสไตล์ตอนลาก)
+            if (catDrag) {
+                try { if (catDrag.label) catDrag.label.classList.remove('hub-cat-dragging'); } catch (e) {}
+                catDrag = null;
+                try { window.applyHubLayout(); } catch (e) {}
+                try { window.saveMenuOrderToDB(); } catch (e) {}
+                try { window.showToast('ย้ายหัวข้อแล้ว'); } catch (e) {}
+            }
             if (drag) {
                 const it = drag.item; drag = null;
                 it.classList.remove('reorder-dragging');
@@ -5903,10 +5922,85 @@
             cancelPress();
         };
 
+        // ── 🖱️📱 เลื่อนจออัตโนมัติระหว่างลาก (16 ก.ย. 69) ─────────────────────────────────
+        //    ปัญหาจริงที่ผู้ใช้เจอ: ลิสต์หน้าตั้งค่าการใช้งานยาว ~2.3 จอ (1391px ในกรอบ 600px)
+        //    ⇒ ลากเมนู/หัวข้อได้เฉพาะช่วงที่มองเห็น = “ย้ายได้แค่ 2 หัวข้อ” ทั้งที่ควรย้ายได้ทุกหัวข้อ
+        //    แก้โดย: นิ้ว/เมาส์อยู่ใกล้ขอบบน–ล่าง = เลื่อนจอเอง แล้ว “คิดเป้าหมายใหม่” ทุกเฟรม
+        //    (นิ้วอยู่นิ่งก็ยังเลื่อน+ย้ายได้ — สำคัญมากบนมือถือที่ไม่มี native scroll ระหว่างลาก)
+        const AUTO_SCROLL_EDGE_PX = 72;   // ระยะจากขอบจอที่เริ่มเลื่อน
+        const AUTO_SCROLL_MAX_PX = 14;    // ความเร็วสูงสุดต่อเฟรม (~840 px/วิ ที่ 60fps)
+        let autoRAF = null, autoDir = 0, autoRunning = false;
+        const getScrollHost = () => {
+            let el = container;
+            while (el && el !== document.body) {
+                const cs = getComputedStyle(el);
+                if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && el.scrollHeight > el.clientHeight + 2) return el;
+                el = el.parentElement;
+            }
+            return null;
+        };
+        // 🔁 ให้ handler pointermove ตัวจริง “คิดใหม่” จากพิกัดเดิม — ไม่มีสูตรคำนวณชุดที่สอง
+        //    (พิกัดนิ้วเท่าเดิม แต่หลังจอเลื่อน ตำแหน่งใต้กลายเป็นรายการ/หัวข้อคนละตัว)
+        const reprocessAt = (x, y, pid) => {
+            try {
+                container.dispatchEvent(new PointerEvent('pointermove', {
+                    bubbles: true, cancelable: true, clientX: x || 0, clientY: y || 0,
+                    pointerId: pid || 1, pointerType: 'touch'
+                }));
+            } catch (e) {}
+        };
+        const stopAutoScroll = () => { autoDir = 0; if (autoRAF) { cancelAnimationFrame(autoRAF); autoRAF = null; } };
+        const autoTick = () => {
+            autoRAF = null;
+            if (!drag && !catDrag) return stopAutoScroll();
+            const host = getScrollHost(); if (!host || !autoDir) return stopAutoScroll();
+            const before = host.scrollTop;
+            host.scrollTop = before + autoDir;
+            const delta = host.scrollTop - before;
+            if (!delta) { autoDir = 0; return; } // ชนขอบบน/ล่างแล้ว — หยุดเงียบ ๆ
+            // 📌 ล็อกรายการที่ลากไว้ “ใต้นิ้ว/เมาส์” — ไม่งั้นจอเลื่อนแล้วรายการหนีมือ
+            if (drag) {
+                drag.staticShift -= delta;
+                drag.item.style.transform = `translate3d(0, ${(drag.lastY - drag.startY) - drag.staticShift}px, 0)`;
+            }
+            autoRunning = true;
+            reprocessAt(lastXY && lastXY.x, lastXY && lastXY.y, (drag && drag.pid) || (catDrag && catDrag.pid));
+            autoRunning = false;
+            if (autoDir) autoRAF = requestAnimationFrame(autoTick);
+        };
+        const updateAutoScroll = (clientY) => {
+            if (!drag && !catDrag) return stopAutoScroll();
+            const host = getScrollHost(); if (!host) return stopAutoScroll();
+            const r = host.getBoundingClientRect();
+            let dir = 0;
+            if (r.height > AUTO_SCROLL_EDGE_PX * 2) {
+                if (clientY <= r.top + AUTO_SCROLL_EDGE_PX) dir = -Math.max(1, Math.round((r.top + AUTO_SCROLL_EDGE_PX - clientY) / 5));
+                else if (clientY >= r.bottom - AUTO_SCROLL_EDGE_PX) dir = Math.max(1, Math.round((clientY - (r.bottom - AUTO_SCROLL_EDGE_PX)) / 5));
+            }
+            autoDir = Math.max(-AUTO_SCROLL_MAX_PX, Math.min(AUTO_SCROLL_MAX_PX, dir));
+            if (autoDir && !autoRAF && !autoRunning) autoRAF = requestAnimationFrame(autoTick);
+            if (!autoDir) stopAutoScroll();
+        };
+        container.addEventListener('pointerup', () => stopAutoScroll());
+        container.addEventListener('pointercancel', () => stopAutoScroll());
+
         container.addEventListener('pointerdown', (e) => {
             if (e.pointerType === 'mouse' && e.button !== 0) return;
             // ✏️ ปุ่มดินสอแก้ข้อความเมนู → ไม่เริ่มลาก/ไม่เข้าโหมดลาก (แอดมินกดแก้ได้ทันที ในโหมดลาก)
             if (e.target.closest && e.target.closest('.menu-item-edit')) return;
+            // 🖐️ หัวข้อในหน้าตั้งค่าการใช้งาน: ในโหมดลาก จับที่จับหัวข้อแล้วลากขึ้น–ลงได้ทันที (ไม่ต้องกดค้าง)
+            if (boxEl && boxEl.id === 'settingsHubModal' && window.__reorder && window.__reorder.container === container && !drag) {
+                const lbl = e.target.closest && e.target.closest('.hub-cat-label');
+                if (lbl && lbl.dataset.cat && !(e.target.closest('.hub-cat-btn'))) {
+                    e.preventDefault();
+                    catDrag = { cat: lbl.dataset.cat, label: lbl, startY: e.clientY, lastY: e.clientY, pid: e.pointerId };
+                    updateAutoScroll(e.clientY);
+                    try { lbl.setPointerCapture(e.pointerId); } catch (err) {}
+                    lbl.classList.add('hub-cat-dragging');
+                    try { navigator.vibrate && navigator.vibrate(8); } catch (err) {}
+                    return;
+                }
+            }
             const it = e.target.closest(itemsSel);
             if (!it) return;
             lastXY = { x: e.clientX, y: e.clientY };
@@ -5939,6 +6033,41 @@
         });
         container.addEventListener('pointermove', (e) => {
             lastXY = { x: e.clientX, y: e.clientY };
+            updateAutoScroll(e.clientY); // 🖱️📱 ใกล้ขอบจอ = เริ่มเลื่อนเอง (ทำงานต่อแม้ปลายนิ้วอยู่นิ่ง)
+            // 🖐️ ลากหัวข้อ: เทียบ “ตำแหน่งนิ้ว” กับกึ่งกลางของหัวข้ออื่น → สลับเฉพาะเมื่อข้ามจริง (ไม่สั่นไปมา)
+            if (catDrag) {
+                e.preventDefault();
+                catDrag.lastY = e.clientY;
+                try {
+                    const lbls = Array.from(container.querySelectorAll('.hub-cat-label')).filter(l => l.dataset.cat && getComputedStyle(l).display !== 'none');
+                    const curIdx = lbls.findIndex(l => l.dataset.cat === catDrag.cat);
+                    if (curIdx >= 0) {
+                        const py = e.clientY;
+                        let target = curIdx;
+                        for (let i = 0; i < lbls.length; i++) {
+                            if (i === curIdx) continue;
+                            const r = lbls[i].getBoundingClientRect();
+                            const mid = r.top + r.height / 2;
+                            if (i < curIdx && py < mid) target = Math.min(target, i);
+                            if (i > curIdx && py > mid) target = Math.max(target, i);
+                        }
+                        if (target !== curIdx) {
+                            const list = window.hubCatsRead();
+                            const from = list.findIndex(c => c.cat === catDrag.cat);
+                            if (from >= 0) {
+                                const moved = list.splice(from, 1)[0];
+                                list.splice(Math.max(0, Math.min(list.length, target)), 0, moved);
+                                window.hubCatsWrite(list);
+                                window.applyHubLayout();
+                                const again = container.querySelector('.hub-cat-label[data-cat="' + catDrag.cat + '"]');
+                                if (again) { again.classList.add('hub-cat-dragging'); catDrag.label = again; }
+                                try { navigator.vibrate && navigator.vibrate(6); } catch (err) {}
+                            }
+                        }
+                    }
+                } catch (err) {}
+                return;
+            }
             if (drag) {
                 e.preventDefault();
                 settleShifts(); // กันวัดตำแหน่งค้างกลาง animation
@@ -6021,6 +6150,8 @@
             if (it) { e.stopPropagation(); e.preventDefault(); return; }
             // 🧩 ปุ่มแก้ชื่อ/ลบหัวข้อ + ช่อง "วางเมนูที่นี่" → ไม่ต้องจบโหมดลาก (ให้ปุ่มทำงานตามปกติ)
             if (e.target.closest('.hub-cat-btn')) return;
+            // 🖐️ แตะ/ลากที่ “หัวข้อ” → ไม่จบโหมดลาก (ต้องลากหัวข้อได้ต่อ) — จบได้จากการคลิกพื้นที่ว่างหรือกดปุ่มปิด
+            if (e.target.closest('.hub-cat-label')) return;
             const btn = e.target.closest('.btn-close-floating, .btn-back-profile, .logout-item, .side-profile-pic, .side-menu-header, .side-user-name, .side-user-role');
             if (btn) { window.exitReorderMode(true); return; }
             e.stopPropagation(); e.preventDefault();
@@ -12588,7 +12719,11 @@
                 lbl.dataset.label = def.label;
                 const mine = byCat[def.cat] || [];
                 const visCount = mine.filter(el => getComputedStyle(el).display !== 'none').length;
-                lbl.innerHTML = '<span class="hub-cat-text">' + _hubEsc(def.label) + '</span>'
+                // 🖐️ (16 ก.ย. 69) โหมดลาก: หัวข้อมี “ที่จับ” (ลากสลับหัวข้อขึ้น–ลงได้เอง) + ปุ่ม ▲▼ สำหรับอุปกรณ์ที่ลากไม่ถนัด
+                lbl.innerHTML = (inReorder ? '<span class="hub-cat-grip" title="กดที่จับนี้แล้วลากขึ้น–ลง เพื่อย้ายทั้งหัวข้อ"><span class="material-symbols-outlined">drag_indicator</span></span>' : '')
+                    + '<span class="hub-cat-text">' + _hubEsc(def.label) + '</span>'
+                    + (inReorder ? '<button class="hub-cat-btn" onclick="window.hubCatOrderMove(\'' + def.cat + '\',-1)" title="ย้ายหัวข้อนี้ขึ้น"><span class="material-symbols-outlined" style="font-size:16px;">arrow_upward</span></button>' : '')
+                    + (inReorder ? '<button class="hub-cat-btn" onclick="window.hubCatOrderMove(\'' + def.cat + '\',1)" title="ย้ายหัวข้อนี้ลง"><span class="material-symbols-outlined" style="font-size:16px;">arrow_downward</span></button>' : '')
                     + (inReorder ? '<button class="hub-cat-btn" onclick="window.openHubCatEditor(\'' + def.cat + '\')" title="เปลี่ยนชื่อหัวข้อนี้"><span class="material-symbols-outlined" style="font-size:16px;">edit</span></button>' : '')
                     + (inReorder && def.custom ? '<button class="hub-cat-btn danger" onclick="window.deleteHubCat(\'' + def.cat + '\')" title="ลบหัวข้อนี้"><span class="material-symbols-outlined" style="font-size:16px;">delete</span></button>' : '');
                 lbl.style.display = (visCount > 0 || inReorder) ? '' : 'none';
@@ -12645,6 +12780,20 @@
         if (typeof window.toggleModal === 'function') window.toggleModal('hubCatEditModal', false);
         window.applyHubLayout();
         window.showToast(target ? 'เปลี่ยนชื่อหัวข้อแล้ว' : 'สร้างหัวข้อแล้ว — ลากเมนูไปวางได้เลย');
+    };
+    // ⬆️⬇️ ย้ายหัวข้อขึ้น/ลง (ปุ่มสํารองของการลาก) — เรียงลิสต์หัวข้อที่บันทึกไว้ แล้ววาดใหม่ + ซิงก์
+    //    💡 หัวข้อที่ตามหลังจะเลื่อนตามเองทุกหัวข้อ — ย้ายได้ไม่จำกัดจำนวนครั้ง
+    window.hubCatOrderMove = (cat, dir) => {
+        const list = window.hubCatsRead();
+        const i = list.findIndex(c => c.cat === cat);
+        if (i < 0) return;
+        const j = i + (Number(dir) < 0 ? -1 : 1);
+        if (j < 0 || j >= list.length) return window.showToast(Number(dir) < 0 ? 'หัวข้อนี้อยู่บนสุดแล้ว' : 'หัวข้อนี้อยู่ล่างสุดแล้ว', true);
+        const moved = list[i]; list[i] = list[j]; list[j] = moved;
+        window.hubCatsWrite(list);
+        window.applyHubLayout();
+        try { window.saveMenuOrderToDB(); } catch (e) {}
+        window.showToast('ย้ายหัวข้อ “' + (moved.label || cat) + '” ' + (Number(dir) < 0 ? 'ขึ้น' : 'ลง') + ' แล้ว');
     };
     window.deleteHubCat = async (catId) => {
         const list = window.hubCatsRead();
@@ -13430,6 +13579,9 @@
         ['2026-09-16', '👤 การ์ดสมาชิก: @username กับ “เข้าใช้ล่าสุด” อยู่บรรทัดเดียว วันเวลาชิดขวา'],
         ['2026-09-16', '🧹 หน้าจัดการผู้ใช้: เอาป้าย “ทะเบียนรถ” ออกทุกตำแหน่ง (รวมแอดมิน)'],
         ['2026-09-16', '🧹 การ์ดสมาชิก: เหลือชื่อ/ไอดี/เวลา — รายละเอียด Gmail+ข้อมูลไม่ครบอยู่ปุ่มแก้ไข'],
+        ['2026-09-16', '🖐️ ลาก “หัวข้อ” ในหน้าตั้งค่าการใช้งานได้เอง — ย้ายทั้งหัวข้อพร้อมเมนูข้างใน'],
+        ['2026-09-16', '⬆️⬇️ ปุ่ม ▲▼ + ✏️ ท้ายหัวข้อ — ย้ายลำดับ/เปลี่ยนชื่อหัวข้อ สำหรับเครื่องที่ลากไม่ถนัด'],
+        ['2026-09-16', '📜 ลากเมนู/หัวข้อค้างที่ขอบจอ = จอเลื่อนเอง — ย้ายข้ามหัวข้อได้ทุกอัน'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
