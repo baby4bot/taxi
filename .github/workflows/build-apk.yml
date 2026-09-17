@@ -142,6 +142,26 @@ jobs:
           git commit -m "ci log: run $GITHUB_RUN_ID"
           git push -f origin ci-logs
 
+      # ⚠️ กับดักที่เคยพลาด (18 ก.ย. 2026): ได้ไฟล์ app-release-**unsigned**.apk แล้วทุกอย่าง “success”
+      #    แต่เอาไปติดตั้งบนมือถือไม่ได้เลย (ระบบจะบอกแค่ว่าติดตั้งไม่ได้)
+      - name: ตรวจว่า APK ถูกเซ็นจริง (ไม่งั้นติดตั้งบนมือถือไม่ได้)
+        run: |
+          set -e
+          cd android-app/app/build/outputs/apk/release
+          ls -l
+          APK=$(ls -1 *.apk | head -1)
+          case "$APK" in
+            *unsigned*)
+              echo "::error::ไฟล์ APK ยังไม่ถูกเซ็น ($APK) — เครื่อง Android จะติดตั้งไม่ได้ ตรวจเส้นทาง keystore ใน android-app/app/build.gradle (TAXI_KEYSTORE)"
+              exit 1
+              ;;
+          esac
+          unzip -l "$APK" | grep -Eq 'META-INF/.*\.(RSA|EC|DSA)' || {
+            echo "::error::ไม่พบลายเซ็นใน APK ($APK)"
+            exit 1
+          }
+          echo "APK ถูกเซ็นแล้ว ✅ $APK — $(stat -c%s "$APK") ไบต์"
+
       - name: อัปโหลด APK (artifact)
         uses: actions/upload-artifact@v4
         with:
@@ -171,6 +191,15 @@ jobs:
               --notes "ดาวน์โหลดไฟล์ .apk แล้วติดตั้งบนมือถือ Android (อนุญาตติดตั้งจากแหล่งที่ไม่รู้จัก)"
           fi
           gh release upload apk-latest android-app/app/build/outputs/apk/release/*.apk --clobber
+
+          # 🧹 ลบไฟล์ที่ไม่ถูกเซ็นที่ค้างจากรอบก่อน — กันคนกดโหลดผิดไฟล์ไปติดตั้งไม่ได้
+          for a in $(gh release view apk-latest --json assets --jq '.assets[].name' 2>/dev/null); do
+            case "$a" in
+              *unsigned*) echo "ลบไฟล์เก่าที่ใช้ไม่ได้: $a"; gh release delete-asset apk-latest "$a" -y || true ;;
+            esac
+          done
+          echo "--- ไฟล์ใน Release ตอนนี้ ---"
+          gh release view apk-latest --json assets --jq '.assets[] | "\(.name)  \(.size) ไบต์\n\(.url)"'
 
       - name: สรุปวิธีใช้งาน
         if: always()

@@ -4,7 +4,13 @@ plugins {
 
 // 🔐 ลายเซ็น APK — อ่านจากตัวแปรสภาพแวดล้อม (GitHub Actions ส่งมาจาก Secrets)
 //    ไม่มี keystore = build ได้ แต่ APK จะยังไม่เซ็น (ใช้ทดสอบเท่านั้น · ติดตั้งทับของเดิมไม่ได้)
-def ksFile = file(System.getenv('TAXI_KEYSTORE') ?: 'keys/keystore.jks')
+//
+// ⚠️ กับดักที่ทำให้ได้ APK “unsigned” เงียบ ๆ (18 ก.ย. 2026):
+//    ถ้าใช้ file('keys/keystore.jks') เฉย ๆ มันจะหาจากโฟลเดอร์ของโมดูล app/ ไม่ใช่รากโปรเจกต์
+//    ⇒ หาไฟล์ไม่เจอ → ไม่เข้าเงื่อนไขเซ็น → พาสร้าง app-release-**unsigned**.apk → ติดตั้งบนมือถือไม่ได้
+//    ⇒ ต้องอิงกับรากโปรเจกต์ (rootProject) เสมอ ไม่ว่าไฟล์จะอยู่ที่ไหน
+def ksRaw = System.getenv('TAXI_KEYSTORE') ?: 'keys/keystore.jks'
+def ksFile = new File(ksRaw).isAbsolute() ? new File(ksRaw) : rootProject.file(ksRaw)
 def ksStorePass = System.getenv('TAXI_STORE_PASSWORD')
 def ksKeyAlias = System.getenv('TAXI_KEY_ALIAS') ?: 'taxi'
 def ksKeyPass = System.getenv('TAXI_KEY_PASSWORD') ?: ksStorePass
