@@ -156,11 +156,20 @@ jobs:
               exit 1
               ;;
           esac
-          unzip -l "$APK" | grep -Eq 'META-INF/.*\.(RSA|EC|DSA)' || {
-            echo "::error::ไม่พบลายเซ็นใน APK ($APK)"
-            exit 1
-          }
-          echo "APK ถูกเซ็นแล้ว ✅ $APK — $(stat -c%s "$APK") ไบต์"
+          # ⚠️ minSdk 26 ⇒ AGP เซ็นด้วยรูปแบบใหม่ (v2/v3) ซึ่ง “ไม่มี” META-INF/*.RSA
+          #    จึงห้ามตัดสินด้วยการหาไฟล์ .RSA — ต้องใช้ apksigner ของจริง (มีมาใน build-tools)
+          APKSIGNER="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools/34.0.0/apksigner"
+          if [ -x "$APKSIGNER" ]; then
+            "$APKSIGNER" verify --print-certs "$APK" | head -5
+            echo "APK ถูกเซ็นแล้ว (apksigner ยืนยัน) ✅ $APK — $(stat -c%s "$APK") ไบต์"
+          else
+            echo "::warning::ไม่พบ apksigner — ตรวจอย่างละเอียดไม่ได้"
+            grep -aq "APK Sig Block 42" "$APK" || unzip -l "$APK" | grep -Eq 'META-INF/.*\.(RSA|EC|DSA)' || {
+              echo "::error::ไม่พบลายเซ็นใน APK ($APK)"
+              exit 1
+            }
+            echo "APK ดูเหมือนถูกเซ็นแล้ว ✅ $APK"
+          fi
 
       - name: อัปโหลด APK (artifact)
         uses: actions/upload-artifact@v4
