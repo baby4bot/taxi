@@ -232,6 +232,27 @@ jobs:
             "$APKSIGNER" verify --print-certs "$APK" > certs.txt 2>/dev/null || true
             grep -E "Signer #1 certificate (DN|SHA-256 digest)" certs.txt | head -2 >> "$INFO" || true
           fi
+
+          # 🔒 ด่านตรวจ “กุญแจถูกดอก” — เทียบลายนิ้วมือของ APK กับค่าที่ตั้งใจไว้ใน repo
+          #    (ลายนิ้วมือเป็นข้อมูลสาธารณะ เก็บในไฟล์ได้ — ไม่ใช่ตัวกุญแจ)
+          #    ถ้าไม่ตรง ⇒ APK นี้ “ติดตั้งทับแอปที่ผู้ใช้มีอยู่ไม่ได้” ⇒ หยุดทันที ไม่ให้หลุดไปให้คนโหลด
+          #    ⚠️ กับดักจริง 18 ก.ย. 2026: ก่อนหน้านี้ทุกงานสร้างกุญแจใหม่เอง ลายนิ้วมือจึงเปลี่ยนทุกงาน
+          #       ⇒ ต้องตรวจอัตโนมัติ ไม่งั้นได้ APK ที่ติดตั้งทับไม่ได้โดยไม่มีใครรู้
+          EXPECT_FILE="$GITHUB_WORKSPACE/android-app/signing-key-fingerprint.txt"
+          if [ -x "$APKSIGNER" ] && [ -f "$EXPECT_FILE" ]; then
+            EXPECT=$(tr -d ':\r\n ' < "$EXPECT_FILE" | tr 'A-F' 'a-f')
+            GOT=$(grep -E "Signer #1 certificate SHA-256 digest" certs.txt | head -1 | awk '{print $NF}' | tr -d ':\r\n' | tr 'A-F' 'a-f')
+            if [ -n "$EXPECT" ] && [ -n "$GOT" ]; then
+              if [ "$EXPECT" = "$GOT" ]; then
+                echo "กุญแจตรงกับที่ตั้งใจ (${GOT:0:16}…) ✅ ติดตั้งทับแอปที่ผู้ใช้มีอยู่ได้" >> "$INFO"
+              else
+                echo "::error::กุญแจเซ็นไม่ตรงกับที่ตั้งใจ — APK นี้ติดตั้งทับของเดิมไม่ได้ (คาด ${EXPECT:0:16}… แต่ได้ ${GOT:0:16}…)"
+                echo "::error::⇒ ถ้ายังไม่ได้ตั้ง Secrets: Repo → Settings → Secrets and variables → Actions → ตั้ง KEYSTORE_BASE64 (ข้อความใน .freebuff/signing-key/secret-KEYSTORE_BASE64.txt) + KEYSTORE_PASSWORD (ใน secret-KEYSTORE_PASSWORD.txt) แล้วกด Re-run งานนี้"
+                echo "::error::⇒ ถ้าตั้งแล้ว: ค่าที่วางอาจขาด/เกิน ⇒ ลบ Secret แล้วตั้งใหม่ทั้ง 2 ตัวให้ครบ"
+                exit 1
+              fi
+            fi
+          fi
           MODE_FILE="$GITHUB_WORKSPACE/android-app/keys/KEY-MODE.txt"
           if [ -f "$MODE_FILE" ] && grep -q '^secrets' "$MODE_FILE"; then
             echo "โหมดกุญแจ: ถาวร (มาจาก Secrets) — ติดตั้งทับของเดิมได้ ✅" >> "$INFO"

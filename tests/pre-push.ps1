@@ -147,6 +147,41 @@ if (Test-Path $pwaChecker) {
   Fail 'tests/pwa-check.ps1 missing'
 }
 
+# --- 3c) never ship the APK signing key -------------------------------------
+#   (owner request 18 Sep 2026: "ติดตั้งทับได้เลย ไม่ต้องถอนของเก่า" -> the key at
+#    .freebuff/signing-key/ + GitHub Actions secrets keeps one identity forever.
+#    If that private key ever lands in the repo, anyone can publish an APK that
+#    updates the drivers' installed app. Only the public fingerprint may ship.)
+$keyDir = Resolve-FromRoot '.freebuff/signing-key'
+if (Test-Path $keyDir) { Pass 'signing key kept outside the repo (.freebuff/signing-key)' }
+else { Skip 'no local signing-key folder (fine on a fresh clone)' }
+$keyLeak = @()
+try {
+  Push-Location (Join-Path $root $Repo)
+  foreach ($f in @(git ls-files)) {
+    $isAllowed = $f -match 'signing-key-fingerprint\.txt$'
+    if (-not $isAllowed -and $f -match '(?i)(keystore|\.jks$|\.keystore$|\.p12$|signing-key)') { $keyLeak += $f }
+  }
+  $keyB64 = Join-Path $keyDir 'secret-KEYSTORE_BASE64.txt'
+  if ((Test-Path $keyB64) -and @(git ls-files).Count) {
+    $prefix = ([System.IO.File]::ReadAllText($keyB64)).Trim()
+    if ($prefix.Length -gt 24) { $prefix = $prefix.Substring(0, 24) }
+    foreach ($f in @(git ls-files)) {
+      $p = Join-Path $root (Join-Path $Repo $f)
+      if (-not (Test-Path $p)) { continue }
+      try {
+        if ([System.IO.File]::ReadAllText($p).Contains($prefix)) { $keyLeak += "$f (contains the key!) " }
+      } catch { }
+    }
+  }
+} catch { } finally { Pop-Location }
+if ($keyLeak.Count) {
+  Fail 'key material is inside the repo -> remove it before pushing'
+  foreach ($l in @($keyLeak | Select-Object -Unique)) { Say ('        ' + $l) }
+} else {
+  Pass 'no key material tracked (only the public fingerprint file is allowed)'
+}
+
 # --- 4) the repo copy must match the file you tested ------------------------
 $repoCopy = Join-Path $root (Join-Path $Repo 'index.html')
 if (Test-Path $repoCopy) {

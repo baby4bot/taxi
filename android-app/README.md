@@ -39,13 +39,18 @@
 3. รอ ~5–8 นาที → ดาวน์โหลด APK ได้จาก
    - **Releases → `apk-latest`** (ลิงก์ถาวร ใช้ตลอด) หรือ
    - **Actions → artifact `taxi-meter-apk`** (เก็บชั่วคราว)
-4. **ตั้งกุญแจเซ็นแอปให้ถาวร** (สำคัญ! ไม่งั้นอัปเดตทับของเดิมไม่ได้)
-   - ดาวน์โหลด artifact **`keystore-bootstrap`** (มี `keystore.jks.base64` + `keystore-password.txt`)
-   - Repo → **Settings → Secrets and variables → Actions → New repository secret**
-     - `KEYSTORE_BASE64` = ข้อความทั้งหมดในไฟล์ `keystore.jks.base64`
-     - `KEYSTORE_PASSWORD` = รหัสในไฟล์ `keystore-password.txt`
-   - **ลบ artifact `keystore-bootstrap` ทิ้ง** แล้วรันงานอีกครั้ง → APK จะเซ็นด้วยกุญแจเดิมตลอดไป
-   - ⛔ ห้าม commit ไฟล์ `.jks` ขึ้นเรโปเด็ดขาด (`.gitignore` กันไว้แล้ว)
+4. **กุญแจเซ็นแอปเป็นแบบถาวรแล้ว** (18 ก.ย. 2569 — ตั้งครั้งเดียว อัปเดตทับได้ตลอด ไม่ต้องถอนแอปเดิม)
+   - ลายนิ้วมือที่ใช้อยู่: `74449ae235baf1ef2e668dae363230366f7d07dfe7f100962068f5cc934aefbe` (SHA-256)
+     มาจาก artifact `keystore-bootstrap` ของงาน **build #8** = ดอกเดียวกับแอปที่ติดตั้งบนเครื่องผู้ใช้
+   - Secrets ที่ต้องมีบน GitHub: `KEYSTORE_BASE64` + `KEYSTORE_PASSWORD`
+     (ค่าต้นทางอยู่ที่ `.freebuff/signing-key/secret-KEYSTORE_BASE64.txt` และ `secret-KEYSTORE_PASSWORD.txt`)
+   - ⛔ ห้าม commit ไฟล์กุญแจเด็ดขาด — โฟลเดอร์ `.freebuff/signing-key/` มี `.gitignore` = `*` กันไว้แล้ว
+     และ `tests/pre-push.ps1` ข้อ 3c จะหยุดก่อน push ถ้าพบกุญแจอยู่ในเรโป
+   - 🔒 **ด่านกันกุญแจเปลี่ยนดอก:** งาน build เทียบลายนิ้วมือของ APK กับ `android-app/signing-key-fingerprint.txt`
+     → ไม่ตรง = **งานล้มทันที ไม่ปล่อย APK** (กันไฟล์ที่ติดตั้งทับของเดิมไม่ได้หลุดไปให้คนโหลด)
+   - หลังตั้ง Secret แล้ว **ลบ artifact `keystore-bootstrap` ทิ้ง** (งานถัดไปจะไม่อัปโหลดกุญแจซ้ำอีก)
+   - ถ้าต้องเปลี่ยนกุญแจจริง ๆ: แก้ `signing-key-fingerprint.txt` + ตั้ง Secret ใหม่พร้อมกัน
+     และแจ้งว่าผู้ใช้ต้องถอนแอปเดิม **1 ครั้ง** แล้วกลับมาทับได้ตามปกติ
 
 ## 📥 ดึงไฟล์ APK ลงเครื่อง (วางไว้โฟลเดอร์เดียวกับ `index.html`)
 
