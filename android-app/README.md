@@ -176,6 +176,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/make-icons.ps1
       ⇒ **ไม่ต้องใช้ `google-services.json`** (แอปไม่พึ่งไฟล์นี้เลย)
    3. ออก APK ใหม่ 1 ครั้ง (แก้ชั้น Android = ต้องติดตั้งใหม่ — เว็บยังอัปเดตเองได้ตามปกติ)
 
+   **⚠️ กับดักที่เจอจริงตอน build (18 ก.ย. 69):** `play-services-auth` ลาก **ไลบรารี androidx** เข้ามาด้วย ⇒ เดิมโปรเจกต์ตั้ง `android.useAndroidX=false`
+   ทำให้ build ล้มทันทีที่ `:app:mergeReleaseNativeLibs` *(“contains AndroidX dependencies, but the android.useAndroidX property is not enabled”)*
+   → แก้เป็น **`android.useAndroidX=true`** ใน `android-app/gradle.properties` (โค้ดแอปเองยังเป็น `android.*` ล้วน ไม่ต้องเขียนใหม่)
+   · `android.enableJetifier=false` (ของที่ดึงมาเป็น androidx อยู่แล้ว) · ทั้ง workflow และ `check-android.ps1` มีด่านกันลบ
+
    **พฤติกรรมเมื่อยังไม่ใส่ Web client ID:** ปุ่ม Google ในแอปยังกดได้ แต่จะขึ้นข้อความไทยบอกว่า **ยังไม่ได้ตั้งค่า Google สำหรับแอป**
    (ไม่พาไปหน้า error ของ Google) · APK รุ่น**เก่า**ที่ยังไม่มีสะพาน → ปุ่มเทาเหมือนเดิม (ข้อความแนะนำใช้ไอดี/PIN)
 

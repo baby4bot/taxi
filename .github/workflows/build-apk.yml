@@ -78,6 +78,13 @@ jobs:
           fi
           grep -q "google()" settings.gradle || { echo "::error::settings.gradle ไม่มี google()"; exit 1; }
           grep -q "mavenCentral()" settings.gradle || { echo "::error::settings.gradle ไม่มี mavenCentral()"; exit 1; }
+          # ⛔ กับดักที่ทำ build ล้ม (18 ก.ย. 2026): play-services-auth ลากไลบรารี androidx เข้ามาด้วย
+          #    ถ้า gradle.properties ตั้ง android.useAndroidX=false → mergeReleaseNativeLibs ล้มทันที
+          if grep -q "play-services-auth" app/build.gradle; then
+            grep -q "^android.useAndroidX=true" gradle.properties \
+              || { echo "::error::gradle.properties ต้องมี android.useAndroidX=true เพราะ play-services-auth (ล็อกอิน Google ในแอป) ดึงไลบรารี androidx มา"; exit 1; }
+            echo "androidx เปิดให้แล้วเพราะมี play-services-auth ✅"
+          fi
           echo "การตั้งค่าโปรเจกต์ครบ ✅"
           grep -n "compileSdk\|applicationId\|buildConfigField\|minSdk\|targetSdk" app/build.gradle
 
