@@ -25,7 +25,6 @@ android {
         minSdk 26          // Android 8.0 ขึ้นไป (พอสำหรับ WebView + Foreground Service ที่ทำงานถูกต้อง)
         targetSdk 34
         // 🔢 เพิ่ม versionCode ทุกครั้งที่จะแจก APK ใหม่ (มือถือใช้ตัวนี้บอกว่า "มีตัวใหม่กว่า")
-        // 🔢 เพิ่ม versionCode ทุกครั้งที่จะแจก APK ใหม่ (มือถือใช้ตัวนี้บอกว่า "มีตัวใหม่กว่า")
         //    v1.2.0 (3) = เพิ่มล็อกอิน Google แบบ native (Google บล็อกหน้า OAuth ในเว็บวิว ⇒ ต้องทำในชั้นแอป)
         versionCode 3
         versionName '1.2.0'   // ชื่อแอป "ค่าแท็กซี่" + ไอคอนรูป taxi + ล็อกอิน Google ในแอปได้

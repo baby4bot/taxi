@@ -57,6 +57,10 @@ public class MainActivity extends Activity {
     private static final int REQ_FILE = 1002;
     private static final int REQ_GOOGLE = 1003;
 
+    private WebView web;
+    private ValueCallback<Uri[]> filePathCallback;
+    private boolean pendingTracking = false;
+
     // ───────────────────────── lifecycle ─────────────────────────
 
     @Override
