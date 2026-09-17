@@ -126,6 +126,27 @@ if (Test-Path $switchChecker) {
   Fail 'tests/switch-check.ps1 missing'
 }
 
+# --- 3b) the PWA install path must stay usable ------------------------------
+#   (owner report 18 Sep 2026: "กดติดตั้งแล้วไม่ติดตั้งจริง ไม่มีไอคอนขึ้นหน้าจอ"
+#    - the page used to inject the manifest as a data: URL, and Chrome refuses to
+#      install from anything that is not a real same-origin file.)
+#   It also guards the other half of the report: the install banner must stay
+#   hidden inside the Android APK, where the user already has an app icon.
+$pwaChecker = Resolve-FromRoot 'tests/pwa-check.ps1'
+if (Test-Path $pwaChecker) {
+  $pOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $pwaChecker -Index $Index -Repo $Repo 2>&1 | Out-String
+  $pBad = @($pOut -split "`r?`n" | Where-Object { $_ -match '^\[FAIL\]' })
+  if ($pBad.Count) {
+    Fail 'pwa-check not clean -> the home-screen install path is broken'
+    foreach ($l in $pBad) { Say ('        ' + $l.Trim()) }
+    Say  '       (full Thai detail: tests/pwa-check-report.txt)'
+  } else {
+    Pass 'pwa-check: real manifest + local icons + no banner inside the app'
+  }
+} else {
+  Fail 'tests/pwa-check.ps1 missing'
+}
+
 # --- 4) the repo copy must match the file you tested ------------------------
 $repoCopy = Join-Path $root (Join-Path $Repo 'index.html')
 if (Test-Path $repoCopy) {

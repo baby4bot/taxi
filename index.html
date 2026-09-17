@@ -17,16 +17,22 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Taxi 2026" />
+    <meta name="apple-mobile-web-app-title" content="ค่าแท็กซี่" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-touch-fullscreen" content="yes" />
     <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
     
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet" />
-    <link id="appleIcon" href="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" rel="apple-touch-icon" />
-    <link id="shortcutIcon" href="https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg" rel="shortcut icon" />
-    
-    <link id="dynamicManifest" rel="manifest" href='data:application/manifest+json,{"name":"Taxi Fare 2026","short_name":"Taxi 2026","start_url":".","display":"fullscreen","background_color":"#090a0f","theme_color":"#090a0f","icons":[{"src":"https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg","sizes":"192x192","type":"image/jpeg"},{"src":"https://i.ibb.co/spwbY6g9/abb8123a-07ff-4222-a85e-15b8024c0b75.jpg","sizes":"512x512","type":"image/jpeg"}]}' />
+    <!-- 🖼️ ไอคอนที่ใช้ตอน "เพิ่มไปยังหน้าจอหลัก" — ใช้ไฟล์ในโฟลเดอร์เว็บเอง (เดิมดึงจาก i.ibb.co ⇒ ออฟไลน์แล้วรูปหาย) -->
+    <link id="appleIcon" href="./icon-192.png" rel="apple-touch-icon" />
+    <link id="shortcutIcon" href="./icon-192.png" rel="shortcut icon" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+
+    <!-- 📲 manifest ต้องเป็น “ไฟล์จริงในเว็บเรา” เท่านั้น
+         ⛔ ห้ามเปลี่ยนกลับเป็น data: URL — เบราว์เซอร์ถือว่าไม่ใช่ต้นทางเดียวกัน ⇒ ปุ่มติดตั้งไม่มีผล
+            (ต้นเหตุ “กดติดตั้งแล้วไม่ติดตั้งจริง / ไม่มีไอคอนขึ้นหน้าจอ” บน Galaxy · 18 ก.ย. 2569)
+         ไฟล์นี้สร้าง/แก้ได้ตามคู่มือใน .freebuff/run.md → android-app/tools/make-pwa-icons.ps1 -->
+    <link id="dynamicManifest" rel="manifest" href="./manifest.webmanifest" />
     
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -7490,7 +7496,18 @@
     const PWA_SKIP_MS = 7 * 24 * 60 * 60 * 1000; // กด “ปิด” แล้วไม่ถาม 7 วัน
     const isStandaloneApp = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
     const isIOSDevice = () => /iP(hone|ad|od)/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    // 📱 เปิดในแอป Android (APK) = มีไอคอนแอปอยู่แล้ว ⇒ ห้ามชวนติดตั้งซ้ำ
+    //    ตรวจ 2 ทาง: สะพาน TaxiNative (แม่นสุด) · user agent ที่ MainActivity ต่อท้ายไว้ (ใช้ได้ก่อนโมดูลโหลดเสร็จ)
+    const isNativeAppShell = () => {
+        try {
+            if (window.TaxiNative && typeof window.TaxiNative.isNativeApp === 'function' && window.TaxiNative.isNativeApp()) return true;
+            if (typeof window.taxiNativeAvailable === 'function' && window.taxiNativeAvailable()) return true;
+        } catch (e) {}
+        return /TaxiMeterApp\//.test(navigator.userAgent || '');
+    };
     const hideInstallBanner = () => { const b = $('installBanner'); if (b) b.style.display = 'none'; };
+    // เปิดในแอป Android (APK) → เอาแบนเนอร์ออกทั้งใบตั้งแต่ต้น ไม่ให้มีโอกาศโผล่มาเลย
+    if (isNativeAppShell()) { try { const _nb = $('installBanner'); if (_nb) _nb.remove(); } catch (e) {} }
     const pwaMarkDismissed = () => { try { localStorage.setItem(PWA_SKIP_KEY, String(Date.now())); } catch(e) {} hideInstallBanner(); };
     const pwaClearDismissed = () => { try { localStorage.removeItem(PWA_SKIP_KEY); } catch(e) {} };
     window.pwaInstallDismiss = pwaMarkDismissed;
@@ -7508,12 +7525,20 @@
                 }
             } catch(e) { window.showToast('ติดตั้งไม่สำเร็จ ลองใหม่ภายหลัง', true); }
         } else {
-            // ไม่มีปุ่มติดตั้งของเบราว์เซอร์ (เช่น iPhone/iOS) → สอนวิธีเพิ่มเข้าหน้าจอหลักเอง
-            window.showToast(isIOSDevice() ? 'กดปุ่ม แชร์ → “เพิ่มไปยังหน้าจอหลัก” แล้วเปิดจากไอคอนแอปเพื่อเต็มจอถาวร' : 'เปิดเมนู ⋮ → “เพิ่มไปยังหน้าจอหลัก” / “ติดตั้งแอป” เพื่อเปิดเต็มจอถาวร', false);
+            // ไม่มีปุ่มติดตั้งของเบราว์เซอร์ (iOS · Samsung Internet) → สอนวิธีเพิ่มเข้าหน้าจอหลักเอง
+            //    ⚠️ Samsung Internet ไม่ส่ง beforeinstallprompt ⇒ ต้องบอกเมนูของเครื่องนั้นตรง ๆ ไม่งั้นกด “ติดตั้ง” แล้วเหมือนไม่มีอะไรเกิดขึ้น
+            const ua = navigator.userAgent || '';
+            const isSamsung = /SamsungBrowser/i.test(ua);
+            window.showToast(isIOSDevice()
+                ? 'กดปุ่ม แชร์ → “เพิ่มไปยังหน้าจอหลัก” แล้วเปิดจากไอคอนแอปเพื่อเต็มจอถาวร'
+                : (isSamsung
+                    ? 'Samsung: กด ☰ มุมล่างขวา → “เพิ่มหน้าไปยัง” → “หน้าจอหลัก” แล้วเปิดจากไอคอนแอป'
+                    : 'เปิดเมนู ⋮ → “ติดตั้งแอป” / “เพิ่มไปยังหน้าจอหลัก” เพื่อเปิดเต็มจอถาวร'), false);
         }
     };
     window.tryShowInstallBanner = () => {
         const b = $('installBanner'); if (!b) return;
+        if (isNativeAppShell()) { hideInstallBanner(); return; } // เปิดจากแอป Android (APK) = มีไอคอนอยู่แล้ว
         if (isStandaloneApp()) return;                       // เปิดจากแอปที่ติดตั้งแล้ว = ไม่ต้องแนะนำ
         if (window.isManualRunning) return;                  // กำลังวิ่งเที่ยว = ไม่รบกวน
         try {
@@ -15278,6 +15303,9 @@
         ['2026-09-18', '🚕 เปลี่ยนภาพไอคอนแอปเป็นรูปรถแท็กซี่แบบใหม่ — พื้นเขียว ไม่มีตัวหนังสือทับ'],
         ['2026-09-18', '📥 ทุกครั้งที่สร้าง APK ใหม่ ไฟล์ติดตั้งจะถูกวางไว้ในโฟลเดอร์โปรเจกต์ให้เลย'],
         ['2026-09-18', '🔎 ไฟล์ APK แนบข้อมูลชื่อแอปกับไอคอนไว้เอง — ตรวจได้โดยไม่ต้องติดตั้ง'],
+        ['2026-09-18', '📲 แก้ “กดติดตั้งแล้วไม่ติดตั้งจริง” — ใช้ manifest เป็นไฟล์จริง ไอคอนครบ'],
+        ['2026-09-18', '🚫 เปิดในแอป Android แล้วไม่ชวนติดตั้งซ้ำ — มีไอคอนแอปอยู่แล้ว'],
+        ['2026-09-18', '🖼️ ไอคอนบนหน้าจอหลักเป็นรูปรถแท็กซี่ของเราเอง — เดิมดึงรูปจากเว็บนอก'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -15684,10 +15712,13 @@
             
             document.getElementById('profilePic').src = safeIcon; document.getElementById('editProfilePic').src = safeIcon; document.getElementById('mainProfilePic').src = safeIcon;
             
-            let manifestLink = document.getElementById('dynamicManifest');
-            if (manifestLink) {
-                let stringManifest = JSON.stringify({ "name": "Taxi: " + displayNameVal, "short_name": displayNameVal, "start_url": ".", "display": "fullscreen", "orientation": "portrait", "background_color": "#121212", "theme_color": "#121212", "categories": ["utilities", "navigation"], "icons": [ { "src": safeIcon, "sizes": "192x192", "type": "image/jpeg" }, { "src": safeIcon, "sizes": "512x512", "type": "image/jpeg" } ] });
-                manifestLink.href = 'data:application/manifest+json,' + encodeURIComponent(stringManifest); 
+            // ⛔ อย่าเขียน manifest เป็น data: URL อีก — ต้นเหตุ “กดติดตั้งแล้วไม่ติดตั้งจริง” (18 ก.ย. 2569)
+            //    เบราว์เซอร์ต้องการ manifest ที่เป็นไฟล์จริงในเว็บเรา (ต้นทางเดียวกัน) จึงจะยอมติดตั้ง
+            //    ⇒ ชื่อ/ไอคอนของไอคอนบนหน้าจอหลักมาจาก manifest.webmanifest + icon-*.png ในโฟลเดอร์เว็บ
+            //    (การตั้งชื่อ/รูปตามบัญชี (displayNameVal/safeIcon) ยังใช้กับหัวแอป/โปรไฟล์ตามปกติ)
+            const manifestLink = document.getElementById('dynamicManifest');
+            if (manifestLink && !/\.webmanifest(\?|$)/.test(manifestLink.getAttribute('href') || '')) {
+                manifestLink.href = './manifest.webmanifest';
             }
 
             window.myCurrentQrCodeURL = data.qrCodeURL || ""; 
