@@ -140,6 +140,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/make-icons.ps1
 | `setKeepScreenOn(on)` | บังคับจอค้างระดับระบบ |
 | `hasLocationPermission()` / `requestLocationPermission()` / `openSystemAppSettings()` | จัดการสิทธิ์ |
 | `vibrate(ms)` | สั่น (สำรองของ `navigator.vibrate`) |
+| `hasNativeGoogleSignIn()` | มีสะพานล็อกอิน Google ในตัวไหม (APK ใหม่ = `true`) — เว็บใช้ตัดสินว่าจะโชว์ปุ่มหรือปิดปุ่ม |
+| `googleSignIn(webClientId)` | เปิดหน้าล็อกอิน Google ของเครื่อง · ผลลัพธ์ส่งกลับที่ `window.__onNativeGoogleResult(ok, errCode, payload)` |
 | `reload()` | สั่งโหลดหน้าใหม่ |
 | `getAppUrl()` / `setAppUrl(url)` | ดู/เปลี่ยน URL ที่โหลด — ใช้ทดสอบกับเซิร์ฟเวอร์ในเครื่อง เช่น `http://192.168.1.20:58911/` |
 
@@ -160,16 +162,24 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/make-icons.ps1
    **ไอดี + รหัสผ่าน หรือ PIN** (ใช้ได้จริง) · ต้องการ Google ให้เปิดเว็บ `baby4bot.github.io/taxi` ใน Chrome
    · ในเบราว์เซอร์ปกติยังใช้ Google ได้เหมือนเดิม
 
-   **ถ้าจะให้ Google ใช้ได้ในแอปจริง ๆ (งานขั้นถัดไป):** ทำ **native Google Sign-In**
+   **✅ แก้แล้วด้วย native Google Sign-In (18 ก.ย. 69 · โค้ดเสร็จแล้ว):**
+   แอปเปิด **หน้าล็อกอิน Google ของเครื่องเอง** (Play Services) → ได้ `idToken` → ส่งเข้าเว็บ → เว็บเรียก
+   `signInWithCredential(auth, GoogleAuthProvider.credential(idToken))` ⇒ ล็อกอินจบ **ในแอป** ไม่เด้งออกเบราว์เซอร์อีก
+
+   **เหลือให้คนเดียวทำในคอนโซล Firebase (ผมทำแทนไม่ได้ · 5 นาที · ครั้งเดียว)**
    1. Firebase Console → Project settings → **Add app → Android**
       · Package name: `com.baby4bot.taximeter`
       · SHA-1: `89:44:CC:82:26:8E:09:D6:85:FB:4D:9A:91:96:50:F3:70:A1:DA:00` (ของกุญแจเซ็นแอป · ตรงกับแอปที่ติดตั้งอยู่)
-   2. เลือกใช้ `GoogleSignInOptions … requestIdToken(<Web client ID>)` ใน `MainActivity` (Web client ID มีอยู่ใน `firebaseConfig` แล้ว)
-      ⇒ ไม่จำเป็นต้องใช้ `google-services.json`
-   3. เพิ่มสะพาน `TaxiNative.googleSignIn()` → ส่ง `idToken` กลับเข้า JS → `signInWithCredential(auth, GoogleAuthProvider.credential(idToken))`
-   4. ออก APK ใหม่ 1 ครั้ง (แก้ชั้น Android = ต้องติดตั้งใหม่ — เว็บยังอัปเดตเองได้ตามปกติ)
+      • ⚠️ ลายนิ้วมือนี้ต้อง**ตรงกับกุญแจที่ใช้เซ็น APK จริง** ⇒ ต้องตั้ง Secrets (`KEYSTORE_BASE64`) ให้เป็นกุญแจดอกเดิมก่อน ไม่งั้นกุญแจเปลี่ยนทุกบิลด์ = SHA-1 เปลี่ยน = Google ปฏิเสธ
+   2. คัดลอก **Web client ID** (อยู่ที่ Authentication → Google → Web SDK configuration · รูปแบบ `…apps.googleusercontent.com`)
+      → วางในไฟล์ `index.html` บรรทัด `window.GOOGLE_WEB_CLIENT_ID = ''` → ประทับเวอร์ชัน → push
+      ⇒ **ไม่ต้องใช้ `google-services.json`** (แอปไม่พึ่งไฟล์นี้เลย)
+   3. ออก APK ใหม่ 1 ครั้ง (แก้ชั้น Android = ต้องติดตั้งใหม่ — เว็บยังอัปเดตเองได้ตามปกติ)
 
-   ⛔ ห้ามเปิดปุ่ม Google ในแอปกลับก่อนที่ข้อ 1–3 จะเสร็จ — ไม่งั้นผู้ใช้จะกลับไปเจอทางตันเดิม
+   **พฤติกรรมเมื่อยังไม่ใส่ Web client ID:** ปุ่ม Google ในแอปยังกดได้ แต่จะขึ้นข้อความไทยบอกว่า **ยังไม่ได้ตั้งค่า Google สำหรับแอป**
+   (ไม่พาไปหน้า error ของ Google) · APK รุ่น**เก่า**ที่ยังไม่มีสะพาน → ปุ่มเทาเหมือนเดิม (ข้อความแนะนำใช้ไอดี/PIN)
+
+   ⛔ กติกา: ห้ามลบสะพาน/ไลบรารี `play-services-auth` ออกโดยไม่ตั้งใจ — `check-android.ps1` ข้อ 7 จะ fail และ push ไม่ผ่าน
 2. **ต้องมีเน็ตครั้งแรก** เพื่อโหลดหน้าเว็บ (หลังจากนั้น `sw.js` เก็บสำรองไว้ให้เปิดแบบออฟไลน์ได้)
 3. **แบต**: ระหว่างจับเที่ยวมี GPS + Wake Lock ⇒ ควรเสียบชาร์จในรถ (ออกแบบมาเพื่อแบบนั้นอยู่แล้ว)
 4. **Play Store**: แอปที่ห่อเว็บเปล่า ๆ เสี่ยงถูกปฏิเสธ — ติดตั้งเองไม่มีปัญหา

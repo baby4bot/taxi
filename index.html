@@ -15237,7 +15237,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '100ca4df83';
+    const APP_WEB_VERSION = '1799d60e42';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -15625,6 +15625,8 @@
         ['2026-09-18', '🛡️ ตัวดึง APK ไม่ทับไฟล์ที่ติดตั้งได้ด้วยไฟล์ที่เซ็นด้วยกุญแจชั่วคราวอีก'],
         ['2026-09-18', '📱 แอป Android ปุ่ม Google เทาและบอกตรง ๆ ว่าต้องใช้ไอดี/ PIN — เลิกพาไปตายที่หน้า error'],
         ['2026-09-18', '🆕 สรุป “มีอะไรใหม่” จำว่าอ่านแล้วต่อบัญชี — เปลี่ยนเครื่องใหม่ก็ไม่เด้งซ้ำ'],
+        ['2026-09-18', '📱 ล็อกอิน Google ในแอป Android ได้แล้ว — ไม่ค้างในเบราว์เซอร์อีก'],
+        ['2026-09-18', '🧩 แอปเก่าที่ไม่มีสะพาน Google → ปุ่มเทาพร้อมบอกทางเลือกไอดี/PIN ให้อัตโนมัติ'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -16953,14 +16955,106 @@
     //    ⇒ ในแอป: ปิดปุ่ม Google ให้ดูไม่หลอกตา + แนะนำไอดี/รหัสผ่าน หรือ PIN (ใช้ได้จริง) · Google ให้ทำบนเว็บ/Chrome
     //    ⛔ ห้ามลบคำเตือนนี้ + ห้ามเปิดปุ่ม Google ในแอปกลับ จนกว่าจะทำ native Google Sign-In (ดู android-app/README.md)
     // ============================================================
-    window.__googleNeedsBrowser = () => {
-        try { return !!isNativeAppShell(); } catch (e) { return false; }
+    // ⭐ ค่า “Web client ID” ของโปรเจกต์ Firebase (ลงท้าย .apps.googleusercontent.com)
+    //    หาได้จาก: Firebase Console → Project settings → (แอป Web) → Web client ID
+    //    หรือ Google Cloud Console → APIs & Services → Credentials → “Web client (auto created by Google Service)”
+    //    ⚠️ ค่านี้ไม่ใช่ความลับ (อยู่ในเว็บสาธารณะอยู่แล้ว) แต่ต้องตรงกับโปรเจกต์ mytalkie-3955a
+    window.GOOGLE_WEB_CLIENT_ID = '';
+    // ลำดับการหาค่า: (1) ค่าที่แอดมินตั้งในเครื่อง (2) ค่าจากการตั้งค่าระบบ (3) ค่าคงที่ในโค้ด
+    window.__googleWebClientId = () => {
+        try {
+            const ls = localStorage.getItem('google_web_client_id');
+            if (ls && /apps\.googleusercontent\.com$/.test(ls.trim())) return ls.trim();
+        } catch (e) {}
+        try {
+            const cfg = window.appConfig && (window.appConfig.googleWebClientId || window.appConfig.googleClientId);
+            if (cfg && /apps\.googleusercontent\.com$/.test(String(cfg).trim())) return String(cfg).trim();
+        } catch (e) {}
+        try { return String(window.GOOGLE_WEB_CLIENT_ID || '').trim(); } catch (e) { return ''; }
     };
-    window.__googleAppNoticeText = () => '📱 ใน<b>แอป Android</b> ใช้ <b>Google ไม่ได้</b> (Google บล็อกหน้าเข้าสู่ระบบในแอป)<br>'
-        + 'เข้าใช้ด้วย <b>ไอดี + รหัสผ่าน</b> หรือ <b>PIN</b> ได้เลย<br>'
-        + 'ถ้าจะเข้าแบบ Google: เปิดเว็บ <b>baby4bot.github.io/taxi</b> ใน Chrome แล้วกด “ผูกบัญชี Google” ในหน้าโปรไฟล์';
+    // 📱 APK รุ่นไหนรองรับล็อกอิน Google ในตัวแล้ว (มีสะพาน TaxiNative.googleSignIn)
+    window.__googleNativeAvailable = () => {
+        try {
+            const n = window.TaxiNative;
+            return !!(n && typeof n.googleSignIn === 'function');
+        } catch (e) { return false; }
+    };
+    // ⛔ ต้องบอกให้ไปเบราว์เซอร์ เมื่ออยู่ในแอป **และ** APK ยังไม่รองรับ native sign-in เท่านั้น
+    window.__googleNeedsBrowser = () => {
+        try { return !!isNativeAppShell() && !window.__googleNativeAvailable(); } catch (e) { return false; }
+    };
+    // 🧾 แปลรหัสข้อผิดพลาดจากชั้น Android เป็นข้อความที่คนขับเข้าใจ
+    window.__googleNativeErrMsg = (code) => {
+        const c = String(code || '');
+        if (/missing-client-id/.test(c)) return 'ยังไม่ได้ตั้งค่า Google Web client ID — แจ้งแอดมินให้ใส่ค่านี้ก่อน';
+        if (/google-signin-12501|-12501/.test(c)) return 'ยกเลิกการเลือกบัญชี Google';
+        if (/google-signin-10|\b10\b/.test(c)) return 'Google ยังไม่รู้จักแอปนี้ — ต้องเพิ่มแอป Android (แพ็กเกจ + SHA-1) ใน Firebase Console ก่อน';
+        if (/google-signin-7|network/.test(c)) return 'เชื่อมต่อกับ Google ไม่ได้ — ตรวจเน็ตแล้วลองใหม่';
+        if (/no-id-token/.test(c)) return 'Google ไม่ส่งข้อมูลยืนยันตัวตนกลับมา — ลองเลือกบัญชีใหม่';
+        if (/cannot-open-google|google-unavailable/.test(c)) return 'เปิดหน้าล็อกอิน Google ในเครื่องไม่ได้ — อัปเดต Play Services แล้วลองใหม่';
+        if (/timeout/.test(c)) return 'หมดเวลารอการล็อกอิน Google — ลองใหม่';
+        return 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ (' + c + ')';
+    };
+    // 🔐 ล็อกอิน Google ในแอป Android: เรียกชั้นแอปขอ idToken → ส่งให้ Firebase ฝั่งเว็บ
+    //    APK เก่าที่ไม่มีสะพานนี้จะไม่ถูกเรียก (มี __googleNativeAvailable กันไว้)
+    let __googleNativePending = null;
+    window.__onNativeGoogleResult = (ok, errCode, payload) => {
+        const p = __googleNativePending;
+        __googleNativePending = null;
+        if (!p) return 'no-pending';
+        if (!ok) { p.reject(new Error(errCode || 'google-signin-failed')); return 'rejected'; }
+        p.resolve(payload || {});
+        return 'resolved';
+    };
+    window.__googleSignInNative = async () => {
+        const { m, auth } = await window.__getFirebaseAuth();
+        const cid = window.__googleWebClientId();
+        if (!cid) throw new Error('missing-client-id');
+        const native = window.TaxiNative;
+        if (!native || typeof native.googleSignIn !== 'function') throw new Error('native-unavailable');
+        const payload = await new Promise((resolve, reject) => {
+            __googleNativePending = { resolve: resolve, reject: reject };
+            setTimeout(() => {
+                if (__googleNativePending) { __googleNativePending = null; reject(new Error('timeout')); }
+            }, 180000);   // ผู้ใช้อาจใช้เวลานานในหน้าเลือกบัญชี
+            try { native.googleSignIn(cid); }
+            catch (e) { __googleNativePending = null; reject(new Error('cannot-open-google')); }
+        });
+        if (!payload || !payload.idToken) throw new Error('no-id-token');
+        const cred = m.GoogleAuthProvider.credential(payload.idToken);
+        const res = await m.signInWithCredential(auth, cred);
+        return { user: res.user, via: 'native' };
+    };
+    // 🧭 ทางเดียวที่ทุกบริบทใช้: ในแอป → native · ในเบราว์เซอร์ → popup/redirect
+    window.__googleSignInAny = async () => {
+        if (window.__googleNativeAvailable()) return await window.__googleSignInNative();
+        return await window.__googleSignIn();
+    };
+    window.__googleAppNoticeText = () => {
+        // APK รุ่นใหม่มีสะพาน native แล้ว แต่ยังไม่ได้ใส่ Web client ID ⇒ คนละข้อความ (ชี้จุดที่ต้องแก้)
+        if (window.__googleNativeAvailable() && !window.__googleWebClientId()) {
+            return '📱 แอปนี้รองรับ <b>ล็อกอิน Google</b> แล้ว แต่ยังไม่ได้ตั้งค่า <b>Web client ID</b><br>'
+                + 'ให้แอดมินใส่ค่าให้เสร็จก่อน — ระหว่างนี้เข้าใช้ด้วย <b>ไอดี + รหัสผ่าน</b> หรือ <b>PIN</b>';
+        }
+        return '📱 ใน<b>แอป Android</b> ใช้ <b>Google ไม่ได้</b> (Google บล็อกหน้าเข้าสู่ระบบในแอป)<br>'
+            + 'เข้าใช้ด้วย <b>ไอดี + รหัสผ่าน</b> หรือ <b>PIN</b> ได้เลย<br>'
+            + 'ถ้าจะเข้าแบบ Google: เปิดเว็บ <b>baby4bot.github.io/taxi</b> ใน Chrome แล้วกด “ผูกบัญชี Google” ในหน้าโปรไฟล์';
+    };
     window.__applyGoogleAppNotice = () => {
         try {
+            // กรณี APK ใหม่: มีสะพาน native → เปิดปุ่มให้กดใช้ Google ได้จริง
+            if (window.__googleNativeAvailable()) {
+                const b0 = document.getElementById('googleLoginBtn');
+                const l0 = document.getElementById('googleLinkBtn');
+                if (b0) { b0.disabled = false; b0.style.opacity = ''; b0.style.filter = ''; b0.style.cursor = ''; b0.title = ''; }
+                if (l0) { l0.disabled = false; l0.style.opacity = ''; l0.style.filter = ''; l0.title = ''; }
+                const h0 = document.getElementById('googleLoginHint');
+                const ready = !!window.__googleWebClientId();
+                if (h0) h0.innerHTML = ready
+                    ? 'ในแอป Android จะเปิดหน้าเลือกบัญชี Google ของเครื่องให้ — เลือกแล้วเข้าได้เลย'
+                    : window.__googleAppNoticeText();
+                if (ready) return true;
+            }
             if (!window.__googleNeedsBrowser()) return false;
             const btn = document.getElementById('googleLoginBtn');
             const hint = document.getElementById('googleLoginHint');
@@ -17091,11 +17185,16 @@
         if (window.__inSocialWebview()) set('⚠️ คุณเปิดแอปอยู่ในเบราว์เซอร์ของ LINE/Facebook — Google ไม่อนุญาตให้ล็อกอินในหน้านี้ ถ้าไม่สำเร็จ ให้เปิดแอปใน Chrome/Safari');
         if (btn) { btn.disabled = true; btn.style.opacity = '0.7'; }
         try {
-            const r = await window.__googleSignIn();
+            // ในแอป Android → เปิดหน้าล็อกอิน Google ของเครื่อง (native) · ในเบราว์เซอร์ → popup/redirect
+            if (window.__googleNativeAvailable()) set('กำลังเปิดหน้าเลือกบัญชี Google…');
+            const r = await window.__googleSignInAny();
             if (r.via === 'redirect') { set('กำลังพาไปหน้าล็อกอิน Google…'); return; }
             await window.__completeGoogleLogin(r.user);
         } catch (e) {
-            const msg = (e && e.message && /ระงับ/.test(e.message)) ? e.message : window.__socialErrMsg(e);
+            const raw = String((e && e.message) || '');
+            const isNative = /^(missing-client-id|google-signin-|no-id-token|cannot-open-google|google-unavailable|timeout|native-unavailable)/.test(raw);
+            const msg = (e && e.message && /ระงับ/.test(e.message)) ? e.message
+                : (isNative ? window.__googleNativeErrMsg(raw) : window.__socialErrMsg(e));
             window.showToast(msg, true);
             set(msg);
         } finally {
@@ -17132,7 +17231,7 @@
         const btn = document.getElementById('googleLinkBtn');
         if (btn) { btn.disabled = true; btn.style.opacity = '0.7'; }
         try {
-            const r = await window.__googleSignIn();
+            const r = await window.__googleSignInAny();   // ในแอป Android → native · เบราว์เซอร์ → popup/redirect
             if (r.via === 'redirect') return;
             const uid = r.user.uid;
             const prev = await window.__fsRestGetDoc('authLink/' + uid).catch(() => null);
@@ -17161,7 +17260,10 @@
             window.showToast('ผูกบัญชี Google แล้ว — ครั้งต่อไปกดปุ่มเดียวเข้าสู่ระบบ 🎉');
             try { window.addChangelogEntry && window.addChangelogEntry('ผูกบัญชี Google กับบัญชีนี้'); } catch (e) {}
         } catch (e) {
-            window.showToast(window.__socialErrMsg(e), true);
+            // ในแอป Android ความผิดพลาดมาจากชั้นแอป (มีรหัสเฉพาะ) → แปลเป็นข้อความที่คนขับเข้าใจ
+            const raw = String((e && e.message) || '');
+            const isNative = /^(missing-client-id|google-signin-|no-id-token|cannot-open-google|google-unavailable|timeout|native-unavailable)/.test(raw);
+            window.showToast(isNative ? window.__googleNativeErrMsg(raw) : window.__socialErrMsg(e), true);
         } finally {
             if (btn) { btn.disabled = false; btn.style.opacity = ''; }
         }

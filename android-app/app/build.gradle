@@ -25,8 +25,10 @@ android {
         minSdk 26          // Android 8.0 ขึ้นไป (พอสำหรับ WebView + Foreground Service ที่ทำงานถูกต้อง)
         targetSdk 34
         // 🔢 เพิ่ม versionCode ทุกครั้งที่จะแจก APK ใหม่ (มือถือใช้ตัวนี้บอกว่า "มีตัวใหม่กว่า")
-        versionCode 2
-        versionName '1.1.0'   // เปลี่ยนชื่อแอปเป็น "ค่าแท็กซี่" + ไอคอนรูป taxi จริง
+        // 🔢 เพิ่ม versionCode ทุกครั้งที่จะแจก APK ใหม่ (มือถือใช้ตัวนี้บอกว่า "มีตัวใหม่กว่า")
+        //    v1.2.0 (3) = เพิ่มล็อกอิน Google แบบ native (Google บล็อกหน้า OAuth ในเว็บวิว ⇒ ต้องทำในชั้นแอป)
+        versionCode 3
+        versionName '1.2.0'   // ชื่อแอป "ค่าแท็กซี่" + ไอคอนรูป taxi + ล็อกอิน Google ในแอปได้
 
         // 🌐 URL ของเว็บแอป — จุดเดียวที่ต้องแก้ถ้าย้ายโดเมน
         //    แก้ชั่วคราวจากในแอปได้ด้วย TaxiNative.setAppUrl('http://192.168.x.x:58911/') เพื่อทดสอบกับเซิร์ฟเวอร์ในเครื่อง
@@ -76,4 +78,9 @@ android {
 
 // ⛔ ไม่มี dependencies โดยเจตนา — ใช้ API ของ framework ล้วน ๆ
 //    (ไม่ต้องใช้ Google Play Services/AndroidX ⇒ build ไม่พังง่าย และติดตั้งได้ทุกเครื่อง)
-dependencies { }
+//    ยกเว้นข้อเดียวที่จำเป็นจริง: play-services-auth สำหรับ “ล็อกอิน Google ในแอป”
+//    เพราะ Google ห้ามหน้า OAuth ใน WebView ⇒ ต้องขอ idToken จากชั้นแอปแล้วส่งเข้า Firebase
+//    หมายเหตุ: บังคับแค่ตอนมีสะพาน TaxiNative.googleSignIn — ถ้าลบ dependency นี้ ต้องลบโค้ดใน MainActivity ด้วย
+dependencies {
+    implementation 'com.google.android.gms:play-services-auth:21.2.0'
+}

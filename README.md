@@ -284,6 +284,12 @@
 
 **กลไก (อ่านก่อนแก้โค้ด)**
 
+- 📱 **(18 ก.ย. 69) ล็อกอิน Google ในแอป Android = native sign-in แล้ว** — ไม่เด้งออกเบราว์เซอร์อีก
+  - **ต้นเหตุเดิม (2 ชั้น):** ① Google ห้ามหน้า OAuth ใน WebView (`disallowed_useragent`) ② โค้ดเดิมส่ง `accounts.google.com` ออกเบราว์เซอร์จริง ⇒ ล็อกอินสำเร็จใน Chrome แต่ **เซสชันไม่กลับเข้าแอป** (คนละพื้นที่จัดเก็บ)
+  - **วิธีแก้:** เพิ่มสะพาน `TaxiNative.googleSignIn(<Web client ID>)` (Java + `play-services-auth`) → เปิดหน้าล็อกอินของเครื่อง → ได้ `idToken` → `window.__onNativeGoogleResult(ok, errCode, payload)` → เว็บเรียก `signInWithCredential(auth, GoogleAuthProvider.credential(idToken))`
+  - **ต้องมี Web client ID:** `window.GOOGLE_WEB_CLIENT_ID` ใน `index.html` — ยังว่าง ⇒ ปุ่มกดได้แต่ขึ้นข้อความไทย “ยังไม่ได้ตั้งค่า Google สำหรับแอป” (ไม่พาไปหน้า error)
+  - **APK รุ่นเก่า (ไม่มีสะพาน)** ⇒ ปุ่มเทา + แนะนำใช้ไอดี/PIN เหมือนเดิม (ถอยหลังได้ ไม่พัง)
+  - ⛔ ต้องกรอกแอป Android ในคอนโซล Firebase (แพ็กเกจ `com.baby4bot.taximeter` + SHA-1 ของกุญแจเซ็น) — SHA-1 ผูกกับกุญแจ ⇒ หากุญแจเปลี่ยนทุกบิลด์ Google จะปฏิเสธ
 - โหลด `firebase-auth.js@10.8.0` แบบ **dynamic import** เฉพาะตอนกดปุ่ม — ไม่เพิ่มเวลาบูตแอป
 - **uid ของ Google → เอกสาร `authLink/{uid}` = `{ docId, email, linkedAt }`** แล้วทุกอย่างเดินโฟลว์เดิม (`users/{docId}` · PIN · สิทธิ์ · บันทึกการเข้าใช้งาน) — บัญชีเดียวกับระบบ username/รหัสผ่าน ไม่มีระบบคู่ขนาน
 - `users/{docId}` จะเก็บ `authProvider: 'google'` · `authLinked: true` · `googleUid` · `googleEmail` · **`password: ''`** ⇒ บัญชีที่**สร้าง**ด้วย Google ล็อกอินด้วยรหัสผ่านไม่ได้ (ตั้ง PIN/รหัสผ่านทีหลังได้) — แต่บัญชี**เดิมที่ผูก** Google ยังมีรหัสผ่านเดิมอยู่ครบ

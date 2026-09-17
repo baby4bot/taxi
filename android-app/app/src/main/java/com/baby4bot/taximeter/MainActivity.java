@@ -26,6 +26,14 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 
 /**
@@ -47,10 +55,7 @@ public class MainActivity extends Activity {
     private static final String PREFS = "taxi_native";
     private static final int REQ_PERMS = 1001;
     private static final int REQ_FILE = 1002;
-
-    private WebView web;
-    private ValueCallback<Uri[]> filePathCallback;
-    private boolean pendingTracking = false;
+    private static final int REQ_GOOGLE = 1003;
 
     // ───────────────────────── lifecycle ─────────────────────────
 
@@ -209,6 +214,18 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
+        if (req == REQ_GOOGLE) {
+            try {
+                GoogleSignInAccount acc = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException.class);
+                sendGoogleResult(acc, null);
+            } catch (ApiException e) {
+                // 12501 = ผู้ใช้กดยกเลิก · 10 = DEVELOPER_ERROR (ยังไม่ได้เพิ่มแอป/SHA-1 ในคอนโซล)
+                sendGoogleResult(null, "google-signin-" + e.getStatusCode());
+            } catch (Exception e) {
+                sendGoogleResult(null, "google-signin-unknown");
+            }
+            return;
+        }
         if (req == REQ_FILE) {
             Uri[] out = null;
             if (res == RESULT_OK && data != null) {
@@ -244,6 +261,66 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         if (web != null && web.canGoBack()) web.goBack();
         else moveTaskToBack(true);   // ย่อแอป ไม่ปิด (คนขับมักกลับมาใช้ต่อ)
+    }
+
+    // ───────────────────── 🔐 ล็อกอิน Google แบบ native (18 ก.ย. 2026) ─────────────────────
+    //  ทำไมต้องมี: Google ห้ามหน้า OAuth ใน WebView (นโยบาย) ⇒ ล็อกอินในเว็บวิวทำไม่ได้เลย
+    //  วิธีที่ถูกต้อง: เปิดหน้าล็อกอินของ Google ในชั้น Android (Play Services) → ได้ idToken
+    //                 → ส่ง idToken กลับเข้าเว็บ → ฝั่งเว็บเรียก signInWithCredential(...) ของ Firebase
+    //  ต้องมีในคอนโซล Firebase: เพิ่มแอป Android (แพ็กเกจนี้ + SHA-1 ของกุญแจเซ็น) และส่ง “Web client ID” จากฝั่งเว็บมา
+    private GoogleSignInClient googleClient(String serverClientId) {
+        GoogleSignInOptions opts = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(serverClientId)   // ⭐ audience = Web client ID ⇒ Firebase ยอมรับ
+                .requestEmail()
+                .build();
+        return GoogleSignIn.getClient(this, opts);
+    }
+
+    /** เรียกจาก JS: TaxiNative.googleSignIn('<Web client ID>') — เลือกบัญชีทุกครั้ง (เหมือน prompt: select_account) */
+    private void startNativeGoogleSignIn(final String serverClientId) {
+        final String cid = serverClientId == null ? "" : serverClientId.trim();
+        if (cid.isEmpty()) { sendGoogleResult(null, "missing-client-id"); return; }
+        try {
+            final GoogleSignInClient client = googleClient(cid);
+            client.signOut().addOnCompleteListener(task -> {
+                try {
+                    startActivityForResult(client.getSignInIntent(), REQ_GOOGLE);
+                } catch (Exception e) {
+                    sendGoogleResult(null, "cannot-open-google");
+                }
+            });
+        } catch (Exception e) {
+            sendGoogleResult(null, "google-unavailable");
+        }
+    }
+
+    /** ส่งผลลัพธ์กลับเข้าเว็บ: window.__onNativeGoogleResult(ok, errCode, payload) */
+    private void sendGoogleResult(GoogleSignInAccount acc, String errCode) {
+        String err = errCode;
+        String idToken = acc == null ? null : acc.getIdToken();
+        if (err == null && (idToken == null || idToken.isEmpty())) err = "no-id-token";
+        JSONObject payload = null;
+        if (acc != null) {
+            payload = new JSONObject();
+            try {
+                payload.put("idToken", idToken == null ? "" : idToken);
+                payload.put("email", acc.getEmail() == null ? "" : acc.getEmail());
+                payload.put("name", acc.getDisplayName() == null ? "" : acc.getDisplayName());
+                Uri photo = acc.getPhotoUrl();
+                payload.put("photo", photo == null ? "" : photo.toString());
+            } catch (Exception ignored) {
+            }
+        }
+        String js = "window.__onNativeGoogleResult(" + (err == null ? "true" : "false") + ","
+                + (err == null ? "null" : JSONObject.quote(err)) + ","
+                + (payload == null ? "null" : payload.toString()) + ");";
+        final String script = js;
+        runOnUiThread(() -> {
+            try {
+                if (web != null) web.evaluateJavascript(script, null);
+            } catch (Exception ignored) {
+            }
+        });
     }
 
     private boolean hasFineLocation() {
@@ -282,6 +359,18 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public boolean isNativeApp() {
             return true;
+        }
+
+        /** APK รุ่นนี้รองรับล็อกอิน Google ในตัวหรือยัง (ฝั่งเว็บใช้ตัดสินว่าโชว์ปุ่มหรือบอกให้ใช้ไอดี/PIN) */
+        @JavascriptInterface
+        public boolean hasNativeGoogleSignIn() {
+            return true;
+        }
+
+        /** เปิดหน้าล็อกอิน Google ของเครื่อง — ผลลัพธ์ส่งกลับทาง window.__onNativeGoogleResult */
+        @JavascriptInterface
+        public void googleSignIn(final String serverClientId) {
+            runOnUiThread(() -> startNativeGoogleSignIn(serverClientId));
         }
 
         @JavascriptInterface
