@@ -194,10 +194,11 @@
     await scenario('12. หน้าจอจริง: แผง “มีอะไรใหม่” ขึ้นหลังอัปเดต และกดปิดได้ (ไม่เด้งซ้ำ)', async () => {
       const T = cw.__whatsNewTest;
       assert(T && typeof T.setRecord === 'function', 'ไม่พบตะขั้วทดสอบ __whatsNewTest');
-      T.clearRecord();
-      assert(cw.__whatsNewAfterUpdate('test') === 'none', 'ยังไม่มีบันทึก → ต้องไม่ทำอะไร');
+      T.clearRecord(); T.clearLocalSeen();
+      T.seenOverride({ uid: 'tester', v: 'otherver00' });   // ให้เซิร์ฟเวอร์บอกว่า “ยังไม่เคยอ่านรุ่นนี้”
+      assert((await cw.__whatsNewAfterUpdate('test')) === 'none', 'ยังไม่มีบันทึก → ต้องไม่ทำอะไร');
       T.setRecord({ to: T.running(), from: 'oldver000', at: Date.now(), date: '2026-09-18', beforeNotes: [] });
-      const out = cw.__whatsNewAfterUpdate('test');
+      const out = await cw.__whatsNewAfterUpdate('test');
       assert(/^shown:\d+$/.test(out), 'ต้องเด้งแผงสรุป (ได้ ' + out + ')');
       const txt = T.panelText() || '';
       assert(/มีอะไรใหม่ในเวอร์ชันนี้/.test(txt), 'แผงต้องมีหัวข้อ (ได้: ' + txt.slice(0, 40) + '…)');
@@ -209,10 +210,48 @@
       okBtn.click();
       await wait(60);
       assert(T.panelText() === null, 'กดปิดแล้วแผงต้องหาย');
-      assert(cw.__whatsNewAfterUpdate('test') === 'none', 'ปิดแล้วต้องไม่เด้งซ้ำในรอบเดียวกัน');
+      assert((await cw.__whatsNewAfterUpdate('test')) === 'none', 'ปิดแล้วต้องไม่เด้งซ้ำในรอบเดียวกัน');
       const xBtn = doc.getElementById('whatsNewClose');
       assert(!!xBtn, 'ต้องมีปุ่ม ✕ มุมขวาบนให้ปิดได้');
+      T.seenOverride(null); T.clearLocalSeen(); T.clearRecord();
       return 'ขึ้นจริง · มีเนื้อหาจากประวัติเวอร์ชัน · ปิดได้ทั้งปุ่มรับทราบและ ✕ · ไม่เด้งซ้ำ';
+    });
+
+    await scenario('13. “อ่านแล้ว” ต่อบัญชี: เคยอ่านรุ่นนี้ที่เครื่องอื่น → ต้องไม่เด้งซ้ำ', async () => {
+      const d = cw.__whatsNewDecide;
+      const notes = ['ก', 'ข', 'ค'];
+      const rec = { to: 'v9', from: 'v8', beforeNotes: ['ก', 'ข'] };
+      const seenSame = d(rec, 'v9', notes, '', { uid: 'u1', v: 'v9' });
+      assert(seenSame.show === false && seenSame.skip === 'seen', 'อ่านรุ่นนี้แล้ว → ห้ามเด้ง (ได้ ' + JSON.stringify(seenSame) + ')');
+      const seenOld = d(rec, 'v9', notes, '', { uid: 'u1', v: 'v8' });
+      assert(seenOld.show === true, 'เคยอ่านแค่รุ่นก่อน → ต้องเด้งรุ่นใหม่');
+      const noSeen = d(rec, 'v9', notes, '');
+      assert(noSeen.show === true, 'ไม่มีข้อมูลการอ่าน (เช่นยังไม่ล็อกอิน/อ่านไม่ได้) → ต้องเด้ง');
+      return 'อ่านรุ่นเดียวกัน=เงียบ · คนละรุ่น=เด้ง · ไม่มีข้อมูล=เด้ง';
+    });
+
+    await scenario('14. หน้าจอจริง: บัญชีนี้เคยอ่านแล้ว → ไม่เด้ง + บันทึกว่าอ่านลงเครื่อง', async () => {
+      const T = cw.__whatsNewTest;
+      assert(T && typeof T.seenOverride === 'function', 'ไม่พบตะขั้ว seenOverride');
+      T.clearRecord(); T.clearLocalSeen();
+      // จำลองว่าเซิร์ฟเวอร์บอกว่า “บัญชีนี้เคยอ่านรุ่นนี้แล้ว”
+      T.seenOverride({ uid: 'tester', v: T.running(), at: Date.now() });
+      T.setRecord({ to: T.running(), from: 'oldver000', at: Date.now(), date: '2026-09-18', beforeNotes: T.notes().slice(0, 3) });
+      const out = await cw.__whatsNewAfterUpdate('test');
+      assert(out === 'seen', 'ต้องรู้ว่าเคยอ่านแล้ว (ได้ ' + out + ')');
+      assert(T.panelText() === null, 'ต้องไม่มีแผงโผล่');
+      // จำลองตรงกันข้าม: ยังไม่เคยอ่าน → ต้องเด้ง
+      T.seenOverride({ uid: 'tester', v: 'otherver00', at: Date.now() });
+      T.setRecord({ to: T.running(), from: 'oldver000', at: Date.now(), date: '2026-09-18', beforeNotes: T.notes().slice(0, 3) });
+      const out2 = await cw.__whatsNewAfterUpdate('test');
+      assert(/^shown:\d+$/.test(out2), 'ยังไม่เคยอ่าน → ต้องเด้ง (ได้ ' + out2 + ')');
+      // กดปิด → ต้องจดว่าอ่านแล้วไว้ในเครื่อง (แล้วเซิร์ฟเวอร์จะได้ค่านี้ในรอบถัดไป)
+      cw.document.getElementById('whatsNewOk').click();
+      await wait(120);
+      const localSeen = T.localSeen();
+      assert(localSeen && localSeen.v === T.running(), 'ปิดแล้วต้องจดว่า “อ่านรุ่นนี้แล้ว” (ได้ ' + JSON.stringify(localSeen) + ')');
+      T.seenOverride(null); T.clearRecord(); T.clearLocalSeen();
+      return 'เคยอ่าน → เงียบ · ยังไม่เคย → เด้ง · ปิดแล้วจดค่าลงเครื่อง (v=' + (localSeen ? localSeen.v : '') + ')';
     });
 
     if (failures.length) console.warn('ล้มเหลว:', failures);
