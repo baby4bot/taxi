@@ -149,10 +149,27 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/make-icons.ps1
 
 ## ⚠️ ข้อจำกัดที่ต้องรู้ (จริงใจ)
 
-1. **ล็อกอิน Google ใน WebView ถูก Google บล็อก** (`disallowed_useragent`) — เวอร์ชันนี้จะ **เด้งออกไปเบราว์เซอร์จริง** ให้
-   ⇒ ในแอป Android ให้เข้าใช้ด้วย **ไอดี + รหัสผ่าน** หรือ **PIN** (ถ้าต้องการปุ่ม Google ในแอปจริง ๆ ต้องทำ
-   **Native Google Sign-In** เพิ่ม: เอา `idToken` จากชั้น Android ส่งเข้า Firebase ฝั่งเว็บ — เป็นงานขั้นถัดไป ต้องใช้
-   SHA-1 ของกุญแจเซ็นแอป + Web client ID)
+1. **ล็อกอิน Google ในแอปทำไม่ได้ — และตอนนี้บอกตรง ๆ แล้ว (แก้ 18 ก.ย. 69)**
+
+   **อาการที่ผู้ใช้รายงาน:** กดปุ่ม Google ในแอป → เลือกอีเมล → **ขึ้น error / ไม่เข้าแอป**
+
+   **ทำไม:** Google ห้ามหน้า OAuth ใน WebView (`disallowed_useragent`) · และโค้ดเดิมส่ง URL นั้น **ออกไปเบราว์เซอร์จริง**
+   ⇒ ล็อกอินสำเร็จใน Chrome แต่ **เซสชันไม่กลับเข้าแอป** (เบราว์เซอร์กับแอปเป็นคนละพื้นที่จัดเก็บ)
+
+   **พฤติกรรมปัจจุบัน:** ในแอป Android ปุ่ม Google และปุ่ม “ผูกบัญชี Google” → **เทา กดไม่ได้** + ข้อความแนะนำให้ใช้
+   **ไอดี + รหัสผ่าน หรือ PIN** (ใช้ได้จริง) · ต้องการ Google ให้เปิดเว็บ `baby4bot.github.io/taxi` ใน Chrome
+   · ในเบราว์เซอร์ปกติยังใช้ Google ได้เหมือนเดิม
+
+   **ถ้าจะให้ Google ใช้ได้ในแอปจริง ๆ (งานขั้นถัดไป):** ทำ **native Google Sign-In**
+   1. Firebase Console → Project settings → **Add app → Android**
+      · Package name: `com.baby4bot.taximeter`
+      · SHA-1: `89:44:CC:82:26:8E:09:D6:85:FB:4D:9A:91:96:50:F3:70:A1:DA:00` (ของกุญแจเซ็นแอป · ตรงกับแอปที่ติดตั้งอยู่)
+   2. เลือกใช้ `GoogleSignInOptions … requestIdToken(<Web client ID>)` ใน `MainActivity` (Web client ID มีอยู่ใน `firebaseConfig` แล้ว)
+      ⇒ ไม่จำเป็นต้องใช้ `google-services.json`
+   3. เพิ่มสะพาน `TaxiNative.googleSignIn()` → ส่ง `idToken` กลับเข้า JS → `signInWithCredential(auth, GoogleAuthProvider.credential(idToken))`
+   4. ออก APK ใหม่ 1 ครั้ง (แก้ชั้น Android = ต้องติดตั้งใหม่ — เว็บยังอัปเดตเองได้ตามปกติ)
+
+   ⛔ ห้ามเปิดปุ่ม Google ในแอปกลับก่อนที่ข้อ 1–3 จะเสร็จ — ไม่งั้นผู้ใช้จะกลับไปเจอทางตันเดิม
 2. **ต้องมีเน็ตครั้งแรก** เพื่อโหลดหน้าเว็บ (หลังจากนั้น `sw.js` เก็บสำรองไว้ให้เปิดแบบออฟไลน์ได้)
 3. **แบต**: ระหว่างจับเที่ยวมี GPS + Wake Lock ⇒ ควรเสียบชาร์จในรถ (ออกแบบมาเพื่อแบบนั้นอยู่แล้ว)
 4. **Play Store**: แอปที่ห่อเว็บเปล่า ๆ เสี่ยงถูกปฏิเสธ — ติดตั้งเองไม่มีปัญหา

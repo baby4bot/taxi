@@ -7559,6 +7559,18 @@
     };
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstallPrompt = e; window.tryShowInstallBanner(); });
     window.addEventListener('appinstalled', () => { deferredInstallPrompt = null; pwaClearDismissed(); hideInstallBanner(); });
+    // 📱 แอป Android (APK): ทันทีที่หน้าล็อกอินขึ้น ให้ปิดปุ่ม Google ให้ดูไม่หลอกตา (รายละเอียดอยู่ในบล็อก __applyGoogleAppNotice)
+    (() => {
+        const apply = () => { try { return !!(window.__applyGoogleAppNotice && window.__applyGoogleAppNotice()); } catch (e) { return false; } };
+        const watchLogin = () => {
+            try {
+                const el = document.getElementById('loginOverlay');
+                if (!el || typeof MutationObserver !== 'function') return;
+                new MutationObserver(apply).observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
+            } catch (e) {}
+        };
+        setTimeout(() => { apply(); watchLogin(); }, 2500);
+    })();
     // สำรอง: ถ้าเข้าแอปแล้วบนมือถือแต่เบราว์เซอร์ไม่ส่ง beforeinstallprompt (iOS/อื่น ๆ) → ลองโชว์ครั้งเดียวหลังโหลด
     setTimeout(() => { if (window.tryShowInstallBanner) window.tryShowInstallBanner(); }, 3000);
     // ถ้าเริ่มเที่ยว/วิ่งจริงระหว่างที่แบนเนอร์ยังโชว์ → ซ่อนอัตโนมัติไม่ให้กวน
@@ -7686,19 +7698,62 @@
     //    กติกา: เด้งครั้งเดียวต่อการอัปเดตหนึ่งครั้ง · ปิดได้เสมอ · มีหัวข้อเดียว = ไม่เด้ง (ไม่มีอะไรให้สรุป)
     // ============================================================
     const WN_KEY = 'web_update_whats_new';
+    const WN_SEEN_KEY = 'whats_new_seen_v1';   // 🧑‍🤝‍🧑 “อ่านเวอร์ชันไหนไปแล้ว” ของบัญชีนี้ (สำเนาในเครื่อง · ตัวจริงอยู่บนเอกสารผู้ใช้)
+    let wnSeenOverride = null;                 // 🧪 ให้ชุดทดสอบกำหนดคำตอบแทนการอ่านจริง
     const wnNorm = (s) => String(s == null ? '' : s).trim();
     const wnEsc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const wnRead = () => { try { return JSON.parse(localStorage.getItem(WN_KEY) || 'null'); } catch (e) { return null; } };
     const wnClear = () => { try { localStorage.removeItem(WN_KEY); } catch (e) {} };
     const wnCurrentNotes = () => { try { return Array.isArray(APP_RELEASE_NOTES) ? APP_RELEASE_NOTES.map(wnNorm).filter(Boolean) : []; } catch (e) { return []; } };
     const wnCurrentDate = () => { try { return wnNorm(APP_RELEASE_DATE); } catch (e) { return ''; } };
+    // 📖 “อ่านไปแล้ว” — อ่าน/เขียนทั้งในเครื่องและบนเอกสารผู้ใช้ (ตัวเดียวกันทุกเครื่อง)
+    const wnLocalSeen = (uid) => {
+        try {
+            const o = JSON.parse(localStorage.getItem(WN_SEEN_KEY) || 'null');
+            if (o && o.v && (!uid || !o.uid || o.uid === uid)) return o;
+        } catch (e) {}
+        return null;
+    };
+    const wnWriteLocalSeen = (uid, v) => {
+        try { localStorage.setItem(WN_SEEN_KEY, JSON.stringify({ uid: wnNorm(uid), v: wnNorm(v), at: Date.now() })); } catch (e) {}
+    };
+    // อ่านจากเซิร์ฟเวอร์ — ช้า/ล่ม/ไม่มีเน็ต = คืน null (ยังแสดงสรุปให้ ไม่ทวงถาม)
+    const wnFetchSeen = async (uid) => {
+        if (wnSeenOverride) return wnSeenOverride;
+        if (!uid) return null;
+        try {
+            const snap = await window.__fsTimeout(getDoc(doc(db, 'users', uid)), 3500);
+            const d = (snap && typeof snap.data === 'function') ? snap.data() : null;
+            const s = d && d.whatsNewSeen;
+            if (s && typeof s === 'object' && wnNorm(s.v)) { wnWriteLocalSeen(uid, s.v); return { uid: uid, v: wnNorm(s.v), at: s.at || 0 }; }
+            if (typeof s === 'string' && wnNorm(s)) { wnWriteLocalSeen(uid, wnNorm(s)); return { uid: uid, v: wnNorm(s), at: 0 }; }
+        } catch (e) {}
+        return null;
+    };
+    // บันทึกว่า “อ่านแล้ว” — ลงในเครื่องทันที แล้วซิงก์ขึ้นเอกสารผู้ใช้ (ข้ามเครื่องได้)
+    const wnMarkSeen = (v) => {
+        const ver = wnNorm(v);
+        if (!ver) return 'no-version';
+        const uid = wnNorm(loggedInUserId);
+        wnWriteLocalSeen(uid, ver);
+        if (!uid) return 'local-only';
+        try {
+            const patch = { whatsNewSeen: { v: ver, at: Date.now() } };
+            window.__fsTimeout(setDoc(doc(db, 'users', uid), patch, { merge: true }), 4000).catch(() => {
+                try { window.__fsRestPatch(uid, patch).catch(() => {}); } catch (e) {}
+            });
+            return 'saved';
+        } catch (e) { return 'local-only'; }
+    };
     // 🧪 ตัดสินใจจากข้อมูลล้วน: เด้งไหม + จะแสดงหัวข้ออะไร
-    window.__whatsNewDecide = (rec, runningVersion, currentNotes, currentDate) => {
+    window.__whatsNewDecide = (rec, runningVersion, currentNotes, currentDate, seen) => {
         const v = wnNorm(runningVersion);
         const notes = Array.isArray(currentNotes) ? currentNotes.map(wnNorm).filter(Boolean) : [];
-        const none = { show: false, notes: [], date: '', freshCount: 0, from: '', exact: false };
+        const none = { show: false, notes: [], date: '', freshCount: 0, from: '', exact: false, skip: '' };
         if (!rec || !v) return none;
         if (wnNorm(rec.to) !== v) return none;   // จดไว้ของรุ่นอื่น = การอัปเดตไม่สำเร็จ/เปลี่ยนรุ่นซ้ำ → ไม่เด้งมั่ว
+        // 🧑‍🤝‍🧑 อ่านเวอร์ชันนี้ไปแล้วจากเครื่องอื่น (บันทึกไว้กับบัญชี) → ไม่เด้งซ้ำ
+        if (seen && wnNorm(seen.v) === v) { const o = Object.assign({}, none); o.skip = 'seen'; return o; }
         if (rec.shownAt) return none;            // เด้งไปแล้วครั้งหนึ่งสำหรับการอัปเดตครั้งนี้
         if (notes.length <= 1) return none;      // มีหัวข้อเดียว = ไม่มีอะไรให้สรุป
         const before = Array.isArray(rec.beforeNotes) ? rec.beforeNotes.map(wnNorm).filter(Boolean) : [];
@@ -7741,7 +7796,8 @@
                 '<button type="button" id="whatsNewHistory" style="flex:1 1 auto; padding:8px 10px; border-radius:10px; border:1px solid rgba(56,189,248,0.45); background:rgba(56,189,248,0.12); color:#7dd3fc; font-weight:700; font-size:12px; cursor:pointer;">ดูประวัติเวอร์ชัน</button>' +
                 '<button type="button" id="whatsNewOk" style="flex:1 1 auto; padding:8px 10px; border-radius:10px; border:0; background:#38bdf8; color:#04212f; font-weight:800; font-size:12px; cursor:pointer;">รับทราบ</button>' +
             '</div>';
-        const close = () => { el.style.display = 'none'; wnClear(); };
+        // ปิด = บอกทุกเครื่องของบัญชีนี้ว่า “อ่านเวอร์ชันนี้แล้ว” → ไม่เด้งซ้ำที่เครื่องอื่น
+        const close = () => { el.style.display = 'none'; wnClear(); try { wnMarkSeen(window.APP_WEB_VERSION); } catch (e) {} };
         const okBtn = document.getElementById('whatsNewOk'); if (okBtn) okBtn.onclick = close;
         const xBtn = document.getElementById('whatsNewClose'); if (xBtn) xBtn.onclick = close;
         const hBtn = document.getElementById('whatsNewHistory');
@@ -7749,20 +7805,47 @@
         el.style.display = 'block';
         return el;
     };
-    window.__whatsNewAfterUpdate = (why) => {
-        const rec = wnRead();
-        if (!rec) return 'none';
-        const info = window.__whatsNewDecide(rec, wnNorm(window.APP_WEB_VERSION), wnCurrentNotes(), wnCurrentDate());
-        if (!info.show) { wnClear(); return 'skip'; }   // จดเป็นรายการใช้ครั้งเดียว — ไม่เด้งซ้ำทุกรอบเปิดแอป
-        rec.shownAt = Date.now();
-        try { localStorage.setItem(WN_KEY, JSON.stringify(rec)); } catch (e) {}
-        wnShowPanel(info);
-        return 'shown:' + info.notes.length;
+    window.__whatsNewAfterUpdate = async (why) => {
+        try {
+            const rec = wnRead();
+            if (!rec) return 'none';
+            const running = wnNorm(window.APP_WEB_VERSION);
+            // 1) สำเนาในเครื่องก่อน (เร็ว/ใช้ได้ตอนออฟไลน์) — 2) ไม่มีก็ถามเซิร์ฟเวอร์ว่าบัญชีนี้เคยอ่านรุ่นนี้หรือยัง
+            let seen = wnLocalSeen(wnNorm(loggedInUserId));
+            if (!seen || wnNorm(seen.v) !== running) {
+                const srv = await wnFetchSeen(wnNorm(loggedInUserId));
+                if (srv) seen = srv;
+            }
+            const info = window.__whatsNewDecide(rec, running, wnCurrentNotes(), wnCurrentDate(), seen);
+            if (!info.show) {
+                wnClear();   // จดเป็นรายการใช้ครั้งเดียว — ไม่เด้งซ้ำทุกรอบเปิดแอป
+                return info.skip === 'seen' ? 'seen' : 'skip';
+            }
+            rec.shownAt = Date.now();
+            try { localStorage.setItem(WN_KEY, JSON.stringify(rec)); } catch (e) {}
+            wnShowPanel(info);
+            return 'shown:' + info.notes.length;
+        } catch (e) { return 'error'; }
+    };
+    // 🔎 ตรวจซ้ำหลังรู้ตัวตนผู้ใช้ (เช่นเพิ่งล็อกอิน): ถ้าบัญชีนี้เคยอ่านรุ่นนี้แล้ว → ปิดแผงทันที
+    window.__whatsNewRecheck = async () => {
+        try {
+            const el = document.getElementById('whatsNewPanel');
+            if (!el || el.style.display === 'none') return 'no-panel';
+            const running = wnNorm(window.APP_WEB_VERSION);
+            const seen = await wnFetchSeen(wnNorm(loggedInUserId));
+            if (seen && wnNorm(seen.v) === running) { el.style.display = 'none'; wnClear(); return 'hidden-seen'; }
+            return 'keep';
+        } catch (e) { return 'error'; }
     };
     // 🧪 ตะขั้วสำหรับชุดทดสอบ (tests/web-update-check.html) — แค่เรียกฟังก์ชันเดิม ไม่เปลี่ยนตรรกะ
     window.__whatsNewTest = {
         notes: () => wnCurrentNotes(),
         running: () => wnNorm(window.APP_WEB_VERSION),
+        // 🧪 จำลองคำตอบจากเซิร์ฟเวอร์ + ตรวจสำเนาในเครื่อง
+        seenOverride: (o) => { wnSeenOverride = o || null; return wnSeenOverride ? 'stubbed' : 'cleared'; },
+        localSeen: () => wnLocalSeen(''),
+        clearLocalSeen: () => { try { localStorage.removeItem(WN_SEEN_KEY); } catch (e) {} },
         panelText: () => { const el = document.getElementById('whatsNewPanel'); return el && el.style.display !== 'none' ? el.textContent : null; },
         setRecord: (o) => { try { localStorage.setItem(WN_KEY, JSON.stringify(o)); } catch (e) {} },
         clearRecord: () => wnClear()
@@ -7774,7 +7857,7 @@
     };
     setTimeout(() => { window.__webUpdateCheck('boot'); }, VER_FIRST_CHECK_MS);
     // หลังอัปเดตเองเสร็จ → สรุป “มีอะไรใหม่” (เช็คหลังแอปเริ่มทำงานแล้ว เพื่อไม่แย่งจังหวะบูต)
-    setTimeout(() => { try { window.__whatsNewAfterUpdate('boot'); } catch (e) {} }, 3500);
+    setTimeout(() => { try { Promise.resolve(window.__whatsNewAfterUpdate('boot')).catch(() => {}); } catch (e) {} }, 3500);
     setInterval(() => { window.__webUpdateCheck('interval'); }, VER_CHECK_EVERY_MS);
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) return;
@@ -15154,7 +15237,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '0981a0d8c3';
+    const APP_WEB_VERSION = 'edf45cf9dd';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -15540,6 +15623,7 @@
         ['2026-09-18', '🛑 ไม่รีโหลดเองกลางเที่ยว — เด้งป้าย “มีเวอร์ชันใหม่” แล้วอัปเดตให้ทันทีที่จบเที่ยว'],
         ['2026-09-18', '🆕 อัปเดตเสร็จแล้วเด้งสรุป “มีอะไรใหม่” จากประวัติเวอร์ชันเดิม ให้ — ปิดได้'],
         ['2026-09-18', '🛡️ ตัวดึง APK ไม่ทับไฟล์ที่ติดตั้งได้ด้วยไฟล์ที่เซ็นด้วยกุญแจชั่วคราวอีก'],
+        ['2026-09-18', '📱 แอป Android ปุ่ม Google เทาและบอกตรง ๆ ว่าต้องใช้ไอดี/ PIN — เลิกพาไปตายที่หน้า error'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -16858,6 +16942,43 @@
     };
     // ตรวจว่าเปิดแอปจากเบราว์เซอร์ในแอป LINE/Facebook ไหม — Google บล็อกการล็อกอินในเว็บวิว
     window.__inSocialWebview = () => /Line\/|FBAN|FBAV|Instagram|Messenger/i.test(navigator.userAgent || '');
+    // ============================================================
+    // 📱 (18 ก.ย. 69 · ผู้ใช้รายงาน) ในแอป Android (APK) “ล็อกอิน Google” ทำไม่ได้ — ต้องบอกตรง ๆ
+    //    ต้นเหตุ 2 ชั้น: ① Google ห้ามหน้า OAuth ใน WebView (นโยบาย disallowed_useragent)
+    //                   ② โค้ดเดิมส่ง accounts.google.com ออกไปเบราว์เซอร์จริง ⇒ ล็อกอินสำเร็จในเบราว์เซอร์
+    //                      แต่ “เซสชันไม่กลับเข้าแอป” ผู้ใช้เห็นเป็น “กัดอีเมลแล้วกดต่อไม่ได้” (รูปที่ 3)
+    //    ⇒ ในแอป: ปิดปุ่ม Google ให้ดูไม่หลอกตา + แนะนำไอดี/รหัสผ่าน หรือ PIN (ใช้ได้จริง) · Google ให้ทำบนเว็บ/Chrome
+    //    ⛔ ห้ามลบคำเตือนนี้ + ห้ามเปิดปุ่ม Google ในแอปกลับ จนกว่าจะทำ native Google Sign-In (ดู android-app/README.md)
+    // ============================================================
+    window.__googleNeedsBrowser = () => {
+        try { return !!isNativeAppShell(); } catch (e) { return false; }
+    };
+    window.__googleAppNoticeText = () => '📱 ใน<b>แอป Android</b> ใช้ <b>Google ไม่ได้</b> (Google บล็อกหน้าเข้าสู่ระบบในแอป)<br>'
+        + 'เข้าใช้ด้วย <b>ไอดี + รหัสผ่าน</b> หรือ <b>PIN</b> ได้เลย<br>'
+        + 'ถ้าจะเข้าแบบ Google: เปิดเว็บ <b>baby4bot.github.io/taxi</b> ใน Chrome แล้วกด “ผูกบัญชี Google” ในหน้าโปรไฟล์';
+    window.__applyGoogleAppNotice = () => {
+        try {
+            if (!window.__googleNeedsBrowser()) return false;
+            const btn = document.getElementById('googleLoginBtn');
+            const hint = document.getElementById('googleLoginHint');
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.55';
+                btn.style.filter = 'grayscale(1)';
+                btn.style.cursor = 'not-allowed';
+                btn.title = 'ในแอป Android ใช้ Google ไม่ได้ — ใช้ไอดี/PIN หรือเปิดเว็บใน Chrome';
+            }
+            if (hint) hint.innerHTML = window.__googleAppNoticeText();
+            const linkBtn = document.getElementById('googleLinkBtn');
+            if (linkBtn) {
+                linkBtn.disabled = true;
+                linkBtn.style.opacity = '0.55';
+                linkBtn.style.filter = 'grayscale(1)';
+                linkBtn.title = 'ในแอป Android ผูกบัญชี Google ไม่ได้ — ทำบนเว็บใน Chrome';
+            }
+            return true;
+        } catch (e) { return false; }
+    };
     // 🧭 รัน signInWithPopup → ถ้าโดนบล็อก/เว็บวิว ให้ถอยไป signInWithRedirect อัตโนมัติ
     window.__googleSignIn = async () => {
         const { m, auth } = await window.__getFirebaseAuth();
@@ -16958,6 +17079,12 @@
         const btn = document.getElementById('googleLoginBtn');
         const hint = document.getElementById('googleLoginHint');
         const set = (t) => { if (hint) hint.innerHTML = t; };
+        // 📱 ในแอป Android: หยุดตรงนี้เลย — ไม่ต้องพาไปหน้า Google ที่จะ error และไม่ได้อะไรกลับมา
+        if (window.__googleNeedsBrowser()) {
+            window.__applyGoogleAppNotice();
+            window.showToast('ในแอป Android ใช้ Google ไม่ได้ — ใช้ไอดี/รหัสผ่าน หรือ PIN', true);
+            return;
+        }
         if (window.__inSocialWebview()) set('⚠️ คุณเปิดแอปอยู่ในเบราว์เซอร์ของ LINE/Facebook — Google ไม่อนุญาตให้ล็อกอินในหน้านี้ ถ้าไม่สำเร็จ ให้เปิดแอปใน Chrome/Safari');
         if (btn) { btn.disabled = true; btn.style.opacity = '0.7'; }
         try {
@@ -16994,6 +17121,11 @@
         // 🔓 (17 ก.ย. 69) แอดมินสั่ง: “ผูก Gmail ไม่ต้องยืนยันรหัส PIN” — ตัดด่าน requireReauth ออก
         //    เหตุผล: การผูกเพิ่มทางเข้าเป็นสิ่งที่ “เจ้าตัว” ตั้งใจกดจากหน้าโปรไฟล์ และ Google ก็ยืนยันตัวตนให้แล้วอีกรอบ
         //    ⛔ ยังไม่ตัดด่านในเส้นทางที่ทำลาย/แก้ข้อมูล (ลบบัญชี · รีเซ็ต PIN · ลบรูป · แก้ข้อมูลสมาชิก) — ยังต้องยืนยันเสมอ
+        // 📱 ในแอป Android: ผูกบัญชี Google ไม่ได้ (Google บล็อก WebView) — บอกให้ทำบนเว็บแทน
+        if (window.__googleNeedsBrowser()) {
+            window.__applyGoogleAppNotice();
+            return window.showToast('ในแอป Android ผูกบัญชี Google ไม่ได้ — เปิดเว็บ baby4bot.github.io/taxi ใน Chrome แล้วผูกที่นั่น', true);
+        }
         const btn = document.getElementById('googleLinkBtn');
         if (btn) { btn.disabled = true; btn.style.opacity = '0.7'; }
         try {
