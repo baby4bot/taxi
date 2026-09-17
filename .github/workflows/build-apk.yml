@@ -99,6 +99,7 @@ jobs:
           if [ -n "$KS_B64" ]; then
             printf '%s' "$KS_B64" | base64 -d > keys/keystore.jks
             PASS="$KS_PASS"
+            printf '%s' 'secrets' > keys/KEY-MODE.txt
             echo "กุญแจเซ็นแอป: ใช้ไฟล์จาก Secret (ลายเซ็นถาวร ✅)"
           else
             PASS="$(openssl rand -hex 10)"
@@ -108,7 +109,8 @@ jobs:
               -dname "CN=Taxi Meter 2026, O=baby4bot, C=TH"
             printf '%s' "$PASS" > keys/keystore-password.txt
             base64 -w0 keys/keystore.jks > keys/keystore.jks.base64
-            echo "กุญแจเซ็นแอป: สร้างใหม่รอบนี้ (ยังไม่ได้ตั้ง Secret) ⚠️"
+            printf '%s' 'temporary' > keys/KEY-MODE.txt
+            echo "::warning::ยังไม่ได้ตั้ง Secrets ⇒ รอบนี้สร้างกุญแจใหม่ — APK นี้ “อัปเดตทับของเดิมไม่ได้”"
           fi
           export TAXI_KEYSTORE=keys/keystore.jks
           export TAXI_STORE_PASSWORD="$PASS"
@@ -219,6 +221,23 @@ jobs:
             fi
           else
             echo "::warning::ไม่พบ aapt2 ที่ $AAPT2 — ข้ามการตรวจชื่อแอป/ไอคอน"
+          fi
+
+          # 🔑 ลายเซ็นที่ใช้เซ็น APK นี้ — ไว้เทียบว่ายังเป็นกุญแจเดิมหรือเปลี่ยนไปแล้ว
+          #    (คนขับเห็นข้อนี้ได้จากหน้า Release ⇒ รู้ก่อนติดตั้งว่าจะ “ทับของเดิมได้” หรือต้องถอนก่อน)
+          echo "" >> "$INFO"
+          echo "--- กุญแจที่ใช้เซ็น APK นี้ ---" >> "$INFO"
+          APKSIGNER="$BUILD_TOOLS/apksigner"
+          if [ -x "$APKSIGNER" ]; then
+            "$APKSIGNER" verify --print-certs "$APK" > certs.txt 2>/dev/null || true
+            grep -E "Signer #1 certificate (DN|SHA-256 digest)" certs.txt | head -2 >> "$INFO" || true
+          fi
+          MODE_FILE="$GITHUB_WORKSPACE/android-app/keys/KEY-MODE.txt"
+          if [ -f "$MODE_FILE" ] && grep -q '^secrets' "$MODE_FILE"; then
+            echo "โหมดกุญแจ: ถาวร (มาจาก Secrets) — ติดตั้งทับของเดิมได้ ✅" >> "$INFO"
+          else
+            echo "โหมดกุญแจ: ชั่วคราว (สร้างใหม่ทุกบิลด์) ⛔ ติดตั้งทับของเดิม “ไม่ได้” — ตั้ง Secrets ก่อน" >> "$INFO"
+            echo "::warning::APK นี้เซ็นด้วยกุญแจชั่วคราว — เครื่องที่ติดตั้งรุ่นก่อนจะอัปเดตทับไม่ได้ ต้องตั้ง Secrets KEYSTORE_BASE64 + KEYSTORE_PASSWORD"
           fi
 
           echo "===== apk-info.txt ====="
