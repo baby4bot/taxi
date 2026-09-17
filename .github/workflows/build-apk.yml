@@ -66,6 +66,21 @@ jobs:
           echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
 
+      # ⛔ กับดักที่เคยทำ build ล้ม 3 รอบ (18 ก.ย. 2026): ไม่ประกาศที่เก็บไลบรารีใน settings.gradle
+      #    ⇒ Gradle หา aapt2 ไม่เจอ แล้วล้มด้วยข้อความ “no repositories are defined” ที่หาสาเหตุยาก
+      - name: ตรวจการตั้งค่าโปรเจกต์ (กันกับดักที่เคยทำให้ล้ม)
+        working-directory: android-app
+        run: |
+          set -e
+          if ! grep -q "dependencyResolutionManagement" settings.gradle; then
+            echo "::error::settings.gradle ไม่มี dependencyResolutionManagement { repositories { google() mavenCentral() } } — build จะล้มเพราะหา aapt2 ไม่เจอ"
+            exit 1
+          fi
+          grep -q "google()" settings.gradle || { echo "::error::settings.gradle ไม่มี google()"; exit 1; }
+          grep -q "mavenCentral()" settings.gradle || { echo "::error::settings.gradle ไม่มี mavenCentral()"; exit 1; }
+          echo "การตั้งค่าโปรเจกต์ครบ ✅"
+          grep -n "compileSdk\|applicationId\|buildConfigField\|minSdk\|targetSdk" app/build.gradle
+
       - name: ติดตั้ง Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
         with:

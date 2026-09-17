@@ -8,5 +8,15 @@ pluginManagement {
     }
 }
 
+// ⚠️ จำเป็นมาก — ถ้าไม่มีบล็อกนี้ build จะล้มด้วยข้อความสั้น ๆ ว่า
+//    "Cannot resolve external dependency com.android.tools.build:aapt2:... because no repositories are defined"
+//    เพราะตัวช่วยของ Android (aapt2 ใช้ทำไฟล์ทรัพยากร) ถูกดาวน์โหลดจากที่เก็บเหล่านี้ ไม่ได้ติดมากับปลั๊กอิน
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
 rootProject.name = 'TaxiMeter2026'
 include ':app'
