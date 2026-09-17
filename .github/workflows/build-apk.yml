@@ -196,8 +196,16 @@ jobs:
             grep -E "^(package|sdkVersion|targetSdkVersion|application-label|launchable-activity)" badging.txt >> "$INFO" || true
             echo "" >> "$INFO"
 
-            echo "--- ไอคอนที่ฝังอยู่ใน APK ---" >> "$INFO"
-            unzip -l "$APK" | grep -E "res/.*ic_launcher" >> "$INFO" || echo "(ไม่พบรายการไอคอน)" >> "$INFO"
+            # ⚠️ กับดักจริง 18 ก.ย. 2026: ห้ามตรวจไอคอนด้วยการดูลายชื่อไฟล์ในซิป (`unzip -l | grep ic_launcher`)
+            #    AAPT2 ตั้งชื่อไฟล์ทรัพยากรเป็นชื่อสั้น (res/xx.png) ⇒ จะขึ้น “(ไม่พบรายการไอคอน)” ทุกครั้งทั้งที่ไอคอนอยู่ครบ
+            #    ต้องอ่านจาก “ตารางทรัพยากร” ที่ aapt2 แปลออกมาเท่านั้น (application-icon-160:'res/…')
+            echo "--- ไอคอนที่ฝังอยู่ใน APK (อ่านจากตารางทรัพยากร) ---" >> "$INFO"
+            ICONS=$(grep -c -E "^application-icon" badging.txt || true)
+            grep -E "^application-icon" badging.txt >> "$INFO" || true
+            echo "จำนวนขนาดไอคอน: $ICONS" >> "$INFO"
+            if [ "$ICONS" -lt 1 ]; then
+              echo "::warning::ไม่พบไอคอนในตารางทรัพยากรของ APK — ตรวจ android:icon ใน AndroidManifest.xml"
+            fi
             echo "" >> "$INFO"
 
             echo "--- ตรวจชื่อที่โชว์บนมือถือ ---" >> "$INFO"
@@ -244,6 +252,9 @@ jobs:
               --title "ค่าแท็กซี่ — APK ล่าสุด" \
               --notes "ดาวน์โหลดไฟล์ .apk แล้วติดตั้งบนมือถือ Android (อนุญาตติดตั้งจากแหล่งที่ไม่รู้จัก)"
           fi
+          # ⚠️ Release สร้างไปแล้วรอบแรกด้วยชื่อเดิม ⇒ ต้องสั่งแก้ชื่อทุกครั้ง ไม่งั้นหน้าดาวน์โหลดจะค้างชื่อเก่า
+          gh release edit apk-latest --title "ค่าแท็กซี่ — APK ล่าสุด" \
+            --notes "ดาวน์โหลดไฟล์ .apk แล้วติดตั้งบนมือถือ Android (อนุญาตติดตั้งจากแหล่งที่ไม่รู้จัก)" || true
           gh release upload apk-latest android-app/app/build/outputs/apk/release/*.apk --clobber
 
           # ข้อมูลของไฟล์ (ชื่อแอป · ไอคอน · sha256 · เวลาสร้าง) — ให้ตรวจได้โดยไม่ต้องติดตั้ง
