@@ -1,5 +1,5 @@
 # ============================================================================
-# สร้างไฟล์ APK ของแอป Taxi Meter 2026 บน GitHub (ไม่ต้องติดตั้งอะไรในเครื่อง)
+# สร้างไฟล์ APK ของแอป “ค่าแท็กซี่” บน GitHub (ไม่ต้องติดตั้งอะไรในเครื่อง)
 #
 # วิธีใช้
 #   1) อัปโปรเจกต์ขึ้น GitHub แล้วเข้าแท็บ Actions → "Build Android APK" → Run workflow
@@ -171,6 +171,51 @@ jobs:
             echo "APK ดูเหมือนถูกเซ็นแล้ว ✅ $APK"
           fi
 
+      # 🔎 พิสูจน์จาก “ในไฟล์ APK” เอง (ไม่ต้องติดตั้งบนมือถือ) ว่าชื่อแอป + ไอคอนคือชุดที่ตั้งใจ
+      #    แล้วเขียน `apk-info.txt` แนบไปกับ Release — ใครก็โหลดอ่านได้ว่าไฟล์นี้คือแอปรุ่นไหน
+      #    ⚠️ ขั้นนี้ “ไม่ทำให้งานล้ม” โดยเจตนา: ถ้า aapt2 อ่านไม่ครบ ยังต้องได้ APK ไปติดตั้ง (แค่เตือน)
+      - name: ตรวจชื่อแอป + ไอคอนใน APK แล้วเขียนไฟล์ข้อมูล
+        run: |
+          set -e
+          cd android-app/app/build/outputs/apk/release
+          APK=$(ls -1 *.apk | head -1)
+          BUILD_TOOLS="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools/34.0.0"
+          AAPT2="$BUILD_TOOLS/aapt2"
+          INFO=apk-info.txt
+          {
+            echo "ไฟล์: $APK"
+            echo "ขนาด: $(stat -c%s "$APK") ไบต์"
+            echo "sha256: $(sha256sum "$APK" | cut -d' ' -f1)"
+            echo "สร้างเมื่อ: $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo "รุ่นข้อมูล: run $GITHUB_RUN_ID"
+            echo ""
+          } > "$INFO"
+
+          if [ -x "$AAPT2" ]; then
+            "$AAPT2" dump badging "$APK" > badging.txt 2>/dev/null || true
+            grep -E "^(package|sdkVersion|targetSdkVersion|application-label|launchable-activity)" badging.txt >> "$INFO" || true
+            echo "" >> "$INFO"
+
+            echo "--- ไอคอนที่ฝังอยู่ใน APK ---" >> "$INFO"
+            unzip -l "$APK" | grep -E "res/.*ic_launcher" >> "$INFO" || echo "(ไม่พบรายการไอคอน)" >> "$INFO"
+            echo "" >> "$INFO"
+
+            echo "--- ตรวจชื่อที่โชว์บนมือถือ ---" >> "$INFO"
+            if grep -q "application-label:'ค่าแท็กซี่'" badging.txt; then
+              echo "ชื่อแอปถูกต้อง: ค่าแท็กซี่ ✅" >> "$INFO"
+            elif grep -q "application-label" badging.txt; then
+              echo "::warning::ชื่อแอปใน APK ไม่ตรงกับที่คาด (ต้องเป็น ค่าแท็กซี่) — ดูบรรทัด application-label ใน apk-info.txt"
+              grep "application-label" badging.txt >> "$INFO" || true
+            else
+              echo "::warning::aapt2 อ่านฉลากแอปไม่ได้ — ตรวจด้วยตาจาก apk-info.txt"
+            fi
+          else
+            echo "::warning::ไม่พบ aapt2 ที่ $AAPT2 — ข้ามการตรวจชื่อแอป/ไอคอน"
+          fi
+
+          echo "===== apk-info.txt ====="
+          cat "$INFO"
+
       - name: อัปโหลด APK (artifact)
         uses: actions/upload-artifact@v4
         with:
@@ -196,10 +241,15 @@ jobs:
           set -e
           if ! gh release view apk-latest >/dev/null 2>&1; then
             gh release create apk-latest \
-              --title "Taxi Meter 2026 — APK ล่าสุด" \
+              --title "ค่าแท็กซี่ — APK ล่าสุด" \
               --notes "ดาวน์โหลดไฟล์ .apk แล้วติดตั้งบนมือถือ Android (อนุญาตติดตั้งจากแหล่งที่ไม่รู้จัก)"
           fi
           gh release upload apk-latest android-app/app/build/outputs/apk/release/*.apk --clobber
+
+          # ข้อมูลของไฟล์ (ชื่อแอป · ไอคอน · sha256 · เวลาสร้าง) — ให้ตรวจได้โดยไม่ต้องติดตั้ง
+          if [ -f android-app/app/build/outputs/apk/release/apk-info.txt ]; then
+            gh release upload apk-latest android-app/app/build/outputs/apk/release/apk-info.txt --clobber
+          fi
 
           # 🧹 ลบไฟล์ที่ไม่ถูกเซ็นที่ค้างจากรอบก่อน — กันคนกดโหลดผิดไฟล์ไปติดตั้งไม่ได้
           for a in $(gh release view apk-latest --json assets --jq '.assets[].name' 2>/dev/null); do

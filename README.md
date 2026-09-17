@@ -1397,8 +1397,11 @@ tests/
   └── serve-tests.ps1          ← ตัวช่วยเปิดหน้าทดสอบเร็ว ๆ
 Taxi-Meter Backup       ← สำรองรุ่นเก่า (อ้างอิงย้อนหลัง)
 android-app/            ← 📱 โปรเจกต์แอป Android (WebView ห่อเว็บ + บริการ GPS ฉากหลัง · build APK ด้วย GitHub Actions)
+  └── tools/            ← 🧰 สคริปต์ช่วยงาน: สร้างไอคอนแอปจากรูป (`make-icons.ps1`) · ดึง APK ล่าสุดลงเครื่อง (`fetch-apk.ps1`)
 .github/workflows/
   └── build-apk.yml     ← 🏗️ สร้าง APK บน GitHub (ไม่ต้องติดตั้ง JDK/Gradle ในเครื่อง) + แนบไว้ที่ Release "apk-latest"
+ค่าแท็กซี่.apk          ← 📥 ไฟล์ติดตั้งรุ่นล่าสุด วางไว้ในโฟลเดอร์นี้ให้ส่งเข้าเครื่องได้เลย (ดึงเองด้วย `fetch-apk.ps1`)
+ค่าแท็กซี่-info.txt      ← 🔎 ชื่อแอป/ไอคอน/sha256 ที่อ่านจากในไฟล์ APK เอง (หลักฐานว่าเป็นแอปที่ถูกต้อง)
 .freebuff/check-android.ps1 ← 🧪 ตรวจไฟล์โปรเจกต์ Android (XML ผ่านทุกไฟล์ · จุดสำคัญใน Java ครบ) โดยไม่ต้อง build
 ```
 
@@ -1417,6 +1420,8 @@ android-app/            ← 📱 โปรเจกต์แอป Android (WebV
 | หน้าเว็บฝั่งเรา | `window.nativeSync` · `window.nativeDrain` · `window.nativeFixes` · `window.nativeSetScreenOn` · ตรวจสถานะด้วย `window.taxiNativeDebug()` (ในเบราว์เซอร์ปกติจะไม่ทำอะไรเลย) |
 | ผูกกับเที่ยวจับเวลา | เริ่มเที่ยว → เริ่มเก็บ GPS ฉากหลังอัตโนมัติ · จบเที่ยว → หยุด |
 | ขอสิทธิ์ | ตำแหน่งแบบ “ขณะใช้งาน” เท่านั้น (ไม่ขอ background location — เลี่ยงเงื่อนไข Play Store) |
+| ชื่อ + ไอคอน | ชื่อใต้ไอคอน = **ค่าแท็กซี่** · ไอคอน = รูปรถแท็กซี่ (สร้างจากรูปด้วย `android-app/tools/make-icons.ps1`) |
+| ไฟล์ติดตั้งในเครื่อง | ทุกครั้งที่ build ใหม่ ให้รัน `android-app/tools/fetch-apk.ps1` → ได้ `ค่าแท็กซี่.apk` ในโฟลเดอร์โปรเจกต์ (ส่งเข้าเครื่องได้ทันที) |
 
 ⛔ **ข้อจำกัดที่ต้องรู้:** ล็อกอิน Google ใน WebView ถูก Google บล็อก (`disallowed_useragent`) ⇒ ในแอปให้ใช้ **ไอดี+รหัสผ่าน หรือ PIN**
 (ปุ่ม Google จะเด้งออกไปเบราว์เซอร์จริง) · รายละเอียดครบ + วิธีตั้งกุญแจเซ็นแอป + วิธีติดตั้ง อยู่ใน `android-app/README.md`

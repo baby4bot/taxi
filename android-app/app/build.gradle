@@ -24,8 +24,9 @@ android {
         applicationId 'com.baby4bot.taximeter'
         minSdk 26          // Android 8.0 ขึ้นไป (พอสำหรับ WebView + Foreground Service ที่ทำงานถูกต้อง)
         targetSdk 34
-        versionCode 1
-        versionName '1.0.0'
+        // 🔢 เพิ่ม versionCode ทุกครั้งที่จะแจก APK ใหม่ (มือถือใช้ตัวนี้บอกว่า "มีตัวใหม่กว่า")
+        versionCode 2
+        versionName '1.1.0'   // เปลี่ยนชื่อแอปเป็น "ค่าแท็กซี่" + ไอคอนรูป taxi จริง
 
         // 🌐 URL ของเว็บแอป — จุดเดียวที่ต้องแก้ถ้าย้ายโดเมน
         //    แก้ชั่วคราวจากในแอปได้ด้วย TaxiNative.setAppUrl('http://192.168.x.x:58911/') เพื่อทดสอบกับเซิร์ฟเวอร์ในเครื่อง

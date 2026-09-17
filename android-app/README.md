@@ -1,4 +1,4 @@
-# 📱 แอป Android (Taxi Meter 2026) — เปลือก WebView + บริการ GPS ฉากหลัง
+# 📱 แอป Android “ค่าแท็กซี่” — เปลือก WebView + บริการ GPS ฉากหลัง
 
 โฟลเดอร์นี้คือ **แอป Android** ที่ “ห่อเว็บแอปจริง” (`https://baby4bot.github.io/taxi/`)
 จุดขาย: **แก้ `index.html` บนเว็บ → ในแอปเห็นทันที ไม่ต้องออก APK ใหม่**
@@ -24,7 +24,10 @@
 | `app/src/main/java/com/baby4bot/taximeter/MainActivity.java` | เปลือก WebView + ขอสิทธิ์ + ตัวเลือกรูป + สะพาน JS (`window.TaxiNative`) |
 | `app/src/main/java/com/baby4bot/taximeter/BgLocationService.java` | Foreground Service เก็บพิกัด (GPS + เครือข่าย) เข้าคิวในหน่วยความจำ |
 | `app/build.gradle` | ตั้งค่าแอป + **URL เว็บแอป** (`buildConfigField APP_URL`) + ลายเซ็น APK |
-| `app/src/main/AndroidManifest.xml` | สิทธิ์ทั้งหมด (ตำแหน่ง · บริการเบื้องหน้า · สั่น · แจ้งเตือน) |
+| `app/src/main/AndroidManifest.xml` | สิทธิ์ทั้งหมด (ตำแหน่ง · บริการเบื้องหน้า · สั่น · แจ้งเตือน) + ตั้งไอคอน `@mipmap/ic_launcher` |
+| `app/src/main/res/values/strings.xml` | **ชื่อที่โชว์ใต้ไอคอนบนมือถือ** (`app_name` = ค่าแท็กซี่) |
+| `app/src/main/res/mipmap-*/ic_launcher*.png` | ไอคอนแอปทุกความละเอียด (สร้างจาก `tools/make-icons.ps1`) |
+| `tools/make-icons.ps1` | สร้างไอคอนจากไฟล์รูปต้นฉบับ — เปลี่ยนรูปได้ด้วยคำสั่งเดียว (ดูหัวข้อถัดไป) |
 | `../../.github/workflows/build-apk.yml` | สร้าง APK บน GitHub (ไม่ต้องติดตั้ง JDK/Gradle ในเครื่อง) |
 
 ---
@@ -44,6 +47,19 @@
    - **ลบ artifact `keystore-bootstrap` ทิ้ง** แล้วรันงานอีกครั้ง → APK จะเซ็นด้วยกุญแจเดิมตลอดไป
    - ⛔ ห้าม commit ไฟล์ `.jks` ขึ้นเรโปเด็ดขาด (`.gitignore` กันไว้แล้ว)
 
+## 📥 ดึงไฟล์ APK ลงเครื่อง (วางไว้โฟลเดอร์เดียวกับ `index.html`)
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File android-app/tools/fetch-apk.ps1
+```
+
+ได้ 2 ไฟล์ในโฟลเดอร์โปรเจกต์: **`ค่าแท็กซี่.apk`** (ตัวล่าสุด ทับของเดิมทุกครั้ง) และ **`ค่าแท็กซี่-info.txt`**
+(ชื่อแอป · ไอคอนที่ฝังในไฟล์ · sha256 · เวลาสร้าง — CI เขียนจากในไฟล์ APK เอง เลยตรวจได้โดยไม่ต้องติดตั้ง)
+
+> 📌 **กติกาของโปรเจกต์นี้:** ทุกครั้งที่ push งานที่แก้ “ชั้น Android” (โค้ด Java · manifest · ไอคอน · ชื่อแอป)
+> ให้รอ CI build เสร็จแล้วรันสคริปต์นี้ทันที — ผู้ใช้จะได้ส่งไฟล์จากคอมเข้าเครื่องได้เลย โดยไม่ต้องเข้าไปโหลดในลิงก์
+> (ลิงก์ Release ยังอัปเดตตามปกติ — สคริปต์นี้คือทางลัด ไม่ใช่ทางแทน)
+
 ## 📲 ติดตั้งบนมือถือ
 
 1. คัดลอกไฟล์ `.apk` ไปที่มือถือ (หรือโหลดจาก Releases บนมือถือโดยตรง)
@@ -53,6 +69,36 @@
 
 **อัปเดตแอป:** ถ้าแก้แค่เว็บ (`index.html`) → ไม่ต้องทำอะไร ปิด-เปิดแอปก็ได้ของใหม่
 ถ้าแก้ชั้น Android → รัน Actions แล้วติดตั้งทับได้เลย (ลายเซ็นเดิม ไม่ต้องถอนก่อน)
+
+---
+
+## 🎨 เปลี่ยนชื่อแอป / ไอคอนแอป
+
+**ชื่อใต้ไอคอน** แก้ที่ `app/src/main/res/values/strings.xml` → `<string name="app_name">`
+
+**ไอคอน** สร้างจากไฟล์รูปต้นฉบับในเครื่องด้วยคำสั่งเดียว (ไม่ต้องติดตั้งโปรแกรมแต่งภาพ):
+
+```powershell
+cd android-app
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/make-icons.ps1
+# ใช้รูปอื่น:  powershell ... -File tools/make-icons.ps1 -Source "C:\path\to\taxi.png"
+```
+
+สคริปต์จะสร้างให้ครบ 3 ชุด ทุกความละเอียด (mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi):
+
+| ไฟล์ | ใช้เมื่อไหร่ |
+|---|---|
+| `ic_launcher.png` | ไอคอนเหลี่ยม และเป็นตัวสำรองของ launcher รุ่นเก่า |
+| `ic_launcher_round.png` | เครื่องที่ขอ **ไอคอนกลม** (`android:roundIcon`) |
+| `ic_launcher_foreground.png` | ชั้นหน้าของ **adaptive icon** (Android 8+) — launcher จะตัดเป็นวงกลม/มุมมนเอง |
+
+> 📌 ไอคอนที่ใช้อยู่ตอนนี้สร้างจาก **รูปรถแท็กซี่พื้นเขียว (ไม่มีตัวหนังสือ)** — คำสั่งที่ใช้จริงบันทึกไว้ใน `.freebuff/run.md`
+
+> 💡 **ทำไมข้อความ “ZOOM!” / “SPEED!” ในรูปถึงหายไป:** adaptive icon จะเห็นเฉพาะส่วนกลางของภาพ
+> (launcher ตัดขอบเอง) ⇒ รถอยู่กลางจอพอดี ข้อความริมขอบถูกตัดออกอัตโนมัติ ถ้าอยากให้เห็นทั้งภาพต้องใช้รูปที่จัดวาง
+> องค์ประกอบไว้กลางจอ
+
+ดูการจำลองหน้าตาก่อนติดตั้งจริงได้ที่ `.freebuff/icon-check.html` (เปิดในพรีวิว)
 
 ---
 
