@@ -35,7 +35,7 @@
         <code>http://127.0.0.1:58911/tests/locked-screen-offline.html</code> (หรือเปิดจาก GitHub Pages ก็ได้ — ชุดนี้ไม่ต้องใช้เน็ต)
         <br>ต่างจาก <code>catchup-regression.html</code> ที่ต้องพึ่ง Firestore/geo จริง — ชุดนี้ <b>ต้องผ่านครบทุกข้อในเครื่อง</b>
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (10 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (11 สถานการณ์)</button>
     <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
     <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
     <div id="summary"></div>
@@ -582,6 +582,150 @@
                 ' | หลังเบิกคืน: ' + stEnd.km.toFixed(2) + ' กม. · รอ ' + fmtClock(stEnd.trafficSec) +
                 ' | มิเตอร์จริง(จำลอง): ' + realKmAll.toFixed(2) + ' กม. · รอ ' + fmtClock(realWaitAll) +
                 ' | ผลต่าง ' + kmErr.toFixed(1) + '% · ' + waitErrMin.toFixed(1) + ' นาที';
+        });
+
+        // ---------- 10) ล็อกจอสั้น ๆ หลายครั้ง "ขณะรถวิ่ง" + TomTom บอกทางโล่ง → ห้ามนับส่วนต่างเป็นเวลารถติด ----------
+        //    🎯 เคสจริง 16 ก.ย. 69: ผู้ใช้เปิดจอตลอดได้ 1:12:02 / มิเตอร์จริง 1:10:37
+        //       แต่รอบที่ "ล็อกจอบ้าง" ขึ้น 1:21:32 (เกิน ~11 นาที) — ต้นเหตุคือการปลดล็อกจอสั้น ๆ หลายสิบครั้ง
+        //       แต่ละครั้ง TomTom บอกว่าช่วงนั้น "วิ่งโล่ง" (สั้นกว่าที่รถทำได้จริง) → ส่วนต่างถูกนับเป็นรถติดทุกครั้ง
+        await runScenario('10. ล็อกจอสั้น ๆ ซ้ำ 5 ครั้งขณะรถวิ่ง + TomTom บอกทางโล่ง → ห้ามนับส่วนต่างเป็นรถติด', async () => {
+            if (skip(10)) return;
+            const cw = w();
+            const ROUNDS = 5, GAP_KM = 0.75, GAP_SEC = 90, TT_ROAD_KM = GAP_KM * 1.06, TT_FREE = 48;
+            // 🕐 ขับด้วยจอเปิดเป็นก้าวละ 4 วิ — ต้องปล่อยให้ตัวจับเวลาจริง (1 วิ) ทำงานทุก 4 ก้าว
+            //    ไม่งั้นตัวตรวจ "หน้าถูกแช่แข็ง" จะเข้าใจผิดว่าเราล็อกจอเอง (ของจริงบนเครื่องไม่เกิด — tick วิ่งทุกวินาที)
+            const driveBlock = async (steps) => {
+                for (let i = 0; i < steps; i++) {
+                    if (i && i % 4 === 0) await wait(1100);
+                    driveStep(4, 30);
+                }
+                await wait(1100);
+            };
+            // 🛣️ TomTom ตอบเส้นทางช่วงซ่อน: รถจริงวิ่ง 30 กม./ชม. (~100 วิ/รอบ) แต่TomTom บอก "โล่ง" 48 วิ
+            //    (ตรงกับของจริง: TomTom รู้ชนิดถนนแต่ไม่รู้ไฟแดง/ทางแยก → เวลาวิ่งโล่งสั้นกว่าที่รถทำได้จริง)
+            cw.fetchRouteFromTomTom = async (lat, lon, fromLat, fromLon) => {
+                if (typeof fromLat !== 'number' || typeof fromLon !== 'number') return null;
+                return { km: TT_ROAD_KM, sec: TT_ROAD_KM / 30 * 3600, noTrafficSec: TT_FREE,
+                         coords: [[fromLat, fromLon], [fromLat + (TT_ROAD_KM * 0.995) / KM_PER_DEG_LAT, fromLon + (TT_ROAD_KM * 0.1) / KM_PER_DEG_LON]],
+                         tolls: { hasTolls: false, booths: [], total: 0 } };
+            };
+            // สร้าง "ความเร็วล้อหมุนของเที่ยวนี้" ก่อน (30 กม./ชม.) — ค่าที่โมเดลใหม่ใช้หักเวลาวิ่ง
+            // ⚠️ ต้องเดินนาฬิกาทีละ ≤ 20 วิ (ไม่งั้นตัวจับเวลาจริงจะมองว่า "หน้าถูกแช่แข็ง" เองโดยไม่มีล็อกจอ)
+            await driveBlock(16);   // 64 วิ · ~0.53 กม. ที่ 30 กม./ชม. → เกิด "ความเร็วล้อหมุนของเที่ยวนี้"
+            const st1 = tripStateFresh();
+            const logLen0 = (st1.catchUpLog || []).length;
+            let billed = 0, perRound = [], perKm = [], perModel = [];
+            for (let k = 0; k < ROUNDS; k++) {
+                // 🚕 ขับด้วยจอเปิดก่อน (ตัวติดตาม GPS ทำงาน → สมอตำแหน่ง/ความเร็วล้อหมุนขยับ — เหมือนเที่ยวจริง)
+                await driveBlock(8);   // 32 วิ · ~0.27 กม. ก่อนล็อกจอ
+                const sbefore = tripStateFresh();
+                const before = sbefore.trafficSec, kmBefore = sbefore.km;
+                await lockByThrottle(GAP_SEC);
+                pos.lat += (GAP_KM * 0.995) / KM_PER_DEG_LAT; pos.lon += (GAP_KM * 0.1) / KM_PER_DEG_LON;
+                cw.__pendingCur.length = 0;   // 🧹 กัน fix เก่าที่ค้างจากรอบก่อนถูกนำมาตัดสินตำแหน่งของรอบนี้
+                await unlockByThrottle();
+                await wait(400);
+                drainPending('round' + k);
+                for (let i = 0; i < 2; i++) { feedFix('cur', pos.lat, pos.lon, 8, -1); await wait(300); }
+                await waitFor(() => (audit() || {}).pendingGapSec === null, 20000, 'ให้ catch-up จบรอบ ' + (k + 1));
+                await wait(300);
+                const sAfter = tripStateFresh();
+                const add = sAfter.trafficSec - before;
+                perRound.push(Math.round(add)); billed += add;
+                perKm.push(Math.round((sAfter.km - kmBefore) * 100) / 100);
+                const tr = (audit() || {}).trace || [];
+                perModel.push(JSON.stringify((audit() || {}).lastModel) + '|' + JSON.stringify(tr[tr.length - 1] || null));
+            }            const st2 = tripStateFresh();
+            cw.__pendingCur.length = 0;
+            const rounds = (st2.catchUpLog || []).slice(logLen0); // 📒 รายการเบิกคืนที่เกิดในรอบทดสอบนี้เท่านั้น
+            const gapKmTotal = rounds.reduce((s, c) => s + (c.km || 0), 0);
+            const gapKmExpect = ROUNDS * TT_ROAD_KM;
+            const kmAdded = st2.km - st1.km, kmExpect = ROUNDS * (0.267 * 1.05 + TT_ROAD_KM); // 0.267 กม. = ขับจริงช่วงจอเปิด (8 ก้าว × 4 วิ ที่ 30 กม./ชม.) ×1.05
+            const last = (audit() || {}).lastModel || null;
+            const dbg = ' รายละเอียด: วิ/รอบ=' + perRound.join(',') + ' · กม.(รวมทั้งช่วง)=' + perKm.join(',') +
+                ' · เบิกคืนรวม=' + rounds.length + ' รอบ ' + gapKmTotal.toFixed(2) + ' กม. · trace/model=' + perModel.join(' || ');
+            log('scenario10' + dbg);
+            // ⚠️ โมเดลเดิม (ใช้ TomTom free-flow เป็นหลัก) จะเบิก (100-48) ≈ 52 วิ/รอบ = 312 วิ → เทสต์นี้จะล้มเหลว
+            assert(billed <= ROUNDS * 25, 'เวลารถติดที่เบิกจากช่วงซ่อนต้องเล็กมาก (รถวิ่งอยู่!) — เบิก ' + Math.round(billed) + ' วิ จาก ' + ROUNDS + ' รอบ (โมเดลเดิมจะได้ ~' + (ROUNDS * (GAP_SEC + 10 - TT_FREE)) + ' วิ) ·' + dbg);
+            assert(gapKmTotal >= gapKmExpect * 0.8, 'ระยะทางช่วงซ่อนต้องถูกเบิกคืนครบทุกครั้ง (เบิก ' + gapKmTotal.toFixed(2) + ' กม. / คาด ~' + gapKmExpect.toFixed(2) + ' กม.) ·' + dbg);
+            assert(gapKmTotal <= gapKmExpect * 1.2, 'ระยะทางต้องไม่เบิกเกินจริง (เบิก ' + gapKmTotal.toFixed(2) + ' กม. / คาด ~' + gapKmExpect.toFixed(2) + ' กม.) ·' + dbg);
+            assert(kmAdded >= kmExpect * 0.85 && kmAdded <= kmExpect * 1.15, 'ระยะทางรวมทั้งช่วงต้องตรง (ได้ ' + kmAdded.toFixed(2) + ' กม. / คาด ~' + kmExpect.toFixed(2) + ' กม.) ·' + dbg);
+            return 'เบิกเวลารถติดรวม ' + Math.round(billed) + ' วิ (' + perRound.join(' + ') + ' วิ/รอบ) · ระยะช่วงซ่อน ' + gapKmTotal.toFixed(2) + ' กม. (' + ROUNDS + ' รอบ)' +
+                (last ? ' · หลักฐานล่าสุด: ' + last.ref + ' (หักเวลาวิ่ง ' + last.moveSec + ' วิ)' : '');
+        });
+
+        // ---------- 11) คลานในรถติด (≤ 6 กม./ชม.) → ต้องหัก "เวลาวิ่ง" ด้วยความเร็วคลานจริง ----------
+        //    🎯 ที่มา: ระยะที่รถคลานถูกนับเข้า km แล้ว แต่มิเตอร์คิด "เวลาคลาน" เป็นเวลารถติด
+        //       ถ้าเอาความเร็ววิ่ง (> 6) ไปหารระยะที่คลานด้วย จะหักเวลาวิ่งเกินจริง → เวลารถติดบวม (สะสมเป็นนาที)
+        //    และ: ห้ามบวก "พื้น 3%" ทับค่าที่ประเมินได้จากหลักฐานจริงแล้ว (เดิมบวกทุกช่วง ≥ 2 นาที)
+        await runScenario('11. คลานในรถติด → หักเวลาวิ่งด้วยความเร็วคลานจริง + ไม่บวกพื้น 3% ทับค่าที่ประเมินได้', async () => {
+            if (skip(11)) return;
+            const cw = w();
+            // (ก) ระดับฟังก์ชัน: หลักฐาน "รู้ว่าคลาน" ต้องหักเวลาวิ่งได้มากกว่า "ไม่รู้" → คิดเวลารถติดน้อยลง
+            //     หลักฐานจำลอง: วิ่ง 3 กม. (30 กม./ชม.) + คลาน 1 กม. (4 กม./ชม.) → คลาน 25% ของระยะ
+            const withCrawl = cw.__gapModelDiag(240, 0.3, null, { rollKm: 3, rollSec: 360, crawlKm: 1, crawlSec: 900 });
+            const noCrawl = cw.__gapModelDiag(240, 0.3, null, { rollKm: 3, rollSec: 360, crawlKm: 0, crawlSec: 0 });
+            assert(withCrawl.via === 'rolling+crawl', 'ต้องใช้หลักฐาน "วิ่ง+คลาน" (ได้ ' + withCrawl.via + ')');
+            assert(withCrawl.billedSec < noCrawl.billedSec, 'คิดเวลารถติดต้องลดลงเมื่อรู้ว่าช่วงนั้นมีคลาน (คลาน ' + withCrawl.billedSec + ' วิ / ไม่คลาน ' + noCrawl.billedSec + ' วิ)');
+            assert(withCrawl.billedSec >= 100 && withCrawl.billedSec <= 180, 'ค่าที่ได้ต้องอยู่ในกรอบที่คำนวณได้ (ได้ ' + withCrawl.billedSec + ' วิ — คาด ~146)');
+            // (ข) ทางโล่ง + มีหลักฐานของตัวเอง → ต้องไม่คิดรถติดเลย และต้องไม่บวก "พื้น" ทับ
+            const freeGap = cw.__gapModelDiag(300, 3.0, null, { rollKm: 3, rollSec: 360 });
+            assert(freeGap.billedSec === 0, 'วิ่ง 3 กม. ใน 5 นาที (ทางโล่ง) ต้องไม่คิดเวลารถติด (ได้ ' + freeGap.billedSec + ' วิ)');
+            assert(freeGap.floorApplied === 0, 'ต้องไม่บวกพื้น 3% ทับค่าที่ประเมินได้ (floorApplied = ' + freeGap.floorApplied + ')');
+            // (ค) ของจริงในเที่ยว: ขับคลานด้วยจอเปิด → ตัวนับ "คลาน" ต้องสะสมจริง (ไม่ใช่แค่ฟังก์ชัน)
+            const c0 = meterDiag();
+            for (let i = 0; i < 60; i++) { driveStep(4, 4); await wait(250); }   // คลาน 240 วิ ที่ 4 กม./ชม. ≈ 0.27 กม.
+            for (let i = 0; i < 30; i++) { driveStep(4, 30); await wait(250); }  // วิ่ง 120 วิ ที่ 30 กม./ชม. ≈ 1.0 กม. (ให้มีทั้งสองหลักฐาน)
+            await wait(500);
+            const c1 = meterDiag();
+            assert(c1.crawlSec - c0.crawlSec >= 120, 'เวลาคลานสะสมต้องเพิ่ม (เพิ่ม ' + Math.round(c1.crawlSec - c0.crawlSec) + ' วิ)');
+            assert(c1.crawlKm - c0.crawlKm >= 0.1, 'ระยะคลานสะสมต้องเพิ่ม (เพิ่ม ' + (c1.crawlKm - c0.crawlKm).toFixed(2) + ' กม.)');
+            assert(c1.crawlKmh !== null && c1.crawlKmh >= 2 && c1.crawlKmh <= 5.5, 'ความเร็วคลานต้องอยู่ในกรอบ 2–5.5 กม./ชม. (ได้ ' + c1.crawlKmh + ')');
+            assert(c1.crawlSharePct >= 5 && c1.crawlSharePct <= 25, 'สัดส่วนระยะคลานต้องคำนวณได้ (ได้ ' + c1.crawlSharePct + '% · คาด ~21%)');
+            return 'คลานสะสม ' + c1.crawlKm.toFixed(2) + ' กม. · ' + Math.round(c1.crawlSec) + ' วิ · ' + c1.crawlKmh + ' กม./ชม. (' + c1.crawlSharePct + '% ของระยะที่ขยับ)' +
+                ' | ช่วงซ่อนที่รถคลาน 4 นาที คิดรถติด ' + withCrawl.billedSec + ' วิ (ถ้าไม่รู้ว่าคลาน = ' + noCrawl.billedSec + ' วิ) · ทางโล่ง = ' + freeGap.billedSec + ' วิ';
+        });
+
+        // ---------- 12) กดเริ่มมิเตอร์ตอนรถจอด → เวลารถติดต้องเริ่มเดินทันที (ไม่ค้างรอ fix แรก) ----------
+        //    🎯 ที่มา: ผู้ใช้รายงาน 18 ก.ย. 69 — กดเริ่มแล้วช่อง "วิ่งแล้ว" เดินปกติ แต่ช่อง "รถติด" ค้างที่ 0:01
+        //       อยู่ ~10 วิ กว่าตัวเลขจะขยับ (เพราะระบบรอ fix แรกมายืนยันว่า "จอด")
+        //       มิเตอร์แท็กซี่จริงคิด "เวลารอ" ทันทีที่กดธง — ตัวเลขต้องเดินเท่ากันตั้งแต่ต้น
+        //    เงื่อนไขที่ต้องคงไว้: ยอดที่ "เดา" ก่อนมี fix ต้องถูกถอนคืนทันทีถ้า fix แรกบอกว่ารถวิ่งจริง
+        await runScenario('12. กดเริ่มมิเตอร์ตอนรถจอด → เวลารถติดเดินทันที และถอนคืนถ้ารถวิ่งจริง', async () => {
+            if (skip(12)) return;
+            const cw = w();
+            const startNewTrip = async () => {
+                try { cw.isManualRunning = false; } catch (e) {}
+                cw.startMeterAndTracking();
+                await wait(250);
+            };
+            // (ก) รถจอด: ยังไม่มี fix เลย → 8 วิแรกต้องนับเวลารถติดไปแล้ว (เดิมค้างที่ ~1 วิ)
+            await startNewTrip();
+            cw.__advance(8000);
+            await wait(1400);
+            const a = meterDiag();
+            assert(a.trafficSeconds >= 6, 'เวลารถติดต้องเดินทันทีระหว่างรอ fix แรก (ได้ ' + a.trafficSeconds + ' วิ หลังผ่านไป 8 วิ)');
+            assert(a.trafficSeconds <= 11, 'ห้ามนับเกินเวลาจริงที่ผ่านไป (ได้ ' + a.trafficSeconds + ' วิ จาก 8 วิ)');
+            // fix แรก: จอดนิ่งที่เดิม (ความเร็ว 0) → ยอดที่เดาไว้ต้องคงอยู่ (ห้ามถูกหักคืน)
+            feedFix('watch', pos.lat, pos.lon, 8, 0);
+            cw.__advance(1000);
+            await wait(500);
+            const b = meterDiag();
+            assert(b.trafficSeconds >= a.trafficSeconds, 'fix ยืนยันว่าจอด → ห้ามหักยอดที่คิดไว้ (จาก ' + a.trafficSeconds + ' เหลือ ' + b.trafficSeconds + ' วิ)');
+            // (ข) รถวิ่งจริงตั้งแต่กดเริ่ม: fix แรกที่ 30 กม./ชม. และห่างออกไปมาก → ยอดที่เดาไว้ต้องถูกถอนคืน
+            await startNewTrip();
+            cw.__advance(8000);
+            await wait(1400);
+            const c = meterDiag();
+            assert(c.trafficSeconds >= 6, 'ก่อนมี fix ยังนับแบบ "ยังไม่ยืนยัน" (ได้ ' + c.trafficSeconds + ' วิ)');
+            pos.lat += 0.25;   // ห่างออกไป ~28 กม. → ความเร็วเฉลี่ยช่วงนั้น > 6 กม./ชม. แน่นอน
+            feedFix('watch', pos.lat, pos.lon, 8, 30);
+            cw.__advance(1000);
+            await wait(600);
+            const d = meterDiag();
+            assert(d.trafficSeconds <= c.trafficSeconds - 5, 'fix แรกบอกว่ารถวิ่งจริง → ต้องถอนเวลารถติดที่เดาไว้คืน (จาก ' + c.trafficSeconds + ' เหลือ ' + d.trafficSeconds + ' วิ)');
+            return 'ออกตัวแล้วเดินทันที: ' + a.trafficSeconds + ' วิ ใน 8 วิแรก (เดิมค้าง ~1 วิ) · fix ยืนยันจอด → คงไว้ ' + b.trafficSeconds +
+                ' วิ · fix บอกว่ารถวิ่ง → ถอนคืนเหลือ ' + d.trafficSeconds + ' วิ';
         });
 
         renderSummary();
