@@ -17,6 +17,10 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- 🔋 ให้แอปขอ "ยกเว้นการประหยัดแบตเตอรี่" จากผู้ใช้ (หน้าต่างของระบบ)
+         ถ้าไม่ยกเว้น ระบบจะเข้า Doze เมื่อจอดับ → หยุดส่งพิกัด ⇒ เวลารถติดเพี้ยน -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- 📳 สั่นเมื่อมีข้อความแจ้งเตือน (navigator.vibrate ในเว็บใช้สิทธิ์นี้) -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
@@ -45,10 +49,18 @@
         </activity>
 
         <!-- 📍 บริการเก็บพิกัดฉากหลัง (ประเภท location → ต้องมีสิทธิ์ FOREGROUND_SERVICE_LOCATION) -->
+        <!-- 📍 บริการเก็บพิกัดฉากหลัง — stopWithTask="false" = ผู้ใช้ปัดแอปออกจากรายการล่าสุด
+             บริการก็ยังเก็บพิกัดต่อ (คนขับปัดทิ้งบ่อยแต่ยังขับอยู่) -->
         <service
             android:name=".BgLocationService"
             android:exported="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location"
+            android:stopWithTask="false" />
+
+        <!-- ⏰ ตัวปลุกบริการเก็บพิกัด (ปัดแอปทิ้ง / OEM ฆ่าทิ้ง) — ดูเหตุผลใน BgWakeReceiver.java -->
+        <receiver
+            android:name=".BgWakeReceiver"
+            android:exported="false" />
 
     </application>
 

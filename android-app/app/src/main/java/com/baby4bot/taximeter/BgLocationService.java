@@ -1,5 +1,6 @@
 package com.baby4bot.taximeter;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -7,6 +8,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.location.Location;
 import android.location.LocationListener;
@@ -44,6 +46,14 @@ public class BgLocationService extends Service implements LocationListener {
 
     static final String ACTION_START = "com.baby4bot.taximeter.action.START";
 
+    // 🔋 (18 ก.ย. 69) ให้บริการ "อยู่รอด" เป็นโปรแกรมฉากหลังจริง
+    //    - PREFS.want = ธงจำว่า "ผู้ใช้ยังจับเที่ยวอยู่ไหม" — ถ้าถูกฆ่า/ปัดทิ้ง เครื่องมือข้างล่างจะปลุกกลับมาได้
+    //    - ตัวปลุก (watchdog) ตั้งทุก 15 นาที: ถ้าบริการหายไป จะถูกเรียก onStartCommand ใหม่ = เริ่มเก็บพิกัดต่อ
+    private static final String PREFS = "taxi_bg";
+    private static final int REQ_WATCHDOG = 7711;
+    private static final int REQ_TASK_REMOVED = 7712;
+    private static final long WATCHDOG_MS = 15L * 60 * 1000;
+
     // คิวพิกัด (static = อยู่ได้แม้ activity ถูกทำลาย · เข้าถึงพร้อมกันจากหลายเธรด → synchronized ทุกจุด)
     private static final Object LOCK = new Object();
     private static final ArrayDeque<JSONObject> FIXES = new ArrayDeque<>();
@@ -59,6 +69,7 @@ public class BgLocationService extends Service implements LocationListener {
 
     static void start(Context c) {
         try {
+            wantFlag(c, true);
             Intent i = new Intent(c, BgLocationService.class);
             i.setAction(ACTION_START);
             c.startForegroundService(i);
@@ -69,9 +80,27 @@ public class BgLocationService extends Service implements LocationListener {
 
     static void stop(Context c) {
         try {
+            wantFlag(c, false);
             c.stopService(new Intent(c, BgLocationService.class));
         } catch (Exception e) {
             Log.w(TAG, "stop failed: " + e.getMessage());
+        }
+    }
+
+    /** ธงจำว่า "ควรเก็บพิกัดอยู่ไหม" — เก็บลงดิสก์ เพราะตัวแปรในหน่วยความจำหายเมื่อโปรเซสถูกฆ่า */
+    private static void wantFlag(Context c, boolean on) {
+        try {
+            SharedPreferences sp = c.getSharedPreferences(PREFS, MODE_PRIVATE);
+            sp.edit().putBoolean("want", on).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
+    static boolean wantOn(Context c) {
+        try {
+            return c.getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("want", false);
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -124,6 +153,50 @@ public class BgLocationService extends Service implements LocationListener {
         return START_STICKY;
     }
 
+    /** ตั้งตัวปลุกเป็นระยะ — ถ้าบริการถูกระบบ/OEM ฆ่าทิ้งระหว่างเที่ยว จะได้เริ่มเก็บพิกัดต่อเอง */
+    private void armWatchdog() {
+        try {
+            AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            if (am == null) return;
+            Intent i = new Intent(this, BgWakeReceiver.class);   // ปลุกผ่าน receiver (ดูเหตุผลใน BgWakeReceiver)
+            i.setAction(ACTION_START);
+            // ⚠️ ปลุกผ่าน receiver ไม่ใช่เรียกบริการตรง ๆ — Android 12+ ห้ามแอปฉากหลังเริ่มบริการเอง
+            //    (ถ้าปลุกตรง ๆ แล้วระบบปฏิเสธ จะกลายเป็นแอปพัง · ผ่าน receiver แล้วจับได้ = เงียบ ๆ)
+            PendingIntent pi = PendingIntent.getBroadcast(this, REQ_WATCHDOG, i,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            long at = System.currentTimeMillis() + WATCHDOG_MS;
+            // ⛔ ตั้งใจใช้แบบไม่เป๊ะ (setAndAllowWhileIdle) — ไม่ต้องขอสิทธิ์ SCHEDULE_EXACT_ALARM
+            //    ปลุกช้าหน่อยไม่เป็นไร ขอแค่ "ไม่หายไปเลย"
+            if (Build.VERSION.SDK_INT >= 23) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+            } else {
+                am.set(AlarmManager.RTC_WAKEUP, at, pi);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "watchdog failed: " + e.getMessage());
+        }
+    }
+
+    /** ผู้ใช้ปัดแอปออกจากรายการล่าสุด — ต้องไม่ทำให้การเก็บพิกัดหยุด (คนขับปัดทิ้งบ่อยแต่ยังขับต่อ) */
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        Log.i(TAG, "task removed — keeping tracking alive");
+        try {
+            if (running && wantOn(this)) {
+                AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+                if (am != null) {
+                    Intent i = new Intent(this, BgWakeReceiver.class);   // ปลุกผ่าน receiver
+                    i.setAction(ACTION_START);
+                    PendingIntent pi = PendingIntent.getBroadcast(this, REQ_TASK_REMOVED, i,
+                            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                    am.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 1500, pi);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        super.onTaskRemoved(rootIntent);
+    }
+
     private void startAsForeground() {
         try {
             NotificationChannel ch = new NotificationChannel(CH_ID, "บันทึกตำแหน่งเที่ยว", NotificationManager.IMPORTANCE_LOW);
@@ -153,6 +226,7 @@ public class BgLocationService extends Service implements LocationListener {
         if (lm == null) return;
         running = true;
         acquireWake();
+        armWatchdog();
         int ok = 0;
         try {
             if (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {

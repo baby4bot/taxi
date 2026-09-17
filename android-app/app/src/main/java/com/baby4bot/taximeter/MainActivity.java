@@ -327,6 +327,35 @@ public class MainActivity extends Activity {
         });
     }
 
+    // 🔋 (18 ก.ย. 69) ขอยกเว้น "การประหยัดแบตเตอรี่" หนึ่งครั้งต่อการติดตั้ง — ครั้งแรกที่เริ่มจับเที่ยว
+    //    ทำไมต้องมี: ถ้าไม่ยกเว้น ระบบจะเข้าสู่ Doze เมื่อจอดับ → หยุดส่งพิกัดให้แอป
+    //    ⇒ ช่วงนั้นแอปไม่มีหลักฐานว่าวิ่งหรือจอด = "เวลารถติด" เพี้ยน (ต้นเหตุที่ผู้ใช้แจ้ง)
+    private void askBackgroundPermissionOnce() {
+        try {
+            if (Build.VERSION.SDK_INT < 23) return;
+            SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
+            if (sp.getBoolean("asked_bg", false)) return;
+            sp.edit().putBoolean("asked_bg", true).apply();
+            android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+            if (pm != null && pm.isIgnoringBatteryOptimizations(getPackageName())) return;   // ยกเว้นอยู่แล้ว
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Toast.makeText(MainActivity.this,
+                                "เพื่อให้เก็บพิกัดแม่นแม้ปิดจอ — กรุณากด “อนุญาต” ในหน้าต่างถัดไป",
+                                Toast.LENGTH_LONG).show();
+                        Intent i = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                        i.setData(Uri.parse("package:" + getPackageName()));
+                        startActivity(i);
+                    } catch (Exception ignored) {
+                    }
+                }
+            });
+        } catch (Exception ignored) {
+        }
+    }
+
     private boolean hasFineLocation() {
         return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
@@ -375,6 +404,44 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void googleSignIn(final String serverClientId) {
             runOnUiThread(() -> startNativeGoogleSignIn(serverClientId));
+        }
+
+        /** 🔋 ยกเว้น "การประหยัดแบตเตอรี่" แล้วหรือยัง — ฝั่งเว็บใช้แสดงสถานะ/เตือนคนขับ */
+        @JavascriptInterface
+        public boolean isIgnoringBatteryOptimizations() {
+            try {
+                if (Build.VERSION.SDK_INT < 23) return true;
+                android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                return pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        /** เปิดหน้าต่างของระบบให้ผู้ใช้อนุญาตทำงานฉากหลัง (เรียกซ้ำได้ทุกเมื่อ) */
+        @JavascriptInterface
+        public void requestIgnoreBatteryOptimizations() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (Build.VERSION.SDK_INT < 23) return;
+                        android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                        if (pm != null && pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                            Toast.makeText(MainActivity.this, "ได้รับอนุญาตอยู่แล้ว — จับพิกัดฉากหลังได้เต็มที่", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        Intent i = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                        i.setData(Uri.parse("package:" + getPackageName()));
+                        startActivity(i);
+                    } catch (Exception ignored) {
+                        try {
+                            openSystemAppSettings();
+                        } catch (Exception ignored2) {
+                        }
+                    }
+                }
+            });
         }
 
         @JavascriptInterface
@@ -444,6 +511,7 @@ public class MainActivity extends Activity {
                 return false;
             }
             BgLocationService.start(MainActivity.this);
+            askBackgroundPermissionOnce();   // 🔋 ขอยกเว้นการประหยัดแบตฯ ครั้งแรก (เก็บพิกัดฉากหลังจะไม่ถูกระงับ)
             return true;
         }
 
@@ -468,6 +536,12 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String peekStats() {
             return BgLocationService.statsJson();
+        }
+
+        /** บริการมีธง "ควรเก็บพิกัดอยู่" ค้างไว้หรือยัง (รอดข้ามการถูกฆ่า/ปัดแอปทิ้ง) */
+        @JavascriptInterface
+        public boolean trackingWanted() {
+            return BgLocationService.wantOn(MainActivity.this);
         }
 
         @JavascriptInterface
