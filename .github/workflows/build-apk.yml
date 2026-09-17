@@ -78,7 +78,9 @@ jobs:
           KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           set -e
+          set -o pipefail
           mkdir -p keys
+          mkdir -p ../.build-logs
           if [ -n "$KS_B64" ]; then
             printf '%s' "$KS_B64" | base64 -d > keys/keystore.jks
             PASS="$KS_PASS"
@@ -98,10 +100,32 @@ jobs:
           export TAXI_KEY_ALIAS=taxi
           export TAXI_KEY_PASSWORD="$PASS"
 
-          # สร้าง Gradle wrapper ให้ครั้งเดียว แล้วใช้ ./gradlew ต่อจากนี้ (มีไว้ให้ build ในเครื่องได้ด้วย)
-          gradle wrapper --gradle-version 8.7 --no-daemon
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          # สร้าง Gradle wrapper ไว้ให้ build ในเครื่องได้ด้วย (ไม่ใช้ตัวนี้ build บน CI)
+          gradle wrapper --gradle-version 8.7 --no-daemon 2>&1 | tail -3
+          chmod +x gradlew 2>/dev/null || true
+
+          # build ด้วย Gradle 8.7 ที่ติดตั้งไว้แล้วโดยตรง — เลี่ยงการ bootstrap ของ wrapper
+          #   (ทั้งขั้นตอนนี้เขียนบันทึกไว้ที่ .build-logs/apk-build.txt เพื่อส่งขึ้นกิ่ง ci-logs ถ้าล้ม)
+          gradle assembleRelease --no-daemon --stacktrace 2>&1 | tee ../.build-logs/apk-build.txt
+
+      # 🔎 เผยบันทึกการสร้างเมื่อล้ม — เพราะ log ของ Actions ต้องล็อกอินอ่าน
+      #    กิ่ง ci-logs อ่านได้สาธารณะ: https://raw.githubusercontent.com/baby4bot/taxi/ci-logs/.build-logs/tail.txt
+      - name: ส่งบันทึกการสร้างขึ้นกิ่ง ci-logs (เฉพาะเมื่อล้ม)
+        if: failure()
+        run: |
+          set -e
+          mkdir -p .build-logs
+          if [ -f .build-logs/apk-build.txt ]; then
+            tail -250 .build-logs/apk-build.txt > .build-logs/tail.txt
+          else
+            echo "(ไม่มีบันทึก — งานล้มก่อนถึงขั้น build) run=$GITHUB_RUN_ID step ดูที่หน้า Actions" > .build-logs/tail.txt
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b ci-logs
+          git add -f .build-logs/tail.txt
+          git commit -m "ci log: run $GITHUB_RUN_ID"
+          git push -f origin ci-logs
 
       - name: อัปโหลด APK (artifact)
         uses: actions/upload-artifact@v4
