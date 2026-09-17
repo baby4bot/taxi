@@ -180,6 +180,7 @@
         .avatar-wrap-ring.role-admin::before { background: conic-gradient(from 0deg, #ffd700, #ffb300, #ff7043, #ffb300, #ffd700); }
         .avatar-wrap-ring.role-manager::before { background: conic-gradient(from 0deg, #a8d5ff, #3b8cff, #1f5fd0, #3b8cff, #a8d5ff); }
         .avatar-wrap-ring.role-user::before { background: conic-gradient(from 0deg, #f2f5fb, #aeb9cc, #7b8aa5, #aeb9cc, #f2f5fb); }
+        .avatar-wrap-ring.role-vip::before { background: conic-gradient(from 0deg, #e9d5ff, #a855f7, #7c3aed, #a855f7, #e9d5ff); }
         /* 🔒 ปุ่ม “ผูกบัญชี Google” ตอนบัญชีนี้ใช้ Google อยู่แล้ว — เทา กดไม่ได้ (ผู้ใช้ขอ 16 ก.ย. 69)
            ตัวริง: บัญชีที่สมัคร/ล็อกอินด้วย Google = ผูกอยู่แล้วเสมอ ⇒ ปุ่มต้องดูไม่ง่ายว่า “ยังกดได้” */
         #googleLinkBtn.g-linked { background: #5b6472 !important; color: #cbd5e1 !important; opacity: 0.6; filter: grayscale(1); cursor: not-allowed !important; box-shadow: none !important; border: 1px solid rgba(255,255,255,0.12); }
@@ -192,10 +193,12 @@
         .cp-role-tag.role-admin { background: rgba(255,210,77,0.14); border-color: rgba(255,210,77,0.45); color: #ffd24d; }
         .cp-role-tag.role-manager { background: rgba(59,140,255,0.16); border-color: rgba(59,140,255,0.45); color: #7db3ff; }
         .cp-role-tag.role-user { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.18); color: #c3cbdd; }
+        .cp-role-tag.role-vip { background: rgba(168,85,247,0.16); border-color: rgba(168,85,247,0.45); color: #d8b4fe; }
         html.light .cp-role-tag { background: rgba(18,26,48,0.06); border-color: rgba(18,26,48,0.16); color: #4a5670; }
         html.light .cp-role-tag.role-admin { background: rgba(200,140,0,0.12); border-color: rgba(200,140,0,0.4); color: #8a6100; }
         html.light .cp-role-tag.role-manager { background: rgba(31,95,208,0.10); border-color: rgba(31,95,208,0.35); color: #1f5fd0; }
         html.light .cp-role-tag.role-user { color: #4a5670; }
+        html.light .cp-role-tag.role-vip { background: rgba(124,58,237,0.10); border-color: rgba(124,58,237,0.35); color: #6d28d9; }
         .cp-uname { color: var(--neon-yellow); font-size: 13px; font-weight: 500; }
         /* ระยะห่างจากชื่อผู้ใช้: ย้ายมาไว้ที่กรอบ (เดิมเป็น margin ของตัวรูป ทำให้กรอบสูงเกินรูป → วงแหวนกลายเป็นวงรีและเหลื่อม) */
         #sideAvatarRing { margin-bottom: 15px; }
@@ -1335,6 +1338,7 @@
         .admin-role-badge.role-admin { background: rgba(255,77,95,0.16); color: #ff8491; border: 1px solid rgba(255,77,95,0.45); }
         .admin-role-badge.role-manager { background: rgba(52,152,219,0.16); color: #7db3ff; border: 1px solid rgba(52,152,219,0.45); }
         .admin-role-badge.role-user { background: rgba(255,255,255,0.07); color: #c3cbdd; border: 1px solid rgba(255,255,255,0.18); }
+        .admin-role-badge.role-vip { background: rgba(168,85,247,0.16); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.45); }
         .admin-role-badge.role-custom { background: rgba(139,92,246,0.15); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.45); }
         /* 👤 (16 ก.ย. 69) บรรทัด @username + “เข้าใช้ล่าสุด” อยู่บรรทัดเดียวกัน (วันที่ชิดขวา) — wrap ได้ถ้าจอแคบมาก */
         .admin-user-sub { display: flex; align-items: center; gap: 10px; row-gap: 4px; flex-wrap: wrap; font-size: 12.5px; color: #8a93a8; margin-top: 3px; }
@@ -3326,6 +3330,7 @@
         html.light .admin-gmail-chip .material-symbols-outlined { color: #075985 !important; }
         html.light .admin-actions-row { border-top-color: rgba(18,26,48,0.12); }
         html.light .admin-role-badge.role-user { background: rgba(18,26,48,0.07); color: #4a5670; border-color: rgba(18,26,48,0.16); }
+        html.light .admin-role-badge.role-vip { background: rgba(124,58,237,0.10); color: #6d28d9; border-color: rgba(124,58,237,0.30); }
         html.light .action-icon-btn { border-color: rgba(18,26,48,0.12); box-shadow: 0 3px 10px rgba(18,26,48,0.12); }
         html.light .perm-item:hover { background: rgba(18,26,48,0.03); }
         html.light .myperms-card { background: rgba(18,26,48,0.04); }
@@ -3489,7 +3494,7 @@
 
 <div id="activityLogModal" class="modal-overlay" style="z-index: 10010;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.toggleModal('activityLogModal', false)" title="กลับหน้าโปรไฟล์"><span class="material-symbols-outlined">arrow_back</span>กลับ</button><h3 id="logModalTitle">ประวัติการใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('activityLogModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="activityLogList" class="modal-content-scroll" style="text-align: left; background: rgba(0,0,0,0.2);"><div style="color: var(--text-dim); text-align: center; padding: 20px;">กำลังโหลด...</div></div></div></div>
 
-<div id="roleSettingsModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('roleSettingsModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">ตั้งค่าสิทธิ์การใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('roleSettingsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><label style="color: var(--neon-yellow); font-size: 13px;">เลือกตำแหน่ง (Role) ที่ต้องการตั้งค่าสิทธิ์</label><select id="settingRoleSelect" onchange="window.loadRolePermissionsToUI()" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: 10px; outline: none; font-family: 'Kanit';"></select><div style="display: flex; gap: 8px; margin-bottom: 6px;"><button onclick="window.addCustomRole()" id="addRoleBtn" class="role-manage-btn role-btn-add" type="button"><span class="material-symbols-outlined" style="font-size: 18px;">add</span> สร้างตำแหน่งใหม่</button><button onclick="window.renameCustomRole()" id="renameRoleBtn" class="role-manage-btn role-btn-rename" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">edit</span> เปลี่ยนชื่อ</button><button onclick="window.deleteCustomRole()" id="deleteRoleBtn" class="role-manage-btn role-btn-del" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span> ลบ</button></div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: var(--space-field); text-align: left; line-height: 1.5;">ตำแหน่งระบบ (ผู้จัดการ / ผู้ใช้งานทั่วไป) เปลี่ยนชื่อหรือลบไม่ได้ — กด "สร้างตำแหน่งใหม่" เลือก "ลอกแบบจาก" ตำแหน่งที่มีอยู่เพื่อตั้งสิทธิ์ไวขึ้น แล้วปรับสิทธิ์ด้านล่าง (ติ๊กแล้วกด บันทึกสิทธิ์)</div><div id="roleMembersPanel" class="role-members-panel"></div><div id="permListContainer" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;"></div><div style="margin-top: 14px; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);"><div style="font-size: 14px; color: var(--neon-yellow); font-weight: 700; margin-bottom: 2px;">🗂️ บันทึกประวัติ (Log)</div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px; line-height: 1.5;">เปิด/ปิดการบันทึก log แต่ละประเภท (เขียน Firestore ทุกครั้งที่เกิดเหตุการณ์ — ปิดประเภทที่ไม่จำเป็นเพื่อประหยัดโควตา · มีผลทันทีทุกเครื่อง)</div><div id="logSettingsBox"></div></div><button onclick="window.saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: var(--space-field);" id="saveRolePermBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์</button></div></div></div>
+<div id="roleSettingsModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('roleSettingsModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">ตั้งค่าสิทธิ์การใช้งาน</h3><button class="btn-close-floating" onclick="window.toggleModal('roleSettingsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><label style="color: var(--neon-yellow); font-size: 13px;">เลือกตำแหน่ง (Role) ที่ต้องการตั้งค่าสิทธิ์</label><select id="settingRoleSelect" onchange="window.loadRolePermissionsToUI()" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: 10px; outline: none; font-family: 'Kanit';"></select><div style="display: flex; gap: 8px; margin-bottom: 6px;"><button onclick="window.addCustomRole()" id="addRoleBtn" class="role-manage-btn role-btn-add" type="button"><span class="material-symbols-outlined" style="font-size: 18px;">add</span> สร้างตำแหน่งใหม่</button><button onclick="window.renameCustomRole()" id="renameRoleBtn" class="role-manage-btn role-btn-rename" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">edit</span> เปลี่ยนชื่อ</button><button onclick="window.deleteCustomRole()" id="deleteRoleBtn" class="role-manage-btn role-btn-del" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span> ลบ</button></div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: var(--space-field); text-align: left; line-height: 1.5;">ตำแหน่งระบบ (แอดมิน / ผู้จัดการ / สมาชิก VIP / ผู้ใช้งานทั่วไป) เปลี่ยนชื่อหรือลบไม่ได้ — กด "สร้างตำแหน่งใหม่" เลือก "ลอกแบบจาก" ตำแหน่งที่มีอยู่เพื่อตั้งสิทธิ์ไวขึ้น แล้วปรับสิทธิ์ด้านล่าง (ติ๊กแล้วกด บันทึกสิทธิ์)</div><div id="roleMembersPanel" class="role-members-panel"></div><div id="permRoleNote" style="display:none;"></div><div id="permListContainer" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;"></div><div style="margin-top: 14px; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);"><div style="font-size: 14px; color: var(--neon-yellow); font-weight: 700; margin-bottom: 2px;">🗂️ บันทึกประวัติ (Log)</div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px; line-height: 1.5;">เปิด/ปิดการบันทึก log แต่ละประเภท (เขียน Firestore ทุกครั้งที่เกิดเหตุการณ์ — ปิดประเภทที่ไม่จำเป็นเพื่อประหยัดโควตา · มีผลทันทีทุกเครื่อง)</div><div id="logSettingsBox"></div></div><button onclick="window.saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: var(--space-field);" id="saveRolePermBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์</button></div></div></div>
 
 <div id="createRoleModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">สร้างตำแหน่งใหม่</h3><button class="btn-close-floating" onclick="window.toggleModal('createRoleModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><div style="font-size:12px; color:var(--text-dim); margin-bottom: var(--space-field); line-height:1.6;">ตั้งชื่อตำแหน่งตามหน้าที่จริง เช่น "หัวหน้ากะ" — แล้วเลือกว่าต้องการลอกสิทธิ์จากตำแหน่งไหน เพื่อตั้งสิทธิ์ไวขึ้น (ปรับทีหลังได้ในหน้าตั้งค่าสิทธิ์)</div><label style="color: var(--neon-yellow); font-size: 13px;">ชื่อตำแหน่ง</label><input type="text" id="crRoleName" placeholder="เช่น หัวหน้ากะ / พนักงานขับรถ" style="margin-top: 8px; margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="color: var(--neon-yellow); font-size: 13px;">ลอกแบบจากตำแหน่ง (สิทธิ์เริ่มต้น)</label><select id="crCopyFrom" style="width: 100%; padding: 14px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-top: 8px; margin-bottom: var(--space-field); outline: none; font-family: 'Kanit';"></select><button onclick="window.confirmCreateRole()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">add</span> สร้างตำแหน่ง</button></div></div></div>
 
@@ -3968,7 +3973,9 @@
     window.baseFare = 35;
     window.surchargeList = [];
     const TOLL_MODE_KEY = 'taxi_toll_mode_v1';
-    try { window.isTollwayMode = localStorage.getItem(TOLL_MODE_KEY) === '1'; } catch(e) { window.isTollwayMode = false; }
+    // 🚗 โหมดทางด่วน = "ค่าของเที่ยวปัจจุบันเท่านั้น" — ไม่จำข้ามเที่ยว/ข้ามครั้งที่ค้นหา (ผู้ใช้สั่ง 17 ก.ย. 69)
+    //    ⚠️ ห้ามกลับไปอ่าน localStorage — คีย์เดิมยังเก็บไว้เพื่อ "ล้างค่าเก่า" ของเครื่องรุ่นก่อนเท่านั้น
+    window.isTollwayMode = false;
 
     const HISTORY_KEY = 'taxi_history_v25';
     const FAVORITES_KEY = 'taxi_favorites_v1';
@@ -4046,11 +4053,11 @@
     //    ตั้งคลาสที่ "กรอบ" (.avatar-wrap-ring) เท่านั้น ห้ามใส่ขอบที่ตัวรูป (จะกลายเป็น 2 วงเหลื่อมกันอีก)
     //    จำค่าไว้ต่อบัญชีใน localStorage → เปิดแอปครั้งถัดไปได้สีถูกตั้งแต่เฟรมแรก ไม่ต้องรอ Firestore ตอบ
     window.applyAvatarRingRole = (role, uid) => {
-        const r = (role === 'Admin' || role === 'Manager' || role === 'User') ? role : 'User';
+        const r = (role === 'Admin' || role === 'Manager' || role === 'User' || role === 'VIP') ? role : 'User'; // ⭐ VIP = ยศระบบใหม่ (17 ก.ย. 69)
         ['mainAvatarRing', 'sideAvatarRing'].forEach((id) => {
             const el = document.getElementById(id);
             if (!el) return;
-            el.classList.remove('role-admin', 'role-manager', 'role-user');
+            el.classList.remove('role-admin', 'role-manager', 'role-user', 'role-vip');
             el.classList.add('role-' + r.toLowerCase());
             el.setAttribute('data-avatar-role', r);
         });
@@ -4383,6 +4390,12 @@
         Manager: { canViewUsers: true, canAdd: true, canEdit: true, canChangeUserRole: false, canViewPassword: false, canBan: true, canDelete: false, canCallStaff: true, canViewLogs: true, canViewGlobalLogs: true, canSetStaffPrefs: false, canEditOwn: true, canDeleteMedia: true, canManageService: false, canManageToastMsg: false, canManageRoles: false, canEditAppTexts: false, canManageHubLayout: false, canManageLoadingScreen: false, canManageScrollbar: false, canManageNavMap: false, canViewQuota: false, canApprovePerms: true, canViewNotifCenter: true, canSetSignupDate: true, canCreateRole: false, canEditManagedSettings: false, canManageFavoritesDefault: false, canExportTrips: true, canUseDeviceUnlock: true, canManageReservedNames: false, canUseMiniMap: false },
         User: { canViewUsers: false, canAdd: false, canEdit: false, canChangeUserRole: false, canViewPassword: false, canBan: false, canDelete: false, canCallStaff: false, canViewLogs: false, canViewGlobalLogs: false, canSetStaffPrefs: false, canEditOwn: true, canDeleteMedia: false, canManageService: false, canManageToastMsg: false, canManageRoles: false, canEditAppTexts: false, canManageHubLayout: false, canManageLoadingScreen: false, canManageScrollbar: false, canManageNavMap: false, canViewQuota: false, canApprovePerms: false, canViewNotifCenter: false, canSetSignupDate: false, canCreateRole: false, canEditManagedSettings: false, canManageFavoritesDefault: false, canExportTrips: true, canUseDeviceUnlock: true, canManageReservedNames: false, canUseMiniMap: false }
     };
+    // ⭐ สมาชิก VIP (เพิ่ม 17 ก.ย. 69) = ยศระดับกลาง ระหว่าง “ผู้จัดการ” กับ “ผู้ใช้ทั่วไป”
+    //    ค่าเริ่มต้นเท่าผู้ใช้ทั่วไป · แอดมินติ๊กเพิ่มได้ในหน้า “ตั้งค่าสิทธิ์การใช้งาน” (เช่น เปิด Mini Map ให้ VIP)
+    // 👑 Admin: ระบบให้ทุกสิทธิ์อยู่แล้ว (god) — ชุดนี้คือ “สิทธิ์ที่คิดตามยศ” ของแอดมิน (เช่น canUseMiniMap)
+    //    ⚠️ ค่าเริ่มต้นทั้งสองชุดอ้างจาก User โดยตั้งใจ — ห้ามเปิด canUseMiniMap ค้างไว้ (สิทธิ์นี้ปิดทุกยศเพื่อประหยัดโควตา)
+    window.DEFAULT_ROLE_PERMS.VIP = { ...window.DEFAULT_ROLE_PERMS.User };
+    window.DEFAULT_ROLE_PERMS.Admin = { ...window.DEFAULT_ROLE_PERMS.User };
     // ค่าสิทธิ์จริงของ role หนึ่ง = ค่าเริ่มต้น + ค่าที่ admin บันทึก (ค่าที่บันทึกชนะ) → คีย์ใหม่ที่ยังไม่เคยเซฟจะได้ค่าเริ่มต้นที่สมเหตุสมผลทันที
     window.effectiveRolePerms = (role) => {
         // ตำแหน่งที่สร้างใหม่เอง (custom) หรือไม่รู้จัก → เริ่มจากค่าเริ่มต้นของผู้ใช้ทั่วไป (แก้โปรไฟล์ตัวเองได้)
@@ -4425,21 +4438,27 @@
 
     // ---------- 🎭 ตำแหน่ง (Role) ที่กำหนดเองได้ — นอกเหนือจากระบบ (Admin/Manager/User) ----------
     // ตำแหน่งใหม่เก็บเป็นคีย์ของ doc settings/roles เหมือน Manager/User (แต่ละคีย์ = ชุดสิทธิ์ของตำแหน่งนั้น)
-    const SYSTEM_ROLES = ['Admin', 'Manager', 'User'];
+    const SYSTEM_ROLES = ['Admin', 'Manager', 'VIP', 'User']; // ⭐ เพิ่ม VIP (17 ก.ย. 69) — ตำแหน่งระบบ = เปลี่ยนชื่อ/ลบไม่ได้
     const isSystemRole = (k) => SYSTEM_ROLES.includes(k);
     const escAttr = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-    window.roleLabelFull = (k) => { if (k === 'Admin') return 'ผู้ดูแลระบบ (Admin)'; if (k === 'Manager') return 'ผู้จัดการ (Manager)'; if (k === 'User') return 'ผู้ใช้งานทั่วไป (User)'; return (k || '') + ' (กำหนดเอง)'; };
-    window.roleLabelShort = (k) => { if (k === 'Admin') return 'แอดมิน'; if (k === 'Manager') return 'ผู้จัดการ'; if (k === 'User') return 'ผู้ใช้'; return (k || 'User'); };
-    window.roleClassKey = (k) => { const m = { Admin: 'admin', Manager: 'manager', User: 'user' }; return m[k] || 'custom'; };
-    // คีย์ตำแหน่งที่กำหนดเอง (ที่มีใน settings/roles แล้ว ไม่ใช่ 3 ตำแหน่งระบบ)
+    // ชื่อไทยกลางของยศ — อยู่ที่เดียว (กันโค้ดแต่ละที่เขียนแยกแล้วยศใหม่ตกหล่น)
+    window.roleLabelTH = (k) => ({ Admin: 'ผู้ดูแลระบบ', Manager: 'ผู้จัดการ', VIP: 'สมาชิก VIP', User: 'ผู้ใช้งานทั่วไป' }[k] || k || 'ผู้ใช้งานทั่วไป');
+    window.roleLabelFull = (k) => { if (k === 'Admin') return 'ผู้ดูแลระบบ (Admin)'; if (k === 'Manager') return 'ผู้จัดการ (Manager)'; if (k === 'VIP') return 'สมาชิก VIP (VIP)'; if (k === 'User') return 'ผู้ใช้งานทั่วไป (User)'; return (k || '') + ' (กำหนดเอง)'; };
+    window.roleLabelShort = (k) => { if (k === 'Admin') return 'แอดมิน'; if (k === 'Manager') return 'ผู้จัดการ'; if (k === 'VIP') return 'สมาชิก VIP'; if (k === 'User') return 'ผู้ใช้'; return (k || 'User'); };
+    window.roleClassKey = (k) => { const m = { Admin: 'admin', Manager: 'manager', VIP: 'vip', User: 'user' }; return m[k] || 'custom'; };
+    // 🔢 ลำดับยศที่ใช้แสดงในเมนู (บน → ล่าง): แอดมิน · ผู้จัดการ · สมาชิก VIP · ผู้ใช้งานทั่วไป
+    window.ROLE_ORDER = ['Admin', 'Manager', 'VIP', 'User'];
+    const customRolesSorted = () => window.getCustomRoleKeys().sort((a, b) => a.localeCompare(b, 'th'));
+    // คีย์ตำแหน่งที่กำหนดเอง (ที่มีใน settings/roles แล้ว ไม่ใช่ตำแหน่งระบบ)
     window.getCustomRoleKeys = () => { const o = window.globalPermissions || {}; return Object.keys(o).filter(k => !isSystemRole(k)); };
-    window.allAssignableRoles = () => ['User', 'Manager'].concat(window.getCustomRoleKeys().sort((a, b) => a.localeCompare(b, 'th')));
+    // ยศที่มอบให้สมาชิกได้ — เรียงตาม ROLE_ORDER (ยกเว้น “แอดมิน” ที่หน้าจัดการผู้ใช้ต่อท้ายไว้โดยตั้งใจ)
+    window.allAssignableRoles = () => ['Manager', 'VIP', 'User'].concat(customRolesSorted());
 
     window.validateRoleKey = (name) => {
         if (!name) return 'กรุณากรอกชื่อตำแหน่ง';
         if (/[./~*\[\]\x00]/.test(name)) return 'ชื่อตำแหน่งห้ามมี . / * [ ] ~';
         if (name.length > 40) return 'ชื่อตำแหน่งยาวเกินไป (สูงสุด 40 ตัวอักษร)';
-        const dup = ['Admin', 'Manager', 'User'].concat(window.getCustomRoleKeys()).some(k => k.toLowerCase() === name.toLowerCase());
+        const dup = window.ROLE_ORDER.concat(window.getCustomRoleKeys()).some(k => k.toLowerCase() === name.toLowerCase());
         if (dup) return 'มีตำแหน่งนี้อยู่แล้ว (หรือชื่อซ้ำกับตำแหน่งระบบ)';
         return '';
     };
@@ -4449,7 +4468,8 @@
         const sSel = document.getElementById('settingRoleSelect');
         if (sSel) {
             const sCur = sSel.value;
-            const opts = ['Manager', 'User'].concat(window.getCustomRoleKeys().sort((a, b) => a.localeCompare(b, 'th')));
+            // 🔢 ลำดับเดียวกับที่ผู้ใช้สั่ง (17 ก.ย. 69): แอดมิน → ผู้จัดการ → สมาชิก VIP → ผู้ใช้งานทั่วไป → ยศที่สร้างเอง
+            const opts = window.ROLE_ORDER.concat(window.getCustomRoleKeys().sort((a, b) => a.localeCompare(b, 'th')));
             sSel.innerHTML = opts.map(k => `<option value="${escAttr(k)}">${window.roleLabelFull(k)}</option>`).join('');
             if (preserve && opts.includes(sCur)) sSel.value = sCur;
         }
@@ -4521,10 +4541,13 @@
         const nameIn = document.getElementById('crRoleName'); if (nameIn) nameIn.value = '';
         const srcSel = document.getElementById('crCopyFrom');
         if (srcSel) {
-            const opts = ['__none__', 'Manager', 'User'].concat(window.getCustomRoleKeys().sort((a, b) => a.localeCompare(b, 'th')));
+            // 👑 เพิ่ม “ลอกแบบจาก แอดมิน” = ได้ทุกสิทธิ์จริง ๆ (ใช้ทำยศระดับผู้ช่วยแอดมินได้ทันที) · ⭐ VIP มากับ ROLE_ORDER
+            const opts = ['__none__'].concat(window.ROLE_ORDER).concat(window.getCustomRoleKeys().sort((a, b) => a.localeCompare(b, 'th')));
             srcSel.innerHTML = opts.map(k => {
                 let label = 'เริ่มจากว่าง (สิทธิ์ผู้ใช้ทั่วไป)';
-                if (k === 'Manager') label = 'ลอกแบบจาก ผู้จัดการ (Manager)';
+                if (k === 'Admin') label = 'ลอกแบบจาก แอดมิน (ทุกสิทธิ์)';
+                else if (k === 'Manager') label = 'ลอกแบบจาก ผู้จัดการ (Manager)';
+                else if (k === 'VIP') label = 'ลอกแบบจาก สมาชิก VIP';
                 else if (k === 'User') label = 'ลอกแบบจาก ผู้ใช้งานทั่วไป (User)';
                 else if (k !== '__none__') label = 'ลอกแบบจาก ' + window.roleLabelFull(k);
                 return `<option value="${escAttr(k)}">${label}</option>`;
@@ -4542,7 +4565,11 @@
         // คัดลอกสิทธิ์จริงของตำแหน่งต้นแบบ (ค่าเริ่มต้น + ที่ admin ตั้ง) ให้ตำแหน่งใหม่ได้ชุดสิทธิ์เหมือนกันทันที
         let newPerms = {};
         let srcLabel = '';
-        if (src !== '__none__') { newPerms = window.effectiveRolePerms(src); srcLabel = src === 'Manager' ? 'ผู้จัดการ' : (src === 'User' ? 'ผู้ใช้ทั่วไป' : src); }
+        if (src !== '__none__') {
+            // 👑 ลอกแบบจากแอดมิน = ใช้ชุด “ทุกสิทธิ์” จริง (effectiveRolePerms('Admin') เป็นแค่สิทธิ์ที่คิดตามยศ เช่น มินิแมพ)
+            newPerms = (src === 'Admin') ? window.godPermsAll() : window.effectiveRolePerms(src);
+            srcLabel = (src === 'Admin') ? 'แอดมิน (ทุกสิทธิ์)' : window.roleLabelShort(src);
+        }
         try {
             await setDoc(doc(db, 'settings', 'roles'), { [name]: newPerms }, { merge: true });
         } catch (e) { return window.showToast('สร้างตำแหน่งไม่ได้ — ชื่อต้องไม่ยาวเกินไปและห้ามมี . หรือ /', true); }
@@ -5174,18 +5201,18 @@
         if (window.updateFareTollBtnText) window.updateFareTollBtnText();
     };
 
-    // ตั้งค่าโหมดทางด่วนตามค่าจาก Firestore (บันทึกต่อบัญชี) + เก็บ localStorage เป็นแคช
-    // keepLocalCache=true → เปลี่ยนเฉพาะเส้นทางปัจจุบัน (window.isTollwayMode + UI) ไม่แตะค่าเริ่มต้นที่คนขับจำไว้ต่อบัญชี
+    // ตั้งค่าโหมดทางด่วน “ของเที่ยวปัจจุบัน” — เปลี่ยนเฉพาะค่าบนจอ ไม่บันทึกลงเครื่อง ไม่บันทึกขึ้นบัญชี
+    //    (ผู้ใช้สั่ง 17 ก.ย. 69: ค้นหาเส้นทางให้เริ่มจากเลี่ยงทางด่วนเสมอ · อยากขึ้นทางด่วนให้จิ้มเองเที่ยวต่อเที่ยว)
+    //    ⇒ คงพารามิเตอร์เดิมไว้ให้จุดเรียกเดิมไม่พัง แต่ไม่เขียนที่ไหนอีกแล้ว
     const applyTollModeState = (isToll, saveToServer, keepLocalCache) => {
         window.isTollwayMode = !!isToll;
-        if (!keepLocalCache) { try { localStorage.setItem(TOLL_MODE_KEY, isToll ? '1' : '0'); } catch(e) {} }
+        try { localStorage.removeItem(TOLL_MODE_KEY); } catch(e) {} // ล้างค่าที่รุ่นก่อนเคยจำไว้ในเครื่อง
         applyTollModeUI(isToll);
-        if (saveToServer && loggedInUserId) { try { updateDoc(doc(db, "users", loggedInUserId), { tollwayMode: isToll }); } catch(e) {} }
     };
     window.setUserTollMode = (isToll) => { applyTollModeState(isToll, false); };
 
-    // ใช้ค่าในเครื่องก่อน (โหลดเร็ว) — ค่าจาก Firestore จะถูกยืนยันตอนล็อกอิน (listenToMyUser)
-    window.applySavedTollMode = () => { applyTollModeState(localStorage.getItem(TOLL_MODE_KEY) === '1', false); };
+    // เรียกตอนล็อกอิน/สลับบัญชี/เข้าแอปใหม่ → บังคับกลับเป็น “เลี่ยงทางด่วน” ทุกครั้ง (ไม่กู้ค่าที่จำไว้)
+    window.applySavedTollMode = () => { applyTollModeState(false, false); };
 
     // เส้นทางปัจจุบันมีช่วงทางด่วนจริงหรือไม่ (จาก route.tolls ที่ TomTom คืนมา)
     window.routeHasToll = () => {
@@ -8724,7 +8751,7 @@
         const cpR = document.getElementById('cpRoleLabel');
         if (cpR) {
             const role = (window.myCurrentRole || (typeof currentUserRole === 'string' ? currentUserRole : '') || 'User');
-            const roleTH = role === 'Admin' ? 'ผู้ดูแลระบบ' : (role === 'Manager' ? 'ผู้จัดการ' : (role === 'User' ? 'ผู้ใช้งานทั่วไป' : role));
+            const roleTH = window.roleLabelTH(role); // ชื่อไทยกลางของยศ (รวม ⭐ VIP)
             cpR.className = 'cp-role-tag role-' + String(role).toLowerCase();
             cpR.innerText = loggedInUserId ? roleTH : '';
         }
@@ -8736,10 +8763,7 @@
         const wrap = document.getElementById('myPermsWrap');
         if (!wrap) return;
         const role = currentUserRole || 'User';
-        let roleTH = role; // ตำแหน่งที่สร้างเอง → แสดงชื่อตำแหน่งนั้น
-        if (role === 'Admin') roleTH = 'ผู้ดูแลระบบ';
-        else if (role === 'Manager') roleTH = 'ผู้จัดการ';
-        else if (role === 'User') roleTH = 'ผู้ใช้งานทั่วไป';
+        const roleTH = window.roleLabelTH(role); // ตำแหน่งที่สร้างเอง → คืนชื่อตำแหน่งนั้นตรง ๆ (roleLabelTH ครอบ ⭐ VIP ให้แล้ว)
         const isGod = role === 'Admin';
         // 🚫 User ทั่วไป (ไม่ใช่ Admin) — ซ่อนการ์ด "สิทธิ์ที่ยังไม่ได้" + ปุ่มขอสิทธิ์ ทั้งหมดในหน้าโปรไฟล์
         if (!isGod) { wrap.innerHTML = ''; wrap.style.display = 'none'; if (window.updateMissingPermsBadge) window.updateMissingPermsBadge(); return; }
@@ -9968,6 +9992,7 @@
         const r = $('driveRemain'); if (r) r.innerText = '0.00';
         window.hideMap(); // ลบเส้นทาง/แผนที่เก่าออก
         window.clearPlanTraffic(); // 🚦 ไม่มีจุดหมาย = ใช้เวลารถติดที่วางแผนไว้ไม่ได้
+        if (window.isTollwayMode) { window.setUserTollMode(false); } // 🚗 ล้างจุดหมาย = กลับไปเริ่มที่ “เลี่ยงทางด่วน” (ไม่จำข้ามครั้ง)
         window.updateFareEstimation(0);
         window.checkAppStatus();
         window.updateClearDestBtn();
@@ -10005,6 +10030,9 @@
     };
     
     window.getRouteData = async (dLat, dLon, name) => {
+        // 🚗 ทุกครั้งที่ “ค้นหาเส้นทาง” = เริ่มจากเลี่ยงทางด่วนเสมอ (ผู้ใช้สั่ง 17 ก.ย. 69)
+        //    ค่าที่ติ๊ก “ขึ้นทางด่วน” ของครั้งก่อน/เที่ยวก่อน ไม่ถูกจำมาที่นี่ — อยากขึ้นให้จิ้มเองในหน้าสรุป
+        if (window.isTollwayMode) { window.setUserTollMode(false); }
         const doRoute = async (sLat, sLon, label) => {
             let route = await window.fetchRouteFromTomTom(dLat, dLon, sLat, sLon);
             if (route) {
@@ -13833,6 +13861,8 @@
         ['2026-09-16', '🪟 หน้าตั้งค่ามินิแมพจัดวางถูกต้อง — ปุ่มคืนค่าเดิม/บันทึกอยู่ล่างเต็มความกว้าง'],
         ['2026-09-16', '🎚️ เปลี่ยนช่องติ๊กเป็นสวิตช์ก้านเลื่อนทุกจุด (โปรไฟล์ · แอดมิน · มินิแมพ) — เขียว = เปิด'],
         ['2026-09-16', '🎚️ สวิตช์ “ตรงเป๊ะเท่านั้น” เป็นก้านเลื่อนด้วย — เหลือติ๊กแค่ลิสต์เลือกหลายรายการ'],
+        ['2026-09-16', '🚗 ค้นหาเส้นทางเริ่มจาก “เลี่ยงทางด่วน” เสมอ — ไม่จำว่าเที่ยวก่อนเลือกขึ้นทางด่วน'],
+        ['2026-09-16', '⭐ เพิ่มยศ “สมาชิก VIP” ตั้งสิทธิ์ได้ในหน้าสิทธิ์ + แอดมินอยู่บนสุดของรายการยศ'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -14286,8 +14316,9 @@
             // โหมดทางด่วนที่บันทึกไว้ต่อบัญชี (Firestore) มีผลเหนือค่าในเครื่อง — นำมาใช้ตอนเข้าสู่ระบบครั้งแรกเท่านั้น
             if (!tollModeLoadedForUser) {
                 tollModeLoadedForUser = true;
-                if (data.tollwayMode === true || data.tollwayMode === false) { window.setUserTollMode(data.tollwayMode); }
-                else { window.applySavedTollMode(); }
+                // 🚗 เข้าแอป/เปลี่ยนบัญชี = เริ่มจาก “เลี่ยงทางด่วน” เสมอ (ผู้ใช้สั่ง 17 ก.ย. 69)
+                //    ❌ ห้ามกลับไปใช้ data.tollwayMode — ไม่จำค่าที่ติ๊กไว้ครั้งก่อนอีกแล้ว
+                window.applySavedTollMode();
             }
             // 🔁 ซิงก์แคช PIN กับเอกสารจริง (สตรีมนี้มีข้อมูลอยู่แล้ว = ไม่กินโควตาอ่านเพิ่ม)
             //    แอดมินรีเซ็ต PIN ของสมาชิก ⇒ เอกสาร pinHash ว่าง ⇒ ต้องล้างแคชในเครื่องนี้ด้วย ไม่งั้น PIN เก่ายังใช้ได้
@@ -15951,7 +15982,7 @@
         const total = conf.reduce((a, c) => a + c.names.length, 0);
         if (head) head.innerHTML = '⚠️ คำใหม่จะบังชื่อสมาชิก ' + total + ' คน';
         if (body) body.innerHTML = conf.map(c => {
-            const shown = c.names.slice(0, 6).map(m => '<b>@' + m.name + '</b>' + (m.role === 'Admin' ? ' <span style="color:#ff8a8a;">(แอดมิน!)</span>' : (m.role === 'Manager' ? ' (ผู้จัดการ)' : '')) + (m.banned ? ' <span style="color:#ff8a8a;">(ถูกระงับ)</span>' : '')).join(' · ') + (c.names.length > 6 ? ' · และอีก ' + (c.names.length - 6) + ' คน' : '');
+            const shown = c.names.slice(0, 6).map(m => '<b>@' + m.name + '</b>' + (m.role === 'Admin' ? ' <span style="color:#ff8a8a;">(แอดมิน!)</span>' : (m.role === 'Manager' ? ' (ผู้จัดการ)' : (m.role === 'VIP' ? ' (สมาชิก VIP)' : ''))) + (m.banned ? ' <span style="color:#ff8a8a;">(ถูกระงับ)</span>' : '')).join(' · ') + (c.names.length > 6 ? ' · และอีก ' + (c.names.length - 6) + ' คน' : '');
             return '<div style="margin-bottom:6px;"><span style="font-family:monospace; color:#ffc46b;">' + c.w + '</span> (' + (c.e ? 'ตรงเป๊ะ' : 'ครอบคลุม') + ') → ' + shown + '</div>';
         }).join('') + '<div style="margin-top:6px;">บัญชีเดิม <b>ไม่ถูกเปลี่ยนชื่อ/ไม่ถูกตัดสิทธิ์</b> — แต่ถ้าพวกเขาตั้งชื่อเดิมซ้ำ หรือแอดมินแก้ชื่อให้ จะติดคำนี้ · ถ้าไม่ได้ตั้งใจ ให้สลับคำเป็น “ตรงเป๊ะ” หรือลบคำนั้นออก</div>';
         box.style.display = '';
@@ -17102,6 +17133,17 @@
     };
     window.renderPermList = () => {
         let html = ''; let perms = window.currentPermConfig; let role = document.getElementById('settingRoleSelect').value; let rolePerms = window.effectiveRolePerms(role);
+        // 📌 แถบอธิบายรายยศ (⭐ VIP / 👑 แอดมิน) — บอกให้ชัดว่าติ๊กแล้วมีผลแค่ไหน
+        try {
+            const noteEl = document.getElementById('permRoleNote');
+            if (noteEl) {
+                let note = '';
+                if (role === 'Admin') note = '👑 <b>แอดมินได้ทุกสิทธิ์จากระบบอยู่เสมอ</b> — ติ๊กหรือไม่ติ๊กก็ใช้ได้ทั้งหมด · ข้อที่ติ๊กไว้มีผลกับสิทธิ์ที่คิด “ตามยศ” (เช่น แผนที่นำทาง Mini Map) และใช้เป็นต้นแบบให้ยศใหม่';
+                else if (role === 'VIP') note = '⭐ <b>สมาชิก VIP</b> — ค่าเริ่มต้นเท่าผู้ใช้ทั่วไป · เปิดเพิ่มได้เลย เช่น “ใช้แผนที่นำทาง (Mini Map) ตอนขับ” ให้ VIP ทุกคนใช้ได้โดยไม่ต้องเปิดรายคน';
+                noteEl.innerHTML = note ? '<div style="background:rgba(255,210,77,0.08); border:1px solid rgba(255,210,77,0.30); border-radius:14px; padding:10px 12px; margin-bottom:12px; font-size:11.5px; color:#ffd9a8; line-height:1.6;">' + note + '</div>' : '';
+                noteEl.style.display = note ? 'block' : 'none';
+            }
+        } catch (e) {}
         perms.forEach(p => {
             let prop = p.id.replace('perm_', ''); let checkedStr = rolePerms[prop] ? 'checked' : ''; let desc = PERM_DESCS[p.id] || '';
             html += `<div class="perm-item" data-id="${p.id}" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">` +
@@ -17252,7 +17294,7 @@
             chip('ธีม', themeMap[u.themeMode] || 'มืด (กรมท่า)') +
             chip('ประเภทรถ', (Number(u.taxiType) === 40 ? 'แวน 40฿' : 'ปกติ 35฿')) +
             chip('เบิกเวลาจอดหลังปิดแอป', (Number(u.killIdleCapMin) > 0 ? Number(u.killIdleCapMin) + ' นาที' : 'ไม่จำกัด')) +
-            chip('โหมดทางด่วน', onOff(u.tollwayMode === true ? true : false)) +
+            chip('โหมดทางด่วน', 'เลือกต่อเที่ยว · ไม่จำค่า') + // 🚗 17 ก.ย. 69: โหมดนี้ไม่ผูกกับบัญชีแล้ว (เริ่มจากเลี่ยงด่วนเสมอ) — ห้ามกลับไปอ่าน u.tollwayMode
             chip('สั่น toast ทอง', onOff(u.vibrateGold)) +
             chip('เสียงติ๊งแจ้งเตือน', onOff(u.toastSound)) +
             chip('เสียงนำทางพูดไทย', onOff(u.navVoice)) +
