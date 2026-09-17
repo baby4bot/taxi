@@ -7616,6 +7616,7 @@
     // อัปเดตจริง: รีโหลดพร้อม tag เวอร์ชัน (บังคับผ่านแคช) — คงค่า query เดิมไว้ด้วย
     window.__webUpdateApplyNow = (why) => {
         const v = verPendingVersion || verServerVersion || '';
+        try { wnRememberBeforeUpdate(v); } catch (e) {}   // จดหัวข้อของรุ่นเดิมไว้ → หลังรีโหลดจะได้บอกได้ว่า “อะไรใหม่”
         try {
             const u = new URL(location.href);
             if (v) u.searchParams.set('v', v);
@@ -7677,13 +7678,103 @@
         verReloadTimer = setTimeout(() => { verReloadTimer = null; window.__webUpdateApplyNow(why || 'trip-end'); }, VER_AUTO_RELOAD_MS);
         return 'scheduled';
     };
+    // ============================================================
+    // 🆕 หลังอัปเดตเองเสร็จ → เด้งสรุปสั้น ๆ ว่าเวอร์ชันใหม่เปลี่ยนอะไร (ผู้ใช้ขอ 18 ก.ย. 69)
+    //    เนื้อหามาจาก “ประวัติเวอร์ชัน” ที่มีอยู่ในโค้ดแล้ว (APP_RELEASE_NOTES) — ไม่ต้องมีเน็ต
+    //    วิธีรู้ว่าอะไรใหม่: ก่อนรีโหลดจดรายการหัวข้อของรุ่นเดิม → หลังรีโหลดเทียบว่าอะไรโผล่มาใหม่
+    //    ปลอดภัย: ตัวตัดสินใจเป็นฟังก์ชันล้วน (`__whatsNewDecide`) ไม่แตะ DOM/เน็ต → ทดสอบออฟไลน์ได้
+    //    กติกา: เด้งครั้งเดียวต่อการอัปเดตหนึ่งครั้ง · ปิดได้เสมอ · มีหัวข้อเดียว = ไม่เด้ง (ไม่มีอะไรให้สรุป)
+    // ============================================================
+    const WN_KEY = 'web_update_whats_new';
+    const wnNorm = (s) => String(s == null ? '' : s).trim();
+    const wnEsc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const wnRead = () => { try { return JSON.parse(localStorage.getItem(WN_KEY) || 'null'); } catch (e) { return null; } };
+    const wnClear = () => { try { localStorage.removeItem(WN_KEY); } catch (e) {} };
+    const wnCurrentNotes = () => { try { return Array.isArray(APP_RELEASE_NOTES) ? APP_RELEASE_NOTES.map(wnNorm).filter(Boolean) : []; } catch (e) { return []; } };
+    const wnCurrentDate = () => { try { return wnNorm(APP_RELEASE_DATE); } catch (e) { return ''; } };
+    // 🧪 ตัดสินใจจากข้อมูลล้วน: เด้งไหม + จะแสดงหัวข้ออะไร
+    window.__whatsNewDecide = (rec, runningVersion, currentNotes, currentDate) => {
+        const v = wnNorm(runningVersion);
+        const notes = Array.isArray(currentNotes) ? currentNotes.map(wnNorm).filter(Boolean) : [];
+        const none = { show: false, notes: [], date: '', freshCount: 0, from: '', exact: false };
+        if (!rec || !v) return none;
+        if (wnNorm(rec.to) !== v) return none;   // จดไว้ของรุ่นอื่น = การอัปเดตไม่สำเร็จ/เปลี่ยนรุ่นซ้ำ → ไม่เด้งมั่ว
+        if (rec.shownAt) return none;            // เด้งไปแล้วครั้งหนึ่งสำหรับการอัปเดตครั้งนี้
+        if (notes.length <= 1) return none;      // มีหัวข้อเดียว = ไม่มีอะไรให้สรุป
+        const before = Array.isArray(rec.beforeNotes) ? rec.beforeNotes.map(wnNorm).filter(Boolean) : [];
+        const exact = before.length > 0;         // เทียบได้จริงไหม (มีรายการรุ่นเดิมให้เทียบ)
+        let fresh;
+        if (exact) {
+            fresh = notes.filter((n) => !before.includes(n));
+            if (!fresh.length) return none;      // เทียบได้และไม่มีอะไรเปลี่ยน → ไม่กวนผู้ใช้
+        } else {
+            fresh = notes.slice(0, 4);           // เทียบไม่ได้ (จดไว้หาย/รุ่นก่อนเก่าเกิน) → โชว์ไฮไลต์ 4 รายการ
+        }
+        return { show: true, notes: fresh.slice(0, 6), freshCount: fresh.length, date: wnNorm(currentDate || rec.date), from: wnNorm(rec.from), exact: exact };
+    };
+    const wnRememberBeforeUpdate = (toVersion) => {
+        try {
+            localStorage.setItem(WN_KEY, JSON.stringify({
+                to: wnNorm(toVersion), from: wnNorm(window.APP_WEB_VERSION), at: Date.now(),
+                date: wnCurrentDate(), beforeNotes: wnCurrentNotes()
+            }));
+        } catch (e) {}
+    };
+    const wnShowPanel = (info) => {
+        let el = document.getElementById('whatsNewPanel');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'whatsNewPanel';
+            el.setAttribute('style', 'position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + env(safe-area-inset-bottom)); z-index:240001; width:min(92vw,430px); background:rgba(8,20,32,0.96); border:1px solid rgba(56,189,248,0.5); border-radius:16px; box-shadow:0 14px 40px rgba(0,0,0,0.55); color:#e2f2ff; padding:12px 13px 11px; backdrop-filter:blur(8px); font-size:12.5px; line-height:1.5; text-align:left;');
+            document.body.appendChild(el);
+        }
+        const bullets = info.notes.map((n) => '<li style="margin:5px 0; display:flex; gap:7px; align-items:flex-start;"><span style="color:#38bdf8;">•</span><span style="flex:1 1 auto;">' + wnEsc(n) + '</span></li>').join('');
+        el.innerHTML =
+            '<div style="display:flex; align-items:flex-start; gap:8px;">' +
+                '<span class="material-symbols-outlined" style="font-size:18px; color:#38bdf8;">auto_awesome</span>' +
+                '<div style="flex:1 1 auto; font-weight:800;">มีอะไรใหม่ในเวอร์ชันนี้</div>' +
+                '<button type="button" id="whatsNewClose" aria-label="ปิด" style="border:0; background:transparent; color:#9fb6c8; font-size:17px; line-height:1; padding:2px 4px; cursor:pointer;">✕</button>' +
+            '</div>' +
+            '<div style="opacity:.78; margin:2px 0 8px; font-size:11.5px;">อัปเดตให้อัตโนมัติแล้ว · ' + (info.exact ? 'ใหม่ ' : 'ไฮไลต์ ') + info.notes.length + ' รายการ' + (info.date ? ' · ' + wnEsc(info.date) : '') + '</div>' +
+            '<ul style="margin:0; padding:0; list-style:none; max-height:34vh; overflow:auto;">' + bullets + '</ul>' +
+            '<div style="display:flex; gap:8px; margin-top:10px;">' +
+                '<button type="button" id="whatsNewHistory" style="flex:1 1 auto; padding:8px 10px; border-radius:10px; border:1px solid rgba(56,189,248,0.45); background:rgba(56,189,248,0.12); color:#7dd3fc; font-weight:700; font-size:12px; cursor:pointer;">ดูประวัติเวอร์ชัน</button>' +
+                '<button type="button" id="whatsNewOk" style="flex:1 1 auto; padding:8px 10px; border-radius:10px; border:0; background:#38bdf8; color:#04212f; font-weight:800; font-size:12px; cursor:pointer;">รับทราบ</button>' +
+            '</div>';
+        const close = () => { el.style.display = 'none'; wnClear(); };
+        const okBtn = document.getElementById('whatsNewOk'); if (okBtn) okBtn.onclick = close;
+        const xBtn = document.getElementById('whatsNewClose'); if (xBtn) xBtn.onclick = close;
+        const hBtn = document.getElementById('whatsNewHistory');
+        if (hBtn) hBtn.onclick = () => { close(); try { if (typeof window.openVersionModal === 'function') window.openVersionModal(); } catch (e) {} };
+        el.style.display = 'block';
+        return el;
+    };
+    window.__whatsNewAfterUpdate = (why) => {
+        const rec = wnRead();
+        if (!rec) return 'none';
+        const info = window.__whatsNewDecide(rec, wnNorm(window.APP_WEB_VERSION), wnCurrentNotes(), wnCurrentDate());
+        if (!info.show) { wnClear(); return 'skip'; }   // จดเป็นรายการใช้ครั้งเดียว — ไม่เด้งซ้ำทุกรอบเปิดแอป
+        rec.shownAt = Date.now();
+        try { localStorage.setItem(WN_KEY, JSON.stringify(rec)); } catch (e) {}
+        wnShowPanel(info);
+        return 'shown:' + info.notes.length;
+    };
     // 🧪 ตะขั้วสำหรับชุดทดสอบ (tests/web-update-check.html) — แค่เรียกฟังก์ชันเดิม ไม่เปลี่ยนตรรกะ
+    window.__whatsNewTest = {
+        notes: () => wnCurrentNotes(),
+        running: () => wnNorm(window.APP_WEB_VERSION),
+        panelText: () => { const el = document.getElementById('whatsNewPanel'); return el && el.style.display !== 'none' ? el.textContent : null; },
+        setRecord: (o) => { try { localStorage.setItem(WN_KEY, JSON.stringify(o)); } catch (e) {} },
+        clearRecord: () => wnClear()
+    };
     window.__webVersionTest = {
         showPill: (v) => verShowPill(v || 'test-version'),
         hidePill: () => verHidePill(),
         pillText: () => { const el = document.getElementById('webUpdatePill'); return el ? el.textContent : null; }
     };
     setTimeout(() => { window.__webUpdateCheck('boot'); }, VER_FIRST_CHECK_MS);
+    // หลังอัปเดตเองเสร็จ → สรุป “มีอะไรใหม่” (เช็คหลังแอปเริ่มทำงานแล้ว เพื่อไม่แย่งจังหวะบูต)
+    setTimeout(() => { try { window.__whatsNewAfterUpdate('boot'); } catch (e) {} }, 3500);
     setInterval(() => { window.__webUpdateCheck('interval'); }, VER_CHECK_EVERY_MS);
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) return;
@@ -15063,7 +15154,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = 'f4fc00b48b';
+    const APP_WEB_VERSION = '9fd3c8f996';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -15447,6 +15538,7 @@
         ['2026-09-18', '🛡️ APK ที่เซ็นด้วยกุญแจผิดจะไม่ถูกปล่อย — งานสร้างหยุดทันทีกันทับของเดิมไม่ได้'],
         ['2026-09-18', '🔄 แอปเช็กเวอร์ชันเว็บเองแล้วอัปเดตให้อัตโนมัติ — ไม่ต้องติดตั้ง APK ใหม่'],
         ['2026-09-18', '🛑 ไม่รีโหลดเองกลางเที่ยว — เด้งป้าย “มีเวอร์ชันใหม่” แล้วอัปเดตให้ทันทีที่จบเที่ยว'],
+        ['2026-09-18', '🆕 อัปเดตเสร็จแล้วเด้งสรุป “มีอะไรใหม่” จากประวัติเวอร์ชันเดิม ให้ — ปิดได้'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {

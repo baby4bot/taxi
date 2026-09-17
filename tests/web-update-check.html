@@ -152,6 +152,69 @@
       return 'diag = ' + JSON.stringify(before);
     });
 
+    await scenario('9. สรุป “มีอะไรใหม่”: เทียบหัวข้อรุ่นเดิมกับรุ่นใหม่ → บอกเฉพาะที่เพิ่มมา', async () => {
+      const d = cw.__whatsNewDecide;
+      assert(typeof d === 'function', 'ไม่พบตัวตัดสินใจ __whatsNewDecide');
+      const rec = { to: 'newver999', from: 'oldver111', beforeNotes: ['หัวข้อเดิม ก', 'หัวข้อเดิม ข'] };
+      const info = d(rec, 'newver999', ['หัวข้อเดิม ก', 'หัวข้อเดิม ข', 'หัวข้อใหม่ ค'], '2026-09-18');
+      assert(info.show === true, 'ต้องเด้งสรุป (ได้ show=' + info.show + ')');
+      assert(info.notes.length === 1 && info.notes[0] === 'หัวข้อใหม่ ค', 'ต้องเหลือเฉพาะหัวข้อใหม่ (ได้ ' + JSON.stringify(info.notes) + ')');
+      assert(info.freshCount === 1, 'ต้องนับว่ามีของใหม่ 1 รายการ');
+      return 'เดิม 2 · ใหม่ 1 → แสดงเฉพาะ “' + info.notes[0] + '”';
+    });
+
+    await scenario('10. สรุป “มีอะไรใหม่”: เด้งครั้งเดียวต่อการอัปเดต 1 ครั้ง (ปิดแล้วไม่เด้งซ้ำ)', async () => {
+      const d = cw.__whatsNewDecide;
+      const notes = ['ก', 'ข', 'ค'];
+      const base = { to: 'v9', from: 'v8', beforeNotes: ['ก', 'ข'] };
+      assert(d(base, 'v9', notes, '').show === true, 'ยังไม่เคยเด้ง → ต้องเด้ง');
+      assert(d(Object.assign({}, base, { shownAt: 12345 }), 'v9', notes, '').show === false, 'เคยเด้งแล้ว → ห้ามเด้งซ้ำ');
+      assert(d(Object.assign({}, base, { to: 'v7' }), 'v9', notes, '').show === false, 'จดไว้คนละรุ่น (อัปเดตไม่สำเร็จ) → ห้ามเด้ง');
+      assert(d(null, 'v9', notes, '').show === false, 'ไม่มีบันทึก → ไม่เด้ง');
+      assert(d(base, 'v9', ['ก'], '').show === false, 'มีหัวข้อเดียว → ไม่มีอะไรให้สรุป');
+      return 'เด้งครั้งเดียว · กันจดข้ามรุ่น · กันตอนไม่เปลี่ยนอะไร';
+    });
+
+    await scenario('11. สรุป “มีอะไรใหม่”: แยกรณี “ของใหม่” กับ “ไฮไลต์” และเงียบเมื่อไม่มีอะไรเปลี่ยน', async () => {
+      const d = cw.__whatsNewDecide;
+      const notes = ['หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก'];
+      // เทียบไม่ได้ (จดรายการรุ่นเดิมไว้หาย) → โหมดไฮไลต์ 4 รายการ
+      const loose = d({ to: 'v9', from: 'v8', beforeNotes: [] }, 'v9', notes, '');
+      assert(loose.show === true && loose.exact === false, 'เทียบไม่ได้ → ต้องเด้งแบบไฮไลต์');
+      assert(loose.notes.length === 4, 'ไฮไลต์ต้องไม่เกิน 4 รายการ (ได้ ' + loose.notes.length + ')');
+      // เทียบได้ + ทุกหัวข้อเป็นของใหม่ → โหมดใหม่ เพดาน 6 รายการ
+      const cap = d({ to: 'v9', from: 'v8', beforeNotes: ['ของเก่าที่ไม่มีแล้ว'] }, 'v9', notes, '');
+      assert(cap.exact === true && cap.notes.length === 6, 'ของใหม่ทั้งชุด → แสดงไม่เกิน 6 รายการ (ได้ ' + cap.notes.length + ')');
+      // เทียบได้ + ไม่มีอะไรเปลี่ยน (เช่น push ที่ไม่เพิ่มหัวข้อ) → ต้องเงียบ ไม่กวนผู้ใช้
+      const same = d({ to: 'v9', from: 'v8', beforeNotes: notes }, 'v9', notes, '');
+      assert(same.show === false, 'ไม่มีอะไรเปลี่ยน → ห้ามเด้งสรุป');
+      return 'เทียบไม่ได้ → ไฮไลต์ 4 · ของใหม่ทั้งชุด → 6 (เพดาน) · ไม่มีอะไรเปลี่ยน → เงียบ';
+    });
+
+    await scenario('12. หน้าจอจริง: แผง “มีอะไรใหม่” ขึ้นหลังอัปเดต และกดปิดได้ (ไม่เด้งซ้ำ)', async () => {
+      const T = cw.__whatsNewTest;
+      assert(T && typeof T.setRecord === 'function', 'ไม่พบตะขั้วทดสอบ __whatsNewTest');
+      T.clearRecord();
+      assert(cw.__whatsNewAfterUpdate('test') === 'none', 'ยังไม่มีบันทึก → ต้องไม่ทำอะไร');
+      T.setRecord({ to: T.running(), from: 'oldver000', at: Date.now(), date: '2026-09-18', beforeNotes: [] });
+      const out = cw.__whatsNewAfterUpdate('test');
+      assert(/^shown:\d+$/.test(out), 'ต้องเด้งแผงสรุป (ได้ ' + out + ')');
+      const txt = T.panelText() || '';
+      assert(/มีอะไรใหม่ในเวอร์ชันนี้/.test(txt), 'แผงต้องมีหัวข้อ (ได้: ' + txt.slice(0, 40) + '…)');
+      const head = (T.notes() || [])[0] || '';
+      assert(head && txt.includes(head.slice(0, 12)), 'แผงต้องแสดงเนื้อหาจากประวัติเวอร์ชันจริง (ได้: ' + JSON.stringify((T.notes() || []).slice(0, 1)) + ')');
+      const doc = cw.document;
+      const okBtn = doc.getElementById('whatsNewOk');
+      assert(!!okBtn, 'ต้องมีปุ่มปิด “รับทราบ”');
+      okBtn.click();
+      await wait(60);
+      assert(T.panelText() === null, 'กดปิดแล้วแผงต้องหาย');
+      assert(cw.__whatsNewAfterUpdate('test') === 'none', 'ปิดแล้วต้องไม่เด้งซ้ำในรอบเดียวกัน');
+      const xBtn = doc.getElementById('whatsNewClose');
+      assert(!!xBtn, 'ต้องมีปุ่ม ✕ มุมขวาบนให้ปิดได้');
+      return 'ขึ้นจริง · มีเนื้อหาจากประวัติเวอร์ชัน · ปิดได้ทั้งปุ่มรับทราบและ ✕ · ไม่เด้งซ้ำ';
+    });
+
     if (failures.length) console.warn('ล้มเหลว:', failures);
   }
 
