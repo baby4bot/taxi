@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบ: ตรวจเวอร์ชันเว็บใหม่ + อัปเดตตัวเอง</title>
+<style>
+  body { background: #0b1220; color: #e6e9f0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 16px; line-height: 1.55; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: #9aa4b2; font-size: 12.5px; margin-bottom: 14px; }
+  #summary { font-size: 15px; font-weight: 700; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; background: rgba(255,255,255,0.04); margin-bottom: 12px; }
+  ul { list-style: none; padding: 0; margin: 0; }
+  li { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; padding: 9px 11px; margin-bottom: 7px; font-size: 13px; white-space: pre-wrap; }
+  li.normal { border-color: rgba(34,197,94,0.55); }
+  li.fail { border-color: rgba(239,68,68,0.75); background: rgba(239,68,68,0.10); }
+  .detail { color: #9aa4b2; font-size: 12px; }
+  button { background: #1f6feb; color: #fff; border: 0; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 700; }
+  iframe { display: none; }
+</style>
+</head>
+<body>
+<h1>🔄 ทดสอบระบบ “มีเวอร์ชันใหม่ → อัปเดตเอง”</h1>
+<div class="sub">รันออฟไลน์ได้ (ยกเว้นด่านที่อ่าน version.json ซึ่งเป็นไฟล์ในเครื่องเอง — ไม่ต้องใช้เน็ตออกนอกเครื่อง)</div>
+<div id="summary">กำลังเริ่ม…</div>
+<ul id="results"></ul>
+<p><button id="runBtn">รันใหม่</button></p>
+<iframe id="appFrame" src="../index.html?fsNowrite=1"></iframe>
+
+<script>
+(function () {
+  'use strict';
+  const frame = document.getElementById('appFrame');
+  const resultsEl = document.getElementById('results');
+  const summaryEl = document.getElementById('summary');
+  let passCount = 0, failCount = 0;
+  const failures = [];
+  const w = () => frame.contentWindow;
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+  function assert(cond, msg) { if (!cond) throw new Error(msg); }
+  async function scenario(name, fn) {
+    const row = document.createElement('li');
+    row.textContent = '⏳ ' + name;
+    resultsEl.appendChild(row);
+    try {
+      const out = await fn();
+      row.className = 'normal';
+      row.innerHTML = '<b>✅ ผ่าน</b> ' + name + (out ? '\n<span class="detail">' + out + '</span>' : '');
+      passCount++;
+    } catch (e) {
+      row.className = 'fail';
+      row.innerHTML = '<b>❌ ล้มเหลว</b> ' + name + '\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span>';
+      failures.push(name + ': ' + (e && e.message ? e.message : String(e)));
+      failCount++;
+    }
+    summaryEl.innerHTML = 'ผลรวม: ผ่าน ' + passCount + ' / ' + (passCount + failCount) + (failCount ? ' — ❌ ล้มเหลว ' + failCount : ' — ✅ ครบทุกข้อ');
+  }
+
+  async function bootApp() {
+    const t0 = Date.now();
+    while (Date.now() - t0 < 30000) {
+      const cw = w();
+      if (cw && typeof cw.__versionCheckDecide === 'function' && typeof cw.__webUpdateCheck === 'function') { await wait(200); return; }
+      await wait(100);
+    }
+    throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+  }
+
+  async function runAll() {
+    resultsEl.innerHTML = ''; passCount = 0; failCount = 0; failures.length = 0;
+    summaryEl.textContent = 'กำลังรัน…';
+    await bootApp();
+    const cw = w();
+    const d = (...a) => cw.__versionCheckDecide(...a);
+
+    await scenario('1. ตัวตัดสินใจ: เวอร์ชันตรงกัน → ไม่ทำอะไร', async () => {
+      assert(d('abc123', 'abc123', {}) === 'none', 'ต้องได้ none (ได้ ' + d('abc123', 'abc123', {}) + ')');
+      return 'same → none';
+    });
+
+    await scenario('2. ตัวตัดสินใจ: มีเวอร์ชันใหม่ + ว่างงาน → อัปเดตเอง', async () => {
+      const v = d('newver999', 'oldver111', {});
+      assert(v === 'reload', 'ต้องได้ reload (ได้ ' + v + ')');
+      return 'newer + idle → reload';
+    });
+
+    await scenario('3. ตัวตัดสินใจ: มีเวอร์ชันใหม่ + กำลังเดินมิเตอร์ → เด้งป้าย ไม่รีโหลด', async () => {
+      const cases = [
+        ['tripRunning', { tripRunning: true }],
+        ['paused', { paused: true }],
+        ['modalOpen', { modalOpen: true }],
+        ['typing', { typing: true }]
+      ];
+      for (const [label, ctx] of cases) {
+        const v = d('newver999', 'oldver111', ctx);
+        assert(v === 'prompt', label + ' ต้องได้ prompt (ได้ ' + v + ')');
+      }
+      return 'ครบ 4 กรณี (เที่ยวเดิน · พักมิเตอร์ · มีหน้าต่างเปิด · กำลังพิมพ์) → prompt';
+    });
+
+    await scenario('4. ตัวตัดสินใจ: ออฟไลน์ หรืออ่านเวอร์ชันไม่ได้ → เงียบไว้', async () => {
+      assert(d('newver999', 'oldver111', { offline: true }) === 'none', 'ออฟไลน์ต้องไม่ทำอะไร');
+      assert(d('', 'oldver111', {}) === 'none', 'เซิร์ฟเวอร์ไม่บอกเวอร์ชัน → เงียบ');
+      assert(d('newver999', '', {}) === 'none', 'หน้านี้ไม่รู้เวอร์ชันตัวเอง → เงียบ (กันรีโหลดวน)');
+      return 'offline / ไม่มีค่า → none';
+    });
+
+    await scenario('5. หน้าเว็บมีเวอร์ชันของตัวเอง (10 ตัวอักษร) + ตรงกับ version.json', async () => {
+      const mine = cw.APP_WEB_VERSION;
+      assert(mine && /^[0-9a-f]{10}$/.test(mine), 'APP_WEB_VERSION ต้องเป็น hex 10 ตัว (ได้ ' + mine + ')');
+      const r = await fetch('../version.json?_=' + Date.now(), { cache: 'no-store' });
+      assert(r.ok, 'อ่าน version.json ไม่ได้ (HTTP ' + r.status + ')');
+      const j = await r.json();
+      assert(j.v === mine, 'version.json.v (' + j.v + ') ต้องเท่ากับ APP_WEB_VERSION (' + mine + ')');
+      assert(/^[0-9a-f]{32}$/.test(j.md5 || ''), 'version.json.md5 ต้องเป็น md5 (ได้ ' + j.md5 + ')');
+      assert(Array.isArray(j.files), 'version.json ต้องมีรายการไฟล์');
+      return 'v=' + mine + ' · md5=' + j.md5.slice(0, 8) + '… · ไฟล์: ' + j.files.join(', ');
+    });
+
+    await scenario('6. เปิดแอปแล้วห้ามรีโหลดเอง (เวอร์ชันตรงกัน) + ไม่มีป้ายค้าง', async () => {
+      const out = await cw.__webUpdateCheck('test');
+      assert(out === 'same', 'ตรวจเวอร์ชันต้องได้ same (ได้ ' + out + ')');
+      const diag = cw.__webVersionDiag();
+      assert(diag.reloadScheduled === false, 'ห้ามตั้งเวลารีโหลดเมื่อเวอร์ชันตรงกัน');
+      assert(diag.pill === false, 'ห้ามมีป้าย “มีเวอร์ชันใหม่” ค้างอยู่');
+      return 'ตรวจได้ same · reloadScheduled=false · ไม่มีป้าย';
+    });
+
+    await scenario('7. ป้าย “มีเวอร์ชันใหม่” เปลี่ยนข้อความตามสถานะ (ว่างงาน = กดเอง · กลางเที่ยว = รอจบเที่ยว)', async () => {
+      const T = cw.__webVersionTest;
+      assert(T && typeof T.showPill === 'function', 'ไม่พบตะขั้วทดสอบ __webVersionTest');
+      cw.isManualRunning = false;
+      T.showPill('newver999');
+      await wait(60);
+      const idle = T.pillText() || '';
+      assert(/แตะอัปเดต/.test(idle), 'ตอนว่างงานต้องชวนให้แตะอัปเดต (ได้: ' + idle + ')');
+      cw.isManualRunning = true;
+      T.showPill('newver999');
+      await wait(60);
+      const trip = T.pillText() || '';
+      assert(/หลังจบเที่ยว/.test(trip), 'กลางเที่ยวต้องบอกว่าจะอัปเดตให้หลังจบเที่ยว (ได้: ' + trip + ')');
+      cw.isManualRunning = false;
+      T.hidePill();
+      await wait(60);
+      assert(T.pillText() === null, 'สั่งซ่อนแล้วป้ายต้องหายไป');
+      return 'ว่างงาน: “' + idle.trim().slice(0, 34) + '…” · กลางเที่ยว: “' + trip.trim().slice(0, 40) + '…”';
+    });
+
+    await scenario('8. ไม่มีสคริปต์อื่นพัง: ตัวเช็คทำงานกับออฟไลน์ได้โดยไม่ throw', async () => {
+      const before = cw.__webVersionDiag();
+      assert(typeof before.lastCheckAgeSec === 'number' || before.lastCheckAgeSec === null, 'อ่านค่า diag ได้');
+      return 'diag = ' + JSON.stringify(before);
+    });
+
+    if (failures.length) console.warn('ล้มเหลว:', failures);
+  }
+
+  document.getElementById('runBtn').addEventListener('click', runAll);
+  window.addEventListener('load', () => { runAll(); });
+})();
+</script>
+</body>
+</html>

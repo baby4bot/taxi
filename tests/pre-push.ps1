@@ -147,7 +147,27 @@ if (Test-Path $pwaChecker) {
   Fail 'tests/pwa-check.ps1 missing'
 }
 
-# --- 3c) never ship the APK signing key -------------------------------------
+# --- 3c) the web build must carry a fresh version stamp ----------------------
+#   (owner request 18 Sep 2026: "let the app notice a newer web build by itself
+#    and reload, without reinstalling the APK". version.json is what the RUNNING
+#    app compares against, so it must describe the exact index.html being
+#    pushed - otherwise the app either never notices an update or reloads
+#    forever. -Check also compares taxi-repo copies.)
+$stamper = Resolve-FromRoot 'tests/stamp-web-version.ps1'
+if (Test-Path $stamper) {
+  $sOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $stamper -Check -Root $root 2>&1 | Out-String
+  $sLines = @($sOut -split "`r?`n" | Where-Object { $_ -match '\S' })
+  if ($LASTEXITCODE -eq 0 -and -not @($sLines | Where-Object { $_ -match '^FAIL' }).Count) {
+    Pass ('web version stamp: ' + (@($sLines | Where-Object { $_ -match '^PASS' }) -join ' '))
+  } else {
+    Fail 'web version stamp is stale -> run: powershell -File tests/stamp-web-version.ps1'
+    foreach ($l in $sLines) { Say ('        ' + $l.Trim()) }
+  }
+} else {
+  Fail 'tests/stamp-web-version.ps1 missing'
+}
+
+# --- 3d) never ship the APK signing key -------------------------------------
 #   (owner request 18 Sep 2026: "ติดตั้งทับได้เลย ไม่ต้องถอนของเก่า" -> the key at
 #    .freebuff/signing-key/ + GitHub Actions secrets keeps one identity forever.
 #    If that private key ever lands in the repo, anyone can publish an APK that

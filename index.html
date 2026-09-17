@@ -7570,6 +7570,128 @@
         window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {}); });
     }
 
+    // ============================================================
+    // 🔄 ตรวจเองว่าเว็บมีเวอร์ชันใหม่กว่า → อัปเดตให้เอง (เพิ่ม 18 ก.ย. 69 · ผู้ใช้ขอ)
+    //    ทำไม: แอป Android เป็น “เปลือก” ที่โหลดเว็บสด ⇒ แก้ index.html แล้วไม่ต้องออก APK ใหม่
+    //    แต่เครื่องที่เปิดแอปค้างไว้จะรันโค้ดเก่าจนกว่าจะปิด-เปิดใหม่ ⇒ ให้ตัวแอปเช็คเองแล้วอัปเดตให้
+    //    กติกาความปลอดภัย (ห้ามละเมิด — ข้อมูลเที่ยว/การนำทางต้องไม่หาย):
+    //      ① ห้ามรีโหลดกลางเที่ยว (มิเตอร์เดิน/พักอยู่) มีหน้าต่างเปิดอยู่ หรือกำลังพิมพ์ข้อความ
+    //         → เด้งป้าย “มีเวอร์ชันใหม่” ให้กดเอง และอัปเดตให้เองทันทีที่จบเที่ยว
+    //      ② ออฟไลน์/อ่านไฟล์ไม่ได้ → ไม่ทำอะไรเลย (ไม่ทวงถาม ไม่รบกวน)
+    //    ตัวตัดสินใจเป็นฟังก์ชันล้วน (`__versionCheckDecide`) — ทดสอบออฟไลน์ได้ใน tests/web-update-check.html
+    //    ที่มาเวอร์ชัน: `version.json` (สคริปต์ tests/stamp-web-version.ps1 เขียนพร้อม index.html ตอน push)
+    // ============================================================
+    const VER_CHECK_EVERY_MS = 5 * 60 * 1000;  // ตรวจซ้ำทุก 5 นาที
+    const VER_FIRST_CHECK_MS = 8000;           // ตรวจครั้งแรกหลังโหลด 8 วิ (ไม่แย่งจังหวะบูตแอป)
+    const VER_RETRY_MS = 60 * 1000;            // หลังกลับเข้าหน้าจอ: ตรวจใหม่ถ้าครั้งก่อนเกิน 60 วิ
+    const VER_AUTO_RELOAD_MS = 4000;           // เด้งข้อความแล้วรอ 4 วิก่อนรีโหลด (ให้คนขับอ่านทัน)
+    let verLastCheckAt = 0, verServerVersion = null, verReloadTimer = null, verPendingVersion = null;
+    window.__webVersionDiag = () => ({
+        mine: window.APP_WEB_VERSION || null, server: verServerVersion,
+        lastCheckAgeSec: verLastCheckAt ? Math.round((Date.now() - verLastCheckAt) / 1000) : null,
+        pill: !!document.getElementById('webUpdatePill'), reloadScheduled: !!verReloadTimer
+    });
+    const verNormalize = (v) => String(v == null ? '' : v).trim();
+    // 🧪 ตัวตัดสินใจ (ไม่แตะ DOM/เน็ต): 'none' = ไม่มีอะไรต้องทำ · 'prompt' = ให้กดเอง · 'reload' = อัปเดตเองได้
+    window.__versionCheckDecide = (serverV, myV, ctx) => {
+        const s = verNormalize(serverV), m = verNormalize(myV);
+        if (!s || !m) return 'none';        // อ่านเวอร์ชันไม่ได้ (ยังไม่ประทับ/ไฟล์หาย) → เงียบไว้
+        if (s === m) return 'none';         // ตรงกัน = รันของล่าสุดอยู่แล้ว
+        const c = ctx || {};
+        if (c.offline) return 'none';       // ออฟไลน์ = ยังโหลดของใหม่ไม่ได้อยู่ดี
+        if (c.tripRunning || c.paused || c.modalOpen || c.typing) return 'prompt'; // ห้ามรีโหลดกลางงาน
+        return 'reload';
+    };
+    const verAnyModalOpen = () => {
+        try {
+            return Array.from(document.querySelectorAll('.modal-overlay')).some(el => {
+                const d = el.style.display;
+                return !!d && d !== 'none' && getComputedStyle(el).display !== 'none';
+            });
+        } catch (e) { return false; }
+    };
+    const verIsTyping = () => {
+        try { const a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); } catch (e) { return false; }
+    };
+    // อัปเดตจริง: รีโหลดพร้อม tag เวอร์ชัน (บังคับผ่านแคช) — คงค่า query เดิมไว้ด้วย
+    window.__webUpdateApplyNow = (why) => {
+        const v = verPendingVersion || verServerVersion || '';
+        try {
+            const u = new URL(location.href);
+            if (v) u.searchParams.set('v', v);
+            u.searchParams.set('upd', String(Date.now()).slice(-6));
+            location.replace(u.toString());
+        } catch (e) { try { location.reload(); } catch (e2) {} }
+        return why || 'manual';
+    };
+    const verShowPill = (serverV) => {
+        let el = document.getElementById('webUpdatePill');
+        if (!el) {
+            el = document.createElement('button');
+            el.id = 'webUpdatePill';
+            el.type = 'button';
+            el.setAttribute('style', 'position:fixed; left:12px; bottom:calc(78px + env(safe-area-inset-bottom)); z-index:240000; display:flex; align-items:center; gap:7px; padding:9px 13px; border-radius:999px; border:1px solid rgba(56,189,248,0.55); background:rgba(8,20,32,0.92); color:#7dd3fc; font-size:12.5px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,0.45); backdrop-filter:blur(6px); cursor:pointer;');
+            el.onclick = () => window.__webUpdateApplyNow('tap');
+            document.body.appendChild(el);
+        }
+        const trip = !!window.isManualRunning;
+        el.innerHTML = '<span class="material-symbols-outlined" style="font-size:17px;">sync</span>' +
+            (trip ? 'มีเวอร์ชันใหม่ — จะอัปเดตให้หลังจบเที่ยว' : 'มีเวอร์ชันใหม่ — แตะอัปเดต') +
+            '<span style="opacity:.75; font-weight:500;">' + (serverV ? ' (' + String(serverV).slice(0, 12) + ')' : '') + '</span>';
+        el.style.display = 'flex';
+    };
+    const verHidePill = () => { const el = document.getElementById('webUpdatePill'); if (el) el.remove(); };
+    window.__webUpdateCheck = async (why) => {
+        verLastCheckAt = Date.now();
+        try {
+            if (navigator.onLine === false) return 'offline';
+            let my = verNormalize(window.APP_WEB_VERSION);
+            if (!my && typeof APP_WEB_VERSION !== 'undefined') my = verNormalize(APP_WEB_VERSION);
+            const r = await fetch('version.json?_=' + Date.now(), { cache: 'no-store' });
+            if (!r.ok) return 'no-file';
+            const j = await r.json();
+            verServerVersion = j && j.v ? String(j.v) : null;
+            const decision = window.__versionCheckDecide(verServerVersion, my, {
+                offline: false,
+                tripRunning: !!window.isManualRunning,
+                paused: !!window.isMeterPaused,
+                modalOpen: verAnyModalOpen(),
+                typing: verIsTyping()
+            });
+            if (decision === 'none') { verPendingVersion = null; return (verServerVersion === my) ? 'same' : 'skipped'; }
+            verPendingVersion = verServerVersion;
+            if (decision === 'prompt') { verShowPill(verServerVersion); return 'prompt'; }
+            verHidePill();
+            if (!verReloadTimer) {
+                if (typeof window.showToast === 'function') window.showToast('พบแอปเวอร์ชันใหม่ — กำลังอัปเดตให้อัตโนมัติ…', false, null, true);
+                verReloadTimer = setTimeout(() => { verReloadTimer = null; window.__webUpdateApplyNow('auto'); }, VER_AUTO_RELOAD_MS);
+            }
+            return 'reload';
+        } catch (e) { return 'error'; }
+    };
+    // จบเที่ยว/ปิดหน้าสรุป → ถ้ามีเวอร์ชันใหม่ค้างอยู่ ให้อัปเดตให้เลย (ไม่รบกวนกลางเที่ยว)
+    window.__webUpdateApplyIfPending = (why) => {
+        if (!verPendingVersion) return 'none';
+        if (window.isManualRunning || window.isMeterPaused || verAnyModalOpen()) return 'wait';
+        if (typeof window.showToast === 'function') window.showToast('อัปเดตเป็นเวอร์ชันใหม่ให้แล้ว…', false, null, true);
+        verReloadTimer = setTimeout(() => { verReloadTimer = null; window.__webUpdateApplyNow(why || 'trip-end'); }, VER_AUTO_RELOAD_MS);
+        return 'scheduled';
+    };
+    // 🧪 ตะขั้วสำหรับชุดทดสอบ (tests/web-update-check.html) — แค่เรียกฟังก์ชันเดิม ไม่เปลี่ยนตรรกะ
+    window.__webVersionTest = {
+        showPill: (v) => verShowPill(v || 'test-version'),
+        hidePill: () => verHidePill(),
+        pillText: () => { const el = document.getElementById('webUpdatePill'); return el ? el.textContent : null; }
+    };
+    setTimeout(() => { window.__webUpdateCheck('boot'); }, VER_FIRST_CHECK_MS);
+    setInterval(() => { window.__webUpdateCheck('interval'); }, VER_CHECK_EVERY_MS);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) return;
+        if (Date.now() - verLastCheckAt >= VER_RETRY_MS) window.__webUpdateCheck('visible');
+        window.__webUpdateApplyIfPending('visible');
+    });
+    window.addEventListener('online', () => { window.__webUpdateCheck('online'); });
+
     window.copyAppShareLink = () => {
         const link = "https://baby4bot.github.io/taxi/";
         navigator.clipboard.writeText(link).then(() => {
@@ -13729,6 +13851,8 @@
     window.resetAll = () => {  
         $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; 
         window.isManualRunning = false; window.surchargeList = []; trafficSeconds = 0; pauseLog = []; pauseOpenAt = null; window.updateSurchargeUI(); window.clearActiveTrip();
+        // 🔄 จบเที่ยว + ปิดหน้าสรุปแล้ว: ถ้ามีเวอร์ชันเว็บใหม่ค้างอยู่ ให้อัปเดตให้ตอนนี้ (ไม่รบกวนกลางเที่ยว)
+        try { if (typeof window.__webUpdateApplyIfPending === 'function') window.__webUpdateApplyIfPending('trip-end'); } catch (e) {}
         window.hideCatchUpStatus();
         window.renderStartButton();
         $('manualTimerBtn').classList.remove('active');
@@ -14936,6 +15060,11 @@
     // ✅ อัปเดต APP_BUILD หลังจากฟังก์ชันถูกประกาศเสร็จ (แก้ Temporal Dead Zone — อ้างก่อนประกาศ)
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
     const APP_RELEASE_DATE = '2026-09-18'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
+    // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
+    //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
+    //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
+    const APP_WEB_VERSION = 'f4fc00b48b';
+    try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
     // 📋 ตารางประวัติเวอร์ชัน — ต้นทางเดียวของข้อความทุกหัวข้อ: [วันที่, ข้อความสรุปสั้น]
@@ -15316,6 +15445,8 @@
         ['2026-09-18', '⏱️ กดเริ่มมิเตอร์แล้วเวลารถติดเดินทันที — เดิมค้างอยู่ที่ 0:01 รอสัญญาณ GPS ~10 วิ'],
         ['2026-09-18', '🔑 ตั้งกุญแจเซ็นแอปถาวรแล้ว — ติดตั้งอัปเดตทับได้เลย ไม่ต้องถอนของเก่า'],
         ['2026-09-18', '🛡️ APK ที่เซ็นด้วยกุญแจผิดจะไม่ถูกปล่อย — งานสร้างหยุดทันทีกันทับของเดิมไม่ได้'],
+        ['2026-09-18', '🔄 แอปเช็กเวอร์ชันเว็บเองแล้วอัปเดตให้อัตโนมัติ — ไม่ต้องติดตั้ง APK ใหม่'],
+        ['2026-09-18', '🛑 ไม่รีโหลดเองกลางเที่ยว — เด้งป้าย “มีเวอร์ชันใหม่” แล้วอัปเดตให้ทันทีที่จบเที่ยว'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
