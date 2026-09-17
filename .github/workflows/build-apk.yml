@@ -45,11 +45,26 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: เตรียม Android SDK (กดยอมรับสัญญาอนุญาตให้ด้วย)
-        uses: android-actions/setup-android@v3
-
-      - name: ติดตั้งแพ็กเกจ Android ที่โปรเจกต์ต้องใช้
-        run: sdkmanager --install "platforms;android-34" "build-tools;34.0.0" > /dev/null || true
+      # ⛔ ไม่ใช้ android-actions/setup-android อีกแล้ว — รอบ 18 ก.ย. 2026 งานล้มที่ขั้นนี้
+      #    เพราะตัวรัน GitHub เปลี่ยนไปใช้ Android Command Line Tools 12.0 (action รุ่นเก่าเข้ากับไม่ได้)
+      #    ตัวรันมี Android SDK มาให้แล้ว: ANDROID_HOME=/usr/local/lib/android/sdk
+      #      · platforms: android-34 (rev 3)  · build-tools: 34.0.0
+      #    ⇒ ใช้ของที่มีอยู่เลย ไม่ต้องติดตั้งอะไร และไม่ต้องกดยอมรับสัญญาอนุญาต
+      # sdk: preinstalled runner SDK (no setup-android)
+      - name: ตรวจ Android SDK ที่มีในเครื่องรัน
+        run: |
+          set -e
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "SDK = $SDK"
+          echo "platforms:   $(ls -1 "$SDK/platforms" 2>/dev/null | tr '\n' ' ')"
+          echo "build-tools: $(ls -1 "$SDK/build-tools" 2>/dev/null | tr '\n' ' ')"
+          echo "java:        $(java -version 2>&1 | head -1)"
+          if [ ! -d "$SDK/platforms/android-34" ]; then
+            echo "::error::ไม่พบ platforms;android-34 — แก้ compileSdk ใน android-app/app/build.gradle ให้ตรงกับที่มีบนตัวรัน"
+            exit 1
+          fi
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
 
       - name: ติดตั้ง Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
