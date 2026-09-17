@@ -44,6 +44,11 @@
      มาจาก artifact `keystore-bootstrap` ของงาน **build #8** = ดอกเดียวกับแอปที่ติดตั้งบนเครื่องผู้ใช้
    - Secrets ที่ต้องมีบน GitHub: `KEYSTORE_BASE64` + `KEYSTORE_PASSWORD`
      (ค่าต้นทางอยู่ที่ `.freebuff/signing-key/secret-KEYSTORE_BASE64.txt` และ `secret-KEYSTORE_PASSWORD.txt`)
+   - ✅ **ตั้ง Secrets ครบแล้ว 18 ก.ย. 69 · build #16 ยืนยันจากตัว APK เองว่าเซ็นด้วย `74449ae2…`**
+     ⇒ ตั้งแต่รุ่น **v1.2.0 (versionCode 3)** ไป ผู้ใช้ติดตั้งทับแอปเดิมได้เลย **ไม่ต้องถอน**
+   - ⚠️ **กับดักที่เจอตอน build #16:** อัปโหลด `apk-info.txt` ขึ้น Release ได้ `HTTP 500 (Error creating asset temp dir)`
+     แบบสุ่ม ⇒ ตัว APK ขึ้นครบแต่ **งานกลายเป็น “ล้ม” ทั้งที่ของดี** · แก้แล้วด้วย `upload_retry()` ใน workflow
+     (ลองซ้ำ 4 ครั้ง เว้น 5/10/20 วิ · APK ล้ม = ล้มงานจริง แต่ไฟล์ข้อมูลประกอบล้ม = เตือนแล้วไปต่อ)
    - ⛔ ห้าม commit ไฟล์กุญแจเด็ดขาด — โฟลเดอร์ `.freebuff/signing-key/` มี `.gitignore` = `*` กันไว้แล้ว
      และ `tests/pre-push.ps1` ข้อ 3c จะหยุดก่อน push ถ้าพบกุญแจอยู่ในเรโป
    - 🔒 **ด่านกันกุญแจเปลี่ยนดอก:** งาน build เทียบลายนิ้วมือของ APK กับ `android-app/signing-key-fingerprint.txt`

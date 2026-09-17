@@ -302,11 +302,33 @@ jobs:
           # ⚠️ Release สร้างไปแล้วรอบแรกด้วยชื่อเดิม ⇒ ต้องสั่งแก้ชื่อทุกครั้ง ไม่งั้นหน้าดาวน์โหลดจะค้างชื่อเก่า
           gh release edit apk-latest --title "ค่าแท็กซี่ — APK ล่าสุด" \
             --notes "ดาวน์โหลดไฟล์ .apk แล้วติดตั้งบนมือถือ Android (อนุญาตติดตั้งจากแหล่งที่ไม่รู้จัก)" || true
-          gh release upload apk-latest android-app/app/build/outputs/apk/release/*.apk --clobber
+          # ⚠️ GitHub เคยตอบ HTTP 500 (Error creating asset temp dir) แบบไม่แน่นอน → อัปโหลดครั้งเดียวเจ๊ง
+          #    แล้วงานทั้งรอบกลายเป็น "ล้ม" ทั้งที่ APK สมบูรณ์ (เกิดจริงกับงาน #16 เมื่อ 18 ก.ย. 69)
+          #    ⇒ ลองซ้ำ 4 ครั้ง (เว้น 5/10/20 วิ) · ตัว APK ถ้าล้มให้ล้มงาน (สำคัญ)
+          #      แต่ apk-info.txt เป็นข้อมูลประกอบ → เตือนพอ ไม่ล้มงานทั้งรอบ
+          upload_retry() {
+            local f="$1" fatal="$2" n=0 wait=5
+            while [ "$n" -lt 4 ]; do
+              if gh release upload apk-latest "$f" --clobber; then return 0; fi
+              n=$((n + 1))
+              if [ "$n" -lt 4 ]; then
+                echo "::warning::อัปโหลด $(basename "$f") ไม่สำเร็จ (ครั้งที่ $n) — รอ ${wait} วิ แล้วลองใหม่"
+                sleep "$wait"
+                wait=$((wait * 2))
+              fi
+            done
+            if [ "$fatal" = fatal ]; then
+              echo "::error::อัปโหลด $(basename "$f") ไม่สำเร็จหลังลอง 4 ครั้ง"
+              return 1
+            fi
+            echo "::warning::อัปโหลด $(basename "$f") ไม่สำเร็จหลังลอง 4 ครั้ง — ข้ามไป (ไฟล์ APK ขึ้นครบแล้ว)"
+            return 0
+          }
+          for f in android-app/app/build/outputs/apk/release/*.apk; do upload_retry "$f" fatal; done
 
           # ข้อมูลของไฟล์ (ชื่อแอป · ไอคอน · sha256 · เวลาสร้าง) — ให้ตรวจได้โดยไม่ต้องติดตั้ง
           if [ -f android-app/app/build/outputs/apk/release/apk-info.txt ]; then
-            gh release upload apk-latest android-app/app/build/outputs/apk/release/apk-info.txt --clobber
+            upload_retry android-app/app/build/outputs/apk/release/apk-info.txt soft
           fi
 
           # 🧹 ลบไฟล์ที่ไม่ถูกเซ็นที่ค้างจากรอบก่อน — กันคนกดโหลดผิดไฟล์ไปติดตั้งไม่ได้
