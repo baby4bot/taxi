@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ชุดทดสอบออฟไลน์ — ใช้พิกัดจริงตอนล็อกจอ (native fixes)</title>
+<style>
+    :root { --bg: #0d1117; --panel: #161b22; --line: #2a323d; --text: #e6e9f0; --dim: #97a1b0; --green: #35d07f; --red: #ff6b6b; --yellow: #ffd24d; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 18px 16px 60px; background: var(--bg); color: var(--text);
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif; line-height: 1.6; }
+    h1 { font-size: 19px; margin: 0 0 6px; }
+    p.note { color: var(--dim); font-size: 13px; margin: 0 0 14px; }
+    button { background: #1f6feb; color: #fff; border: 0; border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    button.alt { background: #30363d; }
+    #offline { margin: 14px 0 8px; font-size: 12.5px; color: var(--dim); }
+    #summary { margin: 8px 0 12px; font-size: 15px; font-weight: 700; }
+    ol { padding-left: 22px; margin: 0; }
+    li { margin: 0 0 9px; font-size: 14px; }
+    li.pass .st { color: var(--green); font-weight: 700; }
+    li.fail .st { color: var(--red); font-weight: 700; }
+    .detail { display: block; color: var(--dim); font-size: 12.5px; white-space: pre-wrap; }
+    iframe { width: 100%; height: 190px; margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+    code { background: #1b2230; padding: 1px 5px; border-radius: 5px; font-size: 12.5px; }
+</style>
+</head>
+<body>
+    <h1>🧾 ชุดทดสอบออฟไลน์ — “ใช้พิกัดจริงตอนล็อกจอ” แทนการเดา</h1>
+    <p class="note">
+        ตรวจ 2 ชั้น: <b>ชั้นสูตร</b> (<code>__gapNativeEvidence</code> อ่าน fix ที่ชั้น Android เก็บไว้ตอนจอดับ/ล็อกจอ) 7 เคส ·
+        <b>ชั้นเที่ยวจริง</b> (จำลองล็อกจอ แล้วดูว่ามิเตอร์เบิกคืนถูกไหม) 3 เคส
+        <br>ไฟล์นี้ <b>ไม่ใช้เน็ต</b> — สตับ GPS/เวลา/การซ่อนหน้าเองทั้งหมด · รันได้ทั้งในเครื่อง (ผ่าน static server) และบน GitHub Pages
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (10 เคส)</button>
+    <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <iframe id="appFrame" src="about:blank"></iframe>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[native-fix-test]', ...a); } catch (e) {} };
+    const START = { lat: 13.7563, lon: 100.5018 };
+    const KM_PER_DEG_LAT = 110.574, KM_PER_DEG_LON = 111.320 * Math.cos(START.lat * Math.PI / 180);
+    let pos = { lat: START.lat, lon: START.lon };
+
+    // ============================ สตับ (ตัดเน็ต + ควบคุมเวลา + GPS ปลอม + สั่งซ่อนหน้า) ============================
+    // หมายเหตุ: ชื่อฟิลด์ของ fix ต้องตรงกับที่ชั้น Android ส่งจริง (BgLocationService.onLocationChanged)
+    //   t = เวลาของจุดพิกัด (ms) · lat/lon · acc = ความคลาดเคลื่อน (ม., -1 = ไม่รู้) · spd = ความเร็ว ม./วินาที (-1 = ไม่รู้) · prov = 'gps'/'network'/'fused'
+    function installStubs() {
+        const cw = w();
+        cw.__testNoDbWrites = true;
+        try { cw.__testSkippedTripWrites = 0; } catch (e) {}
+
+        // ---- ⏰ นาฬิกาปลอม ----
+        cw.__fakeNow = Date.now();
+        cw.Date.now = () => cw.__fakeNow;
+        cw.__advance = (ms) => { cw.__fakeNow += ms; return cw.__fakeNow; };
+
+        // ---- 🚫 ตัดเน็ต ----
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u, ...rest) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) {
+                    cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return;
+                }
+                return open(m, u, ...rest);
+            };
+            const send = x.send.bind(x);
+            x.send = function (...a) {
+                if (x.__blocked) { try { Object.defineProperty(x, 'status', { value: 0 }); x.readyState = 4; x.dispatchEvent(new Event('error')); } catch (e) {} return; }
+                return send(...a);
+            };
+            return x;
+        };
+
+        // ---- 📡 GPS ปลอมของหน้าเว็บ (เหมือนชุดทดสอบอื่น) ----
+        cw.__q = [];
+        cw.__pendingCur = [];
+        cw.__geo = { watchCalls: 0, fed: { watch: 0, cur: 0, queued: 0, timeout: 0, miss: 0 }, drained: 0 };
+        const g = cw.navigator.geolocation;
+        g.getCurrentPosition = (ok, err, opts) => {
+            if (cw.__pendingCur.length) {
+                const fx = cw.__pendingCur.shift();
+                setTimeout(() => { try { ok(fx); } catch (e) {} }, 0);
+                return;
+            }
+            const item = { kind: 'cur', ok, err };
+            cw.__q.push(item);
+            const to = (opts && typeof opts.timeout === 'number') ? opts.timeout : 8000;
+            setTimeout(() => {
+                const i = cw.__q.indexOf(item);
+                if (i < 0) return;
+                cw.__q.splice(i, 1);
+                cw.__geo.fed.timeout++;
+                try { if (err) err({ code: 3, message: 'offline-test: จำลองหมดเวลา' }); } catch (e) {}
+            }, to);
+        };
+        g.watchPosition = (ok, err) => {
+            cw.__geo.watchCalls++;
+            cw.__q.push({ kind: 'watch', ok, err });
+            cw.__watchCb = ok;
+            return 9000 + cw.__geo.watchCalls;
+        };
+        g.clearWatch = () => {};
+
+        // ---- 👁️ สั่งซ่อน/แสดงหน้า (จำลองล็อกจอที่ยังยิง event) ----
+        cw.__setHidden = (hidden) => {
+            try {
+                Object.defineProperty(cw.document, 'visibilityState', { configurable: true, get: () => hidden ? 'hidden' : 'visible' });
+                Object.defineProperty(cw.document, 'hidden', { configurable: true, get: () => !!hidden });
+                cw.document.dispatchEvent(new cw.Event('visibilitychange'));
+            } catch (e) {}
+        };
+    }
+
+    // ============================ ตัวช่วยอ่าน/ขับแอป ============================
+    const TRIP_KEY = 'taxi_active_trip_v1';
+    const tripState = () => { try { return JSON.parse(w().localStorage.getItem(TRIP_KEY) || 'null'); } catch (e) { return null; } };
+    const tripStateFresh = () => { try { w().saveActiveTrip(true); } catch (e) {} return tripState(); };
+    const audit = () => (typeof w().__gapAudit === 'function' ? w().__gapAudit() : null);
+    const lastTrace = () => { const t = (audit() || {}).trace || []; return t[t.length - 1] || null; };
+
+    function feedFix(kind, lat, lon, acc, speedKmh) {
+        const cw = w();
+        const coords = { latitude: lat, longitude: lon, accuracy: (typeof acc === 'number') ? acc : 8, speed: (typeof speedKmh === 'number') ? speedKmh / 3.6 : null };
+        const fix = { coords, timestamp: cw.__fakeNow };
+        if (kind === 'watch') {
+            const cb = (typeof cw.__watchCb === 'function') ? cw.__watchCb : ((cw.__q || []).find(x => x.kind === 'watch') || {}).ok;
+            if (typeof cb === 'function') {
+                const i = (cw.__q || []).findIndex(x => x.kind === 'watch');
+                if (i >= 0) cw.__q.splice(i, 1);
+                try { cb(fix); cw.__geo.fed.watch++; return true; } catch (e) { return false; }
+            }
+            cw.__geo.fed.miss++;
+            return false;
+        }
+        const i = (cw.__q || []).findIndex(x => x.kind === kind);
+        if (i >= 0) { const item = cw.__q.splice(i, 1)[0]; try { item.ok(fix); cw.__geo.fed[kind]++; return true; } catch (e) { return false; } }
+        if (kind === 'cur') { cw.__pendingCur.push(fix); cw.__geo.fed.queued++; return true; }
+        cw.__geo.fed.miss++;
+        return false;
+    }
+
+    function drainPending(tag) {
+        const cw = w();
+        let n = 0;
+        for (let i = cw.__q.length - 1; i >= 0; i--) {
+            if (cw.__q[i].kind !== 'cur') continue;
+            const item = cw.__q.splice(i, 1)[0];
+            try { item.ok({ coords: { latitude: pos.lat, longitude: pos.lon, accuracy: 8, speed: 0 }, timestamp: cw.__fakeNow }); n++; } catch (e) {}
+        }
+        cw.__geo.drained = (cw.__geo.drained || 0) + n;
+        if (n && tag) log('drainPending(' + tag + '): เก็บคำขอค้าง ' + n);
+        return n;
+    }
+
+    // 🧾 ใส่พิกัดที่ชั้น Android เก็บไว้ (ของจริงมาทาง window.nativeDrain) — ที่นี่ใส่ตรงเพื่อคุมหลักฐานเอง
+    function pushNative(t, lat, lon, opts) {
+        const cw = w();
+        const o = opts || {};
+        cw.nativeFixes.push({
+            t: t,
+            lat: lat, lon: lon,
+            acc: (typeof o.acc === 'number') ? o.acc : 8,
+            spd: (typeof o.spd === 'number') ? o.spd : -1,
+            brg: 0,
+            prov: o.prov || 'gps'
+        });
+        cw.__nativeFixLastAt = cw.__fakeNow;
+    }
+    const clearNative = () => { try { w().nativeFixes.length = 0; } catch (e) {} };
+
+    function seedTrip(overrides) {
+        const cw = w();
+        const now = cw.__fakeNow;
+        const data = Object.assign({
+            v: 1, savedAt: now, startTime: now, caughtUpAt: now,
+            km: 0, trafficSec: 0, remainKm: 0, remainSec: 0,
+            lastPos: { lat: START.lat, lon: START.lon },
+            lastPath: [{ lat: START.lat - 0.01, lon: START.lon }, { lat: START.lat, lon: START.lon }],
+            dest: null, destName: '', surcharges: [], baseFare: 35,
+            pauseLog: [], pauseOpenAt: null, paused: false
+        }, overrides || {});
+        cw.localStorage.setItem(TRIP_KEY, JSON.stringify(data));
+        cw.resumeSavedTrip();
+        return data;
+    }
+
+    // 🚗 เดินหน้าไปทางเหนือตามระยะที่วิ่งจริง (โดยไม่มีใครป้อน GPS ให้ตัวติดตามของแอป — ใช้ตอนขับด้วยจอเปิด)
+    function driveStep(sec, kmh) {
+        const cw = w();
+        if (kmh > 0) {
+            const km = kmh * sec / 3600;
+            pos.lat += km / KM_PER_DEG_LAT;
+            pos.lon += (km * 0.1) / KM_PER_DEG_LON;
+        }
+        cw.__advance(sec * 1000);
+        return feedFix('watch', pos.lat, pos.lon, 8, kmh);
+    }
+
+    function haversineKm(a, b) {
+        const R = 6371, dLat = (b.lat - a.lat) * Math.PI / 180, dLon = (b.lon - a.lon) * Math.PI / 180;
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(h));
+    }
+
+    async function waitFor(fn, timeoutMs, label) {
+        const t0 = Date.now();
+        while (Date.now() - t0 < timeoutMs) { if (fn()) return true; await wait(150); }
+        throw new Error('รอไม่สำเร็จ: ' + label);
+    }
+
+    // ============================ บูตแอป ============================
+    async function loadApp() {
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.resumeSavedTrip === 'function' && typeof cw.startMeterAndTracking === 'function'
+                && typeof cw.__gapNativeEvidence === 'function' && typeof cw.catchUpDrivenKmAfterHidden === 'function') {
+                installStubs();
+                await wait(150);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    async function freshApp() {
+        try { w().isManualRunning = false; } catch (e) {}
+        await wait(80);
+        try { w().localStorage.removeItem(TRIP_KEY); } catch (e) {}
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = 'about:blank';
+        await wait(60);
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        try { w().localStorage.removeItem(TRIP_KEY); } catch (e) {}
+        await loadApp();
+        const cw = w();
+        cw.userKillCapMin = 60;
+        cw.__testKillCapMin = 60;
+        cw.fetchRouteFromTomTom = async () => null;      // เที่ยวไม่มีปลายทาง + ห้ามยิงเน็ต
+        clearNative();
+        pos = { lat: START.lat, lon: START.lon };
+        seedTrip({ km: 0, trafficSec: 0 });
+        await wait(300);
+        feedFix('watch', pos.lat, pos.lon, 8, 0);
+        await wait(250);
+        drainPending('boot');
+        await wait(150);
+        return true;
+    }
+
+    // ============================ assert ============================
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+    function near(actual, expected, tol, label) {
+        if (!(Math.abs(actual - expected) <= tol)) throw new Error(label + ': ได้ ' + actual + ' คาด ' + expected + ' (±' + tol + ')');
+        return actual;
+    }
+    function band(actual, lo, hi, label) {
+        if (!(actual >= lo && actual <= hi)) throw new Error(label + ': ได้ ' + actual + ' ต้องอยู่ระหว่าง ' + lo + '–' + hi);
+        return actual;
+    }
+
+    // ============================ รัน 1 เคส ============================
+    async function runScenario(name, fn, opts) {
+        const needFresh = !(opts && opts.fresh === false);
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            if (needFresh) await freshApp();
+            const out = await Promise.race([fn(), wait(90000).then(() => { throw new Error('เคส timeout 90 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ล้มเหลว</span> ' + name + '\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span>';
+            failures.push({ name: name, error: e && e.message ? e.message : String(e) });
+            failCount++;
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ล้มเหลว ' + failCount + '</span>' : ' — ✅ ครบทุกเคส');
+        const n = (w() && w().__net) ? w().__net : { blockedFetch: 0, blockedXhr: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: คำขอออกนอกเครื่องที่ถูกบล็อก ' + (n.blockedFetch + n.blockedXhr) +
+            ' ครั้ง (fetch ' + n.blockedFetch + ' · XHR ' + n.blockedXhr + ') — ชุดทดสอบนี้ไม่ต้องใช้อินเทอร์เน็ต';
+    }
+
+    // ⏱️ สร้างหลักฐานพิกัดช่วงล็อกจอ: วิ่งด้วยความเร็ว spdKmh เป็นเวลา driveSec แล้วจอดนิ่ง stopSec
+    function buildGapTrack(gapStartMs, driveSec, stopSec, spdKmh, opts) {
+        const o = opts || {};
+        const spdMps = (spdKmh || 0) / 3.6;
+        const total = driveSec + stopSec;
+        const stepSec = o.stepSec || 5;
+        let lat = o.startLat, lon = o.startLon;
+        for (let s = 0; s <= total; s += stepSec) {
+            const moving = s < driveSec;
+            const spd = moving ? spdMps : (o.driftSpd ? o.driftSpd : 0);
+            if (moving) {
+                lat += (spdMps * stepSec) / 1000 / KM_PER_DEG_LAT;
+                lon += ((spdMps * stepSec) / 1000 * 0.1) / KM_PER_DEG_LON;
+            } else if (o.driftM) {
+                lat += (o.driftM / 1000) / KM_PER_DEG_LAT * (s % 10 === 0 ? 1 : -1);   // GPS ลอยไปมา ไม่ใช่การวิ่ง
+            }
+            pushNative(gapStartMs + s * 1000, lat, lon, { acc: o.acc || 8, spd: spd, prov: o.prov || 'gps' });
+        }
+        return { lat: lat, lon: lon };
+    }
+
+    async function runAll() {
+        resultsEl.innerHTML = ''; passCount = 0; failCount = 0; failures.length = 0;
+        renderSummary();
+        const only = parseInt(new URLSearchParams(location.search).get('only') || '0', 10);
+        const skip = (n) => only > 0 && n !== only;
+
+        // ⚠️ เคส 1-7 เป็น “ชั้นสูตร” (ไม่รีโหลดแอป) จึงต้องบูตแอปหนึ่งครั้งก่อน — ไม่งั้น iframe ยังเป็น about:blank
+        await freshApp();
+
+        // ═════════════════ ชั้นสูตร: __gapNativeEvidence (ไม่ต้องรีโหลดแอป = เร็ว) ═════════════════
+
+        // ---------- 1) ไม่มีพิกัดฉากหลังเลย (เบราว์เซอร์ปกติ) → ต้องคืน null ให้ผู้เรียกถอยไปใช้วิธีเดิม ----------
+        await runScenario('1. ไม่มีพิกัดฉากหลัง → สูตรต้องคืน null (ถอยไปใช้วิธีเดิม ไม่เดา)', async () => {
+            if (skip(1)) return;
+            const cw = w();
+            clearNative();
+            const now = cw.__fakeNow;
+            const out = cw.__gapNativeEvidence(now - 120000, now, null, null);
+            assert(out === null, 'ต้องคืน null เมื่อไม่มี fix แต่ได้ ' + JSON.stringify(out));
+            return 'ได้ null ตามคาด → แอปจะใช้วิธีเดิม (เส้นทาง/เส้นตรง) ไม่ใช่ใช้ค่าขยะ';
+        }, { fresh: false });
+
+        // ---------- 2) วิ่งด้วย Doppler 90 วิ (30 กม./ชม.) + จอด 60 วิ → ระยะ/เวลาแยกถูก ----------
+        await runScenario('2. วิ่ง 90 วิ (30 กม./ชม.) + จอด 60 วิ → ระยะ 0.75 กม. · จอด 60 วิ', async () => {
+            if (skip(2)) return;
+            const cw = w();
+            clearNative();
+            const gapStart = cw.__fakeNow - 150000;
+            buildGapTrack(gapStart, 90, 60, 30, { startLat: START.lat, startLon: START.lon });
+            const ev = cw.__gapNativeEvidence(gapStart, cw.__fakeNow, null, null);
+            assert(ev, 'ต้องได้หลักฐาน (ไม่ null)');
+            near(ev.km, 0.75, 0.06, 'ระยะที่วิ่ง');
+            near(ev.stopSec, 60, 8, 'วินาทีที่จอด');
+            near(ev.moveSec, 90, 8, 'วินาทีที่วิ่ง');
+            band(ev.maxKmh, 25, 35, 'ความเร็วสูงสุด');
+            assert(ev.strong === true, 'หลักฐานต้องถือว่า “พอเชื่อถือ” (strong) — ได้ ' + JSON.stringify(ev));
+            return 'กม. ' + ev.km + ' · จอด ' + ev.stopSec + ' วิ · วิ่ง ' + ev.moveSec + ' วิ · สูงสุด ' + ev.maxKmh + ' กม./ชม. · fix ' + ev.n + ' จุด · ครอบคลุม ' + (ev.coverage * 100) + '%';
+        }, { fresh: false });
+
+        // ---------- 3) จอดนิ่ง GPS ลอย ±12 ม. → ต้องได้ระยะ 0 (ห้ามมี “ระยะผี”) ----------
+        await runScenario('3. จอดนิ่ง GPS ลอย ±12 ม. → ระยะ 0 กม. · จอด 150 วิ (ไม่มีระยะผี)', async () => {
+            if (skip(3)) return;
+            const cw = w();
+            clearNative();
+            const gapStart = cw.__fakeNow - 150000;
+            buildGapTrack(gapStart, 0, 150, 0, { startLat: START.lat, startLon: START.lon, driftM: 12, stepSec: 5 });
+            const ev = cw.__gapNativeEvidence(gapStart, cw.__fakeNow, null, null);
+            assert(ev, 'ต้องได้หลักฐาน');
+            assert(ev.km <= 0.02, 'ระยะต้องเป็น ~0 (GPS ลอยไม่ใช่การวิ่ง) แต่ได้ ' + ev.km + ' กม.');
+            near(ev.stopSec, 150, 10, 'วินาทีที่จอด');
+            assert(ev.maxKmh <= 6, 'ต้องไม่นับว่าวิ่ง (สูงสุด ' + ev.maxKmh + ' กม./ชม.)');
+            assert(ev.strong === true, 'ต้อง strong (fix หนาแน่น) — ' + JSON.stringify(ev));
+            return 'กม. ' + ev.km + ' (ลอย ±12 ม. ไม่กลายเป็นระยะ) · จอด ' + ev.stopSec + ' วิ';
+        }, { fresh: false });
+
+        // ---------- 4) คลาน 4 กม./ชม. 300 วิ → ระยะเข้า (ล้อหมุน) แต่เวลา = รถติด (≤ 6 กม./ชม.) ----------
+        await runScenario('4. คลาน 4 กม./ชม. 300 วิ → ระยะ 0.33 กม. แต่เวลาเป็น “รถติด” (เกณฑ์ 6 กม./ชม.)', async () => {
+            if (skip(4)) return;
+            const cw = w();
+            clearNative();
+            const gapStart = cw.__fakeNow - 300000;
+            buildGapTrack(gapStart, 300, 0, 4, { startLat: START.lat, startLon: START.lon });
+            const ev = cw.__gapNativeEvidence(gapStart, cw.__fakeNow, null, null);
+            assert(ev, 'ต้องได้หลักฐาน');
+            near(ev.km, 0.333, 0.04, 'ระยะที่คลาน');
+            assert(ev.stopSec >= 285, 'คลาน ≤ 6 กม./ชม. ต้องนับเป็นเวลารถติดทั้งช่วง (ได้ ' + ev.stopSec + ' วิ)');
+            assert(ev.moveSec <= 10, 'ต้องไม่หักเป็นเวลาวิ่ง (ได้ ' + ev.moveSec + ' วิ)');
+            band(ev.maxKmh, 3, 6, 'ความเร็วสูงสุด');
+            return 'กม. ' + ev.km + ' · รถติด ' + ev.stopSec + ' วิ · วิ่ง ' + ev.moveSec + ' วิ (เกณฑ์เดียวกับมิเตอร์เดินสด)';
+        }, { fresh: false });
+
+        // ---------- 5) fix น้อย/ห่างเป็นช่วง (ขาด > 5 นาที) → ต้องไม่กล้าใช้ (strong = false) ----------
+        await runScenario('5. fix โหว่ (ขาดช่วง > 5 นาที) → ต้องไม่กล้าใช้ (strong = false / null)', async () => {
+            if (skip(5)) return;
+            const cw = w();
+            clearNative();
+            const now = cw.__fakeNow;
+            const sparse = now - 600000;
+            pushNative(sparse, START.lat, START.lon, { spd: 8 });
+            pushNative(sparse + 5000, START.lat + 0.0007, START.lon, { spd: 8 });
+            pushNative(sparse + 10000, START.lat + 0.0014, START.lon, { spd: 8 });
+            const few = cw.__gapNativeEvidence(sparse, now, null, null);
+            assert(few === null, 'fix แค่ 3 จุด → ต้องคืน null (ได้ ' + JSON.stringify(few) + ')');
+            clearNative();
+            for (let s = 0; s <= 30; s += 5) pushNative(sparse + s * 1000, START.lat + s * 0.0001, START.lon, { spd: 8 });
+            for (let s = 600; s <= 630; s += 5) pushNative(sparse + s * 1000, START.lat + 0.01 + s * 0.0001, START.lon, { spd: 8 });
+            const holed = cw.__gapNativeEvidence(sparse, sparse + 630000, null, null);
+            assert(holed, 'ต้องยังคืนค่าได้ (มี fix)');
+            assert(holed.strong === false, 'fix คลุมช่วงไม่ถึงครึ่ง → ต้องไม่ strong (coverage ' + holed.coverage + ')');
+            return 'fix 3 จุด → null · fix โหว่ 570 วิ → strong = false (ครอบคลุมแค่ ' + (holed.coverage * 100) + '%) ⇒ แอปถอยไปใช้วิธีเดิม';
+        }, { fresh: false });
+
+        // ---------- 6) fix หยาบเกิน / จากเสาสัญญาณไม่มี Doppler → กรองทิ้ง + ยังกันระยะหายด้วยเส้นตรง ----------
+        await runScenario('6. fix หยาบ (150 ม.) กรองทิ้ง · fix จากเสาสัญญาณ (network) → ยังได้ระยะจากเส้นตรง ไม่หาย', async () => {
+            if (skip(6)) return;
+            const cw = w();
+            const now = cw.__fakeNow;
+            clearNative();
+            const coarse = now - 120000;
+            for (let s = 0; s <= 120; s += 5) pushNative(coarse + s * 1000, START.lat + s * 0.0001, START.lon, { acc: 150, spd: 0 });
+            assert(cw.__gapNativeEvidence(coarse, now, null, null) === null, 'fix ที่ acc 150 ม. ต้องถูกกรองทิ้งทั้งหมด');
+            clearNative();
+            const netStart = now - 120000;
+            // network fix: ไม่มีความเร็ว Doppler (spd = -1) + พิกัดซิกแซก แต่รถวิ่งขึ้นเหนือจริง 0.6 กม.
+            for (let s = 0; s <= 120; s += 10) {
+                const zig = (s % 20 === 0) ? 0.0012 : -0.0012;                       // ซิกแซกข้างทาง ±130 ม.
+                pushNative(netStart + s * 1000, START.lat + (s / 120) * 0.0054, START.lon + zig, { acc: 30, spd: -1, prov: 'fused' });
+            }
+            const netEv = cw.__gapNativeEvidence(netStart, now, null, null);
+            assert(netEv, 'ต้องได้หลักฐานจาก fix เสาสัญญาณ');
+            const straightKm = 0.0054 * KM_PER_DEG_LAT;   // ระยะตรงจุดแรก–จุดสุดท้าย
+            // 🧮 ผลรวมระยะรายช่วงแบบดิบ (ที่ซิกแซกพอง) — ไว้แสดงว่าเพดานความคดเคี้ยวทำงานจริง
+            let naiveKm = 0;
+            for (let s = 10; s <= 120; s += 10) {
+                const zigA = ((s - 10) % 20 === 0) ? 0.0012 : -0.0012, zigB = (s % 20 === 0) ? 0.0012 : -0.0012;
+                naiveKm += haversineKm({ lat: START.lat + ((s - 10) / 120) * 0.0054, lon: START.lon + zigA }, { lat: START.lat + (s / 120) * 0.0054, lon: START.lon + zigB });
+            }
+            assert(typeof netEv.km === 'number' && netEv.km > 0, 'ต้องได้ระยะมากกว่า 0');
+            assert(netEv.km >= straightKm * 0.9, 'ต้องไม่ทิ้งระยะที่วิ่งจริง (ได้ ' + netEv.km + ' กม. จากเส้นตรง ' + straightKm.toFixed(3) + ')');
+            assert(netEv.km <= straightKm * 1.6 + 0.01, 'ต้องบวมไม่เกินเพดานความคดเคี้ยว 1.6 เท่า (ได้ ' + netEv.km + ' จากเส้นตรง ' + straightKm.toFixed(3) + ')');
+            assert(netEv.km < naiveKm * 0.6, 'ต้องไม่ใช้ผลรวมรายช่วงที่ซิกแซก (ดิบ ' + naiveKm.toFixed(2) + ' กม.)');
+            return 'หยาบ 150 ม. → null · network/fused (ไม่มี Doppler) → ' + netEv.km + ' กม. (เส้นตรง ' + straightKm.toFixed(3) + ' · ผลรวมดิบที่ซิกแซก ' + naiveKm.toFixed(2) + ' กม.) ไม่หายและไม่บวม';
+        }, { fresh: false });
+
+        // ---------- 7) มีทั้ง fix ดาวเทียมและเสาสัญญาณ → ต้องเลือกเฉพาะดาวเทียม (กันระยะซิกแซก) ----------
+        await runScenario('7. มีทั้ง fix ดาวเทียมและเสาสัญญาณ → ใช้เฉพาะดาวเทียม (ระยะไม่ซิกแซก)', async () => {
+            if (skip(7)) return;
+            const cw = w();
+            clearNative();
+            const gapStart = cw.__fakeNow - 150000;
+            // 🛰️ fix ดาวเทียม: วิ่ง 0.5 กม. ตรง ๆ ด้วย Doppler (90 วิ) แล้วจอด 60 วิ
+            buildGapTrack(gapStart, 90, 60, 20, { startLat: START.lat, startLon: START.lon, stepSec: 5 });
+            const gpsKm = 20 / 3.6 * 90 / 1000;
+            // 📶 fix เสาสัญญาณแทรกกลางทาง: ซิกแซกข้างทาง ±200 ม. (ถ้าเอามาคิดรวม ระยะจะบวม)
+            for (let s = 0; s <= 150; s += 5) {
+                const zig = (s % 10 === 0) ? 0.0018 : -0.0018;
+                pushNative(gapStart + s * 1000, START.lat + (s / 90) * 0.0041, START.lon + zig, { acc: 25, spd: -1, prov: 'network' });
+            }
+            const ev = cw.__gapNativeEvidence(gapStart, cw.__fakeNow, null, null);
+            assert(ev, 'ต้องได้หลักฐาน');
+            near(ev.km, gpsKm, 0.06, 'ระยะ (ต้องคิดจากดาวเทียมเท่านั้น)');
+            assert(ev.km < gpsKm * 1.3, 'ถ้าเผลอใช้ fix เสาสัญญาณ ระยะจะบวม (ได้ ' + ev.km + ' จากที่ควร ' + gpsKm.toFixed(3) + ')');
+            near(ev.stopSec, 60, 8, 'วินาทีที่จอด');
+            return 'ใช้ fix ดาวเทียม ' + ev.n + ' จุด → ' + ev.km + ' กม. · จอด ' + ev.stopSec + ' วิ (ทิ้ง fix เสาสัญญาณที่ซิกแซก)';
+        }, { fresh: false });
+
+        // ═════════════════ ชั้นเที่ยวจริง: ล็อกจอ → กลับมา → มิเตอร์เบิกคืน ═════════════════
+
+        // ---------- 8) ล็อกจอ 150 วิ “รถวิ่ง” + มีพิกัดจริง → เบิกระยะครบ และคิดเวลารถติดเท่าที่จอดจริง ----------
+        await runScenario('8. ล็อกจอ 150 วิ ขณะรถวิ่ง → เบิกระยะ 0.75 กม. · เวลารถติด ≈ 60 วิ (ไม่ใช่ทั้งช่วง)', async () => {
+            if (skip(8)) return;
+            const cw = w();
+            for (let i = 0; i < 4; i++) { await wait(1100); driveStep(4, 20); }   // ขับด้วยจอเปิด ให้สมอตำแหน่ง (lastPath) ตั้งไว้
+            await wait(900);
+            const before = tripStateFresh();
+            const anchor = { lat: pos.lat, lon: pos.lon };
+            const hideAt = cw.__fakeNow;
+            cw.__setHidden(true);
+            await wait(300);
+            // ตอนนี้ยังไม่มีร่องรอย (ร่องรอยถูกจดตอน “เบิกคืน”) — ตรวจแค่ว่าแอปจดว่ามีช่วงซ่อนค้างอยู่จริง
+            assert((audit() || {}).pendingGapSec !== null, 'แอปต้องจดว่ามี “ช่วงซ่อน” ค้างรอเบิกคืนหลังซ่อนหน้า');
+            buildGapTrack(hideAt, 90, 60, 30, { startLat: anchor.lat, startLon: anchor.lon });
+            pos = { lat: anchor.lat + (0.75 / KM_PER_DEG_LAT), lon: anchor.lon + ((0.75 * 0.1) / KM_PER_DEG_LON) };
+            cw.__advance(150000);
+            cw.__pendingCur.length = 0;
+            for (let i = 0; i < 2; i++) { feedFix('cur', pos.lat, pos.lon, 8, 0); await wait(250); }
+            cw.__setHidden(false);
+            await waitFor(() => (audit() || {}).pendingGapSec === null, 20000, 'ให้ catch-up เบิกคืนจบ');
+            await wait(500);
+            const after = tripStateFresh();
+            const tr = lastTrace();
+            const addKm = after.km - before.km, addTr = after.trafficSec - before.trafficSec;
+            const info = ' เพิ่ม กม. ' + addKm.toFixed(2) + ' · เวลารถติด ' + Math.round(addTr) + ' วิ · ร่องรอย ' + JSON.stringify(tr);
+            log('case8' + info);
+            band(addKm, 0.62, 0.95, 'ระยะที่เบิกคืน (ต้องได้ ~0.75 กม. จากพิกัดจริง)' + info);
+            band(addTr, 40, 110, 'เวลารถติดที่เบิก (ต้องใกล้ 60 วิ ที่จอดจริง — เดิมจะนับเต็ม 150)' + info);
+            assert(tr && tr.native, 'ร่องรอยต้องบอกว่าใช้หลักฐานพิกัดฉากหลัง' + info);
+            assert(tr.stoppedWhole === false, 'ห้ามเหมา “จอดทั้งช่วง” เพราะหลักฐานบอกว่ารถวิ่ง' + info);
+            assert(tr.kmVia === 'gps-native', 'ระยะต้องมาจากพิกัดจริง (gps-native) ไม่ใช่เส้นตรง/เส้นทาง' + info);
+            return 'เบิกคืน +' + addKm.toFixed(2) + ' กม. · +' + Math.round(addTr) + ' วิ (จริง: วิ่ง 90 วิ + จอด 60 วิ) · วิธี = ' + tr.kmVia + ' · หลักฐาน ' + tr.native.n + ' จุด';
+        });
+
+        // ---------- 9) ล็อกจอ 150 วิ “จอดนิ่ง” + พิกัดจริงยืนยันจอด → เบิกเวลาจอดครบทั้งช่วง (ตรงมิเตอร์) ----------
+        await runScenario('9. ล็อกจอ 150 วิ ขณะจอดนิ่ง → เบิกเวลาจอดทั้งช่วง (ตรงมิเตอร์แท็กซี่)', async () => {
+            if (skip(9)) return;
+            const cw = w();
+            await wait(1100);
+            driveStep(4, 0);
+            const before = tripStateFresh();
+            const anchor = { lat: pos.lat, lon: pos.lon };
+            const hideAt = cw.__fakeNow;
+            cw.__setHidden(true);
+            await wait(300);
+            buildGapTrack(hideAt, 0, 150, 0, { startLat: anchor.lat, startLon: anchor.lon, driftM: 10, stepSec: 5 });
+            cw.__advance(150000);
+            cw.__pendingCur.length = 0;
+            for (let i = 0; i < 2; i++) { feedFix('cur', anchor.lat, anchor.lon, 8, 0); await wait(250); }
+            cw.__setHidden(false);
+            await waitFor(() => (audit() || {}).pendingGapSec === null, 20000, 'ให้ catch-up เบิกคืนจบ');
+            await wait(500);
+            const after = tripStateFresh();
+            const tr = lastTrace();
+            const addKm = after.km - before.km, addTr = after.trafficSec - before.trafficSec;
+            const info = ' เพิ่ม กม. ' + addKm.toFixed(2) + ' · เวลารถติด ' + Math.round(addTr) + ' วิ · ร่องรอย ' + JSON.stringify(tr);
+            log('case9' + info);
+            band(addTr, 130, 170, 'เวลารถติดช่วงจอด (ต้องได้ ~150 วิ เท่ามิเตอร์จริง)' + info);
+            assert(addKm <= 0.05, 'จอดนิ่งต้องไม่เกิดระยะผี' + info);
+            assert(tr && tr.native, 'ร่องรอยต้องมีหลักฐานพิกัดฉากหลัง' + info);
+            assert(tr.stoppedWhole === true, 'หลักฐานยืนยันจอด → ต้องเหมาเป็น “จอดทั้งช่วง”' + info);
+            return 'เบิกเวลา +' + Math.round(addTr) + ' วิ (จอด 150 วิ จริง) · ระยะผี ' + addKm.toFixed(2) + ' กม. · หลักฐาน ' + tr.native.n + ' จุด (ครอบคลุม ' + (tr.native.cov * 100) + '%)';
+        });
+
+        // ---------- 10) ไม่มีพิกัดฉากหลัง (เบราว์เซอร์) → พฤติกรรมเดิมต้องไม่พัง ----------
+        await runScenario('10. ไม่มีพิกัดฉากหลัง (เบราว์เซอร์) → ยังเบิกคืนได้เหมือนเดิม (ไม่พัง/ไม่หาย)', async () => {
+            if (skip(10)) return;
+            const cw = w();
+            await wait(1100);
+            driveStep(4, 0);
+            clearNative();                                  // ← จำลองเบราว์เซอร์ที่ไม่มีชั้น Android เก็บพิกัด
+            const before = tripStateFresh();
+            const anchor = { lat: pos.lat, lon: pos.lon };
+            cw.__setHidden(true);
+            await wait(300);
+            cw.__advance(120000);
+            cw.__pendingCur.length = 0;
+            for (let i = 0; i < 2; i++) { feedFix('cur', anchor.lat, anchor.lon, 8, 0); await wait(250); }
+            cw.__setHidden(false);
+            await waitFor(() => (audit() || {}).pendingGapSec === null, 20000, 'ให้ catch-up เบิกคืนจบ');
+            await wait(500);
+            const after = tripStateFresh();
+            const tr = lastTrace();
+            const addKm = after.km - before.km, addTr = after.trafficSec - before.trafficSec;
+            const info = ' เพิ่ม กม. ' + addKm.toFixed(2) + ' · เวลารถติด ' + Math.round(addTr) + ' วิ · ร่องรอย ' + JSON.stringify(tr);
+            log('case10' + info);
+            band(addTr, 100, 145, 'เวลารถติดช่วงจอด (วิธีเดิม ต้องยังเบิกได้)' + info);
+            assert(addKm <= 0.05, 'จอดนิ่งต้องไม่มีระยะผี' + info);
+            assert(!(tr && tr.native), 'ต้องไม่มีหลักฐานพิกัดฉากหลังในร่องรอย' + info);
+            assert(tr.stoppedWhole === true, 'วิธีเดิมต้องตัดสินว่า “จอดทั้งช่วง”' + info);
+            return 'เบิกเวลา +' + Math.round(addTr) + ' วิ ด้วยวิธีเดิม (ไม่มีร่องรอย native) · ไม่มีระยะผี';
+        });
+
+        renderSummary();
+        log('เสร็จ: ผ่าน ' + passCount + ' / ล้มเหลว ' + failCount, failures);
+    }
+
+    document.getElementById('runBtn').addEventListener('click', () => { runAll(); });
+    document.getElementById('dbgBtn').addEventListener('click', () => {
+        const cw = w();
+        alert(JSON.stringify({
+            nativeFixes: (cw.nativeFixes || []).length,
+            evidence: (function () { try { return cw.__gapNativeEvidence(cw.__fakeNow - 300000, cw.__fakeNow, null, null); } catch (e) { return String(e); } })(),
+            audit: audit(),
+            trip: (function () { const t = tripState(); return t ? { km: t.km, trafficSec: t.trafficSec } : null; })()
+        }, null, 2));
+    });
+
+    window.addEventListener('load', () => { runAll(); });
+})();
+</script>
+</body>
+</html>

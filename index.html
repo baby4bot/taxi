@@ -5146,6 +5146,95 @@
         try { if (n && n.peekStats) stats = JSON.parse(n.peekStats()); if (n && n.isTracking) tracking = n.isTracking(); } catch (e) {}
         return { available: !!n, tracking: tracking, fixesInPage: window.nativeFixes.length, lastDrainAt: window.__nativeFixLastAt || 0, android: stats };
     };
+    // ─── 🔋 สถานะการทำงานฉากหลัง (18 ก.ย. 69) ─────────────────────────────────
+    //   ในแอป Android เท่านั้น (เบราว์เซอร์คืน null) — ใช้ให้แอดมิน/คนขับตรวจได้ว่าทำงานเต็มที่หรือยัง
+    //   exempt = ได้ยกเว้น "การประหยัดแบตเตอรี่" (ถ้าไม่ได้ ระบบจะหยุดส่งพิกัดเมื่อจอดับ = เวลารถติดเพี้ยน)
+    window.nativeBackgroundStatus = () => {
+        const n = taxiNative(); if (!n) return null;
+        const call = (fn) => { try { return (typeof n[fn] === 'function') ? n[fn]() : null; } catch (e) { return null; } };
+        return {
+            exempt: call('isIgnoringBatteryOptimizations'),
+            wanted: call('trackingWanted'),
+            tracking: call('isTracking'),
+            fixesInPage: window.nativeFixes.length
+        };
+    };
+    // ขอสิทธิ์ทำงานฉากหลัง (เปิดหน้าต่างของระบบ — ผู้ใช้ต้องกด "อนุญาต" เอง)
+    window.nativeAskBackground = () => {
+        const n = taxiNative(); if (!n || typeof n.requestIgnoreBatteryOptimizations !== 'function') return false;
+        try { n.requestIgnoreBatteryOptimizations(); return true; } catch (e) { return false; }
+    };
+
+    // ─── 🧾 หลักฐานจริงจากพิกัดฉากหลัง (18 ก.ย. 69) ─────────────────────────────────
+    //   ที่มา: BgLocationService เก็บ fix ทุก ~1 วิ ต่อให้จอดับ/ล็อกจอ → หน้าเว็บเบิกมาใส่ window.nativeFixes
+    //   ⚠️ เดิมเบิกมาเก็บเฉย ๆ แล้วไม่เคยใช้ ⇒ catch-up ต้อง “เดา” จากจุดก่อนซ่อน/หลังซ่อนแค่ 2 จุด
+    //      (ต้นเหตุที่เวลารถติดกับระยะทางยังเพี้ยนเมื่อปิดจอ)
+    //   ตัวนี้อ่าน fix ในกรอบเวลา ณ เวลาที่แอปถูกซ่อน แล้วสรุปเป็น ระยะที่วิ่ง + เวลาจอด/เวลาวิ่ง จากของจริง
+    //   คืน null เมื่อหลักฐานไม่พอ (แอปไม่ได้อยู่ในแอป Android / fix น้อย / ช่วงสั้น) — ผู้เรียกต้องถอยไปใช้วิธีเดิมได้เสมอ
+    window.__gapNativeEvidence = (fromMs, toMs, beforePos, afterPos) => {
+        const nf = window.nativeFixes;
+        if (!Array.isArray(nf) || nf.length < 4) return null;
+        const lo = (typeof fromMs === 'number' && fromMs > 0 ? fromMs : 0) - 60000;
+        const hi = (typeof toMs === 'number' && toMs > 0 ? toMs : Date.now()) + 60000;
+        const usable = nf.filter((f) => f && typeof f.t === 'number' && f.t >= lo && f.t <= hi
+                && typeof f.lat === 'number' && typeof f.lon === 'number'
+                && (Math.abs(f.lat) > 1 || Math.abs(f.lon) > 1)
+                && !(typeof f.acc === 'number' && f.acc > 120)            // fix หยาบเกิน = ไม่ใช่หลักฐาน
+                && (f.prov === 'gps' || !(typeof f.acc === 'number') || f.acc <= 60));
+        if (usable.length < 4) return null;
+        // ⭐ มี fix ดาวเทียมพอ → ใช้ "เฉพาะดาวเทียม": fix จากเสาสัญญาณที่แทรกกลางทางทำให้พิกัดซิกแซก ระยะเพี้ยน
+        const gpsOnly = usable.filter((f) => f.prov === 'gps');
+        const pts = (gpsOnly.length >= 4 ? gpsOnly : usable).sort((a, b) => a.t - b.t);
+        if (pts.length < 4) return null;
+        let km = 0, stopSec = 0, moveSec = 0, maxKmh = 0, coveredSec = 0, usedDoppler = false;
+        for (let i = 1; i < pts.length; i++) {
+            const dt = (pts[i].t - pts[i - 1].t) / 1000;
+            if (!(dt > 0) || dt > 300) continue;                        // fix ขาดยาว = ไม่นับช่วงนั้น (ห้ามเดา)
+            const accM = Math.max(20, pts[i].acc || 25, pts[i - 1].acc || 25);
+            const noiseM = Math.max(6, accM * 0.35);                     // ต่ำกว่านี้ = GPS ลอย ไม่ใช่การวิ่ง (ใช้เฉพาะทางที่ไม่มี Doppler)
+            const dm = calcGPS(pts[i - 1].lat, pts[i - 1].lon, pts[i].lat, pts[i].lon) * 1000;
+            // ⭐ ใช้ “ความเร็ว Doppler” ที่เครื่องวัดให้ (spd) เป็นหลัก — แม่นกว่า delta ตำแหน่งมากตอนรถคลานช้า
+            //    (รถวิ่ง 3-6 กม./ชม. = 1.7-3.3 ม./วินาที → ต่ำกว่าความคลาดเคลื่อน GPS ⇒ delta บอกไม่ได้ว่าวิ่งหรือจอด)
+            // ใช้ Doppler เฉพาะ fix จากดาวเทียม (gps) — fix จากเสาสัญญาณ (network) มักรายงานความเร็ว 0 เสมอ
+            const spdMps = ((pts[i].prov === 'gps' || pts[i - 1].prov === 'gps') && typeof pts[i].spd === 'number' && pts[i].spd >= 0) ? pts[i].spd : -1;
+            let segM, kmh;
+            if (spdMps >= 0) {
+                usedDoppler = true;
+                kmh = spdMps * 3.6;
+                segM = spdMps * dt;                                     // ระยะ = ความเร็ว × เวลา (ไม่รับระยะจากพิกัดลอย)
+            } else {
+                segM = dm > noiseM ? dm : 0;
+                kmh = (dm / dt) * 3.6;
+            }
+            km += segM / 1000;
+            coveredSec += dt;
+            if (kmh > maxKmh) maxKmh = kmh;
+            if (kmh > 6) moveSec += dt; else stopSec += dt;             // 6 = เกณฑ์เดียวกับ TRAFFIC_SPEED_KMH ตอนมิเตอร์เดินสด
+        }
+        // ไม่มี Doppler เลย (fix จากเสาสัญญาณ) → วัดระยะทีละช่วงเชื่อถือไม่ได้
+        // ใช้ "ระยะตรงระหว่างจุดแรก–จุดสุดท้าย" เป็นพื้นล่าง กันระยะที่วิ่งจริงหายไปทั้งช่วง (สำคัญ: ไม่งั้นจะกลายเป็น "จอดทั้งช่วง")
+        if (!usedDoppler) {
+            // ⚠️ ไม่มี Doppler เลย → ผลรวมระยะรายช่วงเชื่อถือไม่ได้ (fix จากเสาสัญญาณ "กระโดด" ไปมาได้หลายสิบเมตร
+            //    ⇒ บวกระยะสะสมพองได้หลายเท่า — วัดจริงด้วยชุดทดสอบ: วิ่ง 0.6 กม. ออกมา 3.17 กม.)
+            //    ⇒ ใช้ "ระยะตรงจุดแรก–จุดสุดท้าย" เป็นหลัก + จำกัดความคดเคี้ยวไม่เกิน 1.6 เท่า (เพดานเดียวกับ estimateGapKm)
+            //    กันทั้งระยะหาย (เมื่อกระโดดน้อยกว่าที่วิ่งจริง) และระยะบวม (เมื่อกระโดดมากกว่าที่วิ่งจริง)
+            const straightKm = calcGPS(pts[0].lat, pts[0].lon, pts[pts.length - 1].lat, pts[pts.length - 1].lon);
+            const windingCap = Math.max(straightKm * 1.6, straightKm + 0.15);
+            if (km > windingCap) km = windingCap;
+            if (straightKm > km) km = straightKm;
+        }
+        const spanSec = (pts[pts.length - 1].t - pts[0].t) / 1000;
+        const gapSec = (typeof fromMs === 'number' && typeof toMs === 'number' && toMs > fromMs) ? (toMs - fromMs) / 1000 : spanSec;
+        const coverage = gapSec > 0 ? Math.min(1, coveredSec / gapSec) : 0;
+        return {
+            km: Math.round(km * 1000) / 1000,
+            stopSec: Math.round(stopSec), moveSec: Math.round(moveSec),
+            maxKmh: Math.round(maxKmh), n: pts.length,
+            spanSec: Math.round(spanSec), coverage: Math.round(coverage * 100) / 100,
+            // “พอเชื่อถือ” = fix หนาแน่นพอ + คลุมช่วงซ่อนเกินครึ่ง → อนุญาตให้ใช้แทนการเดา
+            strong: (pts.length >= 8 && coverage >= 0.5 && spanSec >= 20)
+        };
+    };
     if (taxiNative()) {
         window.nativeDrain();
         // เบิกทุก 3 วิ ขณะอยู่หน้าจอ · ตอนหน้าเว็บถูกแช่แข็ง ชั้น Android เก็บคิวไว้ให้แล้ว
@@ -8073,29 +8162,92 @@
             ${parts.length ? `<div style="margin-top:10px; display:flex; flex-wrap:wrap; justify-content:center; gap:6px;">${parts.map(p => `<span style="${pillBase} background:${p.style.bg}; color:${p.style.text}; border-color:${p.style.border};" title="${p.count} × ${p.value} บาท">${p.label}</span>`).join('')}</div>` : `<div style="font-size:12px; color:var(--text-dim); margin-top:8px;">(ทอนพอดี ไม่ต้องเทียบ)</div>`}`;
     };
 
-    // ── ปุ่มย้อนกลับมือถือ (Android back): ปิดทีละชั้น หมวดย่อย → ตั้งค่าการใช้งาน → หน้าแรก → ออกจากแอป ──
-    const BACK_MODALS = new Set(['profileModal', 'settingsHubModal', 'adminMenuModal', 'roleSettingsModal', 'notifHubModal', 'servicePortalModal', 'permRequestsModal', 'versionModal', 'quotaMonitorModal']); // 🗂 avatarFrameModal ถูกยุบรวมเป็นแท็บของ roleSettingsModal (17 ก.ย. 69)
-    window.__backStack = []; // กองหน้าต่างที่เปิดอยู่ (เรียงตามลำดับเปิด) — ใช้กับปุ่ม back ของมือถือ
+    // ── ปุ่มย้อนกลับของมือถือ (Android back · ปัดจากขอบขวาไปซ้าย): ปิดทีละชั้นตามที่เห็นจริงบนจอ (18 ก.ย. 69) ──
+    //   เดิม: ใช้ "รายการไอดีตายตัว" (BACK_MODALS แค่ 9 กล่อง) ⇒ กล่องที่ไม่อยู่ในรายการ
+    //        (หน้าต่างย่อยในหน้าตั้งค่า · เมนูแฮมเบอร์เกอร์ · คีย์แพด) กด back แล้วไม่มีอะไรให้ปิด
+    //        ⇒ WebView ย้อนประวัติไม่ได้ (canGoBack = false) ⇒ แอปถูกย่อ/ปิดทันที ← อาการที่ผู้ใช้แจ้ง
+    //   ใหม่: ตราบใดที่ยังมี "ชั้น" เปิดอยู่จริงบนจอ จะกันประวัติเว็บไว้ 1 รายการเสมอ
+    //        ⇒ canGoBack() = true ⇒ กด back = ย้อนชั้น (ไม่ใช่ออกโปรแกรม)
+    //   การปิดชั้นใช้ทางเดียวกับที่ผู้ใช้กดเอง (ปุ่มกากบาท/ปุ่มยกเลิกของกล่องนั้น) — ไม่ซ่อนดื้อ ๆ
     const BACK_SENTINEL = { t: '__freebuff_back' };
+    window.__backStack = []; // คงชื่อเดิมไว้ (โค้ด/เครื่องมืออื่นอ้างถึง) — ตอนนี้นับจากจอจริงแล้ว
+    let backGuardOn = false; // มีรายการกันประวัติค้างอยู่หรือยัง
     const backPush = () => { try { history.pushState(BACK_SENTINEL, ''); } catch (e) {} };
-    const backTrack = (id, show) => {
-        if (!BACK_MODALS.has(id)) return;
-        const st = window.__backStack;
-        if (show) {
-            if (!st.includes(id)) { st.push(id); backPush(); }
-        } else {
-            for (let i = st.length - 1; i >= 0; i--) if (st[i] === id) st.splice(i, 1);
-        }
+    // ⛔ หน้าจอที่ "ปุ่ม back ไม่ต้องกันไว้" (18 ก.ย. 69 · ผู้ใช้ขอ): หน้าเข้าสู่ระบบ
+    //   หน้าเข้าสู่ระบบไม่ใช่ "ชั้น" ที่ต้องกดปิดทีละชั้น — คนใช้กด back ตรงนั้นต้องได้ย้อนออกไปพักแอปเหมือนแอปอื่น
+    //   ⇒ ไม่นับเป็นชั้น ⇒ ไม่กันประวัติเว็บ ⇒ Android เห็น canGoBack = false ⇒ ย่อแอป (พฤติกรรมปกติของ Android)
+    //   (ส่วนหน้าตั้งค่าโปรไฟล์ครั้งแรกยังกันไว้ — มีข้อมูลที่พิมพ์ค้าง กันกดพลาดแล้วข้อมูลหาย)
+    const BACK_NO_GUARD_IDS = ['loginOverlay'];
+    // ชั้นที่ "มองเห็นได้จริง" ตอนนี้ (คีย์แพด · เมนูแฮมเบอร์เกอร์ · ซูม QR · กล่องทุกแบบในแอป)
+    window.__visibleLayers = () => {
+        const out = [];
+        try {
+            const pad = document.getElementById('pinPad');
+            if (pad && getComputedStyle(pad).display !== 'none') out.push({ id: 'pinPad', el: pad });
+            const menu = document.getElementById('sideMenuOverlay');
+            if (menu && getComputedStyle(menu).display !== 'none' && menu.style.opacity !== '0') out.push({ id: 'sideMenuOverlay', el: menu });
+            const qz = document.getElementById('qrZoomOverlay');
+            if (qz && getComputedStyle(qz).display !== 'none') out.push({ id: 'qrZoomOverlay', el: qz });
+            document.querySelectorAll('.modal-overlay, .custom-confirm-overlay').forEach((el) => {
+                if (el && el.id && getComputedStyle(el).display !== 'none') out.push({ id: el.id, el: el });
+            });
+        } catch (e) {}
+        return out.filter((l) => BACK_NO_GUARD_IDS.indexOf(l.id) === -1);
     };
-    window.addEventListener('popstate', (e) => {
-        if (!e.state || e.state.t !== '__freebuff_back') return; // ปล่อยให้ย้อนจริง (ออกแอป)
+    window.__layerCount = () => window.__visibleLayers().length;
+    // ปิด "หนึ่งชั้น" — ใช้ทางเดียวกับที่ผู้ใช้กดเอง เพื่อให้สถานะภายในถูกล้างครบ (ไม่ใช่ซ่อนดื้อ ๆ)
+    window.__closeLayer = (id) => {
+        try {
+            if (!id) return '';
+            if (id === 'loginOverlay' || id === 'welcomeSetupModal') return ''; // หน้าจอที่ต้องกรอกให้จบ — ห้ามปิดด้วย back
+            if (id === 'pinPad') { window.pinPadClose(); return id; }
+            if (id === 'sideMenuOverlay') { window.toggleSideMenu(false); return id; }
+            if (id === 'qrZoomOverlay') { const q = document.getElementById(id); if (q) q.style.display = 'none'; return id; }
+            const el = document.getElementById(id);
+            if (!el) return '';
+            const btn = el.querySelector('.btn-close-floating') || el.querySelector('.btn-cc-cancel');
+            if (btn) { btn.click(); return id; }
+            window.toggleModal(id, false);
+            return id;
+        } catch (e) { return ''; }
+    };
+    // จัด "กองชั้น" ให้ตรงกับจอจริง — ท้ายกอง = ชั้นบนสุด = ชั้นที่เปิดทีหลังสุด ← ตัวที่ back ต้องปิดก่อน
+    window.__backSync = () => {
+        const vis = window.__visibleLayers().map((l) => l.id);
         const st = window.__backStack;
-        const top = st.length ? st[st.length - 1] : null;
-        if (top && document.getElementById(top)) {
-            window.toggleModal(top, false); // ปิดหน้าต่างบนสุดหนึ่งชั้น
-            if (window.__backStack.length) backPush(); // ยังมีชั้นเหลือ → กันย้อนหนีหน้าเว็บ
+        for (let i = st.length - 1; i >= 0; i--) if (vis.indexOf(st[i]) === -1) st.splice(i, 1); // ชั้นที่ถูกปิดไปแล้ว
+        vis.forEach((id) => { if (st.indexOf(id) === -1) st.push(id); });                        // ชั้นที่เพิ่งเปิด
+        if (st.length > 0 && !backGuardOn) { backGuardOn = true; backPush(); }
+        else if (st.length === 0 && backGuardOn) {
+            // ♻️ ไม่เหลือชั้นที่ต้องกันแล้ว (เช่น ออกจากระบบ → กลับมาหน้าเข้าสู่ระบบ) → คืนรายการกันประวัติที่ค้าง
+            //   ⛔ ถ้าไม่คืน: ปุ่ม back ครั้งถัดไปจะ "กดแล้วไม่มีอะไรเกิดขึ้น" 1 ครั้ง ก่อนจะได้ย่อแอป
+            backGuardOn = false;
+            try { history.back(); } catch (e) {}
         }
-        // ถ้าไม่มีหน้าต่างค้างเหลือ → ปล่อยย้อนกลับตามปกติ (ออกจากแอป)
+        return st.length;
+    };
+    const backTrack = (id, show) => { try { window.__backSync(); } catch (e) {} };
+    // เฝ้าดูการเปิด/ปิดกล่องทุกแบบ (แก้ attribute style) — ครอบคลุมทุกทางที่แอปเปิดหน้าต่าง ไม่ต้องแก้ทีละจุด
+    try {
+        const isLayerEl = (el) => !!(el && el.classList && (el.classList.contains('modal-overlay') || el.classList.contains('custom-confirm-overlay')))
+            || !!(el && (el.id === 'pinPad' || el.id === 'sideMenuOverlay' || el.id === 'qrZoomOverlay'));
+        let queued = false;
+        new MutationObserver((muts) => {
+            let hit = false;
+            for (let i = 0; i < muts.length; i++) { if (isLayerEl(muts[i].target)) { hit = true; break; } }
+            if (!hit || queued) return;
+            queued = true;
+            requestAnimationFrame(() => { queued = false; try { window.__backSync(); } catch (e) {} });
+        }).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['style'] });
+    } catch (e) {}
+    window.addEventListener('popstate', () => {
+        // ตัดสินจาก "ชั้นที่เปิดอยู่จริงบนจอ" ไม่ใช่จาก state — เพราะรายการกันประวัติอาจถูกใช้ไปแล้วรอบก่อน
+        try { window.__backSync(); } catch (err) {}
+        if (window.__backStack.length === 0) { backGuardOn = false; return; } // ไม่มีชั้นเปิด → ปล่อยให้ย้อนประวัติ/ย่อแอปตามปกติ
+        backGuardOn = false;
+        const top = window.__backStack[window.__backStack.length - 1];
+        window.__closeLayer(top);                 // ปิดชั้นบนสุดหนึ่งชั้น
+        try { window.__backSync(); } catch (err) {} // ยังมีชั้นเหลือ → กันประวัติไว้ต่อ (ไม่งั้น back ครั้งถัดไปจะหลุดออกจากแอป)
     });
     window.toggleModal = (id, show) => {
         $(id).style.display = show ? 'flex' : 'none';
@@ -11884,7 +12036,13 @@
             // ใช้ stoppedWholeGap ซึ่งทน GPS ลอย + ความเร็วเพี้ยนตอนเปิดใหม่ (speed ที่มือถือให้ตอนจอดนิ่งลอยได้ ~20 กม./ชม.)
             const speedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
             const movedKm = hidePos ? calcGPS(hidePos.lat, hidePos.lon, p.lat, p.lon) : -1;
-            const stoppedWholeTime = hidePos !== null && stoppedWholeGap(movedKm, pos.coords.accuracy, gapSec, speedKmh);
+            // 🧾 หลักฐานจริงจากชั้น Android (fix ที่เก็บได้แม้จอดับ) — ใช้แทน "เดา" จากจุดก่อน/หลังซ่อน
+            const nat = window.__gapNativeEvidence(hiddenGapStart, Date.now(), hidePos, p);
+            if (nat) __rec.native = { n: nat.n, cov: nat.coverage, km: nat.km, stopSec: nat.stopSec, moveSec: nat.moveSec, maxKmh: nat.maxKmh };
+            // 🛑 ห้ามเหมา "จอดทั้งช่วง" ถ้าหลักฐานจริงบอกว่ามีการวิ่ง (ต้นเหตุเวลารถติดบวม + ระยะทางหาย)
+            const natSaysMoved = !!(nat && nat.strong && nat.maxKmh > 6 && nat.moveSec >= 10);
+            const judgeKm = (nat && nat.strong) ? nat.km : movedKm;
+            const stoppedWholeTime = !natSaysMoved && hidePos !== null && stoppedWholeGap(judgeKm, pos.coords.accuracy, gapSec, speedKmh);
             __rec.movedKm = Math.round(movedKm * 1000) / 1000;
             __rec.stoppedWhole = stoppedWholeTime;
 
@@ -11902,7 +12060,15 @@
                 // หักส่วนต่างระยะเหลือถึงปลายทาง — แม่นกว่าเส้นตรง (เฉพาะเที่ยวมีปลายทาง + ซ่อน > 20 วิ กันโควตา)
                 let distanceAdded = false;
                 let gapEstTraffic = 0; // ⏱️ ประมาณเวลารถติดของช่วงซ่อน (มิเตอร์จริงคิดเวลาช้า/ติดด้วย ไม่ใช่แค่ระยะ) — เบิกตอนจบสาขานี้
-                if (destLoc && gapSec > 20 && hidePos) {
+                // 🧾 ใช้หลักฐานจริงก่อน: fix จากชั้น Android ที่เก็บได้แม้จอดับ/ล็อกจอ
+                //    ตัวเลขทั้งคู่ (ระยะที่วิ่ง · วินาทีที่ ≤ 6 กม./ชม.) มาจากของจริง ⇒ ไม่ต้องเดาจากเส้นตรง/เส้นทาง
+                if (nat && nat.strong) {
+                    if (nat.km > 0.02) { actualDrivenKm += nat.km; caughtKm += nat.km; kmVia = 'gps-native'; }
+                    distanceAdded = true;                        // ตัดสินด้วยของจริงแล้ว — ไม่ต้องเดาต่อ ไม่ว่าขยับหรือไม่
+                    gapEstTraffic = Math.max(gapEstTraffic, nat.stopSec);
+                    if (!destLoc) currentTrueRemainKm = Math.max(0, currentTrueRemainKm - nat.km);
+                }
+                if (!distanceAdded && destLoc && gapSec > 20 && hidePos) {
                     try {
                         const polyRes = await window.catchUpKmViaRoutePolyline(destLoc, hidePos, p);
                         if (polyRes) {
@@ -15237,7 +15403,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '0b3d216b07';
+    const APP_WEB_VERSION = '8fb95d576e';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -15627,6 +15793,10 @@
         ['2026-09-18', '🆕 สรุป “มีอะไรใหม่” จำว่าอ่านแล้วต่อบัญชี — เปลี่ยนเครื่องใหม่ก็ไม่เด้งซ้ำ'],
         ['2026-09-18', '📱 ล็อกอิน Google ในแอป Android ได้แล้ว — ไม่ค้างในเบราว์เซอร์อีก'],
         ['2026-09-18', '🧩 แอปเก่าที่ไม่มีสะพาน Google → ปุ่มเทาพร้อมบอกทางเลือกไอดี/PIN ให้อัตโนมัติ'],
+        ['2026-09-18', '📡 เวลารถติด/ระยะทางช่วงล็อกจอคิดจากพิกัดจริงที่แอปเก็บไว้ — เลิกเดาจากจุดก่อน-หลังซ่อน'],
+        ['2026-09-18', '🔋 ในแอป Android ขอยกเว้นประหยัดแบตเตอรี่ให้เอง + เก็บพิกัดต่อแม้ปัดแอปทิ้ง'],
+        ['2026-09-18', '🚕 กันระยะทางช่วงล็อกจอบวมจากพิกัดที่ซิกแซก — จำกัดความคดเคี้ยวไม่เกิน 1.6 เท่า'],
+        ['2026-09-18', '🔙 หน้าเข้าสู่ระบบกด back หรือปัดจากขอบแล้วย้อนออกไปพักแอปได้ตามปกติ — ไม่ถูกกันไว้'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
