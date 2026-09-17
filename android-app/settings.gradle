@@ -1,0 +1,12 @@
+// Taxi Meter 2026 — โปรเจกต์ Android (WebView ห่อเว็บ + บริการ GPS ฉากหลัง)
+// เปิดด้วย Android Studio ได้ตรง ๆ หรือ build ด้วย GitHub Actions (.github/workflows/build-apk.yml)
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'TaxiMeter2026'
+include ':app'

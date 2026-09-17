@@ -1,0 +1,12 @@
+# ⛔ ห้าม commit กุญแจเซ็นแอป (keystore) เด็ดขาด — ไฟล์นี้คือ "ลายเซ็น" ของแอป
+keys/
+*.jks
+*.keystore
+
+# ผลลัพธ์การ build
+build/
+app/build/
+.gradle/
+local.properties
+*.apk
+*.aab

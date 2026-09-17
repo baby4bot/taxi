@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 🌐 โหลดเว็บแอปจาก GitHub Pages -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- 📍 ตำแหน่ง: ขอแบบ "ขณะใช้งาน" ก็พอ เพราะเราใช้ Foreground Service ที่มีป้ายแจ้งบนแถบสถานะ
+         ⛔ ไม่ขอ ACCESS_BACKGROUND_LOCATION โดยเจตนา — ไม่จำเป็นเมื่อมี Foreground Service
+            และถ้าไม่ขอ จะไม่ติดเงื่อนไขตรวจสอบพิเศษของ Play Store -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- 🔋 บริการเบื้องหน้า: เก็บพิกัดต่อแม้ปิดจอ/ล็อกจอ -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- 📳 สั่นเมื่อมีข้อความแจ้งเตือน (navigator.vibrate ในเว็บใช้สิทธิ์นี้) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
+    <application
+        android:allowBackup="false"
+        android:hardwareAccelerated="true"
+        android:icon="@drawable/app_icon"
+        android:label="@string/app_name"
+        android:supportsRtl="false"
+        android:theme="@android:style/Theme.Material.NoActionBar"
+        android:usesCleartextTraffic="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 📍 บริการเก็บพิกัดฉากหลัง (ประเภท location → ต้องมีสิทธิ์ FOREGROUND_SERVICE_LOCATION) -->
+        <service
+            android:name=".BgLocationService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+    </application>
+
+</manifest>

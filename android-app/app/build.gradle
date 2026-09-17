@@ -1,0 +1,72 @@
+plugins {
+    id 'com.android.application'
+}
+
+// 🔐 ลายเซ็น APK — อ่านจากตัวแปรสภาพแวดล้อม (GitHub Actions ส่งมาจาก Secrets)
+//    ไม่มี keystore = build ได้ แต่ APK จะยังไม่เซ็น (ใช้ทดสอบเท่านั้น · ติดตั้งทับของเดิมไม่ได้)
+def ksFile = file(System.getenv('TAXI_KEYSTORE') ?: 'keys/keystore.jks')
+def ksStorePass = System.getenv('TAXI_STORE_PASSWORD')
+def ksKeyAlias = System.getenv('TAXI_KEY_ALIAS') ?: 'taxi'
+def ksKeyPass = System.getenv('TAXI_KEY_PASSWORD') ?: ksStorePass
+def hasKeystore = ksFile.exists() && ksStorePass
+
+android {
+    namespace 'com.baby4bot.taximeter'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.baby4bot.taximeter'
+        minSdk 26          // Android 8.0 ขึ้นไป (พอสำหรับ WebView + Foreground Service ที่ทำงานถูกต้อง)
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+
+        // 🌐 URL ของเว็บแอป — จุดเดียวที่ต้องแก้ถ้าย้ายโดเมน
+        //    แก้ชั่วคราวจากในแอปได้ด้วย TaxiNative.setAppUrl('http://192.168.x.x:58911/') เพื่อทดสอบกับเซิร์ฟเวอร์ในเครื่อง
+        buildConfigField 'String', 'APP_URL', '"https://baby4bot.github.io/taxi/"'
+    }
+
+    // ให้ MainActivity อ่าน BuildConfig.APP_URL / DEBUG ได้
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        release {
+            if (hasKeystore) {
+                storeFile ksFile
+                storePassword ksStorePass
+                keyAlias ksKeyAlias
+                keyPassword ksKeyPass
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            }
+        }
+        debug {
+            // ใช้เซ็นด้วย debug key ของเครื่อง — ติดตั้งทดสอบได้ แต่ห้ามใช้แจกให้คนขับ
+            applicationIdSuffix ''
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+// ⛔ ไม่มี dependencies โดยเจตนา — ใช้ API ของ framework ล้วน ๆ
+//    (ไม่ต้องใช้ Google Play Services/AndroidX ⇒ build ไม่พังง่าย และติดตั้งได้ทุกเครื่อง)
+dependencies { }

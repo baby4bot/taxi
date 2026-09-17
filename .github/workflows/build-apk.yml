@@ -1,0 +1,151 @@
+# ============================================================================
+# สร้างไฟล์ APK ของแอป Taxi Meter 2026 บน GitHub (ไม่ต้องติดตั้งอะไรในเครื่อง)
+#
+# วิธีใช้
+#   1) อัปโปรเจกต์ขึ้น GitHub แล้วเข้าแท็บ Actions → "Build Android APK" → Run workflow
+#   2) รอ ~5-8 นาที → ดาวน์โหลด APK ได้ 2 ทาง
+#        · Release ชื่อ "apk-latest"  (อยู่ถาวร ลิงก์เดียวใช้ตลอด)
+#        · Artifact ชื่อ "taxi-meter-apk" (เก็บชั่วคราว)
+#   3) ครั้งแรกเท่านั้น: งานจะสร้าง "กุญแจเซ็นแอป" ให้ → ดาวน์โหลด artifact
+#      "keystore-bootstrap" แล้วเอาไปตั้งเป็น Secrets 2 ตัว (ดู android-app/README.md)
+#      ⇒ ทำครั้งเดียว แล้วทุกบิลด์ต่อไปจะใช้ลายเซ็นเดิม = ติดตั้งทับของเดิมได้ ไม่ต้องถอนก่อน
+#
+# ⚠️ แก้ index.html (เว็บ) ไม่ต้องรันงานนี้ — ตัวแอปโหลดเว็บสด ๆ อยู่แล้ว
+#    รันงานนี้เฉพาะเมื่อแก้ "ชั้น Android" ในโฟลเดอร์ android-app
+# ============================================================================
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 'หมายเหตุของบิลด์นี้ (ไม่บังคับ)'
+        required: false
+        default: ''
+  push:
+    branches: [main]
+    paths:
+      - 'android-app/**'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: ดึงโค้ด
+        uses: actions/checkout@v4
+
+      - name: ติดตั้ง JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: เตรียม Android SDK (กดยอมรับสัญญาอนุญาตให้ด้วย)
+        uses: android-actions/setup-android@v3
+
+      - name: ติดตั้งแพ็กเกจ Android ที่โปรเจกต์ต้องใช้
+        run: sdkmanager --install "platforms;android-34" "build-tools;34.0.0" > /dev/null || true
+
+      - name: ติดตั้ง Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: สร้างกุญแจเซ็นแอป (ถ้าจำเป็น) แล้ว build APK
+        working-directory: android-app
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          set -e
+          mkdir -p keys
+          if [ -n "$KS_B64" ]; then
+            printf '%s' "$KS_B64" | base64 -d > keys/keystore.jks
+            PASS="$KS_PASS"
+            echo "กุญแจเซ็นแอป: ใช้ไฟล์จาก Secret (ลายเซ็นถาวร ✅)"
+          else
+            PASS="$(openssl rand -hex 10)"
+            keytool -genkeypair -v -keystore keys/keystore.jks -alias taxi \
+              -keyalg RSA -keysize 2048 -validity 10950 \
+              -storepass "$PASS" -keypass "$PASS" \
+              -dname "CN=Taxi Meter 2026, O=baby4bot, C=TH"
+            printf '%s' "$PASS" > keys/keystore-password.txt
+            base64 -w0 keys/keystore.jks > keys/keystore.jks.base64
+            echo "กุญแจเซ็นแอป: สร้างใหม่รอบนี้ (ยังไม่ได้ตั้ง Secret) ⚠️"
+          fi
+          export TAXI_KEYSTORE=keys/keystore.jks
+          export TAXI_STORE_PASSWORD="$PASS"
+          export TAXI_KEY_ALIAS=taxi
+          export TAXI_KEY_PASSWORD="$PASS"
+
+          # สร้าง Gradle wrapper ให้ครั้งเดียว แล้วใช้ ./gradlew ต่อจากนี้ (มีไว้ให้ build ในเครื่องได้ด้วย)
+          gradle wrapper --gradle-version 8.7 --no-daemon
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: อัปโหลด APK (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: taxi-meter-apk
+          path: android-app/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: อัปโหลดกุญแจเซ็นแอปสำหรับตั้งค่า Secrets (ครั้งแรกเท่านั้น)
+        if: ${{ hashFiles('android-app/keys/keystore-password.txt') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: keystore-bootstrap
+          path: |
+            android-app/keys/keystore.jks.base64
+            android-app/keys/keystore-password.txt
+          retention-days: 1
+
+      - name: แนบ APK ไว้ใน Release "apk-latest" (ลิงก์ถาวร)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          if ! gh release view apk-latest >/dev/null 2>&1; then
+            gh release create apk-latest \
+              --title "Taxi Meter 2026 — APK ล่าสุด" \
+              --notes "ดาวน์โหลดไฟล์ .apk แล้วติดตั้งบนมือถือ Android (อนุญาตติดตั้งจากแหล่งที่ไม่รู้จัก)"
+          fi
+          gh release upload apk-latest android-app/app/build/outputs/apk/release/*.apk --clobber
+
+      - name: สรุปวิธีใช้งาน
+        if: always()
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          MADE_KEY="ไม่"
+          if [ -f android-app/keys/keystore-password.txt ]; then MADE_KEY="ใช่"; fi
+          {
+            echo "## 📱 ผลการสร้าง APK"
+            echo ""
+            echo "- APK: ดู artifact **taxi-meter-apk** หรือ Release **apk-latest**"
+            echo "- สร้างกุญแจเซ็นแอปใหม่รอบนี้: **$MADE_KEY**"
+            echo ""
+            if [ "$MADE_KEY" = "ใช่" ]; then
+              echo "### ⚠️ ต้องทำครั้งเดียว (ไม่งั้นอัปเดตแอปทับของเดิมไม่ได้)"
+              echo "1. ดาวน์โหลด artifact **keystore-bootstrap** (มี 2 ไฟล์)"
+              echo "2. เปิดไฟล์ \`keystore.jks.base64\` คัดลอกข้อความทั้งหมด"
+              echo "3. Repo → Settings → Secrets and variables → Actions → New repository secret"
+              echo "   - ชื่อ \`KEYSTORE_BASE64\` ค่า = ข้อความที่คัดลอกมา"
+              echo "   - ชื่อ \`KEYSTORE_PASSWORD\` ค่า = รหัสในไฟล์ \`keystore-password.txt\`"
+              echo "4. **ลบ artifact keystore-bootstrap ทิ้ง** (อย่าให้กุญแจค้างอยู่ที่ไหน)"
+              echo ""
+              echo "ตั้ง Secret แล้วรันงานนี้อีกครั้ง → APK จะเซ็นด้วยกุญแจเดิมตลอดไป"
+            else
+              echo "ลายเซ็นถาวรพร้อมใช้ — ติดตั้งทับเวอร์ชันก่อนได้เลยไม่ต้องถอนก่อน"
+            fi
+            echo ""
+            echo "### 🔄 อัปเดตแอปครั้งต่อไป"
+            echo "- แก้ \`index.html\` (เว็บ) → เพิ่มบนเว็บ = ในแอปเห็นทันที **ไม่ต้อง build APK ใหม่**"
+            echo "- แก้ \`android-app/\` (ชั้น Android) → รันงานนี้ใหม่อีกครั้ง"
+          } >> "$GITHUB_STEP_SUMMARY"
