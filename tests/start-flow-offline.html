@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — เริ่มมิเตอร์ต้องเข้าจอใหญ่เลย + มินิแมพโชว์ตามสิทธิ์ทันที</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 940px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 940px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: กด “เริ่มมิเตอร์” → ต้องอยู่จอมิเตอร์ใหญ่ (ไม่ใช่หน้าแรกแบบย่อ) + มินิแมพตามสิทธิ์</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ทดสอบของจริง 2 เรื่องที่ผู้ใช้แจ้ง 18 ก.ย. 69:
+        <br>① <b>“กดเริ่มมิเตอร์แล้วไปโผล่หน้าแรกแบบย่อ”</b> — ต้นเหตุคือ <code>history.back()</code> ที่ยิงตอนสแต็กชั้นว่าง
+        แล้วเปิดกล่องใหม่ทับในคลิกเดียวกัน → <code>popstate</code> ที่ย้อนกลับมาถูกอ่านว่า “ผู้ใช้กด back” ⇒ ปิดจอมิเตอร์ใหญ่ทันที
+        <br>② <b>“แอดมินมีสิทธิ์แต่มองไม่เห็นมินิแมพ ต้องรีเฟรชก่อน”</b> — เริ่มเที่ยว/รีเฟรชเคยตัดสินคนละทาง + สิทธิ์ที่มาถึงช้าไม่มีใครคืนแผนที่ให้
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/start-flow-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (7 สถานการณ์)</button>
+    <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const CACHE_KEYS = ['taxi_active_trip_v1', 'taxi_toll_pairs_v1', 'taxi_toll_rates_v1'];
+    const DEST = { lat: 13.6900, lon: 100.7501, name: 'ท่าอากาศยานสุวรรณภูมิ' };
+    const START = { lat: 13.7563, lon: 100.5018 };
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[start-flow-test]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตออกทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;      // 🚫 ห้ามเขียนเที่ยวลง Firestore จริง
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) {
+                    cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return;
+                }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test: ไม่ใช้ GPS' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.startTripFromPreview === 'function' && typeof cw.startNavigationMap === 'function' && typeof cw.toggleModal === 'function') {
+                installStubs();
+                await wait(200);
+                try { cw.isManualRunning = false; } catch (e) {}
+                try { CACHE_KEYS.forEach(k => cw.localStorage.removeItem(k)); } catch (e) {}
+                await closeAllModals();
+                await waitForNoLoader(12000);
+                await wait(200);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    // ============================ เครื่องมือทดสอบ ============================
+    const overlayShown = () => w().getComputedStyle(w().document.getElementById('trackerZoomOverlay')).display !== 'none';
+    const mapShown = () => { const e = w().document.getElementById('navMini'); return !!(e && e.classList.contains('show')); };
+    const btnZoom = () => w().document.getElementById('btnLiveMapZoom');
+    const btnState = () => { const b = btnZoom(); return b ? { hidden: b.classList.contains('is-hidden'), blue: b.classList.contains('map-ready') } : null; };
+
+    // ตั้งจุดหมายผ่านทางเดียวกับที่ผู้ใช้ทำจริง (selectLocation = ตั้ง destLoc ทั้งในมอดูล + window)
+    function armRoute() {
+        const cw = w();
+        cw.selectLocation(DEST.name, DEST.lat, DEST.lon);
+        cw.__pendingRouteStart = Object.assign({}, cw.__pendingRouteStart || {}, {
+            name: DEST.name, km: 48.32, sec: 3900,
+            sLat: START.lat, sLon: START.lon, dLat: DEST.lat, dLon: DEST.lon,
+            coords: [[START.lat, START.lon], [DEST.lat, DEST.lon]]
+        });
+        cw.currentTrueRemainKm = 48.32; cw.currentTrueRemainSec = 3900;
+    }
+
+    async function resetTrip() {
+        const cw = w();
+        cw.__testNoDbWrites = true;
+        try { if (cw.isManualRunning) { await cw.finishTripWithSummary(); await wait(450); } } catch (e) {}
+        await closeAllModals();
+        await wait(150);
+    }
+
+    // ============================ รัน 1 สถานการณ์ ============================
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            await resetTrip();
+            const out = await Promise.race([fn(), wait(40000).then(() => { throw new Error('สถานการณ์ timeout 40 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ล้มเหลว</span> ' + name + '\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span>';
+            failures.push({ name: name, error: e && e.message ? e.message : String(e) });
+            failCount++;
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ล้มเหลว ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        const n = (w() && w().__net) ? w().__net : { blockedFetch: 0, blockedXhr: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: คำขอออกนอกเครื่องที่ถูกบล็อกทั้งหมด ' + (n.blockedFetch + n.blockedXhr) +
+            ' ครั้ง (fetch ' + n.blockedFetch + ' · XHR ' + n.blockedXhr + ') — ชุดทดสอบนี้ไม่ต้องใช้อินเทอร์เน็ต';
+    }
+
+    // ============================ สถานการณ์ทั้งหมด ============================
+    async function runAll() {
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+        renderSummary();
+
+        await runScenario('S1 · กด “เริ่มมิเตอร์” จากหน้าสรุป → ต้องค้างอยู่จอมิเตอร์ใหญ่ (ไม่ถูก popstate ปิด)', async () => {
+            const cw = w();
+            armRoute();
+            await wait(250);
+            const ok = cw.startTripFromPreview();
+            assert(ok === undefined || ok === true || ok === null, 'startTripFromPreview ควรทำงานได้');
+            // 🐞 เคสเดิม: popstate ที่เกิดจากการปิดหน้าสรุป ย้อนกลับมาปิดจอมิเตอร์ใหญ่ทันที
+            await wait(700);
+            assert(overlayShown(), 'จอมิเตอร์ใหญ่ถูกปิดหลังกดเริ่มมิเตอร์ (กลับไปหน้าแรกแบบย่อ)');
+            assert(!!cw.isManualRunning, 'มิเตอร์ควรเดินอยู่');
+            const layers = cw.__visibleLayers ? cw.__visibleLayers().map(l => l.id) : [];
+            assert(layers.indexOf('routePreviewModal') === -1, 'หน้าสรุปเส้นทางควรปิดไปแล้ว');
+            return 'overlay=flex · isManualRunning=true · ชั้นที่เปิดอยู่ = [' + layers.join(', ') + '] หลังรอ 700 มิลลิวินาที';
+        });
+
+        await runScenario('S2 · เริ่มเที่ยวซ้ำ 3 รอบติดกัน — ต้องไม่พลาดสักรอบ (เดิมพลาดเป็นครั้งคราว)', async () => {
+            const cw = w();
+            const res = [];
+            for (let i = 0; i < 3; i++) {
+                await resetTrip();
+                armRoute();
+                await wait(220);
+                cw.startTripFromPreview();
+                await wait(650);
+                res.push(overlayShown() ? 'ผ่าน' : 'พลาด');
+            }
+            const bad = res.filter(r => r !== 'ผ่าน').length;
+            assert(bad === 0, 'มีรอบที่จอมิเตอร์ใหญ่ไม่เปิด ' + bad + ' จาก 3 รอบ → ' + res.join(', '));
+            await resetTrip();
+            return 'ทั้ง 3 รอบอยู่ที่จอมิเตอร์ใหญ่: ' + res.join(' · ');
+        });
+
+        await runScenario('S3 · กด back 1 ครั้ง = ปิดจอมิเตอร์ใหญ่ทีละชั้น (มิเตอร์ยังเดิน ไม่หลุดแอป)', async () => {
+            const cw = w();
+            armRoute();
+            await wait(220);
+            cw.startTripFromPreview();
+            await wait(600);
+            assert(overlayShown(), 'จอมิเตอร์ใหญ่ต้องเปิดก่อนทดสอบ back');
+            const before = (cw.__visibleLayers ? cw.__visibleLayers().length : -1);
+            cw.history.back();
+            await wait(420);
+            assert(!overlayShown(), 'กด back 1 ครั้งแล้วจอมิเตอร์ใหญ่ควรปิด');
+            assert(!!cw.isManualRunning, 'กด back แล้วมิเตอร์ต้องยังเดินอยู่ (ไม่ใช่จบเที่ยว/หลุดแอป)');
+            assert((cw.__backStack || []).length === 0, 'หลังปิดชั้นสุดท้าย สแต็กกันประวัติต้องว่าง (p: ' + JSON.stringify(cw.__backStack) + ')');
+            return 'ชั้นก่อน back = ' + before + ' → หลัง back = 0 · overlay=ปิด · มิเตอร์ยังเดิน';
+        });
+
+        await runScenario('S4 · มีสิทธิ์มินิแมพ → เข้าจอใหญ่แล้วเห็นมินิแมพทันที (ไม่ต้องรีเฟรช)', async () => {
+            const cw = w();
+            const realCan = cw.canUseMiniMap;
+            cw.canUseMiniMap = () => true;
+            try {
+                cw.startNavigationMap(START.lat, START.lon, DEST.lat, DEST.lon, DEST.name, 48.32, [[START.lat, START.lon], [DEST.lat, DEST.lon]]);
+                await wait(250);
+                assert(mapShown(), 'มีสิทธิ์แต่แผนที่นำทางไม่แสดง');
+                const e = cw.document.getElementById('navMini');
+                const r = e.getBoundingClientRect();
+                const hit = cw.document.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top + 12));
+                assert(!!(hit && (hit === e || e.contains(hit))), 'แผนที่แสดงแต่ถูกหน้าอื่นบัง (เห็นไม่ได้จริง)');
+                const z = cw.getComputedStyle(e).zIndex;
+                return 'mapShown=true · ปุ่มที่แตะได้ตรงกลางหัวแผนที่ = ' + (hit.id || hit.tagName) + ' · z-index=' + z;
+            } finally { cw.canUseMiniMap = realCan; }
+        });
+
+        await runScenario('S5 · ไม่มีสิทธิ์มินิแมพ → ซ่อนแผนที่ + ไม่มีปุ่มเปิดคืน (โควตาไม่ถูกใช้)', async () => {
+            const cw = w();
+            const realCan = cw.canUseMiniMap;
+            cw.canUseMiniMap = () => false;
+            try {
+                cw.startNavigationMap(START.lat, START.lon, DEST.lat, DEST.lon, DEST.name, 48.32, [[START.lat, START.lon], [DEST.lat, DEST.lon]]);
+                await wait(250);
+                assert(!mapShown(), 'ไม่มีสิทธิ์แต่แผนที่กลับแสดง');
+                const st = btnState();
+                assert(st && st.hidden === true, 'ไม่มีสิทธิ์แต่ปุ่มเปิดคืนยังโชว์อยู่');
+                assert(cw.navMiniCanReopen() === false, 'ไม่มีสิทธิ์แต่ canReopen = true');
+                return 'mapShown=false · ปุ่มเปิดคืนซ่อน · canReopen=false';
+            } finally { cw.canUseMiniMap = realCan; }
+        });
+
+        await runScenario('S6 · “สิทธิ์เพิ่งมาถึง” กลางเที่ยว → ระบบคืนแผนที่ให้เองโดยไม่ต้องรีเฟรช', async () => {
+            const cw = w();
+            const realCan = cw.canUseMiniMap;
+            cw.canUseMiniMap = () => false;
+            try {
+                cw.startNavigationMap(START.lat, START.lon, DEST.lat, DEST.lon, DEST.name, 48.32, [[START.lat, START.lon], [DEST.lat, DEST.lon]]);
+                await wait(220);
+                assert(!mapShown(), 'ช่วงไม่มีสิทธิ์ แผนที่ต้องไม่แสดง');
+                cw.canUseMiniMap = () => true;
+                cw.navMiniApplyPerm();          // = โปรไฟล์/roles โหลดเสร็จแล้วเรียกใช้สิทธิ์
+                await wait(250);
+                assert(mapShown(), 'ได้สิทธิ์แล้วแต่แผนที่ไม่กลับมา (ผู้ใช้ต้องรีเฟรชเอง)');
+                return 'ก่อน: ซ่อน → หลังได้สิทธิ์ (navMiniApplyPerm): แสดงทันที';
+            } finally { cw.canUseMiniMap = realCan; }
+        });
+
+        await runScenario('S7 · ผู้ใช้กด ✕ ปิดแผนที่เอง → มีปุ่มเปิดคืนสีฟ้า และสิทธิ์ apply ซ้ำต้องไม่เปิดเอง', async () => {
+            const cw = w();
+            const realCan = cw.canUseMiniMap;
+            cw.canUseMiniMap = () => true;
+            try {
+                cw.startNavigationMap(START.lat, START.lon, DEST.lat, DEST.lon, DEST.name, 48.32, [[START.lat, START.lon], [DEST.lat, DEST.lon]]);
+                await wait(220);
+                assert(mapShown(), 'ต้องแสดงก่อนทดสอบ');
+                cw.navMiniHideByUser();          // = กดปุ่ม ✕ บนแผนที่
+                await wait(150);
+                assert(!mapShown(), 'กด ✕ แล้วแผนที่ต้องปิด');
+                const st = btnState();
+                assert(st && st.hidden === false, 'กด ✕ แล้วต้องมีปุ่มเปิดคืนโชว์');
+                assert(st.blue === true, 'ปุ่มเปิดคืนต้องติดสีฟ้า (map-ready) ให้รู้ว่ากดได้');
+                cw.navMiniApplyPerm();           // สิทธิ์ apply ซ้ำ (เช่น roles โหลดใหม่)
+                await wait(220);
+                assert(!mapShown(), 'สิทธิ์ apply ซ้ำแล้วแผนที่เด้งกลับเอง (ขัดเจตนาผู้ใช้ที่กด ✕)');
+                cw.navMiniReopen();
+                await wait(200);
+                assert(mapShown(), 'แตะปุ่มเปิดคืนแล้วแผนที่ต้องกลับมา');
+                return '✕ → ปุ่มเปิดคืนสีฟ้า · apply ซ้ำ = ไม่เด้งเอง · แตะปุ่ม = กลับมาได้';
+            } finally { cw.canUseMiniMap = realCan; }
+        });
+
+        await resetTrip();
+        try { CACHE_KEYS.forEach(k => w().localStorage.removeItem(k)); } catch (e) {}
+        renderSummary();
+        log('สรุป: ผ่าน', passCount, 'ล้มเหลว', failCount, failures);
+    }
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('runBtn');
+        btn.disabled = true; btn.textContent = '⏳ กำลังรัน…';
+        try {
+            if (!stubsInstalled || !w() || !w().startTripFromPreview) {
+                frame.src = 'about:blank';
+                await wait(60);
+                await loadApp();
+            }
+            await runAll();
+        } catch (e) {
+            resultsEl.innerHTML += '<li class="fail"><span class="st">❌ รันชุดไม่สำเร็จ</span>\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span></li>';
+            failCount++; renderSummary();
+        }
+        btn.disabled = false; btn.textContent = '🔄 รันการทดสอบใหม่ (7 สถานการณ์)';
+    });
+
+    document.getElementById('dbgBtn').addEventListener('click', async () => {
+        try {
+            const cw = w();
+            const info = {
+                overlay: cw.getComputedStyle(cw.document.getElementById('trackerZoomOverlay')).display,
+                isManualRunning: !!cw.isManualRunning,
+                mapShown: mapShown(),
+                btn: btnState(),
+                canReopen: (() => { try { return cw.navMiniCanReopen(); } catch (e) { return 'ERR'; } })(),
+                canUseMiniMap: (() => { try { return cw.canUseMiniMap(); } catch (e) { return 'ERR'; } })(),
+                layers: cw.__visibleLayers ? cw.__visibleLayers().map(l => l.id) : [],
+                backStack: cw.__backStack,
+                net: cw.__net
+            };
+            resultsEl.innerHTML += '<li><span class="st">🔎 สถานะสด</span>\n<span class="detail">' + JSON.stringify(info, null, 1) + '</span></li>';
+        } catch (e) {
+            resultsEl.innerHTML += '<li class="fail"><span class="st">🔎 อ่านสถานะไม่ได้</span>\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span></li>';
+        }
+    });
+
+    (async () => { try { document.getElementById('runBtn').click(); } catch (e) {} })();
+})();
+</script>
+</body>
+</html>
