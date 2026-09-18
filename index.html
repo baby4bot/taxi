@@ -3804,7 +3804,7 @@
 
 
 <div id="loadingScreenModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('loadingScreenModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>หน้าจอโหลด</h3><button class="btn-close-floating" onclick="window.toggleModal('loadingScreenModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12.5px; color:var(--text-dim); margin:2px 4px 12px; line-height:1.6;">เลือกรูปพื้นของ <b>หน้าจอโหลด</b> (ตอนเปิดแอป / หลังล็อกอิน) — บันทึกแล้ว <b>ทุกคนที่ใช้แอปจะเห็นรูปนี้เหมือนกัน</b><br>แนะนำรูปแนวตั้ง 9:16 — ระบบจะย่อเป็น 720×1280 ให้เองก่อนบันทึก (รูปใหญ่เกิน 5 MB จะช้า)</p><div class="ls-demo-wrap" id="lsDemoWrap"><img id="lsPreviewImg" src="" alt="" style="display:none; object-position:50% 50%;"><div id="lsPreviewEmpty" class="ls-demo-empty">ยังไม่มีรูป — ใช้พื้นสำเร็จรูปของแอป<br>(แตะ “อัปโหลดรูป” ด้านล่าง)</div><div class="ls-demo-scrim"></div><div class="ls-demo-bottom"><div class="ls-demo-title" id="lsPreviewTitle">กำลังโหลดข้อมูล...</div><div class="ls-demo-bar"><div class="ls-demo-fill"></div></div><div class="ls-demo-pct">41%</div></div></div><div id="lsSizeHint" style="font-size:11.5px; color:var(--text-dim); text-align:center; margin:-4px 0 8px; min-height:16px;"></div><div id="lsPanBlock" style="display:none; margin-bottom:var(--space-field);"><div style="display:flex; justify-content:space-between; font-size:13px; color:#fff;"><span>ตำแหน่งรูป (ซ้าย ↔ ขวา)</span><span id="lsPanVal" style="color:var(--neon-yellow); font-weight:600;">กลาง (50%)</span></div><input type="range" id="lsPanRange" min="0" max="100" step="1" value="50" oninput="window.lsSetFocus(this.value)" style="width:100%; margin-top:6px; accent-color: var(--neon-yellow);"><div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px;"><div id="lsPanHint" style="font-size:11px; color:var(--text-dim); line-height:1.6; flex:1;">ลากบนรูปพรีวิวซ้าย–ขวาเพื่อเลื่อนก็ได้</div><button onclick="window.lsSetFocus(50)" class="manual-timer-btn" style="flex:0 0 auto; padding:6px 12px; font-size:12px; background:#5b6472; color:#fff; white-space:nowrap;"><span class="material-symbols-outlined" style="font-size:17px;">filter_center_focus</span> กลาง</button></div></div>
-<div id="lsDiag" style="font-size:11px; color:var(--text-dim); text-align:left; line-height:1.7; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:8px 12px; margin-bottom:var(--space-field);"></div><label style="text-align:left;">ข้อความบนหน้าจอโหลด</label><input type="text" id="lsTitleInput" maxlength="60" placeholder="กำลังโหลดข้อมูล..." style="margin-bottom:6px; text-align:left;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:var(--space-field);">เว้นว่าง = ใช้คำว่า “กำลังโหลดข้อมูล...”</div><div style="display:flex; gap:8px;"><button onclick="document.getElementById('lsFileInput').click()" class="manual-timer-btn" style="flex:1; justify-content:center;"><span class="material-symbols-outlined" style="font-size:20px;">upload</span> อัปโหลดรูป</button><button onclick="window.lsDownload()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#1f6feb; color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">download</span> ดาวน์โหลดรูป</button></div><div style="display:flex; gap:8px; margin-top:8px;"><button onclick="window.lsPreviewLive()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#5b6472; color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">play_circle</span> ทดลองดู</button><button onclick="window.lsClearImage()" class="manual-timer-btn" style="flex:1; justify-content:center; background:rgba(239,68,68,0.92); color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">hide_image</span> ลบรูป</button></div><input type="file" id="lsFileInput" accept="image/*" style="display:none;" onchange="window.lsPickImage(event)"></div><div style="padding:14px 16px; border-top:1px solid rgba(255,255,255,0.05);"><button id="lsSaveBtn" onclick="window.lsSave()" class="manual-timer-btn" style="background:var(--neon-green); width:100%; justify-content:center; color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div><div id="tollRateModal" class="modal-overlay" style="z-index: 10008;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('tollRateModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>อัตราค่าทางด่วน</h3><button class="btn-close-floating" onclick="window.toggleModal('tollRateModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12.5px; color:var(--text-dim); margin:2px 4px 12px; line-height:1.6;">ราคาที่แอปใช้คิดค่าทางด่วน — แยก <b>ทางด่วน (กทพ.) · Tollway · มอเตอร์เวย์</b><br>ลำดับการใช้ราคา: <b>ราคาจริงที่ระบบจำจากเที่ยว</b> → <b>ตารางด้านล่าง</b> — แก้ตัวเลขแล้วกด “บันทึก” ทุกเครื่องใช้ตารางเดียวกัน</p><div id="tollRateAheadBlock" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px; margin-bottom:12px;"><div style="font-size:13px; font-weight:700; color:#fff;">🚨 เตือนล่วงหน้าบน Mini Map</div><div style="display:flex; align-items:center; gap:8px; margin-top:7px;"><input type="number" id="tollRateAhead" min="0.3" max="30" step="0.5" style="width:104px; text-align:center;"><span style="font-size:12.5px; color:var(--text-dim);">กม. ก่อนถึงด่านขึ้น — จะโชว์ “อีก X กม. ขึ้น… · Y฿”</span></div></div><div id="tollRatePairsBlock" style="margin-bottom:12px;"></div><div id="tollRateExpBlock" style="margin-bottom:12px;"></div><div id="tollRateMwBlock" style="margin-bottom:12px;"></div><div id="tollRateGateBlock" style="margin-bottom:12px;"></div><div id="tollRateNote" style="font-size:11.5px; color:var(--text-dim); line-height:1.7; padding:0 4px 4px;"></div></div><div style="padding:14px 16px; border-top:1px solid rgba(255,255,255,0.05); display:flex; gap:8px;"><button id="tollRateResetBtn" onclick="window.tollRatesResetDefaults()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#5b6472; color:#fff; white-space:nowrap; font-size:13px;"><span class="material-symbols-outlined" style="font-size:19px;">restart_alt</span> คืนค่าเดิม</button><button id="tollRateSaveBtn" onclick="window.tollRatesSave()" class="manual-timer-btn" style="flex:1; justify-content:center; background:var(--neon-green); color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div><div id="navMiniPrefsModal" class="modal-overlay" style="z-index: 10007;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('navMiniPrefsModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>แผนที่นำทาง (Mini Map)</h3><button class="btn-close-floating" onclick="window.toggleModal('navMiniPrefsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12.5px; color:var(--text-dim); margin:2px 4px 12px; line-height:1.6;">คุม <b>จุดลูกศรบน Mini Map</b> ตอนนำทาง · ลูกศรจะ <b>ค่อย ๆ เลื่อนขึ้นจอ</b> ตามระยะที่วิ่งจริง พอเลื่อนครบช่วงที่ตั้งไว้ กล้องจะ <b>ไล่ทันด้วยความเร็วคงที่</b> ให้ลูกศรกลับมาที่จุดยึดเดิมแล้วเริ่มนับใหม่ — <b>บันทึกแล้วทุกคนเห็นเหมือนกัน</b></p><div id="navCrawlBlock" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px;"><div style="display:flex; justify-content:space-between; font-size:13px; color:#fff;"><span>ช่วงการเลื่อนของจุด</span><span id="navCrawlVal" style="color:var(--neon-yellow); font-weight:600;">34% ของความสูงจอ</span></div><input type="range" id="navCrawlRange" min="0" max="45" step="1" oninput="window.navCrawlSet('navCrawl', this.value)" style="width:100%; margin-top:6px; accent-color: var(--neon-yellow);"><div style="font-size:11.5px; color:var(--text-dim); margin-top:4px; line-height:1.6;">0% = <b>ตรึงลูกศรกับที่</b> (แผนที่เลื่อนอย่างเดียว เหมือนเดิม) · 34% = ค่าเดิมของแอป · 45% = เลื่อนได้ไกลสุด (มองเห็นถนนข้างหน้านานขึ้น)</div></div><div id="navCatchBlock" style="margin-top:14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px;"><div style="display:flex; justify-content:space-between; font-size:13px; color:#fff;"><span>ความเร็วการไล่ทัน</span><span id="navCatchVal" style="color:var(--neon-yellow); font-weight:600;">16% ของความสูงจอ/วินาที</span></div><input type="range" id="navCatchRange" min="4" max="40" step="1" oninput="window.navCrawlSet('navCatch', this.value)" style="width:100%; margin-top:6px; accent-color: var(--neon-yellow);"><div style="font-size:11.5px; color:var(--text-dim); margin-top:4px; line-height:1.6;">ค่าน้อย = กล้องตามช้า (ลูกศรอยู่ข้างหน้านาน) · ค่ามาก = กล้องตามเร็ว (ลูกศรอยู่แถวจุดยึดเกือบตลอด) — ปรับแล้วแอปใช้เวลาไล่ทันคงที่ทุกครั้ง</div></div><div id="navCrawlNote" style="font-size:11.5px; color:var(--text-dim); margin-top:12px; line-height:1.7;"></div><div id="navMiniPermBlock" style="margin-top:14px; background:rgba(255,210,77,0.07); border:1px solid rgba(255,210,77,0.28); border-radius:14px; padding:12px 14px;"><div style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--neon-yellow);"><span class="material-symbols-outlined" style="font-size:18px;">key</span> ใครได้ใช้มินิแมพ</div><div id="navMiniPermStatus" style="font-size:11.5px; color:var(--text-dim); line-height:1.6; margin-top:5px;"></div><button id="navMiniPermSelfBtn" onclick="window.navMiniGrantSelf()" class="manual-timer-btn" style="width:100%; justify-content:center; background:var(--neon-green); color:#fff; font-size:13px; margin-top:9px;"><span class="material-symbols-outlined" style="font-size:18px;">map</span> เปิดมินิแมพให้บัญชีของฉัน</button></div></div><div style="padding:14px 16px; border-top:1px solid rgba(255,255,255,0.05); display:flex; gap:8px;"><button id="navCrawlResetBtn" onclick="window.navCrawlResetDefaults()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#5b6472; color:#fff; white-space:nowrap; font-size:13px;"><span class="material-symbols-outlined" style="font-size:19px;">restart_alt</span> คืนค่าเดิม</button><button id="navCrawlSaveBtn" onclick="window.navCrawlSave()" class="manual-timer-btn" style="flex:1; justify-content:center; background:var(--neon-green); color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div>
+<div id="lsDiag" style="font-size:11px; color:var(--text-dim); text-align:left; line-height:1.7; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:8px 12px; margin-bottom:var(--space-field);"></div><label style="text-align:left;">ข้อความบนหน้าจอโหลด</label><input type="text" id="lsTitleInput" maxlength="60" placeholder="กำลังโหลดข้อมูล..." style="margin-bottom:6px; text-align:left;"><div style="font-size:11px; color:var(--text-dim); margin-bottom:var(--space-field);">เว้นว่าง = ใช้คำว่า “กำลังโหลดข้อมูล...”</div><div style="display:flex; gap:8px;"><button onclick="document.getElementById('lsFileInput').click()" class="manual-timer-btn" style="flex:1; justify-content:center;"><span class="material-symbols-outlined" style="font-size:20px;">upload</span> อัปโหลดรูป</button><button onclick="window.lsDownload()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#1f6feb; color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">download</span> ดาวน์โหลดรูป</button></div><div style="display:flex; gap:8px; margin-top:8px;"><button onclick="window.lsPreviewLive()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#5b6472; color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">play_circle</span> ทดลองดู</button><button onclick="window.lsClearImage()" class="manual-timer-btn" style="flex:1; justify-content:center; background:rgba(239,68,68,0.92); color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">hide_image</span> ลบรูป</button></div><input type="file" id="lsFileInput" accept="image/*" style="display:none;" onchange="window.lsPickImage(event)"></div><div style="padding:14px 16px; border-top:1px solid rgba(255,255,255,0.05);"><button id="lsSaveBtn" onclick="window.lsSave()" class="manual-timer-btn" style="background:var(--neon-green); width:100%; justify-content:center; color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div><div id="tollRateModal" class="modal-overlay" style="z-index: 10008;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('tollRateModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>อัตราค่าทางด่วน</h3><button class="btn-close-floating" onclick="window.toggleModal('tollRateModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12.5px; color:var(--text-dim); margin:2px 4px 12px; line-height:1.6;">ราคาที่แอปใช้คิดค่าทางด่วน — แยก <b>ทางด่วน (กทพ.) · Tollway · มอเตอร์เวย์</b><br>ลำดับการใช้ราคา: <b>ราคาจริงที่ระบบจำจากเที่ยว</b> → <b>ตารางด้านล่าง</b> — แก้ตัวเลขแล้วกด “บันทึก” ทุกเครื่องใช้ตารางเดียวกัน</p><div id="tollRateAheadBlock" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px; margin-bottom:12px;"><div style="font-size:13px; font-weight:700; color:#fff;">🚨 เตือนก่อนถึงด่านขึ้น <span style="font-size:11px; color:var(--text-dim); font-weight:400;">(หน่วยเมตร — 19 ก.ย. 69)</span></div><div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-top:10px;"><button type="button" class="spd-step-btn" onclick="window.tollAheadStep(-10)" aria-label="ลดระยะเตือนลง 10 เมตร">−</button><div style="text-align:center; min-width:120px;"><div id="tollAheadVal" class="spd-limit-val">100</div><div style="font-size:11.5px; color:var(--text-dim); margin-top:2px;">เมตร</div></div><button type="button" class="spd-step-btn" onclick="window.tollAheadStep(10)" aria-label="เพิ่มระยะเตือนขึ้น 10 เมตร">+</button></div><input type="number" id="tollRateAheadM" value="100" readonly aria-hidden="true" tabindex="-1" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;"><div style="font-size:11px; color:var(--text-dim); text-align:center; margin-top:9px; line-height:1.55;">กด − / + ปรับทีละ 10 เมตร · ใช้ได้ 30–2000 เมตร · ค่าเริ่มต้น 100 เมตร<br>ข้อความวิ่ง “กำลังจะถึงด่านเก็บเงิน” ขึ้นกลางจอ <b>10 วินาที</b> + <b>เสียงพูด</b> — ใช้ทั้งบน Mini Map และจอมิเตอร์ใหญ่ <b>แม้ไม่ได้เปิด Mini Map</b></div><label style="display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; margin-top:12px; cursor:pointer;"><span style="flex:1; font-size:12.5px; color:var(--text-dim); line-height:1.55;">🔔 เตือนทุกด่าน<br><span style="font-size:11px;">ปิด = เตือนเฉพาะด่านที่ยังไม่รู้ราคา (โหมดไม่กวนเดิม)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="tollRateAheadWarn" checked><span class="app-slider"></span></span></label></div><div id="tollRatePairsBlock" style="margin-bottom:12px;"></div><div id="tollRateExpBlock" style="margin-bottom:12px;"></div><div id="tollRateMwBlock" style="margin-bottom:12px;"></div><div id="tollRateGateBlock" style="margin-bottom:12px;"></div><div id="tollRateNote" style="font-size:11.5px; color:var(--text-dim); line-height:1.7; padding:0 4px 4px;"></div></div><div style="padding:14px 16px; border-top:1px solid rgba(255,255,255,0.05); display:flex; gap:8px;"><button id="tollRateResetBtn" onclick="window.tollRatesResetDefaults()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#5b6472; color:#fff; white-space:nowrap; font-size:13px;"><span class="material-symbols-outlined" style="font-size:19px;">restart_alt</span> คืนค่าเดิม</button><button id="tollRateSaveBtn" onclick="window.tollRatesSave()" class="manual-timer-btn" style="flex:1; justify-content:center; background:var(--neon-green); color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div><div id="navMiniPrefsModal" class="modal-overlay" style="z-index: 10007;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('navMiniPrefsModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>แผนที่นำทาง (Mini Map)</h3><button class="btn-close-floating" onclick="window.toggleModal('navMiniPrefsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12.5px; color:var(--text-dim); margin:2px 4px 12px; line-height:1.6;">คุม <b>จุดลูกศรบน Mini Map</b> ตอนนำทาง · ลูกศรจะ <b>ค่อย ๆ เลื่อนขึ้นจอ</b> ตามระยะที่วิ่งจริง พอเลื่อนครบช่วงที่ตั้งไว้ กล้องจะ <b>ไล่ทันด้วยความเร็วคงที่</b> ให้ลูกศรกลับมาที่จุดยึดเดิมแล้วเริ่มนับใหม่ — <b>บันทึกแล้วทุกคนเห็นเหมือนกัน</b></p><div id="navCrawlBlock" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px;"><div style="display:flex; justify-content:space-between; font-size:13px; color:#fff;"><span>ช่วงการเลื่อนของจุด</span><span id="navCrawlVal" style="color:var(--neon-yellow); font-weight:600;">34% ของความสูงจอ</span></div><input type="range" id="navCrawlRange" min="0" max="45" step="1" oninput="window.navCrawlSet('navCrawl', this.value)" style="width:100%; margin-top:6px; accent-color: var(--neon-yellow);"><div style="font-size:11.5px; color:var(--text-dim); margin-top:4px; line-height:1.6;">0% = <b>ตรึงลูกศรกับที่</b> (แผนที่เลื่อนอย่างเดียว เหมือนเดิม) · 34% = ค่าเดิมของแอป · 45% = เลื่อนได้ไกลสุด (มองเห็นถนนข้างหน้านานขึ้น)</div></div><div id="navCatchBlock" style="margin-top:14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px;"><div style="display:flex; justify-content:space-between; font-size:13px; color:#fff;"><span>ความเร็วการไล่ทัน</span><span id="navCatchVal" style="color:var(--neon-yellow); font-weight:600;">16% ของความสูงจอ/วินาที</span></div><input type="range" id="navCatchRange" min="4" max="40" step="1" oninput="window.navCrawlSet('navCatch', this.value)" style="width:100%; margin-top:6px; accent-color: var(--neon-yellow);"><div style="font-size:11.5px; color:var(--text-dim); margin-top:4px; line-height:1.6;">ค่าน้อย = กล้องตามช้า (ลูกศรอยู่ข้างหน้านาน) · ค่ามาก = กล้องตามเร็ว (ลูกศรอยู่แถวจุดยึดเกือบตลอด) — ปรับแล้วแอปใช้เวลาไล่ทันคงที่ทุกครั้ง</div></div><div id="navCrawlNote" style="font-size:11.5px; color:var(--text-dim); margin-top:12px; line-height:1.7;"></div><div id="navMiniPermBlock" style="margin-top:14px; background:rgba(255,210,77,0.07); border:1px solid rgba(255,210,77,0.28); border-radius:14px; padding:12px 14px;"><div style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--neon-yellow);"><span class="material-symbols-outlined" style="font-size:18px;">key</span> ใครได้ใช้มินิแมพ</div><div id="navMiniPermStatus" style="font-size:11.5px; color:var(--text-dim); line-height:1.6; margin-top:5px;"></div><button id="navMiniPermSelfBtn" onclick="window.navMiniGrantSelf()" class="manual-timer-btn" style="width:100%; justify-content:center; background:var(--neon-green); color:#fff; font-size:13px; margin-top:9px;"><span class="material-symbols-outlined" style="font-size:18px;">map</span> เปิดมินิแมพให้บัญชีของฉัน</button></div></div><div style="padding:14px 16px; border-top:1px solid rgba(255,255,255,0.05); display:flex; gap:8px;"><button id="navCrawlResetBtn" onclick="window.navCrawlResetDefaults()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#5b6472; color:#fff; white-space:nowrap; font-size:13px;"><span class="material-symbols-outlined" style="font-size:19px;">restart_alt</span> คืนค่าเดิม</button><button id="navCrawlSaveBtn" onclick="window.navCrawlSave()" class="manual-timer-btn" style="flex:1; justify-content:center; background:var(--neon-green); color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div>
 <div id="searchScrollbarModal" class="modal-overlay" style="z-index: 10006;">
 <div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('searchScrollbarModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>แถบเลื่อนในลิสต์ค้นหา</h3><button class="btn-close-floating" onclick="window.toggleModal('searchScrollbarModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12.5px; color:var(--text-dim); margin:2px 4px 12px; line-height:1.6;">คุมแถบเลื่อนของ <b>ลิสต์ ที่โปรด / ประวัติ / ผลค้นหา</b> · <b>หน้าต่างทุกบาน</b> (ตั้งค่าโปรไฟล์ ฯลฯ) · <b>เมนูแฮมเบอร์เกอร์</b> · <b>แถบหมวดไอคอน</b><br>เดิมซ่อนไว้ทุกจอ → บนคอมเลื่อนได้ด้วยล้อเมาส์เท่านั้น · ตั้งค่านี้เพื่อ <b>โชว์แถบเลื่อนบนจอคอม</b> พร้อมเลือกความหนา/ความจาง — <b>บันทึกแล้วทุกคนเห็นเหมือนกัน</b> (มือถือปัดนิ้วเหมือนเดิม ไม่มีแถบโผล่)</p><div style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px;"><div style="flex:1;"><div style="font-weight:600; color:#fff; font-size:14px;">โชว์แถบเลื่อนบนจอคอม</div><div style="font-size:11.5px; color:var(--text-dim); margin-top:2px;">ปิด = กลับไปดีไซน์เดิม (ซ่อนแถบ ใช้ล้อเมาส์เท่านั้น)</div></div><label class="app-switch"><input type="checkbox" id="sbOnToggle" onchange="window.sbSetOn(this.checked)"><span class="app-slider"></span></label></div><div id="sbWidthBlock" style="margin-top:14px;"><div style="display:flex; justify-content:space-between; font-size:13px; color:#fff;"><span>ความหนาของแถบ</span><span id="sbWidthVal" style="color:var(--neon-yellow); font-weight:600;">10 px</span></div><input type="range" id="sbWidthRange" min="6" max="18" step="1" oninput="window.sbSetWidth(this.value)" style="width:100%; margin-top:6px; accent-color: var(--neon-yellow);"></div><div id="sbAlphaBlock" style="margin-top:12px;"><div style="display:flex; justify-content:space-between; font-size:13px; color:#fff;"><span>ความจาง (ความทึบ)</span><span id="sbAlphaVal" style="color:var(--neon-yellow); font-weight:600;">ทึบ 50%</span></div><input type="range" id="sbAlphaRange" min="10" max="100" step="5" oninput="window.sbSetAlpha(this.value)" style="width:100%; margin-top:6px; accent-color: var(--neon-yellow);"></div><div style="font-size:11.5px; color:var(--text-dim); margin:14px 0 6px;">ตัวอย่างจริง — เลื่อนในกล่องนี้ได้เลย (สี/ความหนาเปลี่ยนตามค่าที่ตั้งทันที)</div><div class="dropdown-box" id="sbDemo" style="min-height:90px;"></div><div id="sbNote" style="font-size:11.5px; color:var(--text-dim); margin-top:10px; line-height:1.7;"></div></div><div style="padding:14px 16px; border-top:1px solid rgba(255,255,255,0.05); display:flex; gap:8px;"><button id="sbResetBtn" onclick="window.sbResetDefaults()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#5b6472; color:#fff; white-space:nowrap; font-size:13px;"><span class="material-symbols-outlined" style="font-size:19px;">restart_alt</span> คืนค่าเดิม</button><button id="sbSaveBtn" onclick="window.sbSave()" class="manual-timer-btn" style="flex:1.4; justify-content:center; background:var(--neon-green); color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div><div id="reservedNamesModal" class="modal-overlay" style="z-index: 10006;">
 <div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('reservedNamesModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3>ไอดีต้องห้าม</h3><button class="btn-close-floating" onclick="window.toggleModal('reservedNamesModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left; padding:12px;"><p style="font-size:12.5px; color:var(--text-dim); margin:2px 4px 12px; line-height:1.6;">ไอดีที่มีคำในรายการนี้จะ <b>ตั้งไม่ได้ทุกทาง</b> — สมัครสมาชิก · แอดมินสร้างบัญชี · เปลี่ยนชื่อผู้ใช้ (บัญชีที่ใช้อยู่แล้วไม่ถูกบังคับเปลี่ยน)<br>ระบบจะตัดจุด/ขีด และถอดรหัสลวงตาให้ก่อนเทียบ (0→o · 1→i · 4→a · @→a) ⇒ <b>adm1n</b> · <b>@dmin</b> · <b>sup_port</b> ก็โดน · บันทึกแล้ว <b>ทุกคนเห็นเหมือนกัน</b></p><div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px; margin-bottom:12px;"><div style="font-weight:600; color:#fff; font-size:14px; margin-bottom:6px;">นโยบาย “ให้ผู้ใช้ตั้งไอดีเอง”</div><div style="display:flex; align-items:center; gap:10px;"><select id="rvSelfChange" style="flex:1; min-width:0; height:44px; border-radius:12px; background:#252525; color:#fff; border:1px solid #333; font-family:'Kanit'; font-size:14px; padding:0 10px;"><option value="0">0 ครั้ง — ล็อกถาวรหลังสร้างบัญชี (ค่าเริ่มต้น)</option><option value="1">1 ครั้ง — ให้ตั้ง/เปลี่ยนเองได้ครั้งเดียว</option><option value="2">2 ครั้ง</option><option value="3">3 ครั้ง</option></select></div><div style="font-size:11.5px; color:var(--text-dim); margin-top:6px; line-height:1.6;">นับเฉพาะการตั้งเองของผู้ใช้ · แอดมินแก้ให้ได้เสมอ · เปลี่ยนแล้วมีผลกับ <b>ทุกคน</b></div></div><div style="background:rgba(56,189,248,0.07); border:1px solid rgba(56,189,248,0.2); border-radius:14px; padding:12px 14px; margin-bottom:12px;"><div style="font-weight:600; color:#7dd3fc; font-size:14px; margin-bottom:6px;">🧪 ลองพิมพ์ชื่อดูผลทันที</div><input type="text" id="rvTestInput" placeholder="พิมพ์ชื่อที่อยากลอง เช่น admin2024, arm2539" autocomplete="off" oninput="window.rvTest(this.value)" style="text-align:left; margin-bottom:8px;"><div id="rvTestOut" style="font-size:13px; color:var(--text-dim); line-height:1.6; min-height:20px;">— ยังไม่ได้พิมพ์ —</div></div><div id="rvConflictBox" style="display:none; background:rgba(255,196,107,0.08); border:1px solid rgba(255,196,107,0.28); border-radius:14px; padding:12px 14px; margin-bottom:12px;"><div id="rvConflictHead" style="font-weight:600; color:#ffc46b; font-size:14px; margin-bottom:6px;">🛡 ตรวจชื่อสมาชิกก่อนบันทึก</div><div id="rvConflictBody" style="font-size:12.5px; color:var(--text-dim); line-height:1.75;"></div><div id="rvMemberSource" style="font-size:11.5px; color:var(--text-dim); margin-top:8px; line-height:1.6;"></div><button id="rvMemberLoadBtn" onclick="window.rvLoadMembers()" class="manual-timer-btn" style="display:none; width:100%; justify-content:center; background:#5b6472; color:#fff; margin-top:10px;"><span class="material-symbols-outlined" style="font-size:19px;">group</span> ดึงรายชื่อสมาชิกมาตรวจ (ใช้โควตาอ่าน)</button></div><div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;"><input type="text" id="rvNewWord" placeholder="เพิ่มคำใหม่ (a-z 0-9)" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();window.rvAdd();}" style="flex:1; min-width:0; text-align:left;"><button onclick="window.rvAdd()" class="manual-timer-btn" style="flex-shrink:0; padding:13px 14px; justify-content:center; background:var(--neon-green); color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">add</span></button></div><label style="display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; margin-bottom:12px; cursor:pointer;"><span style="flex:1; font-size:12.5px; color:var(--text-dim);">เพิ่มเป็น “ตรงเป๊ะเท่านั้น” (ชื่ออื่นที่มีคำนี้เป็นส่วนหนึ่งยังตั้งได้)</span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="rvNewExact"><span class="app-slider"></span></span></label><div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;"><div style="font-size:12.5px; color:var(--text-dim);">รายการคำต้องห้าม</div><div id="rvCount" style="font-size:12px; color:var(--neon-yellow); font-weight:600;">0 คำ</div></div><div id="rvList"></div><div style="font-size:11.5px; color:var(--text-dim); margin-top:10px; line-height:1.7;">⚠️ คำที่มีเครื่องหมาย <b>ตรงเป๊ะ</b> = บล็อกเฉพาะชื่อที่ตรงทั้งคำ — คำอื่น (admin/manager/support…) บล็อกเมื่อชื่อ<b>ขึ้นต้น / ลงท้าย / เป็นทั้งช่วง</b> เช่น admin2024 · my-admin · sup_port · admin.manager</div></div><div style="padding:14px 16px; border-top:1px solid rgba(255,255,255,0.05); display:flex; gap:8px;"><button id="rvResetBtn" onclick="window.rvResetDefaults()" class="manual-timer-btn" style="flex:1; justify-content:center; background:#5b6472; color:#fff; white-space:nowrap; font-size:13px;"><span class="material-symbols-outlined" style="font-size:19px;">restart_alt</span> คืนค่าเริ่มต้น</button><button id="rvSaveBtn" onclick="window.rvSave()" class="manual-timer-btn" style="flex:1.4; justify-content:center; background:var(--neon-green); color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึก</button></div></div></div>
@@ -6550,11 +6550,66 @@
     };
     try { const _c = JSON.parse(localStorage.getItem(window.__TOLLRATE_KEY) || 'null'); if (_c && typeof _c === 'object') window.__tollRates = _c; } catch (e) {}
     setTimeout(() => { try { window.tollRateFetch(); } catch (e) {} }, 4200);
-    // 🎚️ ระยะเตือนล่วงหนัก่อนถึงด่านขึ้น (กม.) — ใช้ทั้งแถบ Mini Map และป้ายบนจอ
-    window.tollAheadKm = () => { const v = Number((window.__tollRates || {}).aheadKm); return (isFinite(v) && v > 0) ? v : 2.5; };
+    // 🎚️ (19 ก.ย. 69) ระยะเตือน “ก่อนถึงด่านขึ้น” — เปลี่ยนหน่วยจาก กม. → **เมตร** ตามคำสั่งผู้ใช้
+    //   • อ่านหลัก = aheadM (เมตร) · ค่าเริ่มต้น 100 ม.
+    //   • ของเก่าที่เก็บ aheadKm (2.5) → ถือว่า “ค่ายังไม่ถูกแก้” แปลงเป็น 100 ม. (ไม่ใช่ 2500)
+    //   • ยังเขียน aheadKm กลับไปด้วย (= aheadM/1000) ให้เครื่องที่ยังใช้โค้ดเก่าอ่านได้ไม่พัง
+    window.TOLL_AHEAD_MIN_M = 30;
+    window.TOLL_AHEAD_MAX_M = 2000;
+    window.TOLL_AHEAD_STEP_M = 10;
+    window.TOLL_AHEAD_DEFAULT_M = 100;
+    window.TOLL_AHEAD_LEGACY_KM = 2.5;           // ค่าเริ่มต้นเก่า — ถ้าเจอค่านี้ถือว่า “ยังไม่เคยตั้ง”
+    window.tollAheadClampM = (v) => {
+        const n = Math.round(Number(v) / window.TOLL_AHEAD_STEP_M) * window.TOLL_AHEAD_STEP_M;
+        if (!isFinite(n) || n <= 0) return window.TOLL_AHEAD_DEFAULT_M;
+        return Math.min(window.TOLL_AHEAD_MAX_M, Math.max(window.TOLL_AHEAD_MIN_M, n));
+    };
+    window.tollAheadM = () => {
+        const r = window.__tollRates || {};
+        const m = Number(r.aheadM);
+        if (isFinite(m) && m > 0) return window.tollAheadClampM(m);
+        const km = Number(r.aheadKm);
+        if (isFinite(km) && km > 0 && Math.abs(km - window.TOLL_AHEAD_LEGACY_KM) > 0.001) return window.tollAheadClampM(km * 1000);
+        return window.TOLL_AHEAD_DEFAULT_M;
+    };
+    window.tollAheadKm = () => window.tollAheadM() / 1000;   // 🔁 compat — ที่อื่นยังเรียกตัวนี้ได้
+    // 🔔 “เตือนทุกด่าน” (ค่าเริ่มต้น = เปิด) · ปิด = โหมดไม่กวนเดิม (เงียบด่านที่รู้ราคาแล้ว)
+    window.tollAheadWarnAll = () => ((window.__tollRates || {}).aheadWarnAll !== false);
+    // 🖱️ ปุ่ม − / + ในหน้าอัตราค่าทางด่วน — เปลี่ยนทีละ 10 เมตร (ไม่ต้องพิมพ์)
+    //   d = ระยะที่เปลี่ยน “เป็นเมตร” ตรง ๆ (ปุ่มส่ง ±10) — ⛔ ไม่ต้องคูณ TOLL_AHEAD_STEP_M ซ้ำ
+    window.tollAheadStep = (d) => {
+        const box = document.getElementById('tollRateAheadM');
+        const cur = box ? Number(box.value) : window.tollAheadM();
+        const next = (isFinite(cur) ? cur : window.tollAheadM()) + Number(d || 0);
+        // ชนพื้น/เพดานแล้ว “หยุดที่ขอบ” (ไม่เด้งกลับค่าเริ่มต้น) — กดค้างรัว ๆ จึงไม่กระโดด
+        return window.tollAheadSetM(next < window.TOLL_AHEAD_MIN_M ? window.TOLL_AHEAD_MIN_M : next);
+    };
+    window.tollAheadSetM = (m) => {
+        const v = window.tollAheadClampM(m);
+        const box = document.getElementById('tollRateAheadM');
+        if (box) {
+            box.value = String(v);
+            // ทำให้ตัวเฝ้า “มีการแก้ค้าง” ของหน้าต่างนี้ทำงานเหมือนผู้ใช้พิมพ์เอง
+            try { box.dispatchEvent(new Event('input', { bubbles: true })); box.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+        }
+        window.tollAheadSyncUi();
+        return v;
+    };
+    // วาดตัวเลขกลางจอ + ซิงก์กับค่าที่ใช้จริง (เรียกได้ทุกเมื่อ)
+    window.tollAheadSyncUi = () => {
+        const box = document.getElementById('tollRateAheadM');
+        const show = document.getElementById('tollAheadVal');
+        const m = box ? window.tollAheadClampM(box.value) : window.tollAheadM();
+        if (box) box.value = String(m);
+        if (show) show.textContent = String(m);
+        const warn = document.getElementById('tollRateAheadWarn');
+        if (warn) warn.checked = window.tollAheadWarnAll();
+    };
     // ตาราง “ค่าเริ่มต้นจากโค้ด” (ใช้กับปุ่มคืนค่าเริ่มต้นในหน้าอัตราค่าทางด่วน)
     window.tollRateDefaults = () => ({
-        aheadKm: 2.5,
+        aheadKm: window.TOLL_AHEAD_DEFAULT_M / 1000,
+        aheadM: window.TOLL_AHEAD_DEFAULT_M,
+        aheadWarnAll: true,
         expressway: EXPRESSWAY_SYS.map(x => ({ name: x.name, label: x.label || x.name, bands: x.bands })),
         motorway: MOTORWAY_SYS.map(x => ({ name: x.name, label: x.label || x.name, base: x.base || 0, perKm: x.perKm || 0, cap: x.cap || 0, gate: x.gate || 0 })),
         gates: TOLLWAY_GATES.map(g => ({ name: g.name, lat: g.lat, dirs: g.dirs, fare: Object.assign({}, g.fare) }))
@@ -6564,6 +6619,8 @@
         const T = window.tollRateTables();
         return {
             aheadKm: window.tollAheadKm(),
+            aheadM: window.tollAheadM(),
+            aheadWarnAll: window.tollAheadWarnAll(),
             expressway: T.expressway.map(x => ({ name: x.name, label: x.label || x.name, bands: x.bands })),
             motorway: T.motorway.map(x => ({ name: x.name, label: x.label || x.name, base: x.base || 0, perKm: x.perKm || 0, cap: x.cap || 0, gate: x.gate || 0 })),
             gates: T.gates.map(g => ({ name: g.name, lat: g.lat, dirs: g.dirs, fare: Object.assign({}, g.fare) }))
@@ -11531,6 +11588,7 @@
         return hb > 0 ? hb : 0;                                  // ② หน้าจอหลัก → ใต้แถบหัวจอ
     };
     window.__TOLLBAR_MIN_GAP = 96;   // ความสูงขั้นต่ําที่ถือว่า “วางชิดบนสุดได้” (≈ 1 แถบ)
+    // 🚧 ความสูงจริงของป้าย “กำลังจะถึงด่านเก็บเงิน” (0 = ไม่โชว์) — ใช้ดันแถบกรอกยอดให้หลบลงมา
     window.__tollGateBarTop = () => {
         try {
             const modals = Array.prototype.slice.call(document.querySelectorAll('.modal-overlay'))
@@ -11550,7 +11608,7 @@
                     if (b > 0) hb = b;
                 }
             }
-            return window.__tollBarTopDecide(boxTops, hb);
+            return window.__tollBarTopDecide(boxTops, hb) + ((typeof window.tollBannerVisible === 'function' && window.tollBannerVisible()) ? window.__tollBannerHeight() : 0);
         } catch (e) {}
         return 0;   // ไม่มีอะไรให้หลบ → ชิดบนสุด
     };
@@ -11563,6 +11621,125 @@
             return t;
         } catch (e) { return 0; }
     };
+    // ───── 🚧 (19 ก.ย. 69) แบนเนอร์ “กำลังจะถึงด่านเก็บเงิน” — บนสุดตรงกลาง · 10 วินาที · มีเสียงพูด ─────
+    // ผู้ใช้สั่ง: “ไม่โชว์แค่บน Mini Map · แม้ไม่เปิดมินิแมพก็ต้องขึ้น ตรงจอใหญ่ ข้างบนสุดตรงกลาง”
+    // ⛔ กติกา: ห้ามมี backdrop (ต้องไม่บังการขับ) · เป็นเพียงป้ายอ่าน — ไม่รับคลิก
+    window.__TOLL_BANNER_MS = 10000;        // 10 วินาทีตามคำสั่ง
+    window.__TOLL_BANNER_DEDUPE_MS = 60000; // ด่านเดียวกันไม่ยิงซ้ำใน 1 นาที
+    let tollBannerTimer = null;
+    // 🚧 ความสูงจริงของป้าย (0 = ไม่โชว์) — ใช้ดันแถบกรอกยอดให้หลบลงมาด้านล่างป้าย
+    window.__tollBannerHeight = () => {
+        try {
+            const el = document.getElementById('tollAheadBanner');
+            if (!el) return 0;
+            const h = Math.round(el.getBoundingClientRect().height);
+            return h > 0 ? (h + 14) : 0;
+        } catch (e) { return 0; }
+    };
+    let tollBannerLastKey = '';
+    let tollBannerLastAt = 0;
+    const tollBannerStyle = () => {
+        if (document.getElementById('tollAheadBannerStyle')) return;
+        const s = document.createElement('style');
+        s.id = 'tollAheadBannerStyle';
+        s.textContent = [
+            '#tollAheadBanner{position:fixed; left:50%; transform:translateX(-50%) translateY(-14px); top:calc(env(safe-area-inset-top, 0px) + 8px);',
+            ' z-index:10025; pointer-events:none; max-width:min(92vw, 460px); box-sizing:border-box;',
+            ' padding:11px 16px; border-radius:16px; text-align:center; opacity:0; transition:opacity .22s ease, transform .22s ease;',
+            ' background:linear-gradient(180deg, rgba(255,210,77,.97), rgba(255,178,32,.97)); color:#241a00;',
+            ' box-shadow:0 8px 26px rgba(0,0,0,.42), 0 0 0 2px rgba(255,255,255,.14); font-weight:800;}',
+            '#tollAheadBanner.show{opacity:1; transform:translateX(-50%) translateY(0);}',
+            '#tollAheadBanner .tab-title{font-size:16px; line-height:1.25; letter-spacing:.1px;}',
+            '#tollAheadBanner .tab-sub{font-size:12.5px; font-weight:600; margin-top:3px; opacity:.86; line-height:1.4;}',
+            '#tollAheadBanner .tab-km{font-size:20px; font-weight:900; display:block; margin-top:2px;}'
+        ].join('\n');
+        document.head.appendChild(s);
+    };
+    window.__tollBannerEl = () => {
+        let el = document.getElementById('tollAheadBanner');
+        if (el) return el;
+        tollBannerStyle();
+        el = document.createElement('div');
+        el.id = 'tollAheadBanner';
+        el.setAttribute('role', 'status');
+        el.setAttribute('aria-live', 'polite');
+        el.innerHTML = '<div class="tab-title">🚧 กำลังจะถึงด่านเก็บเงิน</div><div class="tab-sub" id="tollAheadBannerSub"></div>';
+        document.body.appendChild(el);
+        return el;
+    };
+    window.tollBannerVisible = () => {
+        const el = document.getElementById('tollAheadBanner');
+        return !!(el && el.className.indexOf('show') >= 0);
+    };
+    // ซ่อนทันที (เรียกตอนจบเที่ยว/เปลี่ยนเส้นทาง — กันป้ายค้างข้ามเที่ยว)
+    window.tollBannerHide = () => {
+        try {
+            if (tollBannerTimer) { clearTimeout(tollBannerTimer); tollBannerTimer = null; }
+            const el = document.getElementById('tollAheadBanner');
+            if (el) el.className = '';
+            try { window.__tollGateBarPlace(); } catch (e) {}   // คืนที่ว่างให้แถบกรอกยอด
+            return true;
+        } catch (e) { return false; }
+    };
+    // 📢 ตัวจัดข้อความล้วน (ทดสอบออฟไลน์ได้): เมตร ต่ำกว่า 1 กม. → “450 ม.” · เกิน → “1.2 กม.”
+    window.__tollBannerAwayText = (awayKm) => {
+        const m = Math.max(0, Math.round((Number(awayKm) || 0) * 1000 / 10) * 10);
+        return (m < 1000) ? (m + ' ม.') : ((m / 1000).toFixed(1) + ' กม.');
+    };
+    // 🔁 ใช้ร่วมทั้งแอป (แถบกรอกยอด/เสียง/ป้าย) — ที่เดียวตัดสิน “เมตร หรือ กม.”
+    window.__tollAwayTxt = (awayKm) => {
+        try { return window.__tollBannerAwayText(awayKm); } catch (e) { return String(awayKm); }
+    };
+    window.__tollBannerSpeech = (txt) => 'กำลังจะถึงด่านเก็บเงิน ' + txt;
+    // key = รหัสด่าน (กันยิงซ้ำ) · บังคับแสดงด้วย force = true
+    window.tollBannerShow = (info, force) => {
+        try {
+            const o = info || {};
+            const key = String(o.key || '');
+            const now = Date.now();
+            if (!force && key && key === tollBannerLastKey && (now - tollBannerLastAt) < window.__TOLL_BANNER_DEDUPE_MS) return false;
+            tollBannerLastKey = key; tollBannerLastAt = now;
+            const awayTxt = window.__tollBannerAwayText(o.awayKm);
+            const price = Math.round(Number(o.price) || 0);
+            const sys = String(o.sys || 'ทางด่วน');
+            const bits = ['อีก ' + awayTxt];          // ใช้เป็น “ประโยคเสียงพูด”+ ตรวจข้อความ
+            const rest = [];                          // บรรทัดที่ 2 บนป้าย
+            if (o.gateIn) { bits.push('ขึ้นด่าน ' + o.gateIn); rest.push('ขึ้นด่าน ' + o.gateIn); }
+            const money = (price > 0 ? (sys + ' ' + price + ' ฿') : sys);
+            bits.push(money); rest.push(money);
+            const el = window.__tollBannerEl();
+            const sub = document.getElementById('tollAheadBannerSub');
+            // 🔤 2 ชั้น: เลขระยะตัวใหญ่ (อ่านจากหางตา) + บรรทัดล่างชื่อด่าน/ยอด — ไม่ให้ตัวเลขไปล้นบรรทัดเดียวกับยอด
+            if (sub) sub.innerHTML = '<span class="tab-km">อีก <b>' + awayTxt + '</b></span>' + rest.join(' · ');
+            el.className = 'show';
+            try { window.__tollGateBarPlace(); } catch (e) {}   // แถบกรอกยอดหลบลงไปด้านล่างป้าย
+            if (tollBannerTimer) clearTimeout(tollBannerTimer);
+            tollBannerTimer = setTimeout(() => { try { window.tollBannerHide(); } catch (e) {} }, window.__TOLL_BANNER_MS);
+            // 🔊 เสียงพูด (ต่อท้าย 320ms ให้เสียงบอกทางดังก่อน — เหมือนแถบอื่น)
+            try {
+                const spk = window.__tollBannerSpeech(bits.join(' '));
+                setTimeout(() => { try { if (window.navVoiceSpeak) window.navVoiceSpeak(spk); } catch (e) {} }, 320);
+            } catch (e) {}
+            return true;
+        } catch (e) { return false; }
+    };
+    // ตัวตัดสินว่าจะยิงป้ายไหม — ใช้กติกา “เตือนทุกด่าน/โหมดไม่กวน” ร่วมกับแถบเดิม
+    window.tollAheadBannerFor = (b, awayKm, learned) => {
+        try {
+            if (!b) return false;
+            const warnAll = (typeof window.tollAheadWarnAll === 'function') ? window.tollAheadWarnAll() : true;
+            // โหมดไม่กวน (ปิดสวิตช์) = ด่านที่จำราคาได้แล้วเงียบ — ตรงกับแถบยอด
+            if (!warnAll && learned > 0) return false;
+            return window.tollBannerShow({
+                key: (b.gateIn || b.from || '') + '@' + b.startKm,
+                awayKm: awayKm, price: b.price, gateIn: b.gateIn || b.from || '',
+                sys: (window.tollSysFull && window.tollSysFull(b)) || 'ทางด่วน'
+            });
+        } catch (e) { return false; }
+    };
+    window.__tollBannerState = () => ({ visible: window.tollBannerVisible(), lastKey: tollBannerLastKey, lastAt: tollBannerLastAt });
+    window.__tollBannerReset = () => { tollBannerLastKey = ''; tollBannerLastAt = 0; return window.tollBannerHide(); };
+
     if (!window.__tollBarPlaceHooked) {
         window.__tollBarPlaceHooked = true;
         const re = () => {
@@ -11896,7 +12073,7 @@
             window.__tollGateBarCtx = { booth: booth, idx: (typeof idx === 'number' ? idx : -1), key: key, mode: mode };
             const sys = (window.tollSysFull && window.tollSysFull(booth)) || (window.tollSysLabel && window.tollSysLabel(booth)) || 'ทางด่วน';
             const gate = booth.gateIn ? (' ' + booth.gateIn + (booth.gateOut ? ' → ' + booth.gateOut : '')) : '';
-            const away = (typeof awayKm === 'number' && awayKm > 0) ? (' · อีก ' + awayKm.toFixed(1) + ' กม.') : '';
+            const away = (typeof awayKm === 'number' && awayKm > 0) ? (' · อีก ' + window.__tollAwayTxt(awayKm)) : '';
             let learned = null;
             try { learned = window.tollPairGet(booth); } catch (e) { learned = null; }
             const tbl = Math.round(Number(booth.price) || 0);
@@ -12028,6 +12205,7 @@
         window.tollGateBarShow('ask', booth, idx, awayKm, 0);
         const away = (typeof awayKm === 'number' && awayKm > 0) ? ('อีก ' + awayKm.toFixed(1) + ' กม. · ') : '';
         try { window.showToast('🛣️ ' + away + 'ใกล้ถึงด่านขึ้น — แตะยอดที่เคยจ่ายบนแถบด้านบน', false); } catch (e) {}
+        try { window.tollAheadBannerFor(booth, awayKm, (typeof window.tollPairGet === 'function') ? window.tollPairGet(booth) : null); } catch (e) {}
         try { if (navigator.vibrate && window.userVibrateGold !== false) { navigator.vibrate([130, 70, 130]); } } catch (e) {}
         try { if (window.userToastSound !== false && typeof window.playSound === 'function') { window.playSound('turnFar'); } } catch (e) {}
         try {
@@ -12053,7 +12231,7 @@
         st.notified[key] = true;
         const sys = (window.tollSysFull && window.tollSysFull(booth)) || (window.tollSysLabel && window.tollSysLabel(booth)) || 'ทางด่วน';
         const gate = booth.gateIn ? (' ' + booth.gateIn) : '';
-        const away = (typeof awayKm === 'number' && awayKm > 0) ? ('อีก ' + awayKm.toFixed(1) + ' กม. · ') : '';
+        const away = (typeof awayKm === 'number' && awayKm > 0) ? ('อีก ' + window.__tollAwayTxt(awayKm) + ' · ') : '';
         // 💬 ยอดที่โชว์: ราคาที่เคยจ่าย > ราคาตามตาราง > “ยังไม่รู้ราคา” (ต้องแสดงให้คนขับเห็นยอดเสมอถ้ามี)
         const tbl = Math.round(Number(booth.price) || 0);
         const priceShown = (price > 0) ? price : tbl;
@@ -14277,6 +14455,8 @@
         mode: !!window.isTollwayMode,
         haveRouteTolls: !!(window.currentTollInfo && window.currentTollInfo.hasTolls),
         aheadKm: (typeof window.tollAheadKm === 'function') ? window.tollAheadKm() : null,
+        aheadM: (typeof window.tollAheadM === 'function') ? window.tollAheadM() : null,
+        aheadWarnAll: (typeof window.tollAheadWarnAll === 'function') ? window.tollAheadWarnAll() : null,
         booths: (((window.currentTollInfo || {}).booths) || []).map((b) => ({
             gateIn: b.gateIn || '', gateOut: b.gateOut || '', price: b.price,
             startKm: b.startKm, basis: b.basis || '',
@@ -16946,8 +17126,12 @@
     };
     window.tollRatesRenderPanel = () => {
         const e = window.__tollEdit || window.tollRatesSnapshot();
-        const ahead = document.getElementById('tollRateAhead');
-        if (ahead) ahead.value = String(e.aheadKm || 2.5);
+        // 🎚️ ระยะเตือนก่อนถึงด่านขึ้น — หน่วยเมตร (ถ้ามีค่าเก่า aheadKm จะถูกแปลงให้เอง)
+        const aheadBox = document.getElementById('tollRateAheadM');
+        if (aheadBox) aheadBox.value = String(window.tollAheadClampM((isFinite(Number(e.aheadM)) && Number(e.aheadM) > 0) ? e.aheadM : window.tollAheadM()));
+        const warnBox = document.getElementById('tollRateAheadWarn');
+        if (warnBox) warnBox.checked = (e.aheadWarnAll === undefined) ? true : !!e.aheadWarnAll;
+        window.tollAheadSyncUi();
 
         // ① ราคาจริงที่จำจากเที่ยว (แก้ไม่ได้ — เป็นยอดที่จ่ายจริง · ลบได้)
         const pb = document.getElementById('tollRatePairsBlock');
@@ -17037,9 +17221,12 @@
     window.tollRatesCollect = () => {
         const out = JSON.parse(JSON.stringify(window.__tollEdit || window.tollRatesSnapshot()));
         const bad = [];
-        const aheadEl = document.getElementById('tollRateAhead');
-        const av = Number(aheadEl && aheadEl.value);
-        out.aheadKm = (isFinite(av) && av >= 0.3 && av <= 30) ? Math.round(av * 10) / 10 : 2.5;
+        // 🎚️ ระยะเตือน (เมตร) — คลิก − / + แล้วอ่านค่าที่ clamp ไว้แล้ว · เขียน aheadKm ตามไปด้วยเพื่อความเข้ากันได้
+        const aheadMEl = document.getElementById('tollRateAheadM');
+        out.aheadM = window.tollAheadClampM(aheadMEl ? aheadMEl.value : window.tollAheadM());
+        out.aheadKm = Math.round((out.aheadM / 1000) * 1000) / 1000;
+        const aheadWarnEl = document.getElementById('tollRateAheadWarn');
+        out.aheadWarnAll = aheadWarnEl ? !!aheadWarnEl.checked : true;
         document.querySelectorAll('#tollRateModal [data-ex]').forEach(inp => {
             const name = inp.getAttribute('data-ex');
             const bands = window.tollBandsFromText(inp.value);
@@ -17137,7 +17324,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '0b0d854b28';
+    const APP_WEB_VERSION = '6730b25ece';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -17613,6 +17800,10 @@
         ['2026-09-19', '🧱 แท็บลำดับ: ลากสลับ/ซ่อนบล็อกโปรไฟล์ — บันทึกแล้วทุกคนเห็นเหมือนกัน'],
         ['2026-09-19', '🛡️ แท็บโชว์ตามสิทธิ์: มีสิทธิ์เดียวเห็นแท็บเดียว · ไม่มีสิทธิ์ซ่อนเมนู'],
         ['2026-09-19', '🐞 หน้าต่างแก้ข้อความไม่ถูกนับเป็น “ข้อความแก้ได้” เอง — ลิสต์ไม่มีแถวขยะ'],
+        ['2026-09-19', '🚧 เตือนก่อนถึงด่านทางด่วนเปลี่ยนหน่วยเป็น “เมตร” — ค่าเริ่มต้น 100 ม.'],
+        ['2026-09-19', '🎚️ ตั้งระยะเตือนด้วยปุ่ม − / + ทีละ 10 เมตร (30–2000) ไม่ต้องพิมพ์เอง'],
+        ['2026-09-19', '🚨 ป้าย “กำลังจะถึงด่านเก็บเงิน” บนสุดกลางจอ 10 วินาที + เสียงพูด'],
+        ['2026-09-19', '📢 ป้ายขึ้นแม้ไม่ได้เปิดมินิแมพ · สวิตช์ “เตือนทุกด่าน” ปิด = โหมดเงียบ'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -22521,7 +22712,25 @@
         } catch (e) { return true; }
     };
     // 🛣️ ช่วงทางด่วนที่ “กำลังจะขึ้น” หรือ “กำลังวิ่งอยู่” — จากข้อมูลเส้นทางจริง (ไม่กินโควตาเพิ่ม)
-    function tollAheadKmCfg() { try { var v = Number((window.__tollRates || {}).aheadKm); return (isFinite(v) && v > 0) ? v : 2.5; } catch (e) { return 2.5; } }
+    // 🎚️ (19 ก.ย. 69) ระยะเตือน “ก่อนถึงด่านขึ้น” — เปลี่ยนหน่วยเป็น **เมตร** (ค่าเริ่มต้น 100 ม.)
+    //   อ่าน aheadM เป็นหลัก · ถ้าเจอค่าเก่า aheadKm (2.5 = ค่าเริ่มต้นเก่า) ถือว่า “ยังไม่เคยตั้ง” → 100 ม.
+    var TOLL_AHEAD_DEF_M = 100, TOLL_AHEAD_MIN_M = 30, TOLL_AHEAD_MAX_M = 2000;
+    function tollAheadMeters() {
+        try {
+            var r = window.__tollRates || {};
+            var m = Number(r.aheadM);
+            if (isFinite(m) && m > 0) { return Math.min(TOLL_AHEAD_MAX_M, Math.max(TOLL_AHEAD_MIN_M, m)); }
+            var km = Number(r.aheadKm);
+            if (isFinite(km) && km > 0 && Math.abs(km - 2.5) > 0.001) { return Math.min(TOLL_AHEAD_MAX_M, Math.max(TOLL_AHEAD_MIN_M, km * 1000)); }
+        } catch (e) {}
+        return TOLL_AHEAD_DEF_M;
+    }
+    function tollAheadKmCfg() { return tollAheadMeters() / 1000; }   // 🔁 compat (ที่ใดยังเรียกเป็น กม.)
+    function tollAwayTxt(awayKm) {
+        try { if (typeof window.__tollBannerAwayText === 'function') { return window.__tollBannerAwayText(awayKm); } } catch (e) {}
+        var m = Math.max(0, Math.round(Number(awayKm) * 1000 / 10) * 10);
+        return (m < 1000) ? (m + ' ม.') : ((m / 1000).toFixed(1) + ' กม.');
+    }
     function paintTollRow() {
         if (!tollRow) { return; }
         var T = nTolls;
@@ -22533,7 +22742,7 @@
             var x = T.booths[i];
             if (typeof x.startKm !== 'number' || typeof x.endKm !== 'number') { continue; }
             if (carKm >= x.startKm - 0.25 && carKm <= x.endKm) { b = x; onIt = true; break; }
-            if (x.startKm > carKm && (x.startKm - carKm) <= tollAheadKmCfg()) { b = x; onIt = false; break; }
+            if (x.startKm > carKm && ((x.startKm - carKm) * 1000) <= tollAheadMeters()) { b = x; onIt = false; break; }
         }
         if (!b) { tollRow.style.display = 'none'; return; }
         var sys = window.tollSysLabel(b) || '';
@@ -22548,7 +22757,7 @@
         } else {
             var away = Math.max(0, b.startKm - carKm);
             var forSys = (b.system === 'tollway') ? 'Tollway' : (b.system === 'motorway' ? 'มอเตอร์เวย์' : 'ทางด่วน');
-            tollMain.textContent = 'อีก ' + away.toFixed(1) + ' กม. · ขึ้น ' + (b.system === 'tollway' ? 'Tollway' : forSys) + ' · ' + b.price + '฿';
+            tollMain.textContent = 'อีก ' + tollAwayTxt(away) + ' · ขึ้น ' + (b.system === 'tollway' ? 'Tollway' : forSys) + ' · ' + b.price + '฿';
             tollSub.textContent = nm + route;
             // 🔔 เตือนครั้งเดียวต่อด่าน (ทอง + เสียงนำทาง ถ้าเปิดเสียงอยู่) — “กำลังจะถึงทางด่วนด่านนี้ กี่บาท”
             var alertKey = (b.gateIn || b.from || '') + '@' + b.startKm + '@' + b.price;
@@ -22557,7 +22766,7 @@
                 // 🔕 โหมดไม่กวน (18 ก.ย. 69): ด่านที่จำราคาไว้แล้ว = เงียบ (เดี๋ยวมีสรุปตอนผ่านด่าน)
                 //    ⛔ ยังเตือนถ้าราคานี้ “ยังไม่รู้จริง” (ด่านไม่รู้ชื่อขึ้น = ระบบไม่บวกให้เอง)
                 if (window.__tollRowWarnAllowed(b)) {
-                    var msg = 'อีก ' + away.toFixed(1) + ' กม. · ขึ้น ' + (b.system === 'tollway' ? 'Tollway' : forSys) + (b.gateIn ? ' ' + b.gateIn : '') + ' ' + b.price + ' บาท';
+                    var msg = 'อีก ' + tollAwayTxt(away) + ' · ขึ้น ' + (b.system === 'tollway' ? 'Tollway' : forSys) + (b.gateIn ? ' ' + b.gateIn : '') + ' ' + b.price + ' บาท';
                     try { if (window.showToast) { window.showToast('🛣️ ' + msg, false); } } catch (e) {}
                     try { if (window.navVoiceSpeak) { window.navVoiceSpeak(msg); } } catch (e) {}
                 }
@@ -23262,6 +23471,7 @@
     window.navMiniSetTolls = function (t) {
         nTolls = (t && t.hasTolls && t.booths && t.booths.length) ? t : null;
         try { if (window.__tollGateReset) window.__tollGateReset(); } catch (e) {}   // 🛣️ เส้นทางใหม่ = เริ่มนับด่านใหม่
+        try { if (window.__tollBannerReset) window.__tollBannerReset(); } catch (e) {} // 🚧 เส้นทางใหม่ = ล้างป้ายค้าง + เริ่มเตือนด่านใหม่ได้
         try { paintTollRow(); } catch (e) {}
     };
 
@@ -23276,7 +23486,7 @@
         if (!window.isManualRunning || window.isMeterPaused) return null;   // ⏸ หยุดมิเตอร์ = ไม่รบกวน
         var km = carAlongKm();
         if (km === null) return null;
-        var ahead = tollAheadKmCfg();
+        var ahead = tollAheadKmCfg();   // = aheadMeters/1000 (ค่าเริ่มต้น 0.1 กม. = 100 ม.)
         var st = window.__tollGateState || null;
         if (!st) { return null; }
         for (var i = 0; i < nTolls.booths.length; i++) {
@@ -23286,6 +23496,15 @@
             if (!key) continue;
             if (st.handled[key]) continue;                     // ด่านนี้จัดการแล้ว/กดยกเลิกไปแล้ว
             var away = b.startKm - km;
+            // 🚧 (19 ก.ย. 69) ป้าย “กำลังจะถึงด่านเก็บเงิน” บนสุดจอ — แสดง **แม้ไม่ได้เปิดมินิแมพ**
+            //   (โมดูลนี้ทำงานนอกมินิแมพอยู่แล้ว · ไม่เช็ค permOk/visible/pref.hidden ตามกติกาข้อเดิม)
+            if (away > 0 && (away * 1000) <= tollAheadMeters()) {
+                try {
+                    var learnedPeek = null;
+                    try { learnedPeek = window.tollPairGet ? window.tollPairGet(b) : null; } catch (e2) {}
+                    if (window.tollAheadBannerFor) { window.tollAheadBannerFor(b, away, learnedPeek); }
+                } catch (e) {}
+            }
             // ⚠️ กับดักที่เจอตอนทดสอบ (18 ก.ย. 69): เดิมกันด้วย “เลยด่านไม่เกิน 150 ม.” ⇒ ถ้า จอล็อก/แอปถูกพัก
             //    ตอนขับผ่านด่าน จะ “พลาดจังหวะ” แล้วไม่ได้ค่าทางด่วนเลยทั้งที่จ่ายไปแล้ว
             //    ⇒ ยอมรับการเบิกทีหลังได้ถึง 5 กม. หลังด่าน (ยังอยู่ในช่วงทางด่วนจริง ไม่ไปคิดด่านที่เลยมาคนละช่วง)
@@ -24060,7 +24279,9 @@
     // 🛣️ อัตราค่าทางด่วน (แอดมิน) — เทียบทุกช่องกรอกในหน้าต่างกับค่าตอนเปิด
     window.dirtyFormBind('tollRates', { boxId: 'tollRateModal', saveId: 'tollRateSaveBtn', resetId: 'tollRateResetBtn', snapshot: () => {
         const o = [];
-        document.querySelectorAll('#tollRateModal [data-ex], #tollRateModal [data-mw], #tollRateModal [data-gate], #tollRateAhead').forEach(el => o.push(String(el.value == null ? '' : el.value)));
+        document.querySelectorAll('#tollRateModal [data-ex], #tollRateModal [data-mw], #tollRateModal [data-gate], #tollRateAheadM').forEach(el => o.push(String(el.value == null ? '' : el.value)));
+        const wa = document.getElementById('tollRateAheadWarn');
+        if (wa) o.push(wa.checked ? '1' : '0');
         return o;
     } });
     window.dirtyFormBind('profile', { boxId: 'profileModal', saveId: 'saveProfileBtn', snapshot: () => { const v = (id) => { const el = pick(id); if (!el) return ''; return el.type === 'checkbox' ? !!el.checked : String(el.value == null ? '' : el.value); }; return { n: v('editDisplayName'), c: v('editCompanyName'), p: v('editPlateNo'), t: v('editPhone'), tt: v('editTaxiType') }; } });

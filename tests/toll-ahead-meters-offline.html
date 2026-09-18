@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — เตือนก่อนถึงด่านทางด่วน (หน่วยเมตร) + ป้าย “กำลังจะถึงด่านเก็บเงิน”</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; white-space: pre-wrap; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: “เตือนก่อนถึงด่านขึ้น” หน่วยเมตร + ป้ายบนสุดกลางจอ</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> ·
+        ตั้งเส้นทางเองด้วย <code>navMiniSetRoute</code> + เลื่อนรถด้วย <code>navMiniUpdate</code> (เหมือน GPS จริงส่งพิกัดเข้ามา)
+        <br><b>กติกาที่ผู้ใช้สั่ง 19 ก.ย. 69:</b> “ระยะเตือนก่อนถึงด่าน <b>ไม่เอากิโลเมตร</b> เปลี่ยนเป็น <b>เมตร</b> ค่าเริ่มต้น <b>100 เมตร</b>
+        มี <b>ปุ่มบวกลบ</b> ทีละ 10 เมตร ไม่ต้องพิมพ์ · และต้องโชว์ <b>ข้างบนสุดตรงกลาง</b> ของจอใหญ่
+        <b>แม้ไม่ได้เปิดมินิแมพ</b> นาน 10 วินาที พร้อม <b>เสียงพูด</b> ว่ากำลังจะถึงด่านเก็บเงิน”
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/toll-ahead-meters-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (11 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[toll-ahead-test]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตทั้งหมด ============================
+    let stubsInstalled = false;
+    let blocked = 0;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedTomtom: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0;
+            if (!isLocal) {
+                cw.__net.blockedFetch++; cw.__net.lastUrl = u; blocked++;
+                if (u.indexOf('tomtom.com') >= 0) { cw.__net.blockedTomtom++; }
+                return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u));
+            }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) { cw.__net.blockedXhr = (cw.__net.blockedXhr || 0) + 1; blocked++; x.__blocked = true; return; }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.tollAheadM === 'function' && typeof cw.navMiniTollWatch === 'function'
+                && typeof cw.navMiniSetTolls === 'function' && typeof cw.navMiniSetRoute === 'function') {
+                installStubs();
+                await wait(200);
+                try { ['taxi_active_trip_v1', 'taxi_toll_pairs_v1', 'taxi_toll_rates_v1'].forEach(k => cw.localStorage.removeItem(k)); } catch (e) {}
+                await closeAllModals();
+                await wait(300);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    // ============================ เครื่องมือทดสอบ ============================
+    // เส้นทางตรงเหนือ-ใต้ ~4.4 กม. — จุดถี่ทุก ~100 ม. (เหมือนเส้นทางจริงจาก TomTom)
+    const ROUTE = (() => { const a = []; for (let i = 0; i <= 44; i++) { a.push([13.70 + i * 0.0009, 100.50]); } return a; })();
+    const M_PER_DEG_LAT = 111320;
+
+    const el = (id) => w().document.getElementById(id);
+    const bannerText = () => { const b = el('tollAheadBanner'); return b ? b.innerText.replace(/\s+/g, ' ').trim() : '(ไม่มีป้าย)'; };
+
+    function armRoute() {
+        const cw = w();
+        cw.canUseMiniMap = () => true;
+        cw.navMiniSetRoute(ROUTE, 'ทดสอบด่าน');
+        cw.startNavigationMap(ROUTE[0][0], ROUTE[0][1], ROUTE[4][0], ROUTE[4][1], 'ทดสอบด่าน', 0, ROUTE);
+        cw.__routeBaseKm = 0; cw.__routeBaseSec = 0;
+        try { cw.invalidateRouteBase(); } catch (e) {}
+    }
+    // ให้ “เที่ยวเดินอยู่” แบบที่ navMiniTollWatch ต้องการ (มิเตอร์เดิน · ไม่ได้พัก)
+    function armTrip() {
+        const cw = w();
+        cw.isManualRunning = true;
+        cw.isMeterPaused = false;
+        cw.__navArmed = true;
+        try { if (cw.__tollGateReset) cw.__tollGateReset(); } catch (e) {}
+    }
+    function setRates(patch) {
+        const cw = w();
+        cw.__tollRates = Object.assign({}, cw.__tollRates || {}, patch);
+    }
+    function moveToRouteIdx(i, kmh) {
+        w().navMiniUpdate(ROUTE[i][0], ROUTE[i][1], kmh || 40);
+    }
+
+    // ============================ รัน 1 สถานการณ์ ============================
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(30000).then(() => { throw new Error('สถานการณ์ timeout 30 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ไม่ผ่าน</span> ' + name + '\n<span class="detail">' + ((e && e.message) ? e.message : e) + '</span>';
+            failCount++;
+            failures.push(name + ' → ' + ((e && e.message) ? e.message : e));
+        }
+    }
+
+    // ============================ ชุดสถานการณ์ ============================
+    async function runAll() {
+        const cw = w();
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+        const keepRates = JSON.parse(JSON.stringify(cw.__tollRates || {}));
+        // 🔒 ล็อกค่าเริ่มต้นให้ชัดก่อนทดสอบ (แคช Firestore ในเบราว์เซอร์อาจมีค่าจริงของผู้ใช้ → ทำให้ผลไม่นิ่ง)
+        cw.__tollRates = Object.assign({}, cw.__tollRates || {}, { aheadM: 100, aheadWarnAll: true });
+
+        await runScenario('S1 · ค่าที่ใช้จริง = เมตร · ค่าเริ่มต้น 100 · แปลงค่าเก่า (กม.) ให้เอง · เพดาน 30–2000', async () => {
+            const save = JSON.parse(JSON.stringify(cw.__tollRates || {}));
+            const t = [];
+            cw.__tollRates = {}; t.push(['ว่าง', cw.tollAheadM(), 100]);
+            cw.__tollRates = { aheadKm: 2.5 }; t.push(['ค่าเก่า 2.5 กม. (ของเดิม)', cw.tollAheadM(), 100]);
+            cw.__tollRates = { aheadKm: 1.2 }; t.push(['ค่าเก่า 1.2 กม. ที่แอดมินเคยแก้', cw.tollAheadM(), 1200]);
+            cw.__tollRates = { aheadM: 450 }; t.push(['aheadM = 450', cw.tollAheadM(), 450]);
+            cw.__tollRates = { aheadM: 5 }; t.push(['ต่ำกว่าเพดาน (5 ม.)', cw.tollAheadM(), 30]);
+            cw.__tollRates = { aheadM: 9999 }; t.push(['เกินเพดาน (9999 ม.)', cw.tollAheadM(), 2000]);
+            cw.__tollRates = { aheadM: 437 }; t.push(['ปัดทีละ 10 (437)', cw.tollAheadM(), 440]);
+            const bad = t.filter(([n, got, exp]) => got !== exp).map(([n, got, exp]) => n + ' → ได้ ' + got + ' (ควร ' + exp + ')');
+            cw.__tollRates = { aheadM: 100 };
+            assert(Math.abs(cw.tollAheadKm() - 0.1) < 1e-9, 'tollAheadKm() (ตัวคุมรุ่นเก่า) ควรเป็น 0.1 แต่ได้ ' + cw.tollAheadKm());
+            cw.__tollRates = save;
+            assert(bad.length === 0, bad.join(' · '));
+            return t.map(([n, got, exp]) => n + ' = ' + got + (got === exp ? '' : ' ⛔')).join(' · ');
+        });
+
+        await runScenario('S2 · ตัวจัดข้อความระยะ (ใช้ร่วมทั้งแอป): <1 กม. = เมตร · ≥1 กม. = ทศนิยม 1', async () => {
+            //   ⚠️ เกณฑ์เดียวกับป้ายระยะเดิมของแอป (navDistLabel): “ต่ำกว่า 1 กม. = เมตร” · ตั้งแต่ 1 กม. ขึ้นไป = ทศนิยม 1
+            const cases = [[0.04, '40 ม.'], [0.1, '100 ม.'], [0.45, '450 ม.'], [0.94, '940 ม.'], [0.999, '1.0 กม.'], [1, '1.0 กม.'], [2.3, '2.3 กม.'], [0, '0 ม.']];
+            const f = cw.__tollAwayTxt;
+            const bad = cases.filter(([km, exp]) => f(km) !== exp).map(([km, exp]) => km + ' → “' + f(km) + '” (ควร “' + exp + '”)');
+            assert(bad.length === 0, bad.join(' · '));
+            return cases.map(([km, exp]) => km + ' กม. → “' + exp + '”').join(' · ');
+        });
+
+        await runScenario('S3 · แผง “อัตราค่าทางด่วน”: ปุ่ม − / + ทีละ 10 เมตร · ตัวเลขกลางจอขยับ · ชนเพดานได้', async () => {
+            cw.__tollEdit = cw.tollRatesSnapshot();
+            cw.tollRatesRenderPanel();
+            const box = el('tollRateAheadM'), show = el('tollAheadVal');
+            assert(box && show, 'ไม่พบช่องค่า/ตัวเลขแสดงผลในหน้าต่าง (อาจยังไม่ถูกวาด)');
+            // ⚠️ กดผ่าน “ฟังก์ชันที่ปุ่มเรียก” (window.tollAheadStep) = ทางเดียวกับ onclick ของปุ่มจริงบนจอ
+            const seq = [show.textContent];
+            for (let i = 0; i < 3; i++) { w().tollAheadStep(10); }
+            seq.push(show.textContent);
+            assert(el('tollRateAheadBlock').querySelector('.spd-step-btn[aria-label*="เพิ่ม"]') !== null
+                && el('tollRateAheadBlock').querySelector('.spd-step-btn[aria-label*="ลด"]') !== null,
+                'ต้องมีปุ่มกลม + / − จริงในหน้าต่าง (ไม่ใช่ช่องให้พิมพ์ตัวเลข)');
+            w().tollAheadStep(-10);
+            seq.push(show.textContent);
+            for (let i = 0; i < 20; i++) { w().tollAheadStep(-10); }   // กด − รัว ๆ → ชนพื้น
+            seq.push(show.textContent);
+            for (let i = 0; i < 300; i++) { w().tollAheadStep(10); }   // กด + รัว ๆ → ชนเพดาน
+            seq.push(show.textContent);
+            assert(seq[0] === '100', 'ต้องเริ่มที่ 100 เมตร แต่ได้ ' + seq[0]);
+            assert(seq[1] === '130', 'กด + สามครั้ง → ต้องได้ 130 แต่ได้ ' + seq[1]);
+            assert(seq[2] === '120', 'กด − หนึ่งครั้ง → ต้องได้ 120 แต่ได้ ' + seq[2]);
+            assert(seq[3] === '30', 'กด − รัว ๆ → ต้องหยุดที่ 30 แต่ได้ ' + seq[3]);
+            assert(seq[4] === '2000', 'กด + รัว ๆ → ต้องหยุดที่ 2000 แต่ได้ ' + seq[4]);
+            assert(box.value === show.textContent, 'ช่องค่า (' + box.value + ') กับตัวเลขบนจอ (' + show.textContent + ') ต้องตรงกัน');
+            w().tollAheadSetM(100);
+            return 'ลำดับตัวเลข: ' + seq.join(' → ') + ' เมตร (ปุ่มละ 10 เมตร)';
+        });
+
+        await runScenario('S4 · ปุ่มบันทึก/คืนค่าเป็นสีเมื่อมีการแก้ (กด + แล้วเทา → เขียว/แดง)', async () => {
+            cw.__tollEdit = cw.tollRatesSnapshot();
+            cw.tollRatesRenderPanel();
+            cw.dirtyFormCommit('tollRates');
+            w().tollAheadStep(10);
+            await wait(30);
+            const dirtyAfterStep = cw.dirtyFormDirty('tollRates');
+            const saveOn = !el('tollRateSaveBtn').disabled, resetOn = !el('tollRateResetBtn').disabled;
+            cw.dirtyFormCommit('tollRates');
+            await wait(30);
+            const dirtyAfterCommit = cw.dirtyFormDirty('tollRates');
+            const saveOff = el('tollRateSaveBtn').disabled;
+            assert(dirtyAfterStep && saveOn && resetOn, 'กด + แล้วต้องถือว่า “มีการแก้” และปุ่มบันทึก/คืนค่ากดได้ (dirty=' + dirtyAfterStep + ' save=' + saveOn + ' reset=' + resetOn + ')');
+            assert(!dirtyAfterCommit && saveOff, 'กลับเป็นค่าเดิมแล้วปุ่มต้องเทากลับ (dirty=' + dirtyAfterCommit + ' saveDisabled=' + saveOff + ')');
+            w().tollAheadSetM(100);
+            return 'กด + → dirty=true · ปุ่มกดได้ · บันทึกฐานใหม่ → dirty=false · ปุ่มเทากลับ';
+        });
+
+        await runScenario('S5 · ค่าที่จะบันทึกจริง: aheadM + aheadKm (เข้ากันได้) + สวิตช์ “เตือนทุกด่าน”', async () => {
+            w().tollAheadSetM(250);
+            el('tollRateAheadWarn').checked = false;
+            let r = cw.tollRatesCollect().out;
+            const first = { m: r.aheadM, km: r.aheadKm, warn: r.aheadWarnAll };
+            el('tollRateAheadWarn').checked = true;
+            r = cw.tollRatesCollect().out;
+            const second = { m: r.aheadM, km: r.aheadKm, warn: r.aheadWarnAll };
+            assert(first.m === 250 && Math.abs(first.km - 0.25) < 1e-9, 'ต้องได้ aheadM=250 + aheadKm=0.25 แต่ได้ ' + JSON.stringify(first));
+            assert(first.warn === false && second.warn === true, 'สวิตช์ต้องถูกอ่านจริง (ปิด=' + first.warn + ' เปิด=' + second.warn + ')');
+            //   snapshot = “ค่าที่บันทึกไว้จริง” (ไม่ใช่ร่างที่ยังไม่กดบันทึก) — ต้องมีฟิลด์ครบเพื่อไม่ให้เครื่องอื่นอ่านพลาด
+            const snap = cw.tollRatesSnapshot();
+            assert(typeof snap.aheadM === 'number' && typeof snap.aheadWarnAll === 'boolean', 'snapshot ต้องมี aheadM/aheadWarnAll (ได้ ' + JSON.stringify({ m: snap.aheadM, w: snap.aheadWarnAll }) + ')');
+            assert(second.m === 250, 'ร่างที่กด + แล้วต้องเป็น 250 เมตร (ได้ ' + second.m + ')');
+            const dflt = cw.tollRateDefaults();
+            assert(dflt.aheadM === 100 && dflt.aheadWarnAll === true, 'ปุ่ม “คืนค่าเดิม” ต้องกลับไป 100 เมตร + เตือนทุกด่าน');
+            w().tollAheadSetM(100);
+            return 'บันทึก: ' + JSON.stringify(first) + ' · snapshot มี aheadM · ค่าเริ่มต้น = 100 ม.';
+        });
+
+        await runScenario('S6 · ป้าย “กำลังจะถึงด่านเก็บเงิน”: โผล่ · ข้อความถูก · โปร่งใสไม่บังจอ · 10 วินาทีแล้วปิดเอง', async () => {
+            cw.__tollBannerReset();
+            const b = { startKm: 5, gateIn: 'บางนา', from: 'บางนา', to: 'ดินแดง', price: 65, system: 'expressway' };
+            const shown = cw.tollAheadBannerFor(b, 0.45, null);
+            const bx = el('tollAheadBanner');
+            assert(shown && bx && cw.tollBannerVisible(), 'ป้ายต้องโผล่');
+            const cs = cw.getComputedStyle(bx);
+            assert(cs.position === 'fixed' && cs.pointerEvents === 'none', 'ป้ายต้องเป็น fixed + ไม่รับคลิก (pointer-events:none) แต่ได้ ' + cs.position + '/' + cs.pointerEvents);
+            const t = bannerText();
+            assert(t.indexOf('กำลังจะถึงด่านเก็บเงิน') >= 0, 'ข้อความต้องมี “กำลังจะถึงด่านเก็บเงิน” แต่ได้ “' + t + '”');
+            assert(t.indexOf('450 ม.') >= 0, 'ต้องบอกระยะเป็น “450 ม.” (ไม่ใช่ กม.) แต่ได้ “' + t + '”');
+            assert(t.indexOf('บางนา') >= 0 && t.indexOf('65') >= 0, 'ต้องบอกชื่อด่าน + ยอดที่จำไว้ แต่ได้ “' + t + '”');
+            const topNow = cw.__tollGateBarTop();
+            assert(topNow > 40, 'แถบกรอกยอดต้องถูกดันลงมาให้พ้นป้าย แต่ตำแหน่งบนสุดได้ ' + topNow + 'px');
+            assert(cw.__TOLL_BANNER_MS === 10000, 'เวลาที่ป้ายค้างต้องเป็น 10 วินาที แต่ได้ ' + cw.__TOLL_BANNER_MS);
+            await wait(10500);
+            assert(!cw.tollBannerVisible(), 'ครบ 10 วินาทีแล้วป้ายต้องปิดเอง');
+            return 'ข้อความ: “' + t + '” · แถบกรอกยอดถูกดันลงมา ' + topNow + 'px · ปิดเองหลัง 10 วิ';
+        });
+
+        await runScenario('S7 · ด่านเดียวกันไม่ยิงป้ายซ้ำ + เปลี่ยนเส้นทางแล้วเริ่มเตือนใหม่ได้', async () => {
+            cw.__tollBannerReset();
+            const b = { startKm: 5, gateIn: 'บางนา', from: 'บางนา', price: 65, system: 'expressway' };
+            const a1 = cw.tollAheadBannerFor(b, 0.1, null);
+            const a2 = cw.tollAheadBannerFor(b, 0.1, null);
+            assert(a1 === true && a2 === false, 'ครั้งแรกต้องโผล่ ครั้งที่สองต้องเงียบ (ได้ ' + a1 + '/' + a2 + ')');
+            cw.navMiniSetTolls({ hasTolls: true, booths: [b] });     // เส้นทางใหม่ = ล้างสถานะป้าย
+            const a3 = cw.tollAheadBannerFor(b, 0.1, null);
+            assert(a3 === true, 'เส้นทางใหม่ต้องยิงป้ายได้อีกครั้ง แต่ได้ ' + a3);
+            cw.__tollBannerReset();
+            return 'ยิงครั้งที่ 1 = โผล่ · ครั้งที่ 2 = เงียบ · เปลี่ยนเส้นทาง = โผล่ใหม่ได้';
+        });
+
+        await runScenario('S8 · โหมดไม่กวน: ปิดสวิตช์ → ด่านที่รู้ราคาเงียบ · ด่านที่ไม่รู้ราคายังเตือน · เปิดสวิตช์ → เตือนทุกด่าน', async () => {
+            const b = { startKm: 5, gateIn: 'บางนา', from: 'บางนา', price: 65, system: 'expressway' };
+            setRates({ aheadWarnAll: false });
+            cw.__tollBannerReset();
+            const known = cw.tollAheadBannerFor(b, 0.1, 65);        // รู้ราคาแล้ว → เงียบ
+            const unknown = cw.tollAheadBannerFor(b, 0.1, null);     // ไม่รู้ราคา → ยังเตือน
+            setRates({ aheadWarnAll: true });
+            cw.__tollBannerReset();
+            const all = cw.tollAheadBannerFor(b, 0.1, 65);
+            cw.__tollBannerReset();
+            setRates({ aheadWarnAll: true });
+            assert(known === false && unknown === true && all === true, 'ปิดสวิตช์: รู้ราคา=' + known + ' ไม่รู้=' + unknown + ' · เปิดสวิตช์: ' + all);
+            return 'ปิด “เตือนทุกด่าน” → ด่านที่จำราคาได้เงียบ · ด่านไม่รู้ราคายังเตือน · เปิด → เตือนทุกด่าน';
+        });
+
+        await runScenario('S9 · แสดงแม้ไม่ได้เปิดมินิแมพ + ไม่ใช้สิทธิ์มินิแมพเลย (จอใหญ่เท่านั้น)', async () => {
+            armRoute();
+            armTrip();
+            cw.__tollBannerReset();
+            moveToRouteIdx(10, 40);                                  // รถอยู่บนเส้นทางจริง
+            const along = cw.navMiniAlongKm();
+            assert(typeof along === 'number' && along > 0, 'ต้องอ่านระยะบนเส้นทางได้ แต่ได้ ' + along);
+            const booth = { startKm: along + 0.06, endKm: along + 2, gateIn: 'บางนา', from: 'บางนา', to: 'ดินแดง', price: 65, system: 'expressway' };
+            cw.navMiniSetTolls({ hasTolls: true, booths: [booth] });
+            // ❗ ปิดมินิแมพ + ตัดสิทธิ์มินิแมพให้เหลือศูนย์ — ป้ายต้องยังขึ้น (ผู้ใช้สั่งชัด)
+            cw.navMiniHide();
+            cw.canUseMiniMap = () => false;
+            try { if (cw.__navMiniApplyPerm) cw.__navMiniApplyPerm(); } catch (e) {}
+            await wait(60);
+            const hidden = !cw.navMiniIsVisible();
+            const act = cw.navMiniTollWatch();
+            const shown = cw.tollBannerVisible();
+            assert(hidden, 'มินิแมพต้องถูกซ่อนก่อนทดสอบ (เพื่อพิสูจน์ว่าป้ายไม่ได้ผูกกับมินิแมพ)');
+            assert(shown, 'ป้ายต้องขึ้นแม้มินิแมพถูกซ่อน/ไม่มีสิทธิ์ (ผลลัพธ์ watch = ' + act + ')');
+            const t = bannerText();
+            assert(t.indexOf('บางนา') >= 0, 'ป้ายควรบอกชื่อด่าน แต่ได้ “' + t + '”');
+            cw.__tollBannerReset();
+            cw.canUseMiniMap = () => true;
+            try { if (cw.__navMiniApplyPerm) cw.__navMiniApplyPerm(); } catch (e) {}
+            return 'มินิแมพซ่อนอยู่ + ไม่มีสิทธิ์มินิแมพ → ป้ายยังขึ้น: “' + t + '” (watch=' + act + ')';
+        });
+
+        await runnerScenarioVoice(cw);
+
+        await runScenario('S11 · ตัวเลข/ป้ายไม่กินโควตา TomTom + สายไฟในโค้ดจริง (กันถอดกลับ)', async () => {
+            const q0 = (() => { try { return cw.tomtomUsageToday().route; } catch (e) { return -1; } })();
+            const net0 = cw.__net.blockedTomtom || 0;
+            for (let i = 0; i < 12; i++) { moveToRouteIdx(8 + i, 35); await wait(20); }
+            cw.navMiniTollWatch();
+            const q1 = (() => { try { return cw.tomtomUsageToday().route; } catch (e) { return -1; } })();
+            const net1 = cw.__net.blockedTomtom || 0;
+            assert(q1 === q0, 'ตัวนับโควตาเส้นทางต้องไม่ขยับ (' + q0 + ' → ' + q1 + ')');
+            assert(net1 === net0, 'ต้องไม่มีคำขอไป TomTom เพิ่ม (บล็อกไว้ ' + net0 + ' → ' + net1 + ')');
+            const src = await fetch('../index.html').then(r => r.text());
+            const need = [
+                ['อ่านค่าเป็นเมตร', /function tollAheadMeters\(\)/],
+                ['ใช้เมตรตัดสินระยะเตือน', /\(x\.startKm - carKm\) \* 1000\) <= tollAheadMeters\(\)/],
+                ['เตือนใน watch นอกมินิแมพ', /tollAheadBannerFor\(b, away, learnedPeek\)/],
+                ['ป้าย 10 วินาที', /__TOLL_BANNER_MS = 10000/],
+                ['มีเสียงพูด', /__tollBannerSpeech/],
+                ['เก็บค่าเป็นเมตร', /out\.aheadM = window\.tollAheadClampM/],
+                ['สวิตช์เตือนทุกด่าน', /id="tollRateAheadWarn"/],
+                ['ปุ่มบวกลบ', /window\.tollAheadStep = \(d\)/]
+            ];
+            const miss = need.filter(([n, re]) => !re.test(src)).map(([n]) => n);
+            assert(miss.length === 0, 'โค้ดจริงขาด: ' + miss.join(' · '));
+            const stale = /id="tollRateAhead"/.test(src);
+            assert(!stale, 'ยังเหลือช่องพิมพ์เดิม id="tollRateAhead" (ต้องถูกแทนด้วยปุ่มบวกลบแล้ว)');
+            return 'โควตา route ' + q0 + ' → ' + q1 + ' · คำขอ TomTom เพิ่ม ' + (net1 - net0) + ' · สายไฟ 8 จุดครบ · ไม่เหลือช่องพิมพ์เดิม';
+        });
+
+        cw.__tollRates = keepRates;
+        cw.__tollBannerReset();
+        try { cw.isManualRunning = false; } catch (e) {}
+    }
+
+    // แยกเป็นฟังก์ชันเพราะต้องสตับ “เสียงพูด” ก่อนเรียก
+    async function runnerScenarioVoice(cw) {
+        await runScenario('S10 · เสียงพูดตามป้าย: “กำลังจะถึงด่านเก็บเงิน …” (ส่งเข้าลำโพงนำทางตัวเดิม)', async () => {
+            // ⚠️ กันคิวค้าง: ป้ายของสถานการณ์ก่อนหน้าหน่วง 320ms ก่อนพูด ⇒ รอให้คิวเก่าพ้นก่อนค่อยเริ่มเก็บคำพูดใหม่
+            await wait(900);
+            const spoken = [];
+            const real = cw.navVoiceSpeak;
+            cw.navVoiceSpeak = (t) => { spoken.push(String(t)); return true; };
+            try {
+                cw.__tollBannerReset();
+                const b = { startKm: 5, gateIn: 'บางนา', from: 'บางนา', price: 65, system: 'expressway' };
+                const ok = cw.tollAheadBannerFor(b, 0.45, null);
+                await wait(700);   // ป้ายหน่วง 320ms ก่อนพูด (ให้เสียงบอกทางดังก่อน)
+                assert(ok === true, 'ป้ายต้องโผล่ก่อน (จึงจะมีเสียง) แต่ได้ ' + ok);
+                assert(spoken.length === 1, 'ต้องพูดครั้งเดียวต่อป้าย แต่พบ ' + spoken.length + ' ครั้ง: ' + spoken.join(' | '));
+                const s = spoken[0];
+                assert(s.indexOf('กำลังจะถึงด่านเก็บเงิน') === 0, 'คำพูดต้องขึ้นต้นด้วย “กำลังจะถึงด่านเก็บเงิน” แต่ได้ “' + s + '”');
+                assert(s.indexOf('450') >= 0 && s.indexOf('บางนา') >= 0, 'คำพูดควรบอกระยะ + ชื่อด่าน แต่ได้ “' + s + '”');
+                cw.__tollBannerReset();
+                return 'คำพูด: “' + s + '”';
+            } finally { cw.navVoiceSpeak = real; }
+        });
+    }
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const btnRun = document.getElementById('runBtn');
+        btnRun.disabled = true; btnRun.textContent = '⏳ กำลังรัน...';
+        try {
+            if (!stubsInstalled) await loadApp();
+            await runAll();
+            offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งหมดในชุดทดสอบ (บล็อกคำขอออกนอกเครื่อง ' + blocked + ' ครั้ง)';
+        } catch (e) {
+            summaryEl.innerHTML = '<span style="color:var(--red)">ตั้งชุดทดสอบไม่สำเร็จ: ' + (e && e.message ? e.message : e) + '</span>';
+        } finally {
+            btnRun.disabled = false; btnRun.textContent = '🔄 รันการทดสอบใหม่ (11 สถานการณ์)';
+        }
+    });
+
+    const paintSummary = () => {
+        summaryEl.innerHTML = (failCount === 0
+            ? '<span style="color:var(--green)">✅ ผ่านทั้งหมด ' + passCount + ' / ' + (passCount + failCount) + ' สถานการณ์</span>'
+            : '<span style="color:var(--red)">❌ ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + '</span>\n' + failures.join('\n'));
+    };
+    setInterval(paintSummary, 500);
+
+    (async () => {
+        try { await loadApp(); await runAll(); offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งหมดในชุดทดสอบ (บล็อกคำขอออกนอกเครื่อง ' + blocked + ' ครั้ง)'; }
+        catch (e) { log('auto-load failed', e); }
+    })();
+})();
+</script>
+</body>
+</html>
