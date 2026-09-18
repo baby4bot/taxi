@@ -831,5 +831,44 @@ public class MainActivity extends Activity {
                 }
             });
         }
+
+        // ───────────────────────── 🚗 จอรถ (Android Auto) ─────────────────────────
+        // ตัวเลขมิเตอร์อยู่ในหน้าเว็บ แต่จอรถวาดด้วย Car App Library ⇒ หน้าเว็บ “ประกาศ”
+        // สแนปช็อตสั้น ๆ ทุกราว 2 วินาที แล้วฝั่งจอรถดึงไปวาด (ดู CarMeterState + MeterCarScreen)
+
+        /**
+         * หน้าเว็บประกาศตัวเลขล่าสุดให้จอรถ (เรียกทุกราว 2 วินาที)
+         * json = {running?, paused?, km?, trafficSec?, fare?, remainKm?, dest?, at?}
+         */
+        @JavascriptInterface
+        public void publishCarState(final String json) {
+            try {
+                CarMeterState.publish(getApplicationContext(), json);
+            } catch (Exception ignored) {
+            }
+        }
+
+        /**
+         * หน้าเว็บเบิกคำสั่งที่กดจากจอรถ ("" = ไม่มี)
+         * ค่าที่เป็นไปได้: pause · resume · finish — หน้าเว็บ polls ทุกราว 2 วินาที
+         */
+        @JavascriptInterface
+        public String takeCarCommand() {
+            try {
+                return CarMeterState.takeCommand();
+            } catch (Exception ignored) {
+                return "";
+            }
+        }
+
+        /** ไว้ตรวจบนเครื่องจริง: มีสแนปช็อตไหม/เก่ากี่วินาที/มีคำสั่งค้างไหม */
+        @JavascriptInterface
+        public String carStateDebug() {
+            try {
+                return CarMeterState.debug(getApplicationContext());
+            } catch (Exception e) {
+                return "{}";
+            }
+        }
     }
 }

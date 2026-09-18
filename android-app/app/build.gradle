@@ -29,8 +29,9 @@ android {
         //    v1.4.0 (5) = แอปรู้เวอร์ชันตัวเอง (TaxiNative.appVersionCode) + ดาวน์โหลด/ติดตั้งรุ่นใหม่จากในแอป
         //                 ⇒ หน้าเว็บเทียบ "รหัสที่ติดตั้งอยู่" กับ apk-version.json แล้วเตือนจนกว่าจะอัปเดต
         //    v1.5.0 (6) = เครื่อง Samsung: แจ้งเตือนให้ปิด “ตัวบล็อกอัตโนมัติ (Auto Blocker)” ก่อนติดตั้ง + ปุ่มพาไปหน้าตั้งค่านั้น
-        versionCode 6
-        versionName '1.5.0'   // อัปเดตแอปได้จากในตัว: รู้รหัสรุ่นตัวเอง + ดาวน์โหลด/เปิดหน้าติดตั้งให้
+        //    v1.6.0 (7) = ขึ้นจอรถ Android Auto ได้: การ์ดเลขมิเตอร์สด (ระยะทาง/เวลารถติด/ค่าโดยสาร) + ปุ่มหยุด-เริ่มต่อ
+        versionCode 7
+        versionName '1.6.0'   // อัปเดตแอปได้จากในตัว: รู้รหัสรุ่นตัวเอง + ดาวน์โหลด/เปิดหน้าติดตั้งให้
 
         // 🌐 URL ของเว็บแอป — จุดเดียวที่ต้องแก้ถ้าย้ายโดเมน
         //    แก้ชั่วคราวจากในแอปได้ด้วย TaxiNative.setAppUrl('http://192.168.x.x:58911/') เพื่อทดสอบกับเซิร์ฟเวอร์ในเครื่อง
@@ -85,4 +86,12 @@ android {
 //    หมายเหตุ: บังคับแค่ตอนมีสะพาน TaxiNative.googleSignIn — ถ้าลบ dependency นี้ ต้องลบโค้ดใน MainActivity ด้วย
 dependencies {
     implementation 'com.google.android.gms:play-services-auth:21.2.0'
+
+    // 🚗 (18 ก.ย. 69) ให้แอปขึ้นจอรถ (Android Auto) — ใช้เทมเพลตของ Car App Library เท่านั้น
+    //    ⚠️ ทำไมเลือก 1.4.0 (ไม่ใช่รุ่น 1.7.0 ล่าสุด): รุ่นใหม่ดึง androidx.core รุ่นใหม่ที่ “บังคับ compileSdk 35”
+    //       แต่โปรเจกต์นี้ตรึง compileSdk 34 ไว้ (ตรงกับตัวรัน GitHub) ⇒ เลือกรุ่นที่เข้ากับ 34 ได้ก่อน
+    //       · host ของ Android Auto ยังรองรับ car API level เก่า ⇒ 1.4.0 เชื่อมได้
+    //       · app = ตัวไลบรารี · app-projected = ส่วนที่ใช้กับ Android Auto (โทรศัพท์ต่อรถ)
+    implementation 'androidx.car.app:app:1.4.0'
+    implementation 'androidx.car.app:app-projected:1.4.0'
 }

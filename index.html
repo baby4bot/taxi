@@ -13028,7 +13028,95 @@
         window.updatePauseBtnUI();
         if (window.isManualRunning) window.updateLiveMeterDisplay();
         window.checkAppStatus();
+        try { if (typeof window.__carPublishNow === 'function') window.__carPublishNow(); } catch (e) {} // 🚗 ให้จอรถเห็นทันที
     };
+
+    // ─────────────────── 🚗 สะพานไปจอรถ (Android Auto) ───────────────────
+    // ทำไมต้องมี: ตัวเลขมิเตอร์คำนวณอยู่ในหน้าเว็บ แต่จอรถวาดด้วย Car App Library ของ Android
+    //   ⇒ หน้าเว็บ “ประกาศ” สแนปช็อตสั้น ๆ ทุกราว 2 วิ (TaxiNative.publishCarState) แล้ว “เบิกค�ำสั่ง”
+    //   ที่กดจากจอรถ (pause/resume) กลับมาทำในหน้าเว็บ — หน้าเว็บเป็นเจ้าของตรรกะเดียว ไม่มีสูตรซ้ำ
+    // ⛔ เบราว์เซอร์ปกติไม่มี TaxiNative → ทุกฟังก์ชันต้องเงียบ ไม่ throw (กติกาเดิมของแอปนี้)
+    // ⚠️ ข้อจำกัดตรง ๆ: ตัวเลขจะเดินตราบที่หน้าเว็บยังอยู่ในเครื่อง (แอปถูกย่อ = ยังเดิน)
+    //    ถ้าแอปถูกปิดสนิท จอรถจะขึ้น “เลขอาจไม่สดแล้ว” พร้อมบอกว่าอัปเดตล่าสุดกี่วินาทีที่แล้ว
+    // ☠️ ห้ามให้จอรถกด “จบเที่ยว” (กันกดพลาดตอนขับ) — จบได้จากมือถือเท่านั้น
+    window.__carBridgeOn = false;
+
+    /** สร้างสแนปช็อตที่จอรถต้องใช้ (ฟังก์ชันล้วน — ทดสอบออฟไลน์ได้) */
+    window.__carSnapshot = () => {
+        let km = 0, trafficSec = 0, fare = 0, remainKm = -1, dest = '';
+        try { km = Number(actualDrivenKm) || 0; } catch (e) {}
+        try { trafficSec = Number(trafficSeconds) || 0; } catch (e) {}
+        try { fare = Math.max(0, Math.round(window.currentMeterFare())); } catch (e) {}
+        try {
+            if (destLoc) {
+                remainKm = Math.max(0, Number(currentTrueRemainKm) || 0);
+                dest = String(destLoc.name || 'จุดหมาย');
+            }
+        } catch (e) {}
+        return {
+            running: !!window.isManualRunning,
+            paused: !!window.isMeterPaused,
+            km: Math.round(km * 100) / 100,
+            trafficSec: Math.round(trafficSec),
+            fare: fare, remainKm: remainKm, dest: dest, at: Date.now()
+        };
+    };
+
+    /** ประกาศสแนปช็อตทันที (เรียกตอนเริ่ม/หยุด/จบเที่ยว) */
+    window.__carPublishNow = () => {
+        if (!window.__carBridgeOn) return false;
+        try {
+            if (!window.TaxiNative || typeof window.TaxiNative.publishCarState !== 'function') return false;
+            window.TaxiNative.publishCarState(JSON.stringify(window.__carSnapshot()));
+            return true;
+        } catch (e) { return false; }
+    };
+
+    /** เบิกคำสั่งที่กดจากจอรถ — pause/resume เท่านั้น (เทียบธงก่อน กันกดซ้ำ) */
+    window.__carPollCommands = () => {
+        if (!window.__carBridgeOn) return '';
+        try {
+            if (!window.TaxiNative || typeof window.TaxiNative.takeCarCommand !== 'function') return '';
+            const cmd = String(window.TaxiNative.takeCarCommand() || '');
+            if (!cmd) return '';
+            if (cmd === 'pause' || cmd === 'resume') {
+                const wantPaused = (cmd === 'pause');
+                if (!!window.isMeterPaused !== wantPaused) window.toggleMeterPause();
+            }
+            return cmd;
+        } catch (e) { return ''; }
+    };
+
+    /** เปิดสะพาน (คืน false = ยังไม่มีสะพาน/ไม่ใช่แอป) */
+    window.__carStartBridge = () => {
+        if (window.__carBridgeOn) return true;
+        let ok = false;
+        try { ok = !!(window.TaxiNative && typeof window.TaxiNative.publishCarState === 'function'); } catch (e) { ok = false; }
+        if (!ok) return false;
+        window.__carBridgeOn = true;
+        try { clearInterval(window.__carPubTimer); } catch (e) {}
+        try { clearInterval(window.__carCmdTimer); } catch (e) {}
+        window.__carPubTimer = setInterval(() => { try { window.__carPublishNow(); } catch (e) {} }, 2000);
+        window.__carCmdTimer = setInterval(() => { try { window.__carPollCommands(); } catch (e) {} }, 2000);
+        window.__carPublishNow();
+        return true;
+    };
+
+    /** วินิจฉัยบนเครื่องจริง: เปิดสะพานไหม · สแนปช็อตล่าสุดเป็นอย่างไร (ดูฝั่งแอปด้วย carStateDebug) */
+    window.__carDiag = () => ({ on: !!window.__carBridgeOn, snapshot: window.__carSnapshot() });
+
+    // เริ่มสะพานเองเมื่ออยู่ในแอป — ลองซ้ำเพราะสะพานอาจถูกฉีดช้ากว่าสคริปต์ (เฉพาะใน APK)
+    try {
+        let __carTries = 0;
+        const __carBoot = () => {
+            __carTries++;
+            try {
+                if (!window.__carStartBridge() && __carTries < 6) setTimeout(__carBoot, 1500);
+            } catch (e) {}
+        };
+        setTimeout(__carBoot, 1200);
+        document.addEventListener('visibilitychange', () => { try { if (!document.hidden) window.__carPublishNow(); } catch (e) {} });
+    } catch (e) {}
 
     window.startMeterAndTracking = (seed) => { 
         if (window.isManualRunning) return;
@@ -15834,7 +15922,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = 'c141c547cf';
+    const APP_WEB_VERSION = 'c5c80e51d0';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -16255,6 +16343,11 @@
         ['2026-09-18', '🖥 เปิดหน้าตั้งค่าโปรไฟล์แล้วลำดับ/การซ่อนตรงกับที่แอดมินตั้ง — ไม่ต้องปิดเปิดแอปใหม่'],
         ['2026-09-18', '🧱 เครื่อง Samsung เตือนให้ปิด “ตัวบล็อกอัตโนมัติ” ก่อนติดตั้ง APK — พร้อมปุ่มพาไปปิด'],
         ['2026-09-18', '📱 APK 1.5.0 รู้ยี่ห้อเครื่อง — เครื่อง Samsung เห็นคำเตือน Auto Blocker ในแถบมีรุ่นใหม่'],
+        ['2026-09-18', '🚗 ขึ้นจอรถ Android Auto ได้แล้ว — การ์ดเลขมิเตอร์สด (ระยะทาง · เวลารถติด · ค่าโดยสาร)'],
+        ['2026-09-18', '⏸ ปุ่มหยุด/เริ่มต่อมิเตอร์กดได้จากจอรถ — คำสั่งกลับมาทำในหน้าแอป (สูตรเดียว ไม่มีเลขซ้ำ)'],
+        ['2026-09-18', '🛡 ห้ามจบเที่ยวจากจอรถโดยเจตนา — กันกดพลาดตอนขับ จบเที่ยวทำจากมือถือเท่านั้น'],
+        ['2026-09-18', '🕒 จอรถบอก “อัปเดตล่าสุดกี่วินาทีที่แล้ว” — รู้ทันทีถ้าตัวเลขเริ่มไม่สด'],
+        ['2026-09-18', '📱 APK 1.6.0 ขึ้นจอรถ Android Auto + เลขมิเตอร์บนสแนปช็อต 8 ฟิลด์ (ทดสอบออฟไลน์ 12/12)'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {

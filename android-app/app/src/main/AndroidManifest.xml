@@ -67,6 +67,24 @@
             </intent-filter>
         </activity>
 
+        <!-- 🚗 (18 ก.ย. 69) ประตูเข้าแอปบนจอรถ (Android Auto)
+             ⚠️ ต้องมี createHostValidator() = ALLOW_ALL_HOSTS_VALIDATOR (ใน TaxiCarAppService)
+                ไม่งั้นโฮสต์ของรถจะไม่ยอมเชื่อมกับ APK ที่โหลดเอง
+             ⚠️ การจะเห็นแอปในรถ: เปิด Developer mode → “Unknown sources” ในแอป Android Auto บนมือถือ (1 ครั้ง)
+             หมวดที่ประกาศ = POI (คน้หาระยะ/จุดหมาย) — เป็นหมวดที่ Car App Library รองรับและไม่จำกัดการใช้งาน -->
+        <service
+            android:name=".TaxiCarAppService"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.POI" />
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="androidx.car.app.minCarApiLevel"
+            android:value="1" />
+
         <!-- 📍 บริการเก็บพิกัดฉากหลัง (ประเภท location → ต้องมีสิทธิ์ FOREGROUND_SERVICE_LOCATION) -->
         <!-- 📍 บริการเก็บพิกัดฉากหลัง — stopWithTask="false" = ผู้ใช้ปัดแอปออกจากรายการล่าสุด
              บริการก็ยังเก็บพิกัดต่อ (คนขับปัดทิ้งบ่อยแต่ยังขับอยู่) -->

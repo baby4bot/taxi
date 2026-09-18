@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบ: จอรถ Android Auto (สะพานมิเตอร์ + คำสั่งจากจอรถ)</title>
+<style>
+  body { background: #0b1220; color: #e6e9f0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 16px; line-height: 1.55; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: #9aa4b2; font-size: 12.5px; margin-bottom: 14px; }
+  #summary { font-size: 15px; font-weight: 700; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; background: rgba(255,255,255,0.04); margin-bottom: 12px; }
+  ul { list-style: none; padding: 0; margin: 0; }
+  li { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; padding: 9px 11px; margin-bottom: 7px; font-size: 13px; white-space: pre-wrap; }
+  li.normal { border-color: rgba(34,197,94,0.55); }
+  li.fail { border-color: rgba(239,68,68,0.75); background: rgba(239,68,68,0.10); }
+  .detail { color: #9aa4b2; font-size: 12px; }
+  button { background: #1f6feb; color: #fff; border: 0; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 700; }
+  iframe { display: none; }
+</style>
+</head>
+<body>
+<h1>🚗 ทดสอบ “จอรถ Android Auto” — สะพานมิเตอร์ + คำสั่งจากจอรถ</h1>
+<div class="sub">รันออฟไลน์ได้ทั้งหมด — โหลดหน้าแอปจริงใน iframe แล้วจำลองสะพาน Android (TaxiNative) ไม่ต้องใช้เน็ต</div>
+<div id="summary">กำลังเริ่ม…</div>
+<ul id="results"></ul>
+<p><button id="runBtn">รันใหม่</button></p>
+<iframe id="appFrame" src="../index.html?fsNowrite=1"></iframe>
+
+<script>
+(function () {
+  'use strict';
+  const frame = document.getElementById('appFrame');
+  const resultsEl = document.getElementById('results');
+  const summaryEl = document.getElementById('summary');
+  let passCount = 0, failCount = 0;
+  const failures = [];
+  const w = () => frame.contentWindow;
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+  function assert(cond, msg) { if (!cond) throw new Error(msg); }
+  async function scenario(name, fn) {
+    const row = document.createElement('li');
+    row.textContent = '⏳ ' + name;
+    resultsEl.appendChild(row);
+    try {
+      const detail = await fn();
+      passCount++;
+      row.className = 'normal';
+      row.innerHTML = '✅ ' + name + (detail ? '\n<span class="detail">' + detail + '</span>' : '');
+    } catch (e) {
+      failCount++;
+      failures.push(name + ' — ' + e.message);
+      row.className = 'fail';
+      row.innerHTML = '❌ ' + name + '\n<span class="detail">' + e.message + '</span>';
+    }
+  }
+
+  /** ติดตั้งสะพานปลอม: เก็บทุกสแนปช็อต + มีคิวคำสั่งจากจอรถ */
+  function installFakeBridge() {
+    const calls = [];
+    const queue = [];
+    w().TaxiNative = {
+      isNativeApp: () => true,
+      appVersionCode: () => 7,
+      appVersionName: () => '1.6.0',
+      deviceBrand: () => 'samsung',
+      publishCarState: (j) => calls.push(j),
+      takeCarCommand: () => (queue.length ? queue.shift() : ''),
+      carStateDebug: () => JSON.stringify({ hasSnapshot: calls.length > 0, ageSec: 0, pendingCommands: queue.length })
+    };
+    return { calls, queue };
+  }
+  function removeFakeBridge() { try { delete w().TaxiNative; } catch (e) { w().TaxiNative = undefined; } }
+
+  /** รับประกันว่าเที่ยวเดินอยู่ (ไม่ค้างในสถานะหยุด) ก่อนจบชุด */
+  function ensureNotPaused() {
+    try { if (w().isMeterPaused) w().toggleMeterPause(); } catch (e) {}
+  }
+
+  let running = false;
+
+  /** รอให้สคริปต์ของแอปใน iframe บูตเสร็จก่อน (แอปจริงโหลดหนักกว่าหน้าทดสอบ) */
+  async function waitForApp(timeoutMs) {
+    const t0 = Date.now();
+    while (Date.now() - t0 < timeoutMs) {
+      try {
+        const A = w();
+        if (A && typeof A.__carStartBridge === 'function' && typeof A.__carSnapshot === 'function') return true;
+      } catch (e) {}
+      await wait(250);
+    }
+    return false;
+  }
+
+  async function runAll() {
+    if (running) return;
+    running = true;
+    try {
+    resultsEl.innerHTML = '';
+    passCount = 0; failCount = 0; failures.length = 0;
+    summaryEl.textContent = 'กำลังเริ่ม…';
+    summaryEl.style.color = '';
+
+    const booted = await waitForApp(25000);
+    if (!booted) {
+      summaryEl.textContent = '❌ หน้าแอปใน iframe ไม่บูตภายใน 25 วินาที — ตรวจว่ามี __carStartBridge ใน index.html';
+      summaryEl.style.color = '#f87171';
+      return;
+    }
+
+    const A = w();
+
+    // 0) เบราว์เซอร์ปกติ (ไม่มีสะพาน) → ต้องเงียบ ไม่พัง
+    await scenario('เบราว์เซอร์ปกติ: ไม่มีสะพาน → ไม่เปิด ไม่ยิง และไม่ throw', async () => {
+      assert(typeof A.__carStartBridge === 'function', 'ไม่พบ __carStartBridge (โค้ดสะพานยังไม่ขึ้นหน้า?)');
+      assert(A.__carStartBridge() === false, 'คืน true ทั้งที่ไม่มี TaxiNative');
+      assert(A.__carBridgeOn === false, 'เปิดสะพานทั้งที่ไม่มีสะพาน');
+      assert(A.__carPublishNow() === false, 'ยิงสแนปช็อตทั้งที่ไม่มีสะพาน');
+      assert(A.__carPollCommands() === '', 'เบิกคำสั่งทั้งที่ไม่มีสะพาน');
+      return 'startBridge=false · publishNow=false · pollCommands="" · bridgeOn=false';
+    });
+
+    // 1) เปิดสะพานในแอปจริง (จำลอง) → ยิงสแนปช็อตทันที 1 ครั้ง + สัญญาข้อมูลครบ
+    const bridge = installFakeBridge();
+    await scenario('เปิดสะพาน: ยิงสแนปช็อตทันทีและสัญญาข้อมูลครบ 8 ฟิลด์', async () => {
+      assert(A.__carStartBridge() === true, 'เปิดสะพานไม่สำเร็จ');
+      assert(bridge.calls.length === 1, 'ยิงทันทีควรได้ 1 ครั้ง แต่ได้ ' + bridge.calls.length);
+      const snap = JSON.parse(bridge.calls[0]);
+      const keys = Object.keys(snap).sort().join(',');
+      const want = 'at,dest,fare,km,paused,remainKm,running,trafficSec';
+      assert(keys === want, 'ฟิลด์ไม่ตรง: ' + keys);
+      assert(typeof snap.km === 'number' && snap.km >= 0, 'km ไม่ใช่ตัวเลข: ' + snap.km);
+      assert(typeof snap.trafficSec === 'number' && snap.trafficSec >= 0, 'trafficSec ไม่ใช่ตัวเลข');
+      assert(typeof snap.fare === 'number' && snap.fare >= 0, 'fare ไม่ใช่ตัวเลข');
+      assert(typeof snap.running === 'boolean' && typeof snap.paused === 'boolean', 'running/paused ต้องเป็น boolean');
+      assert(snap.at > 0 && Math.abs(Date.now() - snap.at) < 5000, 'at ต้องเป็นเวลาปัจจุบัน');
+      return 'km=' + snap.km + ' · trafficSec=' + snap.trafficSec + ' · fare=' + snap.fare + ' · running=' + snap.running;
+    });
+
+    // 2) ไม่มีปลายทาง → remainKm = -1 และ dest ว่าง (จอรถต้องรู้ว่า “ไม่มีปลายทาง”)
+    await scenario('ไม่มีปลายทาง: remainKm=-1 · dest="" (ไม่โชว์บรรทัดที่ไม่มีข้อมูล)', async () => {
+      const snap = A.__carSnapshot();
+      assert(snap.remainKm === -1, 'remainKm ควรเป็น -1 แต่ได้ ' + snap.remainKm);
+      assert(snap.dest === '', 'dest ควรว่าง แต่ได้ ' + JSON.stringify(snap.dest));
+      return 'remainKm=-1 · dest=""';
+    });
+
+    // 3) คำสั่งจากจอรถ: pause → หยุด · resume → เริ่มต่อ · finish → ไม่ทำอะไร
+    await scenario('คำสั่งจากจอรถ: pause ⇒ หยุดมิเตอร์ · resume ⇒ เริ่มต่อ', async () => {
+      ensureNotPaused();
+      const before = !!A.isMeterPaused;
+      bridge.queue.push('pause');
+      const cmd1 = A.__carPollCommands();
+      assert(cmd1 === 'pause', 'เบิกคำสั่งได้ ' + JSON.stringify(cmd1));
+      assert(A.isMeterPaused === true, 'กด pause แล้วยังไม่หยุด (ก่อน=' + before + ')');
+
+      bridge.queue.push('resume');
+      const cmd2 = A.__carPollCommands();
+      assert(cmd2 === 'resume', 'เบิกคำสั่งได้ ' + JSON.stringify(cmd2));
+      assert(A.isMeterPaused === false, 'กด resume แล้วยังหยุดอยู่');
+      return 'pause → paused=true · resume → paused=false';
+    });
+
+    // 4) “finish” ถูกเมินโดยเจตนา — ห้ามจบเที่ยวจากจอรถ (กันกดพลาดตอนขับ)
+    await scenario('คำสั่ง finish ถูกเมิน (จบเที่ยวทำได้จากมือถือเท่านั้น)', async () => {
+      ensureNotPaused();
+      const before = !!A.isMeterPaused;
+      const runningBefore = !!A.isManualRunning;
+      bridge.queue.push('finish');
+      const cmd = A.__carPollCommands();
+      assert(cmd === 'finish', 'คำสั่ง finish ต้องถูกเบิกออกจากคิว แต่ได้ ' + JSON.stringify(cmd));
+      assert(!!A.isMeterPaused === before, 'finish ต้องไม่เปลี่ยนสถานะหยุด');
+      assert(!!A.isManualRunning === runningBefore, 'finish ต้องไม่จบเที่ยว');
+      return 'finish → ไม่เปลี่ยน paused · เที่ยวยังเดินอยู่=' + runningBefore;
+    });
+
+    // 5) กดซ้ำสถานะเดิม → ไม่สลับ (กันรถส่งคำสั่งซ้ำแล้วกลับด้าน)
+    await scenario('คำสั่งซ้ำ: pause ขณะหยุดอยู่แล้ว → ไม่สลับกลับไปวิ่ง', async () => {
+      ensureNotPaused();
+      bridge.queue.push('pause'); A.__carPollCommands();
+      assert(A.isMeterPaused === true, 'ควรหยุด');
+      bridge.queue.push('pause'); A.__carPollCommands();   // ซ้ำ
+      assert(A.isMeterPaused === true, 'คำสั่งซ้ำต้องไม่เริ่มมิเตอร์เอง');
+      bridge.queue.push('resume'); A.__carPollCommands();
+      assert(A.isMeterPaused === false, 'resume ต้องกลับมาวิ่ง');
+      bridge.queue.push('resume'); A.__carPollCommands();   // ซ้ำ
+      assert(A.isMeterPaused === false, 'resume ซ้ำต้องไม่หยุดเอง');
+      return 'pause,pause → ยังหยุด · resume,resume → ยังวิ่ง';
+    });
+
+    // 6) สแนปช็อตสะท้อนสถานะหยุดจริง (จอรถจะได้โชว์ “หยุดชั่วคราว” ถูกต้อง)
+    await scenario('สแนปช็อตบอกสถานะหยุดจริง: paused=true ขณะหยุด', async () => {
+      ensureNotPaused();
+      A.toggleMeterPause();                       // หยุด
+      const paused = A.__carSnapshot();
+      assert(paused.paused === true, 'สแนปช็อตไม่บอกว่าหยุด');
+      assert(paused.running === true, 'ยังต้อง running=true (เที่ยวยังไม่จบ)');
+      ensureNotPaused();
+      const running = A.__carSnapshot();
+      assert(running.paused === false, 'เริ่มต่อแล้วสแนปช็อตยังบอกว่าหยุด');
+      return 'paused → paused=true · เริ่มต่อ → paused=false';
+    });
+
+    // 7) เริ่ม/หยุดมิเตอร์ → ยิงสแนปช็อตทันที (จอรถไม่ต้องรอรอบ 2 วิ)
+    await scenario('เปลี่ยนสถานะแล้วยิงสแนปช็อตทันที (ไม่รอรอบ 2 วินาที)', async () => {
+      ensureNotPaused();
+      const n0 = bridge.calls.length;
+      A.toggleMeterPause();                       // pause → ต้อง publishNow
+      const n1 = bridge.calls.length;
+      ensureNotPaused();                          // resume → ต้อง publishNow
+      const n2 = bridge.calls.length;
+      assert(n1 > n0, 'กด pause แล้วไม่ยิงสแนปช็อตทันที (ก่อน=' + n0 + ' หลัง=' + n1 + ')');
+      assert(n2 > n1, 'กด resume แล้วไม่ยิงสแนปช็อตทันที (ก่อน=' + n1 + ' หลัง=' + n2 + ')');
+      return 'publish หลัง pause: +' + (n1 - n0) + ' · หลัง resume: +' + (n2 - n1);
+    });
+
+    // 8) ขณะแอปถูกซ่อน/กลับมา → ยิงสแนปช็อตใหม่ (ตัวเลขที่จอรถเห็นไม่ค้าง)
+    await scenario('กลับเข้าหน้าจอ → ยิงสแนปช็อตใหม่ (เลขบนจอรถไม่ค้าง)', async () => {
+      const n0 = bridge.calls.length;
+      A.dispatchEvent(new Event('focus'));
+      document.dispatchEvent(new Event('visibilitychange'));
+      A.__carPublishNow();
+      await wait(30);
+      assert(bridge.calls.length > n0, 'ไม่มีการยิงสแนปช็อตใหม่');
+      return 'ยิงเพิ่ม ' + (bridge.calls.length - n0) + ' ครั้ง';
+    });
+
+    // 9) สัญญาสอดคล้องกับสถานะจริงของแอปเสมอ (จอรถเชื่อตัวเลขนี้ได้)
+    //    ตรวจกับ “สิ่งที่ผู้ใช้เห็นบนจอ” จริง ไม่ใช่ตัวแปรภายใน (closure ภายไม่มีให้อ่าน)
+    await scenario('สแนปช็อตสะท้อนสถานะจริงของแอป: running/paused · km ↔ เลข “วิ่งแล้ว” · trafficSec ↔ นาฬิการถติด', async () => {
+      ensureNotPaused();
+      const snap = A.__carSnapshot();
+      assert(snap.running === !!A.isManualRunning, 'running ไม่ตรงกับ isManualRunning (' + snap.running + ' vs ' + !!A.isManualRunning + ')');
+      assert(snap.paused === !!A.isMeterPaused, 'paused ไม่ตรงกับ isMeterPaused');
+
+      const covered = A.document.getElementById('driveCovered');
+      const coveredTxt = covered ? String(covered.textContent).trim() : '';
+      const coveredNum = parseFloat(coveredTxt);
+      if (isFinite(coveredNum) && snap.running) {
+        assert(Math.abs(snap.km - coveredNum) < 0.02,
+          'km บนจอรถ (' + snap.km + ') ไม่ตรงกับ “วิ่งแล้ว” บนจอ (' + coveredTxt + ')');
+      }
+
+      const tr = A.document.getElementById('smallTrafficTime');
+      const trTxt = tr ? String(tr.textContent).trim() : '';
+      const m = /^(\d+):(\d{2})$/.exec(trTxt);
+      if (m) {
+        const domSec = (parseInt(m[1], 10) * 60) + parseInt(m[2], 10);
+        assert(Math.abs(snap.trafficSec - domSec) <= 2,
+          'เวลารถติดบนจอรถ (' + snap.trafficSec + ' วิ) ต่างจากนาฬิกาบนจอ (' + trTxt + ' = ' + domSec + ' วิ) เกิน 2 วิ');
+        return 'running=' + snap.running + ' · km=' + snap.km + ' (จอ=' + coveredTxt + ') · trafficSec=' + snap.trafficSec + ' (จอ=' + trTxt + ')';
+      }
+      return 'running=' + snap.running + ' · paused=' + snap.paused + ' · km=' + snap.km + ' · trafficSec=' + snap.trafficSec;
+    });
+
+    // 10) ตัวเลขที่จอรถเห็น ต้องอัปเดตตามเมื่อมิเตอร์เดิน (ไม่ใช่ค่าค้าง)
+    await scenario('ตัวเลขบนสแนปช็อตอัปเดตตามเมื่อมิเตอร์เดิน', async () => {
+      const a = A.__carSnapshot();
+      await wait(1500);
+      const b = A.__carSnapshot();
+      assert(b.at > a.at, 'at ต้องใหม่ขึ้น');
+      assert(b.trafficSec >= a.trafficSec, 'เวลารถติดต้องไม่ลดลงเอง (a=' + a.trafficSec + ' b=' + b.trafficSec + ')');
+      return 'at ใหม่ขึ้น · trafficSec ' + a.trafficSec + ' → ' + b.trafficSec;
+    });
+
+    // 11) ต้องมีสแนปช็อตส่งครบตามรอบ 2 วินาที (จอรถสดเสมอตอนแอปเปิดอยู่)
+    await scenario('ยิงสแนปช็อตเป็นรอบ ~2 วินาที (จอรถไม่อ่านค่าค้าง)', async () => {
+      const n0 = bridge.calls.length;
+      await wait(4600);
+      const added = bridge.calls.length - n0;
+      assert(added >= 2, 'ใน 4.6 วิ ควรมียิงอย่างน้อย 2 ครั้ง แต่ได้ ' + added);
+      return 'ยิงเพิ่ม ' + added + ' ครั้งใน 4.6 วินาที';
+    });
+
+    removeFakeBridge();
+    ensureNotPaused();
+
+    summaryEl.textContent = failCount === 0
+      ? '✅ ผ่านทั้งหมด ' + passCount + ' เคส'
+      : '❌ ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + ' → ' + failures.join(' | ');
+    summaryEl.style.color = failCount === 0 ? '#4ade80' : '#f87171';
+    } finally { running = false; }
+  }
+
+  document.getElementById('runBtn').addEventListener('click', async () => {
+    try { frame.contentWindow.location.reload(); } catch (e) {}
+    await wait(600);
+    runAll();
+  });
+  frame.addEventListener('load', () => { runAll(); });
+  if (document.readyState === 'complete' || document.readyState === 'interactive') { setTimeout(runAll, 300); }
+})();
+</script>
+</body>
+</html>
