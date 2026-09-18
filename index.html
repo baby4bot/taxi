@@ -3847,7 +3847,7 @@
 <div id="pinPolicyBox" style="margin-top: 14px; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);"><div style="font-size: 14px; color: var(--neon-yellow); font-weight: 700; margin-bottom: 2px;">🔑 นโยบาย PIN ยืนยันสำคัญ (ค่าเริ่มต้นของตำแหน่ง)</div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.5;">ตั้งค่าให้ <b>ทุกคนในตำแหน่งนี้</b> — บังคับ/ไม่บังคับตั้ง PIN · อายุ PIN ขั้นต่ำก่อนเปลี่ยน · เตือนเปลี่ยนทุกกี่วัน · ให้ถอด PIN เองได้ไหม · หลังแก้แล้วกด “บันทึกสิทธิ์” ด้านล่าง (มีผลทุกเครื่อง)</div><div id="pinPolicyRows"></div></div><!-- 🎨 (17 ก.ย. 69) บล็อก “กรอบอวตารประจำยศ” ถูกถอดออกจากหน้านี้แล้ว — ผู้ใช้สั่งว่า “ไม่จำเป็นต้องแสดงอันนี้ เพราะยังไงมันก็มีอยู่ในเมนูกรอบอวตารอยู่แล้ว”
          ⇒ การตั้งกรอบรายยศ/รายคน เหลือที่ “แท็บที่ 2 ของหน้าต่างนี้” ที่เดียว (17 ก.ย. 69: รวมเมนูเป็น “สิทธิ์และกรอบอวตาร” — แท็บ 1 สิทธิ์ · แท็บ 2 กรอบอวตาร)
          ⚠️ อย่าลบฟังก์ชัน renderRoleFrameSelect / renderRoleFramePreview / onRoleFrameChanged เพราะมันคืนค่าเปล่า ๆ อย่างปลอดภัยเมื่อไม่มีธาตุบนจอ (กันข้อผิดพลาดตอนสคริปต์อื่นเรียก)
-         ⚠️ สำคัญ: ตอนกด “บันทึกสิทธิ์” ต้องรักษาค่า avatarFrame ของยศไว้เสมอ (ดู saveRolePermissions) ไม่งั้นการบันทึกสิทธิ์จะลบกรอบของยศทิ้ง --><div style="margin-top: 14px; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);"><div style="font-size: 14px; color: var(--neon-yellow); font-weight: 700; margin-bottom: 2px;">🗂️ บันทึกประวัติ (Log)</div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px; line-height: 1.5;">เปิด/ปิดการบันทึก log แต่ละประเภท (เขียน Firestore ทุกครั้งที่เกิดเหตุการณ์ — ปิดประเภทที่ไม่จำเป็นเพื่อประหยัดโควตา · มีผลทันทีทุกเครื่อง)</div><div id="logSettingsBox"></div></div><button onclick="window.saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: var(--space-field);" id="saveRolePermBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์</button></div></div></div>
+         ⚠️ สำคัญ: ตอนกด “บันทึกสิทธิ์” ต้องรักษาค่า avatarFrame ของยศไว้เสมอ (ดู saveRolePermissions) ไม่งั้นการบันทึกสิทธิ์จะลบกรอบของยศทิ้ง --><div style="margin-top: 14px; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);"><div style="font-size: 14px; color: var(--neon-yellow); font-weight: 700; margin-bottom: 2px;">🗺️ เปิดมินิแมพอัตโนมัติ (ทั้งระบบ)</div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px; line-height: 1.5;">คุมการเปิดเองของทุกยศพร้อมกัน (มีผลทันทีทุกเครื่อง) — ยังต้องติ๊กสิทธิ์ “เปิดมินิแมพอัตโนมัติเมื่อเริ่มเที่ยว” ให้ยศนั้นก่อน</div><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; margin-bottom: 4px;"><span style="flex:1; font-size:14px;">เปิดเองเฉพาะเที่ยว “ขึ้นทางด่วน”<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เปิด (ค่าเริ่มต้น) = ยศที่ติ๊กเปิดเอง จะเปิดแผนที่เองเฉพาะเที่ยวที่เลือกขึ้นทางด่วนเพื่อดูค่าด่าน/ทางแยก · <b>เที่ยวถนนปกติยังเริ่มจากยุบให้กดเอง</b> (ประหยัดโควตา)<br>ปิด = กลับไปเป็นแบบเดิม (ติ๊กแล้วเปิดเองทุกเที่ยว)</span></span><span class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="miniMapAutoOpenTollOnly" onchange="window.setMiniMapAutoOpenTollOnly(this.checked)" checked><span class="app-slider"></span></span></label></div><div style="margin-top: 14px; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);"><div style="font-size: 14px; color: var(--neon-yellow); font-weight: 700; margin-bottom: 2px;">🗂️ บันทึกประวัติ (Log)</div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px; line-height: 1.5;">เปิด/ปิดการบันทึก log แต่ละประเภท (เขียน Firestore ทุกครั้งที่เกิดเหตุการณ์ — ปิดประเภทที่ไม่จำเป็นเพื่อประหยัดโควตา · มีผลทันทีทุกเครื่อง)</div><div id="logSettingsBox"></div></div><button onclick="window.saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: var(--space-field);" id="saveRolePermBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์</button></div></div></div>
 
 <div id="createRoleModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 style="color: var(--neon-yellow);">สร้างตำแหน่งใหม่</h3><button class="btn-close-floating" onclick="window.toggleModal('createRoleModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align: left;"><div style="font-size:12px; color:var(--text-dim); margin-bottom: var(--space-field); line-height:1.6;">ตั้งชื่อตำแหน่งตามหน้าที่จริง เช่น "หัวหน้ากะ" — แล้วเลือกว่าต้องการลอกสิทธิ์จากตำแหน่งไหน เพื่อตั้งสิทธิ์ไวขึ้น (ปรับทีหลังได้ในหน้าตั้งค่าสิทธิ์)</div><label style="color: var(--neon-yellow); font-size: 13px;">ชื่อตำแหน่ง</label><input type="text" id="crRoleName" placeholder="เช่น หัวหน้ากะ / พนักงานขับรถ" style="margin-top: 8px; margin-bottom: var(--space-field); text-align: left;" autocomplete="off"><label style="color: var(--neon-yellow); font-size: 13px;">ลอกแบบจากตำแหน่ง (สิทธิ์เริ่มต้น)</label><select id="crCopyFrom" style="width: 100%; padding: 14px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-top: 8px; margin-bottom: var(--space-field); outline: none; font-family: 'Kanit';"></select><button onclick="window.confirmCreateRole()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center;"><span class="material-symbols-outlined" style="font-size: 20px;">add</span> สร้างตำแหน่ง</button></div></div></div>
 
@@ -5115,11 +5115,18 @@
             return !!p.miniMapAutoOpen;
         } catch (e) { return false; }
     };
+    // 🛣️ (19 ก.ย. 69) “เที่ยวนี้เลือกขึ้นทางด่วนอยู่หรือไม่” — ใช้คุมการเปิดเอง (ผู้ใช้สั่ง: เปิดเองเฉพาะเที่ยวขึ้นทางด่วน)
+    //    · อ่านจากโหมดของเที่ยวปัจจุบัน (window.isTollwayMode) — ตัวเดียวกับที่ปุ่ม 🛣️ และการคำนวณเส้นทางใช้
+    window.miniMapTripIsToll = () => { try { return window.isTollwayMode === true; } catch (e) { return false; } };
     // 🧑‍✈️ ของผู้ล็อกอินคนนี้ (อ่านจากยศปัจจุบัน · ใช้ __testRole ได้ตอนทดสอบออฟไลน์)
     window.canMiniMapAutoOpen = () => {
         try {
             if (!(window.canUseMiniMap && window.canUseMiniMap())) return false;
-            return window.miniMapAutoOpenFor(window.myRoleKey());
+            if (!window.miniMapAutoOpenFor(window.myRoleKey())) return false;
+            // 🛣️ (19 ก.ย. 69) ตัวคุม “เฉพาะเที่ยวขึ้นทางด่วน” (ค่าเริ่มต้นเปิด · แอดมินปิดได้จากหน้าตั้งค่าสิทธิ์)
+            //    ⇒ เที่ยวถนนปกติ (ไม่ได้ขึ้นทางด่วน) ต้องเริ่มจาก “ยุบ” เสมอ แม้ยศจะติ๊กเปิดเองไว้
+            if (window.miniMapAutoOpenTollOnly() && !window.miniMapTripIsToll()) return false;
+            return true;
         } catch (e) { return false; }
     };
     // ให้มอดูลมินิแมพบังคับใช้ทันที (ซ่อน/ล้างปุ่มเปิดคืน) — แอดมินติ๊กเปลี่ยนแล้วมีผลกับคนที่กำลังขับอยู่
@@ -7643,7 +7650,10 @@
     //    ฟังสด doc นี้: แอดมินสลับสวิตช์ → ทุกเครื่องที่เปิดแอปอยู่อ่านค่าล่าสุด (ค่าเริ่มต้นปิด = ประหยัดโควตา)
     //    logFlags: loginLogout / perm / security / member / profile / signup / portal (true = บันทึก, false = ข้าม)
     const LOG_FLAG_DEFAULTS = { loginLogout: false, perm: true, security: true, member: true, profile: true, signup: true, portal: true };
-    window.__appConfig = { logLoginLogout: false, logFlags: Object.assign({}, LOG_FLAG_DEFAULTS) };
+    //    🛣️ (19 ก.ย. 69) เพิ่มตัวคุม “เปิดมินิแมพอัตโนมัติเฉพาะเที่ยวขึ้นทางด่วน” — ค่าเริ่มต้น = เปิด (true)
+    //       · true = ยศที่ติ๊กเปิดเอง จะเปิดเอง **เฉพาะเที่ยวที่เลือก “ขึ้นทางด่วน”** · เที่ยวถนนปกติยังเริ่มจากยุบ
+    //       · false = กลับไปเป็นแบบเดิม (ติ๊กแล้วเปิดเองทุกเที่ยว)
+    window.__appConfig = { logLoginLogout: false, logFlags: Object.assign({}, LOG_FLAG_DEFAULTS), miniMapAutoOpenTollOnly: true };
     let appConfigUnsub = null;
     window.listenAppConfig = () => {
         if (appConfigUnsub) return;
@@ -7656,10 +7666,13 @@
                 if (d.logFlags && typeof d.logFlags === 'object') { Object.keys(d.logFlags).forEach(k => { next[k] = d.logFlags[k] === true; }); }
                 window.__appConfig = {
                     logLoginLogout: d.logLoginLogout === true || next.loginLogout === true,
-                    logFlags: next
+                    logFlags: next,
+                    // ค่าเริ่มต้น = true (เปิด) — เฉพาะตอนที่เซิร์ฟเวอร์ส่ง false มาจึงปิด
+                    miniMapAutoOpenTollOnly: (d.miniMapAutoOpenTollOnly === false) ? false : true
                 };
                 // (สวิตช์เดียวอยู่ที่ “ตั้งค่าสิทธิ์การใช้งาน → 🗂️ บันทึกประวัติ” แล้ว — ไม่ต้องซิงก์ checkbox ที่นี่)
                 if (typeof window.renderLogSettings === 'function') window.renderLogSettings();
+                if (typeof window.renderMiniMapAutoOpenSettings === 'function') window.renderMiniMapAutoOpenSettings();
             });
         } catch (e) { appConfigUnsub = null; }
     };
@@ -7681,6 +7694,32 @@
             restP.then(ok => { if (ok) win(); });
             Promise.all([sdkP, restP]).then(() => { if (!done) { done = true; window.__appConfig.logFlags[flag] = !target; window.showToast("บันทึกไม่สำเร็จ — ลองอีกครั้ง", true); if (typeof window.renderLogSettings === 'function') window.renderLogSettings(); } });
         } catch (e) { window.__appConfig.logFlags[flag] = !target; window.showToast("บันทึกไม่สำเร็จ — ลองอีกครั้ง", true); if (typeof window.renderLogSettings === 'function') window.renderLogSettings(); }
+    };
+    // 🛣️ (19 ก.ย. 69) “เปิดเองเฉพาะเที่ยวขึ้นทางด่วน” — อ่านค่า (ค่าเริ่มต้น = เปิด) + เขียนค่าจากหน้าสิทธิ์
+    window.miniMapAutoOpenTollOnly = () => {
+        try { return !(window.__appConfig && window.__appConfig.miniMapAutoOpenTollOnly === false); } catch (e) { return true; }
+    };
+    window.setMiniMapAutoOpenTollOnly = async (enabled) => {
+        const target = !!enabled;
+        window.__appConfig.miniMapAutoOpenTollOnly = target;   // อัปเดตทันที (ปุ่มต้องไม่กระพริบ)
+        try {
+            let done = false;
+            const sdkP = window.__fsTimeout(setDoc(doc(db, "settings", "app_config"), { miniMapAutoOpenTollOnly: target }, { merge: true }), 6000).then(() => true).catch(() => false);
+            const restP = window.__fsTimeout(window.__fsRestPatchDoc("settings/app_config", { miniMapAutoOpenTollOnly: target }), 6000).then(() => true).catch(() => false);
+            const win = () => { if (!done) { done = true; window.showToast(target ? 'เปิดเองเฉพาะเที่ยว “ขึ้นทางด่วน” แล้ว' : 'เปิดเองทุกเที่ยวตามสิทธิ์ยศแล้ว'); } };
+            sdkP.then((ok) => { if (ok) win(); });
+            restP.then((ok) => { if (ok) win(); });
+            Promise.all([sdkP, restP]).then(() => {
+                if (!done) { done = true; window.__appConfig.miniMapAutoOpenTollOnly = !target; window.showToast('บันทึกไม่สำเร็จ — ลองอีกครั้ง', true); window.renderMiniMapAutoOpenSettings(); }
+            });
+        } catch (e) { window.__appConfig.miniMapAutoOpenTollOnly = !target; window.showToast('บันทึกไม่สำเร็จ — ลองอีกครั้ง', true); window.renderMiniMapAutoOpenSettings(); }
+        if (typeof window.renderMiniMapAutoOpenSettings === 'function') window.renderMiniMapAutoOpenSettings();
+        return true;
+    };
+    // 🎨 วาดสวิตช์ “เปิดเองเฉพาะเที่ยวขึ้นทางด่วน” (ทั้งระบบ — ไม่ใช่ต่อยศ) ตามค่าที่โหลดมา
+    window.renderMiniMapAutoOpenSettings = () => {
+        const sw = document.getElementById('miniMapAutoOpenTollOnly');
+        if (sw) { try { sw.checked = window.miniMapAutoOpenTollOnly(); } catch (e) {} }
     };
     // 🎨 วาดสวิตช์เปิด/ปิด log แต่ละประเภท (ในหน้าตั้งค่าสิทธิ์) ตามค่าที่โหลดมา
     window.renderLogSettings = () => {
@@ -14040,6 +14079,7 @@
             rollingKm: rollingKm, rollingSec: rollingSec, // ⚙️ ความเร็วล้อหมุนสะสม (ไว้ประเมินช่วงที่แอปถูกปิดรอบถัดไป)
             crawlKm: crawlKm, crawlSec: crawlSec, // 🐌 ระยะ/เวลาที่คลานสะสม (ไม่ให้หายเมื่อแอปถูกคิลกลางเที่ยว)
             remainKm: currentTrueRemainKm, remainSec: currentTrueRemainSec,
+            toll: !!window.isTollwayMode,   // 🛣️ (19 ก.ย. 69) จำ “เที่ยวนี้ขึ้นทางด่วนหรือไม่” ไว้กู้คืนหลังปิด/รีเฟรช
             lastPos: lastPos ? { lat: lastPos.lat, lon: lastPos.lon } : null, // เซฟตำแหน่งล่าสุดไว้ เบิกคืนตอนแอปถูกคิลแล้วเปิดใหม่
             lastPath: lastPath.slice(), // พิกัดเส้นทาง 2-3 จุดล่าสุด ไว้ประมาณระยะที่วิ่งช่วงแอปปิด (แทนเส้นตรงเส้นเดียว)
             routeCoords: (window.navMiniRouteSaved && window.navMiniRouteSaved.length > 1) ? window.navMiniRouteSaved : null, // 🗺️ เส้นทางเต็ม ไว้กู้ Mini Map หลังแอปปิด/รีเฟรช
@@ -14692,6 +14732,9 @@
             $('kmInput').value = actualDrivenKm.toFixed(2);
             window.updateFareEstimation(actualDrivenKm);
             window.estimateFareAmt = seed.estimateFare || window.estimateFareAmt || 0; // คงราคาประเมินเดิมของเที่ยวไว้ (ไม่ให้ถูกแทนด้วยค่าตาม กม. ที่วิ่งแล้ว)
+            // 🛣️ (19 ก.ย. 69) คืน “โหมดทางด่วนของเที่ยวนี้” ก่อนกู้แผนที่ — ไม่งั้นเที่ยวที่เลือกขึ้นทางด่วนจะถูกมองเป็นเที่ยวถนน
+            //    ⇒ ตัวคุม “เปิดเองเฉพาะเที่ยวขึ้นทางด่วน” จะไม่เปิดให้หลังรีเฟรช (ผลต่างจากตอนเริ่มเที่ยว)
+            if (typeof seed.toll === 'boolean') { try { window.setUserTollMode(seed.toll); } catch (e) {} }
             // 🗺️ เที่ยวที่กู้คืนมีจุดหมาย → เปิด Mini Map นำทางกลับมาแสดงตำแหน่งรถต่อทันที
             if (window.navMiniResume && (seed.dest || seed.routeCoords)) { try { window.navMiniResume(seed); } catch(e) {} }
             window.updateSurchargeUI();
@@ -17472,7 +17515,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '5101eb7ab8';
+    const APP_WEB_VERSION = 'ae39118859';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -17963,6 +18006,9 @@
         ['2026-09-19', '⏱️ ปุ่มเปิดมินิแมพโชว์เวลาถึงด้วย (อีก 15.2 กม. · 32 นาที)'],
         ['2026-09-19', '🚦 เวลาที่โชว์ใช้เวลาที่เหลือจริงจากเส้นทางก่อน แล้วค่อยประมาณในเครื่อง'],
         ['2026-09-19', '🔇 เหลือไม่ถึง 1 นาที = ไม่ต่อเวลาให้รก (ยังขึ้น “ใกล้ถึง” เหมือนเดิม)'],
+        ['2026-09-19', '🗺️ มินิแมพเปิดเองเฉพาะเที่ยวที่เลือก “ขึ้นทางด่วน” (ถนนปกติยังเริ่มจากยุบ)'],
+        ['2026-09-19', '⚙️ แอดมินปิด/เปิดตัวคุมนี้ได้จากหน้าตั้งค่าสิทธิ์ (มีผลทุกเครื่อง)'],
+        ['2026-09-19', '💾 จำโหมดทางด่วนของเที่ยว — ปิด/รีเฟรชกลางเที่ยวแล้วเปิดเองได้เหมือนเดิม'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -21952,7 +21998,7 @@
         'perm_canExportTrips': 'กดปุ่ม “ส่งออก CSV” ในเมนูประวัติ — ได้ไฟล์เที่ยว/รายได้ไปเปิดใน Excel',
         'perm_canUseDeviceUnlock': 'ผูกเครื่องนี้ไว้ปลดล็อกแทน PIN ด้วยลายนิ้วมือ / Face ID (WebAuthn)',
         'perm_canUseMiniMap': 'เปิดแผนที่นำทางขนาดย่อ (Mini Map) ให้ตำแหน่งนี้ใช้ตอนขับ — มินิแมพกินโควตาแผนที่ต่อเนื่อง ค่าเริ่มต้น = ปิดทุกยศ (รวมแอดมิน)',
-        'perm_miniMapAutoOpen': 'ยศนี้เปิดแผนที่นำทางให้อัตโนมัติเมื่อกดเริ่มเที่ยว (ปกติจะเริ่มจาก “ยุบ” เสมอ ต้องกดปุ่มเปิดเอง) — ต้องเปิด “ใช้แผนที่นำทาง (Mini Map) ตอนขับ” ของยศนี้ก่อนจึงมีผล · ค่าเริ่มต้น = ปิด (เริ่มจากยุบเสมอ)',
+        'perm_miniMapAutoOpen': 'ยศนี้เปิดแผนที่นำทางให้อัตโนมัติเมื่อกดเริ่มเที่ยว (ปกติจะเริ่มจาก “ยุบ” เสมอ ต้องกดปุ่มเปิดเอง) — ต้องเปิด “ใช้แผนที่นำทาง (Mini Map) ตอนขับ” ของยศนี้ก่อนจึงมีผล · ค่าเริ่มต้น = ปิด (เริ่มจากยุบเสมอ) · และถ้า “เปิดเองเฉพาะเที่ยวขึ้นทางด่วน” (ทั้งระบบ) เปิดอยู่ → จะเปิดเองเฉพาะเที่ยวที่เลือกขึ้นทางด่วน (เที่ยวถนนปกติยังเริ่มจากยุบ)',
         'perm_canManageAvatarFrames': 'เลือกกรอบรูปอวตาร (20 แบบตามเทศกาล) ให้แต่ละตำแหน่ง และมอบกรอบพิเศษให้สมาชิกรายคนได้',
     };
     window.renderPermList = () => {
@@ -23644,6 +23690,12 @@
     function autoOpenAtStart() {
         if (userClosedThisTrip) { hideNow(); return false; }
         if (!permOk()) { hideNow(); return false; }
+        // 🛣️ (19 ก.ย. 69) กันพลาดจุดเดียว: โหมด “เฉพาะเที่ยวขึ้นทางด่วน” → เที่ยวถนนปกติต้องยุบเสมอ
+        //    (กันใครวันหลังไปเรียก autoOpenAtStart() จากที่ใหม่โดยไม่ผ่าน canMiniMapAutoOpen())
+        try {
+            if (window.miniMapAutoOpenTollOnly && window.miniMapAutoOpenTollOnly()
+                && !(window.miniMapTripIsToll && window.miniMapTripIsToll())) { hideNow(); return false; }
+        } catch (e) {}
         pref.hidden = false;
         savePref();
         canReopen = false;   // เปิดอยู่แล้ว = ไม่ต้องมีปุ่มเปิดคืน

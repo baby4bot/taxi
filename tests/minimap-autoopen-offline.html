@@ -34,10 +34,12 @@
         <br>① <b>ค่าเริ่มต้น = ยุบเสมอ</b> ทุกยศ (รวมแอดมิน) — ต้องติ๊กเองถึงจะเปิดเอง
         <br>② <b>สิทธิ์สองชั้น</b> — เปิดอัตโนมัติได้ต้องมี “ใช้แผนที่นำทาง (Mini Map) ตอนขับ” ของยศนั้นก่อน (กันข้ามสิทธิ์)
         <br>③ <b>ใช้จริงตอนเริ่มเที่ยว/รีเฟรช</b> — เปิดเองทุกครั้งที่เริ่มเที่ยว · ผู้ใช้กด ✕ เองแล้วห้ามเปิดคืน
+        <br>④ <b>🛣️ (19 ก.ย. 69 · ผู้ใช้ขอ)</b> ตัวคุมทั้งระบบ “เปิดเองเฉพาะเที่ยวขึ้นทางด่วน” (ค่าเริ่มต้น = เปิด)
+        — เที่ยวถนนปกติต้องเริ่มจากยุบเสมอ · แอดมินปิดตัวคุมได้จากหน้าตั้งค่าสิทธิ์ · ปิด/รีเฟรชกลางเที่ยวแล้วโหมดทางด่วนถูกจำไว้
         <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
         <code>http://127.0.0.1:58911/tests/minimap-autoopen-offline.html</code>
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (9 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (13 สถานการณ์)</button>
     <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
     <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
     <div id="summary"></div>
@@ -175,6 +177,10 @@
         const cw = w();
         cw.startNavigationMap(START.lat, START.lon, DEST.lat, DEST.lon, DEST.name, 48.32, COORDS);
     }
+    // 🛣️ (19 ก.ย. 69) สลับ “เที่ยวนี้ขึ้นทางด่วนหรือไม่” ด้วยฟังก์ชันจริงของแอป
+    function setToll(on) { w().setUserTollMode(!!on); }
+    // 🛣️ ตัวคุมทั้งระบบ (ค่าใหม่ 19 ก.ย. 69) — ค่าเริ่มต้นเปิด
+    function setTollOnly(on) { const cw = w(); cw.__appConfig = Object.assign({}, cw.__appConfig || {}, { miniMapAutoOpenTollOnly: !!on }); cw.renderMiniMapAutoOpenSettings(); }
 
     // ============================ รัน 1 สถานการณ์ ============================
     async function runScenario(name, fn) {
@@ -253,7 +259,9 @@
             return 'ไม่มีสิทธิ์ใช้มินิแมพ + ติ๊กเปิดเอง → ไม่เปิด (กันข้ามสิทธิ์) ✅ · มีทั้งคู่ → เปิด ✅ · ปิดสวิตช์ → ไม่เปิด ✅';
         });
 
-        await runScenario('S4 · ยศที่ติ๊กไว้: กดเริ่มเที่ยว → แผนที่เปิดเองทันที (ไม่ต้องกดปุ่ม)', async () => {
+        await runScenario('S4 · ยศที่ติ๊กไว้ + เที่ยว “ขึ้นทางด่วน”: กดเริ่มเที่ยว → แผนที่เปิดเองทันที', async () => {
+            setTollOnly(true);
+            setToll(true);                 // 🛣️ เที่ยวนี้เลือกขึ้นทางด่วน (เงื่อนไขใหม่)
             grant('VIP', true, true);
             startNav();
             await wait(400);
@@ -261,7 +269,7 @@
             const b = btnState();
             assert(b && b.hidden, 'แผนที่เปิดอยู่แล้วไม่ควรมีปุ่ม “เปิดมินิแมพ” ค้างอีก');
             assert(cw.navMiniCanReopen() === false, 'canReopen ต้องเป็น false เมื่อเปิดอยู่');
-            return 'ยศ VIP (ติ๊กเปิดอัตโนมัติ) → เริ่มเที่ยวแล้วแผนที่ขึ้นเอง ✅ · ไม่มีปุ่มเปิดค้าง · canReopen=false ✅';
+            return 'ยศ VIP (ติ๊กเปิดอัตโนมัติ) + เที่ยวขึ้นทางด่วน → แผนที่ขึ้นเอง ✅ · ไม่มีปุ่มเปิดค้าง · canReopen=false ✅';
         });
 
         await runScenario('S5 · ยศที่มีสิทธิ์แต่ยังไม่ติ๊ก (ค่าเริ่มต้น) → เริ่มจากยุบ + ปุ่มเปิดสีฟ้า', async () => {
@@ -290,6 +298,8 @@
         });
 
         await runScenario('S7 · ผู้ใช้กด ✕ เองระหว่างเที่ยว → ระบบห้ามเปิดคืนเอง (แม้ติ๊กเปิดอัตโนมัติ)', async () => {
+            setTollOnly(true);
+            setToll(true);
             grant('VIP', true, true);
             startNav();
             await wait(350);
@@ -303,6 +313,8 @@
         });
 
         await runScenario('S8 · รีเฟรช/กลับเข้าแอปกลางเที่ยว → ได้ผลเหมือนตอนเริ่มเที่ยว (ตรงกันทั้งสองทาง)', async () => {
+            setTollOnly(true);
+            setToll(true);
             grant('VIP', true, true);
             cw.navMiniResume({ dest: DEST, destName: DEST.name, routeCoords: COORDS, lastPos: { lat: START.lat, lng: START.lon } });
             await wait(350);
@@ -314,6 +326,79 @@
             const b = btnState();
             assert(b && !b.hidden && b.blue, 'ยศที่มีสิทธิ์แต่ไม่ติ๊ก → ต้องมีปุ่มเปิดสีฟ้าให้กดเอง');
             return 'ติ๊กไว้ → เปิดเองทั้งสองทาง ✅ · ไม่ติ๊ก → ยุบ + ปุ่มสีฟ้า ✅';
+        });
+
+        await runScenario('S10 · 🛣️ เที่ยวถนนปกติ (ไม่ได้ขึ้นทางด่วน) → ต้องเริ่มจากยุบ แม้ยศติ๊กเปิดอัตโนมัติ', async () => {
+            setTollOnly(true);
+            setToll(false);                 // 🛣️ เที่ยวนี้เลี่ยงทางด่วน (ค่าเริ่มต้นของทุกเที่ยว)
+            grant('VIP', true, true);
+            startNav();
+            await wait(400);
+            assert(!mapShown(), 'เที่ยวถนนปกติต้องเริ่มจาก “ยุบ” แต่แผนที่ขึ้นเอง (ผิดคำสั่ง 19 ก.ย. 69)');
+            const b = btnState();
+            assert(b && !b.hidden && b.blue, 'ต้องมีปุ่มเปิดสีฟ้าให้กดเอง (มีสิทธิ์ + มีเส้นทาง)');
+            cw.navMiniReopen();
+            await wait(250);
+            assert(mapShown(), 'กดปุ่มเองแล้วแผนที่ต้องเปิดได้');
+            return 'ยศติ๊กไว้ + เที่ยวถนนปกติ → ยุบ + ปุ่มสีฟ้า ✅ · กดปุ่มเอง → เปิดได้ ✅ (ประหยัดโควตา)';
+        });
+
+        await runScenario('S11 · 🛣️ แอดมินปิดตัวคุม → กลับไปเปิดเองทุกเที่ยว (พฤติกรรมเดิม)', async () => {
+            setTollOnly(false);
+            setToll(false);
+            grant('VIP', true, true);
+            startNav();
+            await wait(400);
+            assert(mapShown(), 'ปิดตัวคุมแล้ว เที่ยวถนนปกติต้องเปิดเองเหมือนเดิม แต่แผนที่ไม่ขึ้น');
+            setTollOnly(true);             // คืนค่าเริ่มต้น
+            return 'ตัวคุมปิด → เที่ยวถนนปกติก็เปิดเอง (ยศติ๊กไว้) ✅';
+        });
+
+        await runScenario('S12 · 🛣️ สวิตช์ในหน้าตั้งค่าสิทธิ์จริง: ค่าเริ่มต้นเปิด · เป็นสวิตช์เลื่อน · สะท้อนค่าที่ได้จากเซิร์ฟเวอร์', async () => {
+            const box = cw.document.getElementById('miniMapAutoOpenTollOnly');
+            assert(box, 'ไม่พบสวิตช์ miniMapAutoOpenTollOnly ในหน้าตั้งค่าสิทธิ์ (แอดมินตั้งไม่ได้)');
+            const label = box.closest('label');
+            const txt = label ? label.textContent : '';
+            assert(txt.indexOf('เปิดเองเฉพาะเที่ยว') >= 0, 'ชื่อสวิตช์ไม่ตรง: ' + txt.slice(0, 90));
+            assert(txt.indexOf('ขึ้นทางด่วน') >= 0, 'ต้องบอกว่า “เฉพาะเที่ยวขึ้นทางด่วน”');
+            assert(box.closest('.app-switch') !== null, 'ต้องเป็นสวิตช์เลื่อน (.app-switch) ไม่ใช่ช่องติ๊กเปล่า');
+            assert(typeof cw.setMiniMapAutoOpenTollOnly === 'function', 'ไม่พบฟังก์ชันบันทึกค่าของสวิตช์นี้');
+            cw.__appConfig = Object.assign({}, cw.__appConfig, { miniMapAutoOpenTollOnly: false });
+            cw.renderMiniMapAutoOpenSettings();
+            assert(box.checked === false, 'ค่าจากเซิร์ฟเวอร์ = false แล้วสวิตช์ยังติ๊กอยู่ (ผู้ใช้จะเข้าใจผิด)');
+            cw.__appConfig = Object.assign({}, cw.__appConfig, { miniMapAutoOpenTollOnly: true });
+            cw.renderMiniMapAutoOpenSettings();
+            assert(box.checked === true, 'ค่าจากเซิร์ฟเวอร์ = true แล้วสวิตช์ยังไม่ติ๊ก');
+            assert(cw.miniMapAutoOpenTollOnly() === true, 'ค่าเริ่มต้นต้องเป็น “เปิด”');
+            return 'สวิตช์อยู่ในหน้าตั้งค่าสิทธิ์ · เป็น .app-switch · ค่าเริ่มต้น = เปิด · สะท้อนค่าจากเซิร์ฟเวอร์ได้ ✅';
+        });
+
+        await runScenario('S13 · 🛣️ ปิด/รีเฟรชกลางเที่ยวขึ้นทางด่วน → โหมดทางด่วนถูกจำไว้ → เปิดเองเหมือนเดิม', async () => {
+            setTollOnly(true);
+            setToll(true);
+            grant('VIP', true, true);
+            const seed = { dest: DEST, destName: DEST.name, routeCoords: COORDS, lastPos: { lat: START.lat, lng: START.lon }, km: 1.2, startTime: Date.now() - 60000, toll: true };
+            setToll(false);                 // จำลองแอปเพิ่งเปิดใหม่: โหมดทางด่วนถูกล้างเป็นค่าเริ่มต้น
+            assert(cw.miniMapTripIsToll() === false, 'ตั้งต้นเทสต์ต้องเป็นเที่ยวถนนก่อน');
+            cw.navMiniResume(seed);
+            await wait(300);
+            assert(!mapShown(), 'กู้คืนด้วย seed ตรง ๆ ยังไม่ได้คืนโหมดทางด่วน → ต้องยังยุบ (ตรงนี้ทดสอบข้อจำกัดที่รู้อยู่)');
+            // ทางจริงกู้คืนผ่าน startMeterAndTracking(seed) ซึ่งคืนโหมดทางด่วนก่อนเปิดแผนที่
+            try { cw.isManualRunning = false; } catch (e) {}
+            const src = await fetch('../index.html?cb=' + Date.now()).then(r => r.text());
+            const need = [
+                ['บันทึกโหมดทางด่วนลงเที่ยว', /toll: !!window\.isTollwayMode,/],
+                ['คืนโหมดทางด่วนก่อนกู้แผนที่', /if \(typeof seed\.toll === 'boolean'\) \{ try \{ window\.setUserTollMode\(seed\.toll\); \} catch \(e\) \{\} \}/],
+                ['อ่านค่าจาก config', /window\.miniMapAutoOpenTollOnly = \(\) =>/],
+                ['เช็คโหมดเที่ยว', /window\.miniMapTripIsToll = \(\) =>/],
+                ['บังคับใช้ใน canMiniMapAutoOpen', /if \(window\.miniMapAutoOpenTollOnly\(\) && !window\.miniMapTripIsToll\(\)\) return false;/],
+                ['กันพลาดใน autoOpenAtStart', /if \(window\.miniMapAutoOpenTollOnly && window\.miniMapAutoOpenTollOnly\(\)/],
+                ['สวิตช์ในหน้าตั้งค่า', /id="miniMapAutoOpenTollOnly"/],
+                ['เขียนค่า settings/app_config', /setDoc\(doc\(db, "settings", "app_config"\), \{ miniMapAutoOpenTollOnly: target \}/]
+            ];
+            const miss = need.filter(([n, re]) => !re.test(src)).map(([n]) => n);
+            assert(miss.length === 0, 'โค้ดจริงขาด: ' + miss.join(' · '));
+            return 'สายไฟ ' + need.length + ' จุดครบ (บันทึก toll → คืนค่าก่อนเปิดแผนที่) ✅';
         });
 
         await runScenario('S9 · สายไฟในโค้ดจริง: ทั้ง 2 ทางที่เริ่มแผนที่ต้องผ่าน canMiniMapAutoOpen() (กันถอดออก)', async () => {
