@@ -6005,6 +6005,75 @@
     const TT_USAGE_KEY = 'tomtom_usage_daily';
     const TT_DASH_KEY = 'tomtom_dash_ref'; // ยอดจริงที่แอดมินกรอกจากแดชบอร์ด TomTom (ไว้เทียบว่าที่แอปนับตรงไหม)
     const ttToday = () => new Date().toISOString().slice(0, 10);
+    // 📅 (19 ก.ย. 69) เพดาน “ต่อเดือน” — โควตาฟรีจริงของ TomTom คิดเป็นรายเดือน ไม่ใช่รายวัน
+    //    (docs.tomtom.com/pricing: Free ต่อ API → Routing 20,000/เดือน · Search 2,500/เดือน — แยกถังกัน)
+    //    ⇒ ของเดิม “2,500/วัน” คือ “วงเงินที่แอปตั้งเอง” ซึ่งไม่ตรงกับโควตาจริง ⇒ เพิ่มถังรายเดือนไว้บอกของจริง
+    //    ⚠️ TomTom ไม่มี API ให้อ่านยอดที่เหลือ → ตัวเลข “ใช้ไป” คือยอดที่แอปนับเอง (แดชบอร์ดคือของจริง)
+    const TOMTOM_FREE_MONTHLY = { route: 20000, search: 2500 };
+    const TT_MONTH_LIMIT_KEY = 'tomtom_monthly_limit';   // {"route":20000,"search":2500} — แอดมินแก้ได้
+    const TT_USAGE_MONTH_KEY = 'tomtom_usage_monthly';   // {"month":"2026-09","route":123,"search":45}
+    const ttMonth = () => new Date().toISOString().slice(0, 7);
+    const ttKind = (kind) => ((kind === 'search') ? 'search' : 'route');
+    window.TOMTOM_FREE_MONTHLY = TOMTOM_FREE_MONTHLY;
+    window.ttCurrentMonth = ttMonth;
+    window.tomtomMonthlyLimit = (kind) => {
+        const k = ttKind(kind);
+        try {
+            const raw = JSON.parse(localStorage.getItem(TT_MONTH_LIMIT_KEY) || '{}');
+            const v = parseInt(raw && raw[k], 10);
+            if (v >= 100 && v <= 10000000) return v;
+        } catch (e) {}
+        return TOMTOM_FREE_MONTHLY[k];
+    };
+    window.setTomtomMonthlyLimit = (kind, v) => {
+        const k = ttKind(kind);
+        const n = Math.round(Number(v) || 0);
+        if (!(n >= 100 && n <= 10000000)) { window.showToast('ใส่ตัวเลข 100 – 10,000,000', true); return false; }
+        let raw = {}; try { raw = JSON.parse(localStorage.getItem(TT_MONTH_LIMIT_KEY) || '{}') || {}; } catch (e) { raw = {}; }
+        raw[k] = n;
+        try { localStorage.setItem(TT_MONTH_LIMIT_KEY, JSON.stringify(raw)); } catch (e) {}
+        window.showToast('ตั้งวงเงิน TomTom ต่อเดือน (' + (k === 'search' ? 'ค้นหาสถานที่' : 'คำนวณเส้นทาง') + ') = ' + n.toLocaleString('th-TH') + ' ครั้ง');
+        if (typeof window.renderQuotaMonitor === 'function') window.renderQuotaMonitor();
+        return true;
+    };
+    // ยอดที่แอปนับเอง “เดือนนี้” — ขึ้นเดือนใหม่ = เริ่มศูนย์เอง (ไม่ต้องล้างมือ)
+    window.tomtomUsageMonth = () => {
+        const m = ttMonth();
+        let st = {}; try { st = JSON.parse(localStorage.getItem(TT_USAGE_MONTH_KEY) || '{}'); } catch (e) {}
+        const route = (st.month === m ? (st.route || 0) : 0);
+        const search = (st.month === m ? (st.search || 0) : 0);
+        return { month: m, route, search, total: route + search };
+    };
+    const countTomTomMonth = (kind) => {
+        const k = ttKind(kind);
+        const m = ttMonth();
+        let st = { month: m, route: 0, search: 0 };
+        try {
+            const raw = JSON.parse(localStorage.getItem(TT_USAGE_MONTH_KEY) || '{}');
+            if (raw.month === m) st = { month: m, route: raw.route || 0, search: raw.search || 0 };
+        } catch (e) {}
+        st[k] += 1;
+        try { localStorage.setItem(TT_USAGE_MONTH_KEY, JSON.stringify(st)); } catch (e) {}
+        return st[k];
+    };
+    // ⏱️ เวลาที่ยิงจริงไม่กี่รายการล่าสุด — ใช้บอกว่า “เรียกถี่” แค่ไหนในข้อความสาเหตุ
+    window.__ttCallLog = { route: [], search: [] };
+    window.__ttCallsInLastSec = (kind, secs) => {
+        const k = ttKind(kind);
+        const cut = Date.now() - (Math.max(1, Number(secs) || 60) * 1000);
+        const arr = (window.__ttCallLog && window.__ttCallLog[k]) || [];
+        return arr.filter((t) => t >= cut).length;
+    };
+    const logTomTomCall = (kind) => {
+        const k = ttKind(kind);
+        try {
+            const arr = window.__ttCallLog[k] || (window.__ttCallLog[k] = []);
+            arr.push(Date.now());
+            const cut = Date.now() - 5 * 60 * 1000;   // เก็บย้อนหลัง 5 นาทีก็พอ
+            while (arr.length && arr[0] < cut) arr.shift();
+            if (arr.length > 600) arr.splice(0, arr.length - 600);
+        } catch (e) {}
+    };
     window.tomtomDailyLimit = () => {
         try { const v = parseInt(localStorage.getItem(TT_LIMIT_KEY) || '', 10); if (v >= 100 && v <= 1000000) return v; } catch (e) {}
         return TOMTOM_DAILY_LIMIT;
@@ -6050,6 +6119,8 @@
         } catch (e) {}
         st[k] += 1;
         try { localStorage.setItem(TT_USAGE_KEY, JSON.stringify({ date: today, route: st.route, search: st.search, n: st.route + st.search })); } catch (e) {}
+        countTomTomMonth(k);   // 📅 (19 ก.ย. 69) นับถังรายเดือนคู่กัน (ใช้กับสาเหตุ “โควตาหมด”)
+        logTomTomCall(k);      // ⏱️ เก็บเวลาไว้บอก “เรียกถี่” ในข้อความสาเหตุ
         const lim = window.tomtomDailyLimit();
         for (const [pct, id] of [[0.88, 1], [0.97, 2]]) {
             const dayId = today + ':' + k + ':' + id;
@@ -6058,7 +6129,7 @@
                 try { localStorage.setItem('tomtom_warned_' + k + '_' + id, dayId); } catch (e) {}
                 const label = (k === 'search') ? 'ค้นหาสถานที่' : 'คำนวณเส้นทาง';
                 const tail = (k === 'search') ? 'ระบบอาจค้นหาสถานที่ไม่ได้ชั่วคราว' : 'ระบบจะประเมินจากระยะทางแทนชั่วคราว';
-                window.showToast('⚠️ โควตา TomTom (' + label + ') ใช้ไป ~' + st[k].toLocaleString('th-TH') + '/' + lim.toLocaleString('th-TH') + ' ครั้งวันนี้ — ' + tail, false, null, true);
+                window.showToast('⚠️ วงเงินที่ตั้งเองต่อวัน (' + label + ') ใช้ไป ~' + st[k].toLocaleString('th-TH') + '/' + lim.toLocaleString('th-TH') + ' ครั้งวันนี้ — ' + tail, false, null, true);
             }
         }
         return st[k];
@@ -11887,6 +11958,48 @@
             }).catch(() => resolve('unknown'));
         } catch (e) { resolve('unknown'); }
     });
+    // ═══ 📉 (19 ก.ย. 69) สาเหตุ “โควตาหมด / เรียกถี่” ต้องบอก “ตัวเลขจริง + เวลารีเซ็ต” (ผู้ใช้สั่ง) ═══
+    //    ⛔ เดิมบอกแค่ “โควตาแผนที่หมด — รีเซ็ตเที่ยงคืน PST” ⇒ ผู้ใช้ไม่รู้ว่าใช้ไปเท่าไหร่จากเพดานเท่าไหร่
+    //    ✅ ตัวสร้างข้อความเป็น “ฟังก์ชันล้วน” (รับค่าเข้ามา ไม่แตะ DOM/เน็ต) ⇒ ทดสอบออฟไลน์ได้
+    window.TT_MONTH_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    window.__ttLeftText = (ms) => {
+        const t = Math.max(0, Math.round(Number(ms) || 0) / 1000);
+        const d = Math.floor(t / 86400), h = Math.floor((t % 86400) / 3600), m = Math.floor((t % 3600) / 60);
+        if (d > 0) return d + ' วัน ' + h + ' ชม.';
+        if (h > 0) return h + ' ชม. ' + m + ' น.';
+        if (m > 0) return m + ' น.';
+        return 'ไม่ถึงนาที';
+    };
+    // โควตาฟรีรายเดือนของ TomTom เริ่มรอบใหม่ “วันที่ 1 ของเดือนถัดไป 00:00 UTC” (≈ 07:00 ไทย)
+    window.__ttResetInfo = (nowMs) => {
+        const now = new Date(Number(nowMs) || Date.now());
+        const at = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0));
+        const leftMs = Math.max(0, at.getTime() - now.getTime());
+        const text = at.getDate() + ' ' + window.TT_MONTH_TH[at.getMonth()] + ' ' + String(at.getFullYear() + 543).slice(-2)
+            + ' ' + String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0');
+        return { atMs: at.getTime(), leftMs, text, leftText: window.__ttLeftText(leftMs) };
+    };
+    // ข้อความสาเหตุ “โควตาหมด” — เลือกถังที่ใช้เกินมากสุด แล้วบอก ใช้ไป/เพดาน/เหลือ/วันนี้/รอบใหม่
+    window.__ttQuotaDetail = (month, todayRoute, reset) => {
+        const m = month || { route: 0, search: 0 };
+        const r = reset || window.__ttResetInfo(Date.now());
+        const rows = [
+            { label: 'คำนวณเส้นทาง', used: m.route || 0, cap: window.tomtomMonthlyLimit('route') },
+            { label: 'ค้นหาสถานที่', used: m.search || 0, cap: window.tomtomMonthlyLimit('search') }
+        ].map((x) => ({ label: x.label, used: x.used, cap: x.cap, pct: x.cap > 0 ? (x.used / x.cap) * 100 : 0 }));
+        const worst = rows.slice().sort((a, b) => (b.pct - a.pct))[0] || rows[0];
+        const remain = Math.max(0, worst.cap - worst.used);
+        return '<b>ใช้ไป ' + worst.used.toLocaleString('th-TH') + '/' + worst.cap.toLocaleString('th-TH') + ' ครั้ง</b>เดือนนี้'
+            + ' (' + worst.label + ' · ' + worst.pct.toFixed(1) + '% · เหลือ ' + remain.toLocaleString('th-TH') + ')'
+            + ' · วันนี้ ' + (Number(todayRoute) || 0).toLocaleString('th-TH') + ' ครั้ง'
+            + ' · โควตารอบใหม่ ' + r.text + ' (อีก ' + r.leftText + ')';
+    };
+    // ข้อความสาเหตุ “เรียกถี่” — บอกว่ายิงไปกี่ครั้งใน 1 นาทีล่าสุด
+    window.__ttRateDetail = (callsLastMin) => {
+        const n = Number(callsLastMin) || 0;
+        if (!n) return '';
+        return 'แอปยิงคำขอเส้นทางไปแล้ว <b>' + n.toLocaleString('th-TH') + ' ครั้งใน 1 นาทีล่าสุด</b> — เซิร์ฟเวอร์ตัดการเชื่อมต่อชั่วคราว รอ ~10-20 วินาทีแล้วลองใหม่ได้เลย';
+    };
     // 🧰 ข้อความ + ปุ่ม ของแต่ละสาเหตุ (ปุ่มส่งเป็น “คีย์” แล้วให้ navActionRun จัดการ)
     window.navCauseInfo = (code) => {
         const C = window.TaxiNative;
@@ -11900,8 +12013,16 @@
             case 'timeout': return { tag: 'เน็ตช้า', cls: 'c-offline', head: '🐢 คำขอเส้นทางหมดเวลา (15 วิ)', why: 'เน็ตช้ากว่าที่คำนวณเส้นทางต้องใช้ — ลองใหม่อีกครั้ง', acts: acts(['retry']) };
             case 'perm': return { tag: 'สิทธิ์ตำแหน่ง', cls: 'c-perm', head: '📍 ยังไม่ได้ให้สิทธิ์ตำแหน่ง', why: native ? 'แตะ “เปิดสิทธิ์ตำแหน่ง” แล้วกด “อนุญาต” — ระบบจะเริ่มนำทางให้ทันที' : 'เปิดสิทธิ์ “ตำแหน่ง” ให้เว็บนี้ (ไอคอนกุญแจข้างที่อยู่เว็บ) แล้วลองใหม่', acts: acts(['perm', 'appset', 'retry']) };
             case 'gps': return { tag: 'GPS', cls: 'c-gps', head: '🛰️ ยังไม่จับสัญญาณ GPS', why: 'เปิด GPS / ออกที่โล่งแล้วรอสักครู่ — มิเตอร์เดินได้ ระยะทางจะเริ่มนับเมื่อจับสัญญาณได้', acts: acts(['perm', 'appset', 'retry']) };
-            case 'quota': return { tag: 'โควตา', cls: 'c-quota', head: '📉 โควตาแผนที่ (TomTom) หมด', why: 'ระหว่างนี้ระบบประเมินจากระยะทางที่กรอกให้ก่อน — โควตารีเซ็ตเที่ยงคืน PST (บ่าย 2-3 โมงไทย)', acts: acts(['retry', 'quota']) };
-            case 'rate': return { tag: 'เรียกถี่', cls: 'c-quota', head: '⏱️ เรียกเส้นทางถี่เกินไป', why: 'เซิร์ฟเวอร์จำกัดอัตราชั่วคราว — รอสัก 10-20 วินาทีแล้วลองใหม่', acts: acts(['retry']) };
+            case 'quota': {
+                let dynQ = '';
+                try { dynQ = window.__ttQuotaDetail(window.tomtomUsageMonth(), (window.tomtomUsageToday() || {}).route, window.__ttResetInfo(Date.now())); } catch (e) {}
+                return { tag: 'โควตา', cls: 'c-quota', head: '📉 โควตาแผนที่ (TomTom) หมด', why: (dynQ ? dynQ + ' — ' : '') + 'ระหว่างนี้ระบบประเมินจากระยะทางที่กรอกให้ก่อน', acts: acts(['retry', 'quota']) };
+            }
+            case 'rate': {
+                let dynR = '';
+                try { dynR = window.__ttRateDetail(window.__ttCallsInLastSec('route', 60)); } catch (e) {}
+                return { tag: 'เรียกถี่', cls: 'c-quota', head: '⏱️ เรียกเส้นทางถี่เกินไป', why: dynR || 'เซิร์ฟเวอร์จำกัดอัตราชั่วคราว — รอสัก 10-20 วินาทีแล้วลองใหม่', acts: acts(['retry']) };
+            }
             case 'key': return { tag: 'คีย์แผนที่', cls: 'c-quota', head: '🔑 คีย์แผนที่ใช้ไม่ได้', why: 'คีย์ถูกปิด/ผิด หรือบิลลิ่งมีปัญหา — ต้องให้ผู้ดูแลตรวจในคอนโซล TomTom', acts: acts(['quota', 'retry']) };
             case 'api': return { tag: 'เซิร์ฟเวอร์', cls: 'c-quota', head: '🌐 เซิร์ฟเวอร์เส้นทางขัดข้อง', why: 'ฝั่ง TomTom ตอบ error (5xx) — ปกติหายเองในไม่กี่นาที', acts: acts(['retry']) };
             case 'noRoute': return { tag: 'ไม่มีเส้นทาง', cls: '', head: '🧭 หาเส้นทางไม่เจอ', why: 'พิกัดต้นทาง/ปลายทางไม่ครบ หรือจุดหมายอยู่ในที่ที่รถเข้าไม่ถึง — เลือกจุดหมายใหม่จากช่องค้นหา', acts: acts(['retry']) };
@@ -17348,7 +17469,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = 'c43a348f99';
+    const APP_WEB_VERSION = '56e23ac28a';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -17832,6 +17953,10 @@
         ['2026-09-19', '🏷️ โชว์ชัดว่ากำลังใช้ลิมิตของโซนไหน (จอใหญ่ · การ์ดหน้าจอ · หน้าตั้งค่า)'],
         ['2026-09-19', '🛣️ สลับเมื่อรถเข้า/ออกช่วงทางด่วนจริง — คิดในเครื่อง ไม่กินโควตาแผนที่'],
         ['2026-09-19', '⚙️ ตั้งลิมิตแยก 2 ช่อง (− / + ทีละ 1) · เปลี่ยนโซน = เริ่มนับรอบเตือนใหม่'],
+        ['2026-09-19', '📉 แถบสาเหตุโควตาหมดบอกตัวเลขจริง — ใช้ไปกี่ครั้งจากเพดานเท่าไหร่'],
+        ['2026-09-19', '📅 บอกเวลารีเซ็ตโควตา TomTom + นับถอยหลัง (รอบใหม่ต้นเดือนหน้า)'],
+        ['2026-09-19', '⏱️ สาเหตุ “เรียกถี่” บอกจำนวนครั้งที่ยิงไปใน 1 นาทีล่าสุด'],
+        ['2026-09-19', '🚗 เพดานโควตาดูเป็นรายเดือนตามแผนจริง (เส้นทาง 20,000 · ค้นหา 2,500)'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -21551,8 +21676,9 @@
                 { k: 'search', label: 'ค้นหาสถานที่', color: '#a78bfa', hint: 'ทุกครั้งที่พิมพ์หาปลายทางแล้วกดค้น' }
             ];
             html += '<div style="border:1px solid rgba(255,210,77,0.28); background:rgba(255,210,77,0.05); border-radius:14px; padding:11px 12px; margin-bottom:14px;">' +
-                '<div style="display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:700; color:#ffd24d;"><span class="material-symbols-outlined" style="font-size:18px;">navigation</span> โควตาธอมธอม (TomTom) — วันนี้</div>' +
-                '<div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin:4px 0 10px;">ตัวเลขนี้คือ <b>ยอดที่แอปนับเองจากเครื่องนี้</b> (แต่ละเครื่องนับของตัวเอง) · แผนฟรีแยก “ถัง” ตาม API · TomTom ไม่มี API ให้อ่านโควตาที่เหลือ → ยอดจริงดูที่แดชบอร์ด TomTom แล้วกรอกด้านล่างเพื่อเทียบได้</div>';
+                '<div style="display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:700; color:#ffd24d;"><span class="material-symbols-outlined" style="font-size:18px;">navigation</span> โควตาธอมธอม (TomTom) — วันนี้ / เดือนนี้</div>' +
+                '<div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin:4px 0 10px;">ตัวเลขนี้คือ <b>ยอดที่แอปนับเองจากเครื่องนี้</b> (แต่ละเครื่องนับของตัวเอง) · แผนฟรีแยก “ถัง” ตาม API · TomTom ไม่มี API ให้อ่านโควตาที่เหลือ → ยอดจริงดูที่แดชบอร์ด TomTom แล้วกรอกด้านล่างเพื่อเทียบได้</div>' +
+                '<div style="font-size:11px; color:#ffd24d; line-height:1.6; margin:0 0 10px; background:rgba(255,210,77,0.07); border:1px solid rgba(255,210,77,0.22); border-radius:10px; padding:8px 10px;">📅 <b>โควตาฟรีจริงคิดเป็นรายเดือน</b> — แผนฟรีของ TomTom: Routing 20,000 · Search 2,500 ครั้ง/เดือน (คนละถัง) · รอบใหม่ = วันที่ 1 ของเดือนถัดไป 00:00 UTC (≈ 07:00 ไทย) · ส่วน “วงเงินต่อวัน” ด้านล่างคือวงเงินที่แอปตั้งเองไว้เตือน ไม่ใช่เพดานจริง</div>';
             BUCKETS.forEach(b => {
                 const v = tt[b.k] || 0;
                 const pct = Math.min(100, (v / lim) * 100);
@@ -21566,12 +21692,31 @@
                     '<span style="font-size:11.5px; color:' + (warn ? '#ff8a95' : '#fff') + '; white-space:nowrap;">ใช้ ' + v.toLocaleString() + ' · เหลือ ' + remain.toLocaleString() + ' · ' + pct.toFixed(1) + '%</span></div>' +
                     '<div style="height:8px; border-radius:99px; background:rgba(255,255,255,0.1); overflow:hidden;"><div style="height:100%; width:' + pct + '%; border-radius:99px; background:' + b.color + '; transition:width .3s;"></div></div>' +
                     (diff ? '<div style="font-size:10.5px; color:var(--text-dim); margin-top:4px;">📊 ' + diff.replace(/^ · /, '') + '</div>' : '') +
+                    (() => {
+                        let mv = 0, mc = 1, mp = 0, ri = { text: '—', leftText: '—' };
+                        try {
+                            const mu = window.tomtomUsageMonth();
+                            mv = (b.k === 'route' ? mu.route : mu.search) || 0;
+                            mc = window.tomtomMonthlyLimit(b.k);
+                            mp = mc > 0 ? Math.min(100, (mv / mc) * 100) : 0;
+                            ri = window.__ttResetInfo(Date.now());
+                        } catch (e) {}
+                        return '<div style="font-size:10.5px; color:' + (mp >= 80 ? '#ff8a95' : 'var(--text-dim)') + '; margin-top:4px; line-height:1.5;">📅 เดือนนี้ '
+                            + mv.toLocaleString('th-TH') + '/' + mc.toLocaleString('th-TH') + ' (' + mp.toFixed(1) + '% · เหลือ ' + Math.max(0, mc - mv).toLocaleString('th-TH') + ')'
+                            + ' · รอบใหม่ ' + ri.text + ' (อีก ' + ri.leftText + ')</div>';
+                    })() +
                     '</div>';
             });
             html += '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,0.08); padding-top:9px;">' +
-                '<span style="font-size:11.5px; color:var(--text-dim);">วงเงินต่อวัน (ต่อถัง)</span>' +
+                '<span style="font-size:11.5px; color:var(--text-dim);">วงเงินต่อวัน (ต่อถัง · ตั้งเอง)</span>' +
                 '<input type="number" id="ttLimitInput" min="100" max="1000000" value="' + lim + '" style="width:110px; padding:7px 10px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:12.5px; text-align:left;">' +
                 '<button onclick="window.setTomtomDailyLimit(document.getElementById(\'ttLimitInput\').value)" class="sp-btn-add" style="padding:7px 12px; font-size:12px; white-space:nowrap;">ตั้งวงเงิน</button></div>' +
+                '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px;">' +
+                '<span style="font-size:11.5px; color:var(--text-dim);">วงเงินต่อเดือน (ต่อถัง)</span>' +
+                '<input type="number" id="ttMonthLimitRoute" min="100" max="10000000" value="' + window.tomtomMonthlyLimit('route') + '" title="คำนวณเส้นทาง" placeholder="เส้นทาง" style="width:100px; padding:7px 10px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:12.5px; text-align:left;">' +
+                '<input type="number" id="ttMonthLimitSearch" min="100" max="10000000" value="' + window.tomtomMonthlyLimit('search') + '" title="ค้นหาสถานที่" placeholder="ค้นหา" style="width:100px; padding:7px 10px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:12.5px; text-align:left;">' +
+                '<button onclick="window.setTomtomMonthlyLimit(\'route\', document.getElementById(\'ttMonthLimitRoute\').value) & window.setTomtomMonthlyLimit(\'search\', document.getElementById(\'ttMonthLimitSearch\').value)" class="sp-btn-add" style="padding:7px 12px; font-size:12px; white-space:nowrap;">ตั้งวงเงินรายเดือน</button></div>' +
+                '<div style="font-size:10.5px; color:var(--text-dim); margin-top:7px; line-height:1.55;">ค่าเริ่มต้นตามแผนฟรีของ TomTom: เส้นทาง 20,000 · ค้นหา 2,500 ครั้ง/เดือน (แก้ได้ตามแผนจริงของบัญชี)</div>' +
                 '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px;">' +
                 '<span style="font-size:11.5px; color:var(--text-dim);">ยอดจริงจากแดชบอร์ด</span>' +
                 '<input type="number" id="ttDashRoute" min="0" placeholder="เส้นทาง" value="' + (dash ? dash.route : '') + '" style="width:88px; padding:7px 10px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; font-size:12.5px; text-align:left;">' +
