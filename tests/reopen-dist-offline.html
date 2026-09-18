@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — ป้ายระยะที่เหลือบนปุ่มเปิดมินิแมพ (“อีก 49.7 กม.”)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: ป้าย “ระยะที่เหลือ” บนปุ่มเปิดมินิแมพ</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> ·
+        ตั้งเส้นทางเองด้วย <code>navMiniSetRoute</code> + เลื่อนรถด้วย <code>navMiniUpdate</code> (เหมือน GPS จริงส่งพิกัดเข้ามา)
+        <br>กติกาที่ผู้ใช้สั่ง 18 ก.ย. 69: “ใส่ตัวเลขระยะทางเหลือบนปุ่มเปิดมินิแมพ (เช่น อีก 49.7 กม.)
+        เพื่อให้เห็นข้อมูลโดยไม่ต้องเปิดแผนที่ <b>และไม่กินโควตา</b>”
+        <br>⇒ ต้องพิสูจน์ 3 อย่าง: ① ตัวเลขถูกและเปลี่ยนตามรถ ② หน่วยอ่านง่าย (กม. ทศนิยม 1 / เมตร / ใกล้ถึง)
+        ③ <b>ไม่มีการยิงคำขอออกเน็ตเลย</b> และตัวนับโควตาในเครื่องไม่ขยับ
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/reopen-dist-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (9 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const CACHE_KEYS = ['taxi_active_trip_v1', 'taxi_toll_pairs_v1', 'taxi_toll_rates_v1'];
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[reopen-dist-test]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตทั้งหมด ============================
+    let stubsInstalled = false;
+    let blocked = 0;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '', blockedTomtom: 0 };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) {
+                cw.__net.blockedFetch++; cw.__net.lastUrl = u; blocked++;
+                // 🎯 แยกนับ “คำขอไป TomTom” ออกจากคำขออื่นของแอป (Firebase/prefs) — ใช้พิสูจน์เรื่องโควตาโดยตรง
+                if (u.indexOf('tomtom.com') >= 0) { cw.__net.blockedTomtom = (cw.__net.blockedTomtom || 0) + 1; }
+                return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u));
+            }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) { cw.__net.blockedXhr++; blocked++; x.__blocked = true; return; }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.navDistLabel === 'function' && typeof cw.navMiniUpdate === 'function'
+                && typeof cw.navMiniSetRoute === 'function' && typeof cw.startNavigationMap === 'function') {
+                installStubs();
+                await wait(200);
+                try { CACHE_KEYS.forEach(k => cw.localStorage.removeItem(k)); } catch (e) {}
+                await closeAllModals();
+                await waitForNoLoader(12000);
+                await wait(200);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    // ============================ เครื่องมือทดสอบ ============================
+    // เส้นทางตรงเหนือ-ใต้ ~4.4 กม. — จุดถี่ทุก ~100 ม. (เหมือนเส้นทางจริงจาก TomTom)
+    //    ⚠️ ต้องถี่: ตัวอ่านระยะ snap กับ “จุดยอดของเส้นทาง” → เส้นทางหยาบจะอ่านค่าเป็นขั้นละ 1 กม.
+    const ROUTE = (() => { const a = []; for (let i = 0; i <= 44; i++) { a.push([13.70 + i * 0.0009, 100.50]); } return a; })();
+    let realCan = null;
+
+    const btn = (id) => w().document.getElementById(id);
+    const label = (id) => { const b = btn(id); const sp = b && b.querySelector('.nm-reopen-label'); return sp ? sp.textContent : '(ไม่มี span)'; };
+    const visible = (id) => !btn(id).classList.contains('is-hidden');
+    const quotaRoute = () => { try { return w().tomtomUsageToday().route; } catch (e) { return -1; } };
+
+    function armRoute(km) {
+        const cw = w();
+        cw.canUseMiniMap = () => true;
+        cw.navMiniSetRoute(ROUTE, 'ทดสอบ');
+        cw.startNavigationMap(ROUTE[0][0], ROUTE[0][1], ROUTE[4][0], ROUTE[4][1], 'ทดสอบ', km || 0, ROUTE);
+        cw.__routeBaseKm = 0; cw.__routeBaseSec = 0;      // เที่ยวใหม่ = ยังไม่มีฐาน
+        cw.invalidateRouteBase();
+    }
+    // ตั้ง “ฐานเส้นทาง” ให้ระบบรู้ความยาวจริงของเส้นทาง แล้วคำนวณระยะที่เหลือจากการ snap
+    function setBase(km) { const cw = w(); cw.__routeBaseKm = km; cw.refreshRemainFromRoute(); cw.navMiniSyncReopenLabel(); }
+    function move(lat, lon, kmh) { w().navMiniUpdate(lat, lon, kmh || 40); }
+
+    // ============================ รัน 1 สถานการณ์ ============================
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(30000).then(() => { throw new Error('สถานการณ์ timeout 30 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ไม่ผ่าน</span> ' + name + '\n<span class="detail">' + ((e && e.message) ? e.message : e) + '</span>';
+            failCount++;
+            failures.push(name + ' → ' + ((e && e.message) ? e.message : e));
+        }
+    }
+
+    // ============================ ชุดสถานการณ์ ============================
+    async function runAll() {
+        const cw = w();
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+        realCan = cw.canUseMiniMap;
+
+        await runScenario('S1 · หน่วยข้อความอ่านง่าย: ≥1 กม. = ทศนิยม 1 · <1 กม. = เมตร · ใกล้ถึง', async () => {
+            const f = cw.navDistLabel;
+            const cases = [[49.7, 'อีก 49.7 กม.'], [49, 'อีก 49.0 กม.'], [12.34, 'อีก 12.3 กม.'], [1.0, 'อีก 1.0 กม.'],
+                           [0.94, 'อีก 940 ม.'], [0.35, 'อีก 350 ม.'], [0.104, 'อีก 100 ม.'], [0.09, 'อีก 90 ม.'],
+                           [0.05, 'อีก 50 ม.'], [0.04, 'ใกล้ถึง'], [0, 'ใกล้ถึง'], [-1, '']];
+            const bad = cases.filter(([km, exp]) => f(km) !== exp).map(([km, exp]) => km + '→' + JSON.stringify(f(km)) + ' (ควร ' + JSON.stringify(exp) + ')');
+            assert(bad.length === 0, 'รูปแบบผิด: ' + bad.join(' · '));
+            return cases.map(([km, exp]) => km + ' กม. → “' + exp + '”').join(' · ');
+        });
+
+        await runScenario('S2 · ปุ่มเปิดมินิแมพ (ทั้ง 2 ปุ่ม) ขึ้นข้อความเดียวกัน และกว้างขึ้นจริง', async () => {
+            armRoute(0);
+            setBase(49.7);
+            // ทำให้กล่องที่บรรจุปุ่มมองเห็นได้ (ของจริงมันโชว์เมื่อมีจุดหมาย) — ไม่งั้นวัดความกว้างได้ 0
+            ['liveTrackerDestName', 'tzDestNameBox'].forEach((id) => { const e = cw.document.getElementById(id); if (e) e.style.display = 'flex'; });
+            const ov = cw.document.getElementById('trackerZoomOverlay'); if (ov) ov.style.display = 'flex';
+            cw.navMiniSyncReopen();
+            await wait(80);
+            const l1 = label('btnLiveMap'), l2 = label('btnLiveMapZoom');
+            assert(l1 === 'อีก 49.7 กม.', 'ปุ่มบนการ์ดหน้าจอควรขึ้น “อีก 49.7 กม.” แต่ได้ “' + l1 + '”');
+            assert(l2 === l1, 'ปุ่มบนจอมิเตอร์ใหญ่ต้องข้อความเดียวกัน (ได้ “' + l2 + '”)');
+            assert(btn('btnLiveMap').classList.contains('has-dist'), 'ปุ่มควรได้คลาส has-dist (เปิดให้แสดงข้อความ)');
+            // ⚠️ วัดความกว้างจริงต้องมีกล่องที่ “เรนเดอร์จริง” — กล่องมิเตอร์ถูกซ่อนตอนเทสต์ ⇒ ยกแบบจำลองไปไว้ในกล่องที่มองเห็น
+            const probe = cw.document.createElement('div');
+            probe.style.cssText = 'position: fixed; left: -9999px; top: 0; display: flex;';
+            probe.appendChild(btn('btnLiveMap').cloneNode(true));
+            cw.document.body.appendChild(probe);
+            const wpx = Math.round(probe.firstChild.getBoundingClientRect().width);
+            probe.remove();
+            assert(wpx > 40, 'ปุ่มต้องกว้างขึ้นกว่ารูปไอคอนเดิม (เดิม 32px) แต่ได้ ' + wpx + 'px');
+            const tip = btn('btnLiveMap').title;
+            assert(tip.indexOf('49.7') >= 0, 'คำอธิบายปุ่ม (title) ควรบอกระยะด้วย แต่ได้ “' + tip + '”');
+            return 'การ์ดหน้าหลัก = “' + l1 + '” · จอใหญ่ = “' + l2 + '” · กว้าง ' + wpx + 'px · title = “' + tip + '”';
+        });
+
+        await runScenario('S3 · ขับไปตามเส้นทาง → ตัวเลขลดลงตามระยะจริง (ไม่ใช่ค่าคงที่)', async () => {
+            armRoute(0);
+            setBase(4.4);
+            const seq = [];
+            seq.push([0, label('btnLiveMap'), Math.round(cw.navRemainKm() * 100) / 100]);
+            const ratios = [0.15, 0.35, 0.6, 0.85];
+            for (const r of ratios) {
+                move(13.70 + r * 0.04, 100.50, 40);
+                await wait(40);
+                cw.refreshRemainFromRoute();          // = สิ่งที่มิเตอร์ทำทุกวินาที
+                cw.navMiniSyncReopenLabel();
+                seq.push([r, label('btnLiveMap'), Math.round(cw.navRemainKm() * 100) / 100]);
+            }
+            const vals = seq.slice(1).map(s => s[2]);
+            assert(vals.every((v, i) => i === 0 || v < vals[i - 1]), 'ระยะต้องลดลงเรื่อย ๆ แต่ได้ ' + vals.join(' → '));
+            assert(vals[3] > 0 && vals[3] < 0.8, 'ที่จุดสุดท้าย (วิ่ง 85%) ควรเหลือ <0.8 กม. แต่ได้ ' + vals[3]);
+            return 'จุดเริ่ม ' + seq[0][2] + ' กม. → ' + seq.slice(1).map(s => Math.round(s[0] * 100) + '% = ' + s[1] + ' [' + s[2] + ' กม.]').join(' → ');
+        });
+
+        await runScenario('S4 · ล้างจุดหมายเที่ยวเก่า → ปุ่มเงียบ (ไม่โชว์เลขมั่ว) · ถึงปลายทาง → “ใกล้ถึง”', async () => {
+            armRoute(0);
+            setBase(4.4);
+            move(13.735, 100.50, 30);                 // ให้มีเลขค้างอยู่ก่อน (เหมือนเที่ยวเก่าที่เพิ่งจบ)
+            cw.refreshRemainFromRoute(); cw.navMiniSyncReopenLabel();
+            const stale = label('btnLiveMap');
+            cw.clearDestination();                     // = จบเที่ยว/ล้างจุดหมายจริง (ศูนย์ทั้งระยะและฐานเส้นทาง)
+            cw.navMiniSyncReopenLabel();
+            cw.refreshRemainFromRoute(); cw.navMiniSyncReopenLabel();
+            const logicNoRoute = cw.navMiniDistLabelText();
+            // ให้ปุ่มมองเห็นก่อนตรวจ DOM (ซ่อนอยู่ = ตัวซิงก์ข้ามการเขียน DOM โดยเจตนา → S6 ตรวจข้อนี้แยก)
+            btn('btnLiveMap').classList.remove('is-hidden');
+            cw.navMiniSyncReopenLabel();
+            const noRoute = label('btnLiveMap');
+            assert(stale !== '', 'ต้องมีเลขค้างก่อนล้างจุดหมาย (ไม่ขึ้นเลย = เทสต์ไม่ได้ทดสอบอะไร)');
+            assert(logicNoRoute === '', 'ยังไม่มีเส้นทางต้องไม่ขึ้นตัวเลข แต่ตรรกะคืน “' + logicNoRoute + '”');
+            assert(noRoute === '', 'ยังไม่มีเส้นทางต้องไม่ขึ้นตัวเลข (ห้ามเอาเลขค้าง “' + stale + '” มาโชว์) แต่ได้ “' + noRoute + '”');
+            assert(!btn('btnLiveMap').classList.contains('has-dist'), 'ไม่มีเส้นทางต้องไม่ติดคลาส has-dist');
+            setBase(4.4);
+            move(13.7405, 100.50, 20);                // เลยปลายทางไปแล้ว
+            cw.refreshRemainFromRoute(); cw.navMiniSyncReopenLabel();
+            const near = label('btnLiveMap');
+            assert(near === 'ใกล้ถึง', 'ถึงปลายทางควรขึ้น “ใกล้ถึง” แต่ได้ “' + near + '”');
+            return 'เลขค้างก่อนล้างจุดหมาย = “' + stale + '” → ล้างจุดหมาย → “” (เงียบ ไม่เอาเลขค้างมาโชว์) · มีเส้นทาง+เลยปลายทาง → “' + near + '”';
+        });
+
+        await runScenario('S5 · 🔴 ไม่กินโควตา: อัปเดตป้าย 60 ครั้ง → ไม่มีคำขอออกเน็ต และตัวนับ TomTom ไม่ขยับ', async () => {
+            armRoute(0);
+            setBase(12.5);
+            const before = quotaRoute();
+            const blockedBefore = cw.__net.blockedFetch + cw.__net.blockedXhr;
+            let changed = 0, last = label('btnLiveMap');
+            for (let i = 0; i < 60; i++) {
+                const lat = 13.70 + (i % 5) * 0.01 + 0.0005;
+                move(lat, 100.50, 30 + i);
+                cw.refreshRemainFromRoute();
+                cw.navMiniSyncReopenLabel();
+                const now = label('btnLiveMap');
+                if (now !== last) { changed++; last = now; }
+                await wait(12);
+            }
+            const after = quotaRoute();
+            const tomtomCalls = cw.__net.blockedTomtom || 0;
+            assert(tomtomCalls === 0, 'ต้องไม่มีคำขอไป TomTom เลย แต่ถูกบล็อก ' + tomtomCalls + ' ครั้ง');
+            assert(after === before, 'ตัวนับโควตา TomTom ต้องไม่ขยับ (' + before + ' → ' + after + ')');
+            assert(changed >= 4, 'ตัวเลขควรเปลี่ยนตามการขยับรถอย่างน้อย 4 ครั้ง แต่เปลี่ยน ' + changed);
+            return 'อัปเดต 60 ครั้ง (ขยับรถไปมา) · ตัวเลขเปลี่ยน ' + changed + ' ครั้ง · คำขอไป TomTom = ' + tomtomCalls + ' · โควตา route = ' + before + ' → ' + after + ' (เท่าเดิม)';
+        });
+
+        await runScenario('S6 · ปุ่มถูกซ่อนอยู่ → ไม่เขียน DOM ซ้ำ (ไม่สร้าง span เพิ่ม)', async () => {
+            armRoute(0);
+            setBase(9.9);
+            const b = btn('btnLiveMap');
+            b.classList.add('is-hidden');              // จำลองว่าแผนที่เปิดอยู่ (ปุ่มถูกซ่อน)
+            const spansBefore = b.querySelectorAll('.nm-reopen-label').length;
+            for (let i = 0; i < 20; i++) { cw.navMiniSyncReopenLabel(); }
+            const spansAfter = b.querySelectorAll('.nm-reopen-label').length;
+            b.classList.remove('is-hidden');
+            cw.navMiniSyncReopenLabel();
+            const after = label('btnLiveMap');
+            assert(spansBefore === 1 && spansAfter === 1, 'span ต้องมีใบเดียวเสมอ (' + spansBefore + ' → ' + spansAfter + ')');
+            assert(after === 'อีก 9.9 กม.', 'พอเปิดปุ่มกลับมาต้องได้เลขถูก แต่ได้ “' + after + '”');
+            return 'ซ่อนปุ่ม → เรียกซิงก์ 20 ครั้ง · span คงที่ ' + spansAfter + ' ใบ · เปิดปุ่มกลับมา → “' + after + '”';
+        });
+
+        await runScenario('S7 · ไม่มีสิทธิ์มินิแมพ → ปุ่มถูกซ่อน (ระยะไม่ถูกโชว์ให้คนไม่มีสิทธิ์)', async () => {
+            armRoute(0);
+            setBase(7.7);
+            cw.canUseMiniMap = () => false;            // ถอดสิทธิ์
+            cw.__navMiniApplyPerm();                    // = สิ่งที่ระบบเรียกเมื่อสิทธิ์เปลี่ยน
+            await wait(60);
+            const hidden = !visible('btnLiveMap') && !visible('btnLiveMapZoom');
+            assert(hidden, 'ไม่มีสิทธิ์แล้วปุ่มต้องถูกซ่อน (การ์ด=' + visible('btnLiveMap') + ' · จอใหญ่=' + visible('btnLiveMapZoom') + ')');
+            cw.canUseMiniMap = () => true;
+            cw.__navMiniApplyPerm();
+            await wait(60);
+            const back = visible('btnLiveMap');
+            assert(back, 'ได้สิทธิ์คืนมาแล้วปุ่มต้องกลับมา');
+            return 'ถอดสิทธิ์ → ปุ่มซ่อนทั้ง 2 ปุ่ม ✓ · คืนสิทธิ์ → ปุ่มกลับมา + ระยะ “' + label('btnLiveMap') + '” ✓';
+        });
+
+        await runScenario('S8 · อัปเดตเองทุกครั้งที่ได้พิกัด (ไม่ต้องมีใครกด) — ตัวซิงก์ถูกเรียกจากเส้นทาง GPS', async () => {
+            armRoute(0);
+            setBase(3.3);
+            let calls = 0;
+            const real = cw.navDistLabel;
+            // ⚠️ ต้องดักที่ navDistLabel (ไม่ใช่ navMiniSyncReopenLabel) — เพราะ syncReopenBtns เรียก syncReopenLabels ในมอดูลตรง ๆ
+            cw.navDistLabel = function () { calls++; return real.apply(null, arguments); };
+            move(13.712, 100.50, 45);                   // = GPS ส่งพิกัดเข้ามา (navMiniUpdate → syncReopenBtns → syncReopenLabels)
+            await wait(80);
+            cw.navDistLabel = real;
+            assert(calls >= 1, 'navMiniUpdate ต้องทำให้ป้ายถูกคำนวณใหม่ให้เอง แต่ถูกเรียก ' + calls + ' ครั้ง');
+            const shown = label('btnLiveMap');
+            assert(shown.indexOf('อีก') === 0 && shown.indexOf('กม.') > 0, 'หลังขยับรถ ป้ายต้องเป็นระยะเป็น กม. แต่ได้ “' + shown + '”');
+            return 'navMiniUpdate 1 ครั้ง → ซิงก์ป้ายถูกเรียก ' + calls + ' ครั้ง · ป้าย = “' + shown + '”';
+        });
+
+        await runScenario('S9 · สายไฟในโค้ดจริง: มิเตอร์ติ๊กทุกวินาทีต้องอัปเดตป้ายด้วย (กันถอดออก)', async () => {
+            const res = await fetch('../index.html?cb=' + Date.now());
+            const txt = await res.text();
+            const tickCall = 'if (typeof window.navMiniSyncReopenLabel === \'function\') window.navMiniSyncReopenLabel();';
+            const hasTick = txt.indexOf(tickCall) >= 0;
+            const hasInRaw = txt.indexOf('window.navRemainKm = () =>') >= 0;
+            const hasRail = txt.indexOf('window.navDistLabel = (km) =>') >= 0;
+            assert(hasTick, 'ไม่พบการเรียกซิงก์ป้ายในเส้นทางติ๊กมิเตอร์ (navMiniSyncReopenLabel)');
+            assert(hasInRaw, 'ไม่พบทางอ่านระยะ navRemainKm');
+            assert(hasRail, 'ไม่พบตัวจัดรูปแบบ navDistLabel');
+            return 'พบครบ 3 จุดใน index.html: ตัวจัดรูปแบบ · ทางอ่านระยะจากมิเตอร์ · การเรียกในติ๊กทุกวินาที';
+        });
+
+        // คืนค่าสภาพเดิม
+        try {
+            cw.canUseMiniMap = realCan;
+            if (typeof cw.__navMiniApplyPerm === 'function') cw.__navMiniApplyPerm();
+            cw.navMiniSyncReopenLabel();
+        } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const btnRun = document.getElementById('runBtn');
+        btnRun.disabled = true; btnRun.textContent = '⏳ กำลังรัน...';
+        try {
+            if (!stubsInstalled) await loadApp();
+            await runAll();
+            offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งหมดในชุดทดสอบ (บล็อกคำขอออกนอกเครื่อง ' + blocked + ' ครั้ง)';
+        } catch (e) {
+            summaryEl.innerHTML = '<span style="color:var(--red)">ตั้งชุดทดสอบไม่สำเร็จ: ' + (e && e.message ? e.message : e) + '</span>';
+        } finally {
+            btnRun.disabled = false; btnRun.textContent = '🔄 รันการทดสอบใหม่ (9 สถานการณ์)';
+        }
+    });
+
+    const paintSummary = () => {
+        summaryEl.innerHTML = (failCount === 0
+            ? '<span style="color:var(--green)">✅ ผ่านทั้งหมด ' + passCount + ' / ' + (passCount + failCount) + ' สถานการณ์</span>'
+            : '<span style="color:var(--red)">❌ ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + '</span>\n' + failures.join('\n'));
+    };
+    setInterval(paintSummary, 500);
+
+    // โหลดแอปให้เลย แล้วค่อยรันอัตโนมัติ (เปิดหน้าแล้วเห็นผลได้ทันที)
+    (async () => {
+        try { await loadApp(); await runAll(); offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งหมดในชุดทดสอบ (บล็อกคำขอออกนอกเครื่อง ' + blocked + ' ครั้ง)'; }
+        catch (e) { log('auto-load failed', e); }
+    })();
+})();
+</script>
+</body>
+</html>

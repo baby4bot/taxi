@@ -321,6 +321,12 @@
         .small-toll-btn.active { background: #4caf50; color: white; border-color: #4caf50; box-shadow: none; }
         .small-toll-btn.toll-active { background: #2196f3; color: white; border-color: #2196f3; box-shadow: none; }
         .small-toll-btn:active { transform: scale(0.92); }
+        /* 🏷️ (18 ก.ย. 69) ปุ่มเปิดมินิแมพมี “ระยะที่เหลือ” ติดอยู่ — ผู้ใช้ขอ: เห็นข้อมูลโดยไม่ต้องเปิดแผนที่
+           · กว้างเท่าไหร่ก็ได้ตามข้อความ (เดิมล็อก 32/36px) · ซ่อนข้อความตอนไม่มีตัวเลข */
+        .small-toll-btn .nm-reopen-label {
+            display: none; font-size: 11.5px; font-weight: 700; white-space: nowrap; letter-spacing: 0;
+        }
+        .small-toll-btn.has-dist .nm-reopen-label { display: inline; }
 
         /* ปุ่มกากบาท (×) ล้างจุดหมาย — ไอคอนเล็ก ๆ อยู่ในช่องค้นหาขวาสุด เหมือนปุ่มตาสลับพาสเวิร์ด
            โผล่/หายแบบ fade+slide นุ่ม ๆ (เลื่อนจากขวา + เฟด 0.22 วิ) */
@@ -2903,7 +2909,7 @@
         <div id="liveTrackerDestName" style="font-size: 15px; font-weight: 500; color: white; margin-bottom: 10px; display: none; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); align-items: center; justify-content: space-between; gap: 10px;">
             <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; text-align: left;">📍 ไปที่: <span id="ltDestText" style="color: var(--neon-yellow);"></span></div>
             <div style="display: flex; gap: 5px; flex-shrink: 0;">
-                <button id="btnLiveMap" class="small-toll-btn is-hidden" style="width: 32px; height: 32px; border-radius: 8px;" onclick="event.stopPropagation(); window.navMiniReopen()" title="เปิดแผนที่นำทางกลับมา" aria-label="เปิดแผนที่นำทาง"><span class="material-symbols-outlined" style="font-size: 16px;">map</span></button>
+                <button id="btnLiveMap" class="small-toll-btn is-hidden" style="width: auto; min-width: 32px; height: 32px; border-radius: 8px; padding: 0 9px; gap: 5px;" onclick="event.stopPropagation(); window.navMiniReopen()" title="เปิดแผนที่นำทางกลับมา" aria-label="เปิดแผนที่นำทาง"><span class="material-symbols-outlined" style="font-size: 16px;">map</span><span class="nm-reopen-label"></span></button>
                 <button id="btnTollToggleLive" class="small-toll-btn active" style="width: 32px; height: 32px; border-radius: 8px;" onclick="event.stopPropagation(); window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)"><span class="material-symbols-outlined" style="font-size: 16px;">route</span></button>
             </div>
         </div>
@@ -3850,7 +3856,7 @@
         
         <div id="tzDestNameBox" style="color: white; font-size: 18px; font-weight: 500; background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 15px; margin-bottom: var(--space-zoom); display: none; border: 1px solid rgba(255,255,255,0.05); align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
             <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">📍 ไปที่: <span id="tzDestText" style="color: var(--neon-yellow);"></span></div>
-            <button id="btnLiveMapZoom" class="small-toll-btn is-hidden" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;" onclick="event.stopPropagation(); window.navMiniReopen()" title="เปิดแผนที่นำทางกลับมา" aria-label="เปิดแผนที่นำทาง"><span class="material-symbols-outlined" style="font-size: 18px;">map</span></button>
+            <button id="btnLiveMapZoom" class="small-toll-btn is-hidden" style="width: auto; min-width: 36px; height: 36px; border-radius: 11px; padding: 0 10px; gap: 6px; flex-shrink: 0;" onclick="event.stopPropagation(); window.navMiniReopen()" title="เปิดแผนที่นำทางกลับมา" aria-label="เปิดแผนที่นำทาง"><span class="material-symbols-outlined" style="font-size: 18px;">map</span><span class="nm-reopen-label"></span></button>
             <button id="btnTollToggleZoom" class="small-toll-btn toll-pop-in active" style="width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;" onclick="event.stopPropagation(); window.setTollMode(!window.isTollwayMode)" title="เลี่ยงทางด่วน (แตะเพื่อขึ้นทางด่วน)"><span class="material-symbols-outlined" style="font-size: 18px;">route</span></button>
         </div>
         
@@ -12881,6 +12887,10 @@
         lastSearchQuery = ''; lastSearchHtml = null; // ล้างแคชคำค้น → ค้นใหม่จริงเมื่อพิมพ์ครั้งถัดไป
         destLoc = null;
         currentTrueRemainKm = 0; currentTrueRemainSec = 0;
+        // 🧭 (18 ก.ย. 69) ล้างจุดหมาย = ต้องล้าง “ฐานระยะตามเส้นทาง” ด้วย
+        //    🐞 เดิมไม่ล้าง: ฐานยังค้างเป็นของเที่ยวก่อน ⇒ ปุ่มเปิดมินิแมพอ่านเจอ “มีเส้นทาง” แล้วโชว์ “ใกล้ถึง”
+        //       ทั้งที่ไม่มีเส้นทางอยู่เลย (ระยะเหลือ 0 เกิดได้ 2 อย่าง: ไม่มีเส้นทาง กับ ถึงปลายทางแล้ว)
+        window.invalidateRouteBase();
         window.currentTollInfo = null;
         const s = $('suggestionList'), h = $('historyList');
         if (s) s.style.display = 'none';
@@ -14280,6 +14290,12 @@
             //    ไม่งั้นจอมิเตอร์จะกลายเป็นเที่ยวธรรมดา (ไม่มีแถบจุดหมาย/เส้นทาง/รถ/ปุ่ม Google Maps)
             if (!destLoc && !window.__pendingRouteStart) {
                 destLoc = null;
+                // 🧭 (18 ก.ย. 69) เที่ยวใหม่แบบไม่มีจุดหมาย = ล้างระยะของเที่ยวก่อนด้วย
+                //    🐞 เดิมค่าระยะ/ฐานเส้นทางของเที่ยวเก่าค้างอยู่ ⇒ ปุ่มเปิดมินิแมพ (และการ์ดหน้าแรก) โชว์
+                //       “อีก 500 ม.” / “ใกล้ถึง” ของเที่ยวก่อน ทั้งที่เที่ยวนี้ยังไม่มีเส้นทางเอาเสียเลย
+                //    (เที่ยวที่มีจุดหมายไม่ถูกแตะ — ค่าที่วางแผนไว้ตอนค้นหาเป็นของเที่ยวนี้อยู่แล้ว)
+                window.invalidateRouteBase();
+                currentTrueRemainKm = 0; currentTrueRemainSec = 0;
                 try { window.destLoc = null; } catch(e) {}
                 try { window.__restoredDestInfo = null; } catch(e) {}
                 try { window.__lastDestInfo = null; } catch(e) {}
@@ -14345,6 +14361,8 @@
             window.advanceMeterTime(nowTick);
             // 🧭 ระยะที่เหลือแบบต่อเนื่อง (snap บนเส้นทางในเครื่อง) ก่อนวาดจอ → เลขไม่ค้างเป็นนาที
             if (typeof window.refreshRemainFromRoute === 'function') window.refreshRemainFromRoute();
+            // 🏷️ อัปเดตตัวเลขบนปุ่มเปิดมินิแมพ (ต่อจาก refreshRemainFromRoute ซึ่งเพิ่งคำนวณระยะใหม่)
+            if (typeof window.navMiniSyncReopenLabel === 'function') window.navMiniSyncReopenLabel();
             window.updateLiveMeterDisplay(); 
             window.saveActiveTrip(); 
             // 📡 GPS ตายเงียบ (Android พัก watchPosition ตอนล็อกจอ) → ปลุกใหม่ ไม่งั้นระยะทางหยุดนับทั้งที่มิเตอร์วิ่ง
@@ -15729,6 +15747,10 @@
             return true;
         } catch (e) { return false; }
     };
+    // 📏 (18 ก.ย. 69) เผย “ระยะที่เหลือ” ให้สคริปต์อื่น (มินิแมพ/ปุ่มเปิดแผนที่) อ่านได้
+    //    ⚠️ ตัวแปรจริงเป็น `let` ระดับสคริปต์ → ห้ามให้สคริปต์อื่นอ้างชื่อตรง ๆ ให้เรียกฟังก์ชันนี้
+    //    · เป็นค่าที่คำนวณในเครื่อง (snap บนเส้นทาง) ⇒ อ่านซ้ำกี่ครั้งก็ไม่กินโควตา
+    window.navRemainKm = () => (typeof currentTrueRemainKm === 'number' && isFinite(currentTrueRemainKm)) ? currentTrueRemainKm : 0;
 
     window.startDynamicRouting = () => { 
         if(routeUpdateTimer) clearInterval(routeUpdateTimer); 
@@ -17011,7 +17033,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '1832f1354d';
+    const APP_WEB_VERSION = '1fa65775d3';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -17473,6 +17495,10 @@
         ['2026-09-18', '🆘 ปุ่มแก้ตรงจุดในแถบเตือน — เปิดสิทธิ์ · ตั้งค่าแอป · ดูโควตา'],
         ['2026-09-18', '💡 เน็ตหลุด → ระบบลองใหม่ให้เองเมื่อเน็ตกลับ · ไม่ได้สิทธิ์ → ปุ่มขอสิทธิ์ทันที'],
         ['2026-09-18', '⏱️ คำขอเส้นทางมีเพดาน 15 วินาที (เน็ตค้างไม่รอไม่จบ) · แถบเปลี่ยนสีตามสาเหตุ'],
+        ['2026-09-18', '🏷️ ปุ่มเปิด Mini Map โชว์ “อีก 49.7 กม.” เอง — รู้ระยะโดยไม่ต้องเปิดแผนที่'],
+        ['2026-09-18', '🔴 ตัวเลขบนปุ่มคิดในเครื่อง (snap บนเส้นทาง) → ไม่ยิงเน็ต ⇒ ไม่กินโควตา TomTom'],
+        ['2026-09-18', '📏 อ่านง่าย: เกิน 1 กม. = “อีก 49.7 กม.” · ไม่ถึง 1 กม. = “อีก 350 ม.”'],
+        ['2026-09-18', '🐞 ล้างจุดหมาย/ขึ้นเที่ยวใหม่แบบไม่มีจุดหมาย = ล้างระยะเที่ยวเก่าด้วย'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -23019,7 +23045,56 @@
                 b.title = on ? 'เปิดแผนที่นำทาง (กดเพื่อดูเส้นทาง)' : '';
             }
         }
+        syncReopenLabels();   // 🏷️ ต่อด้วย “ระยะที่เหลือ” บนปุ่ม (ถ้ามีเส้นทาง)
     }
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🏷️ (18 ก.ย. 69) “ระยะที่เหลือ” บนปุ่มเปิดมินิแมพ — ผู้ใช้ขอ:
+    //    “ใส่ตัวเลขระยะทางเหลือบนปุ่มเปิดมินิแมพ (เช่น อีก 49.7 กม.) เพื่อให้เห็นข้อมูล
+    //     โดยไม่ต้องเปิดแผนที่และไม่กินโควตา”
+    //    ✅ ตัวเลขมาจาก `window.navRemainKm()` = ค่าที่คำนวณในเครื่อง (เส้นทางที่ขอไว้แล้ว + snap ตำแหน่งบนเส้นทาง)
+    //       ⇒ **ไม่มีคำขอออกเน็ตเลย ⇒ ไม่กินโควตา TomTom แม้แต่ครั้งเดียว**
+    //    หน่วยตามที่ผู้ใช้สั่ง: ≥1 กม. = ทศนิยม 1 ตำแหน่ง (“อีก 49.7 กม.”) · <1 กม. = เมตร (“อีก 350 ม.”) · ใกล้ถึง = “ใกล้ถึง”
+    window.navDistLabel = (km) => {
+        const n = Number(km);
+        if (!isFinite(n) || n < 0) return '';
+        const m = n * 1000;
+        if (m < 50) return 'ใกล้ถึง';   // รวม 0 = ถึงแล้ว (แยกจาก “ไม่รู้ระยะ” ด้วย navHasRouteBase)
+        // ⚠️ เกณฑ์ 50 ม. — เคยตั้ง 150 ม. แล้วคนที่เหลือ 100 ม. ยังอ่านว่า “อีก 100 ม.” ได้ (ตรงกับที่ Google Maps ทำ)
+        if (n < 1) return 'อีก ' + (Math.max(10, Math.round(m / 10) * 10)) + ' ม.';
+        return 'อีก ' + n.toFixed(1) + ' กม.';
+    };
+    // 🔎 รู้ว่า “มีเส้นทางที่คำนวณไว้แล้ว” หรือยัง — ระยะ 0 มี 2 ความหมายต่างกัน:
+    //    ไม่มีเส้นทางเลย (ต้องเงียบ) กับ ถึงปลายทางแล้ว (ต้องขึ้น “ใกล้ถึง”)
+    window.navHasRouteBase = () => (typeof window.__routeBaseKm === 'number' && window.__routeBaseKm > 0);
+    function reopenDistText() {
+        try {
+            // ⛔ เงื่อนไขสำคัญ: ต้อง “มีเส้นทางที่คำนวณไว้” ก่อน ⇒ ไม่เอาเลขค้างจากเที่ยวก่อนมาโชว์
+            //    (เจอจริงตอนทดสอบ: ล้างฐานเส้นทางแล้วยังขึ้น “อีก 1.1 กม.” ค้างจากเที่ยวก่อน)
+            if (!window.navHasRouteBase()) return '';
+            const km = (typeof window.navRemainKm === 'function') ? window.navRemainKm() : 0;
+            return window.navDistLabel(km);   // เหลือ 0 แต่มีเส้นทาง = “ใกล้ถึง”
+        } catch (e) { return ''; }
+    }
+    function syncReopenLabels() {
+        try {
+            const txt = reopenDistText();
+            const ids = ['btnLiveMap', 'btnLiveMapZoom'];
+            for (let i = 0; i < ids.length; i++) {
+                const b = document.getElementById(ids[i]);
+                if (!b) continue;
+                if (b.classList.contains('is-hidden')) continue;   // ซ่อนอยู่ = ไม่ต้องเขียน DOM
+                let sp = b.querySelector('.nm-reopen-label');
+                if (!sp) { sp = document.createElement('span'); sp.className = 'nm-reopen-label'; b.appendChild(sp); }
+                if (sp.textContent !== txt) sp.textContent = txt;
+                b.classList.toggle('has-dist', !!txt);
+                const tip = txt ? ('เปิดแผนที่นำทาง — ' + txt + ' ถึงปลายทาง') : 'เปิดแผนที่นำทาง (กดเพื่อดูเส้นทาง)';
+                if (b.title !== tip) { b.title = tip; b.setAttribute('aria-label', tip); }
+            }
+            return txt;
+        } catch (e) { return ''; }
+    }
+    window.navMiniSyncReopenLabel = () => syncReopenLabels();       // ให้มิเตอร์เรียกทุกวินาที (เบา: เทียบข้อความก่อนเขียน)
+    window.navMiniDistLabelText = () => reopenDistText();           // ไว้ตรวจตอนทดสอบ
     window.navMiniReopen = function () {
         try {
             if (!permOk()) { try { window.showToast('แผนที่นำทาง (Mini Map) ถูกปิดโดยผู้ดูแลระบบ — ขอเปิดใช้จากแอดมิน', true); } catch (e) {} return; }
