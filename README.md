@@ -1494,12 +1494,13 @@ android-app/            ← 📱 โปรเจกต์แอป Android (WebV
 |---|---|
 | เปลือกแอป | `MainActivity` — WebView + อนุมัติตำแหน่งให้ origin ของเรา + ตัวเลือกรูป (SAF) + DOM storage + สั่น/จอค้าง |
 | หัวใจความแม่น | `BgLocationService` — Foreground Service เก็บพิกัด (GPS+เครือข่าย) **แม้จอดับ/ล็อกจอ** เก็บเข้าคิวให้หน้าเว็บเบิก |
-| สะพานเว็บ ↔ Android | `window.TaxiNative` — `startTracking` · `stopTracking` · `drainFixes` · `peekStats` · `setKeepScreenOn` · `setAppUrl` |
+| สะพานเว็บ ↔ Android | `window.TaxiNative` — `startTracking` · `stopTracking` · `drainFixes` · `peekStats` · `setKeepScreenOn` · `setAppUrl` · `appVersionCode` · `downloadAndInstallApk` · `deviceBrand` · `openAutoBlockerSettings` |
 | หน้าเว็บฝั่งเรา | `window.nativeSync` · `window.nativeDrain` · `window.nativeFixes` · `window.nativeSetScreenOn` · ตรวจสถานะด้วย `window.taxiNativeDebug()` (ในเบราว์เซอร์ปกติจะไม่ทำอะไรเลย) |
 | ผูกกับเที่ยวจับเวลา | เริ่มเที่ยว → เริ่มเก็บ GPS ฉากหลังอัตโนมัติ · จบเที่ยว → หยุด |
 | ขอสิทธิ์ | ตำแหน่งแบบ “ขณะใช้งาน” เท่านั้น (ไม่ขอ background location — เลี่ยงเงื่อนไข Play Store) |
 | ชื่อ + ไอคอน | ชื่อใต้ไอคอน = **ค่าแท็กซี่** · ไอคอน = รูปรถแท็กซี่ (สร้างจากรูปด้วย `android-app/tools/make-icons.ps1`) |
 | ไฟล์ติดตั้งในเครื่อง | ทุกครั้งที่ build ใหม่ ให้รัน `android-app/tools/fetch-apk.ps1` → ได้ `ค่าแท็กซี่.apk` ในโฟลเดอร์โปรเจกต์ (ส่งเข้าเครื่องได้ทันที) · 🛡️ สคริปต์จะ **ไม่ทับ** ถ้าไฟล์ที่โหลดมาเซ็นด้วยกุญแจชั่วคราว (ยังไม่ได้ตั้ง Secrets) — ป้องกันได้ไฟล์ที่ติดตั้งอัปเดตทับเครื่องเดิมไม่ได้ |
+| 🧱 ติดตั้งบน Samsung | One UI 6+ มี **“ตัวบล็อกอัตโนมัติ (Auto Blocker)”** ที่ทำการติดตั้ง APK “เงียบ” (ไม่มี error ไม่ขึ้นหน้าติดตั้ง) ⇒ แถบมีรุ่นใหม่จะขึ้นหมายเหตุ + ปุ่ม **“เปิดการตั้งค่า Auto Blocker”** (APK 1.5.0 ขึ้นไป เปิดหน้าให้ตรง · APK เก่าจะบอกทางไปเอง) |
 
 ⛔ **ข้อจำกัดที่ต้องรู้:** ล็อกอิน Google ใน WebView ถูก Google บล็อก (`disallowed_useragent`) ⇒ **ในแอปใช้ Google ไม่ได้**
 ต้องใช้ **ไอดี+รหัสผ่าน หรือ PIN** (และ Google ให้ทำบนเว็บ/Chrome แทน)

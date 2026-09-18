@@ -1385,6 +1385,12 @@
         #apkUpdateBar .apk-upd-btn .material-symbols-outlined { font-size: 16px; }
         #apkUpdateBar .apk-upd-btn.go { background: #16a34a; color: #fff; }
         #apkUpdateBar .apk-upd-btn.ghost { background: rgba(255,255,255,0.34); font-weight: 600; }
+        /* 🧱 หมายเหตุเฉพาะเครื่อง Samsung (ตัวบล็อกอัตโนมัติบล็อกการติดตั้ง APK) — ต้องอ่านง่ายบนพื้นส้ม */
+        #apkUpdateBar .apk-upd-note { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; padding: 8px 10px; border-radius: 12px; background: rgba(0,0,0,0.26); color: #fff8ee; }
+        #apkUpdateBar .apk-upd-note > .material-symbols-outlined { font-size: 18px; margin-top: 1px; }
+        #apkUpdateBar .apk-upd-note b { display: block; font-size: 12px; }
+        #apkUpdateBar .apk-upd-note .apk-upd-note-txt { display: block; font-size: 11.5px; line-height: 1.35; opacity: 0.92; }
+        #apkUpdateBar .apk-upd-btn.tiny { flex: 0 0 auto; padding: 6px 10px; font-size: 11.5px; margin-top: 6px; }
         .reorder-mode .side-menu-item:hover, .reorder-mode .hub-item:hover { transform: none; }
         .reorder-mode .hub-chevron { display: none; }
         .reorder-grip {
@@ -8119,6 +8125,55 @@
             return apkMineRaw().replace(/\s*\(.*$/, '').trim();                        // “1.3.0 (4)” ⇒ “1.3.0”
         } catch (e) { return ''; }
     };
+    // 🧱 (18 ก.ย. 69) เครื่อง Samsung (One UI 6+) มี “ตัวบล็อกอัตโนมัติ (Auto Blocker)” ที่บล็อกการติดตั้ง APK
+    //    อาการจริงที่ผู้ใช้เจอ: กดติดตั้งแล้ว “ไม่ขึ้นอะไรเลย” แล้วหาสาเหตุไม่ได้ ⇒ ต้องเตือน + พาไปปิด
+    //    ⚠️ userAgent ในแอป APK บอกยี่ห้อเครื่องไม่ได้ ⇒ ถามสะพาน `TaxiNative.deviceBrand()` (APK 1.5.0+)
+    //       ถ้าไม่มีสะพาน (เปิดจากเบราว์เซอร์) ค่อยเดาจาก UA (Samsung Internet / รุ่น SM-xxxx)
+    window.__apkIsSamsung = (brand, ua) => {
+        const b = String(brand == null ? '' : brand).trim();
+        if (b) return /samsung/i.test(b);
+        return /SamsungBrowser|SAMSUNG|SM-[A-Z0-9]{3,}/i.test(String(ua == null ? '' : ua));
+    };
+    const apkBrand = () => { try { return (apkIsNative() && window.TaxiNative.deviceBrand) ? String(window.TaxiNative.deviceBrand() || '') : ''; } catch (e) { return ''; } };
+    const apkIsSamsung = () => window.__apkIsSamsung(apkBrand(), (navigator.userAgent || ''));
+    const apkCanOpenAutoBlocker = () => { try { return !!(apkIsNative() && window.TaxiNative.openAutoBlockerSettings); } catch (e) { return false; } };
+    // 🧪 ตัวสร้าง “หมายเหตุ Samsung” (ฟังก์ชันล้วน — ทดสอบออฟไลน์ได้ใน tests/apk-update-check.html)
+    //    ⚠️ 2 โหมด: 'samsung' = รู้แน่ว่าเป็นเครื่อง Samsung (มีสะพานบอกยี่ห้อ) · 'maybe' = ในแอป APK แต่ยี่ห้ออ่านไม่ได้
+    //    เคส 'maybe' จำเป็นมาก: APK รุ่นเก่า (1.4.0) ที่ยังไม่มี deviceBrand ต้องอัปเดตเครื่อง Samsung อยู่ดี
+    //    ⇒ ต้องเห็นคำเตือน “ถ้าติดตั้งแล้วไม่ขึ้นอะไร” ไม่งั้นผู้ใช้จะเจออาการเงียบแล้วหาสาเหตุไม่ได้
+    window.__apkSamsungNote = (opts) => {
+        const o = opts || {};
+        const brand = (o.brand == null) ? apkBrand() : String(o.brand == null ? '' : o.brand);
+        const samsung = (o.samsung == null) ? window.__apkIsSamsung(brand, navigator.userAgent || '') : !!o.samsung;
+        const maybe = (o.maybe == null) ? !!(apkIsNative() && !String(brand).trim()) : !!o.maybe;
+        const mode = samsung ? 'samsung' : (maybe ? 'maybe' : '');
+        if (!mode) return '';
+        const canOpen = (o.canOpen == null) ? apkCanOpenAutoBlocker() : !!o.canOpen;
+        const head = (mode === 'samsung')
+            ? 'เครื่อง Samsung — ปิด “ตัวบล็อกอัตโนมัติ (Auto Blocker)” ก่อนติดตั้ง'
+            : 'ถ้าเครื่องนี้เป็น Samsung ต้องปิด “ตัวบล็อกอัตโนมัติ (Auto Blocker)” ก่อนติดตั้ง';
+        const lead = (mode === 'samsung')
+            ? 'ถ้าเปิดอยู่ กดติดตั้งแล้วจะไม่ขึ้นอะไรเลย '
+            : 'ถ้ากดติดตั้งแล้วไม่ขึ้นอะไรเลย ให้ปิดตัวบล็อกอัตโนมัติ ';
+        const tail = canOpen ? 'กดปุ่มด้านล่างเพื่อไปปิด แล้วกลับมากด “ติดตั้งทันที” อีกครั้ง'
+                             : 'ไปที่ ตั้งค่า → ความปลอดภัยและความเป็นส่วนตัว → ตัวบล็อกอัตโนมัติ แล้วปิด';
+        return '<div class="apk-upd-note"><span class="material-symbols-outlined">shield</span><div>' +
+            '<b>' + head + '</b>' +
+            '<span class="apk-upd-note-txt">' + lead + tail + '</span>' +
+            (canOpen ? '<button type="button" class="apk-upd-btn tiny" onclick="window.apkOpenAutoBlocker()"><span class="material-symbols-outlined">lock_open</span> เปิดการตั้งค่า Auto Blocker</button>' : '') +
+            '</div></div>';
+    };
+    window.apkOpenAutoBlocker = () => {
+        try {
+            if (apkIsNative() && window.TaxiNative.openAutoBlockerSettings) {
+                window.TaxiNative.openAutoBlockerSettings();
+                if (typeof window.showToast === 'function') window.showToast('เปิดหน้าตั้งค่าให้แล้ว — ปิด “ตัวบล็อกอัตโนมัติ” แล้วกลับมากดติดตั้งอีกครั้ง', false, null, true);
+                return 'native';
+            }
+        } catch (e) {}
+        if (typeof window.showToast === 'function') window.showToast('เปิดจากเบราว์เซอร์ — ไปที่ ตั้งค่า → ความปลอดภัยและความเป็นส่วนตัว → ตัวบล็อกอัตโนมัติ แล้วปิดก่อนติดตั้ง');
+        return 'manual';
+    };
     const apkSnoozedFor = (info) => {
         try {
             const s = JSON.parse(sessionStorage.getItem(APK_SNOOZE_KEY) || 'null');
@@ -8157,6 +8212,7 @@
                 '<div class="apk-upd-head"><span class="material-symbols-outlined">system_update</span>' +
                 '<div class="apk-upd-txt"><b>มีแอปเวอร์ชันใหม่</b>' +
                 '<span>ติดตั้งอยู่ ' + wnEsc(mine) + (d.versionName ? ' → ใหม่ ' + wnEsc(d.versionName) : '') + ' · ' + (d.versionCode ? 'รหัส ' + d.versionCode : '') + '</span></div></div>' +
+                window.__apkSamsungNote() +
                 '<div class="apk-upd-btns">' +
                 '<button type="button" class="apk-upd-btn go" onclick="window.apkUpdateNow()"><span class="material-symbols-outlined">download</span> ติดตั้งทันที</button>' +
                 '<button type="button" class="apk-upd-btn" onclick="window.apkUpdateOpenDownload()"><span class="material-symbols-outlined">open_in_new</span> ดาวน์โหลดเอง</button>' +
@@ -8181,7 +8237,8 @@
             }
             try {
                 window.TaxiNative.downloadAndInstallApk(url);
-                if (typeof window.showToast === 'function') window.showToast('กำลังดาวน์โหลดรุ่นใหม่… เสร็จแล้วระบบจะให้กด “ติดตั้ง” ยืนยัน 1 ครั้ง', false, null, true);
+                const maybeBlocker = apkIsSamsung() || (apkIsNative() && !String(apkBrand()).trim());   // Samsung แน่ ๆ หรือยี่ห้ออ่านไม่ได้ (APK เก่า)
+                if (typeof window.showToast === 'function') window.showToast('กำลังดาวน์โหลดรุ่นใหม่… เสร็จแล้วระบบจะให้กด “ติดตั้ง” ยืนยัน 1 ครั้ง' + (maybeBlocker ? ' · เครื่อง Samsung: ถ้าหน้าติดตั้งไม่ขึ้น ให้ปิด “ตัวบล็อกอัตโนมัติ” (ปุ่มอยู่ในแถบเตือน)' : ''), false, null, true);
                 return 'native';
             } catch (e) { /* ตกไปเปิดลิงก์สำรอง */ }
         }
@@ -8215,7 +8272,7 @@
             return d.why;
         } catch (e) { apkInfoLastWhy = 'error'; return 'error'; }
     };
-    window.__apkUpdateDiag = () => ({ native: apkIsNative(), mineCode: apkMineCode(), mineName: apkMineName(), server: apkInfoServer, lastWhy: apkInfoLastWhy, bar: !!document.getElementById('apkUpdateBar'), lastCheckAgeSec: apkInfoLastAt ? Math.round((Date.now() - apkInfoLastAt) / 1000) : null });
+    window.__apkUpdateDiag = () => ({ native: apkIsNative(), mineCode: apkMineCode(), mineName: apkMineName(), server: apkInfoServer, lastWhy: apkInfoLastWhy, bar: !!document.getElementById('apkUpdateBar'), lastCheckAgeSec: apkInfoLastAt ? Math.round((Date.now() - apkInfoLastAt) / 1000) : null, brand: apkBrand(), samsung: apkIsSamsung(), canOpenAutoBlocker: apkCanOpenAutoBlocker() });
     setTimeout(() => { try { window.__apkUpdateCheck('boot'); } catch (e) {} }, APK_INFO_FIRST_MS);
     setInterval(() => { try { window.__apkUpdateCheck('interval'); } catch (e) {} }, APK_INFO_EVERY_MS);
     document.addEventListener('visibilitychange', () => {
@@ -15777,7 +15834,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '1cff94542a';
+    const APP_WEB_VERSION = 'c141c547cf';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -16196,6 +16253,8 @@
         ['2026-09-18', '🧱 จัดลำดับ/ซ่อนบล็อกโปรไฟล์ มีผลกับทุกคนจริง (เดิมค่าจากเซิร์ฟเวอร์ไม่เคยถูกใช้)'],
         ['2026-09-18', '👁 ซ่อน/แสดงบล็อกโปรไฟล์ไม่ทำบล็อกหลุดจากระบบอีก (ทะเบียนรถ/เบอร์โทร เคยหาย)'],
         ['2026-09-18', '🖥 เปิดหน้าตั้งค่าโปรไฟล์แล้วลำดับ/การซ่อนตรงกับที่แอดมินตั้ง — ไม่ต้องปิดเปิดแอปใหม่'],
+        ['2026-09-18', '🧱 เครื่อง Samsung เตือนให้ปิด “ตัวบล็อกอัตโนมัติ” ก่อนติดตั้ง APK — พร้อมปุ่มพาไปปิด'],
+        ['2026-09-18', '📱 APK 1.5.0 รู้ยี่ห้อเครื่อง — เครื่อง Samsung เห็นคำเตือน Auto Blocker ในแถบมีรุ่นใหม่'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
