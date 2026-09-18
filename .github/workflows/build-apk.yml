@@ -288,7 +288,10 @@ jobs:
           SIGNER=$(grep -E "Signer #1 certificate SHA-256 digest" certs.txt 2>/dev/null | head -1 | awk '{print $NF}' | tr -d ':\r\n' | tr 'A-F' 'a-f')
           cat > apk-version.json <<JSON
           {"app":"ค่าแท็กซี่","versionCode":${VCODE:-0},"versionName":"${VNAME:-}","sha256":"$SHA","sizeBytes":$SIZE,"signMode":"$SIGN_MODE","signer":"$SIGNER","builtAt":"$(date -u '+%Y-%m-%d %H:%M UTC')","builtAtUnix":$(date -u +%s),"url":"https://github.com/baby4bot/taxi/releases/download/apk-latest/app-release.apk","note":"รหัส APK ล่าสุด — หน้าเว็บเทียบกับ TaxiNative.appVersionCode() แล้วเตือนถ้ามีรุ่นใหม่"}
-JSON
+          JSON
+          # ⚠️ กับดักที่ทำให้ “workflow ล้มทันทีโดยไม่มี job” (18 ก.ย. 69): บรรทัดปิด heredoc ต้องย่อหน้า
+          #    ให้เท่ากับเนื้อใน block (`run: |`) เสมอ — ถ้าเขียน `JSON` ชิดขอบซ้าย YAML จะถือว่า block จบตรงนั้น
+          #    แล้วอ่าน `JSON` เป็นคีย์ไม่มีค่า ⇒ ไฟล์ workflow ผิดรูปแบบ ⇒ GitHub ไม่สร้าง job เลย (อ่าน log ไม่ได้ด้วย)
           # ⚠️ heredoc ใน YAML ติดช่องว่างนำหน้าจากการย่อหน้า ⇒ ตัดออก (JSON ยังอ่านได้แม้มีช่องว่าง แต่ให้สะอาด)
           sed -i 's/^[[:space:]]*//' apk-version.json
           cp apk-version.json "$GITHUB_WORKSPACE/apk-version.json"
