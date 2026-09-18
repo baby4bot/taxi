@@ -8776,6 +8776,28 @@
         if(id === 'adminMenuModal' && window.handleAdminModalState) window.handleAdminModalState(show);
     };
 
+    // 🔊 (18 ก.ย. 69) แปลงระยะเป็นคำพูด/ข้อความไทย — ผู้ใช้สั่ง:
+    //    “2,000 เมตร ให้เรียกเป็น 2 กิโล · 2,300 เมตร ก็เป็น 2.3 กิโล”
+    //    ⇒ ≺ 1 กม. พูดเป็น “เมตร” (ปัดเลือดให้พูดลื่น) · ≥ 1 กม. พูดเป็น “กิโล”
+    //    ⛔ ใช้ที่เดียวทั้งเสียงนำทาง (จุดเลี้ยว) และเสียง/ข้อความทางด่วน — ห้ามเขียนสูตรซ้ำ
+    window.voiceDistThai = (m) => {
+        var n = Math.max(0, Math.round(Number(m) || 0));
+        if (n < 1000) {
+            // ① ต่ำกว่า 1 กม. → พูดเป็น “เมตร” (ปัดให้ลื่น: <100 ม. = ผละ 10 · 100–999 ม. = ผละ 50)
+            var r = (n < 100) ? Math.max(10, Math.round(n / 10) * 10) : (Math.round(n / 50) * 50);
+            // ⚠️ ค่าที่ผละแล้วข้ามไป 1000 (เช่น 980 ม.) → ต้องกลายเป็น “1 กิโล” ไม่ใช่ “1000 เมตร”
+            if (r < 1000) { return r + ' เมตร'; }
+            n = r;
+        }
+        // ② ตั้งแต่ 1 กม. → พูดเป็น “กิโล” (ผู้ใช้สั่ง: 2000→“2 กิโล” · 2300→“2.3 กิโล”)
+        //    ⚠️ ปัดจากค่าจริง (ไม่ใช่ค่าที่ผละ 50 ม. แล้ว) — ไม่งั้น 2340 จะเป็น 2.4 ไม่ใช่ 2.3
+        var km = n / 1000;
+        if (km < 10) {
+            var k1 = Math.round(km * 10 + 1e-9) / 10;
+            return (Math.abs(k1 - Math.round(k1)) < 0.05) ? (Math.round(k1) + ' กิโล') : (k1.toFixed(1) + ' กิโล');
+        }
+        return Math.round(km) + ' กิโล';          // ไกลมาก = ปัดเป็นจำนวนเต็ม
+    };
     window.showToast = (msg, isError = false, imgUrl = null, gold = false, onClick = null, subtitle = null) => {
         // 🔧 ข้อความ/ไอคอน/วินาทีที่แอดมินแก้ไว้ (Firestore settings/toast_messages) — ค้นจาก registry (exact หรือ prefix สำหรับข้อความที่มีตัวแปรต่อท้าย)
         let overrideIcon = null;
@@ -11647,7 +11669,10 @@
         try { if (navigator.vibrate && window.userVibrateGold !== false) { navigator.vibrate(120); } } catch (e) {}
         try {
             if (typeof window.navVoiceSpeak === 'function') {
-                window.navVoiceSpeak('อีก ' + Math.max(1, Math.round(awayKm * 1000 / 100)) * 100 + ' เมตร ถึงด่าน' + gate + ' ค่าทางด่วน ' + (priceShown > 0 ? priceShown + ' บาท' : 'ไม่ทราบราคา'));
+                var awayM = Math.max(10, Math.round(awayKm * 1000 / 50) * 50);   // ปัดเลือด 50 ม. ให้พูดลื่น
+                // ⛔ ใช้สูตรระยะเดียวกันทั้งแอป (≺1 กม. = เมตร · ≥1 กม. = กิโล) — ผู้ใช้สั่ง 18 ก.ย. 69
+                var awayTxt = (window.voiceDistThai ? window.voiceDistThai(awayM) : (awayM + ' เมตร'));
+                window.navVoiceSpeak('อีก ' + awayTxt + ' ถึงด่าน' + gate + ' ค่าทางด่วน ' + (priceShown > 0 ? priceShown + ' บาท' : 'ไม่ทราบราคา'));
             }
         } catch (e) {}
         // ✏️ แสดงเป็น “แถบเล็กด้านบน” เหมือนโหมดถาม (ผู้ใช้สั่งให้เลิกบังจอ) — มีปุ่มแก้ราคาในตัว
@@ -13387,7 +13412,8 @@
         if (typeof remainKm !== 'number' || remainKm > 0.1) return;
         arriveAsked = true;
         const meters = Math.max(1, Math.round(remainKm * 1000));
-        const ok = await window.showCustomConfirm('ถึงปลายทางแล้วหรือยัง?', 'ระบบตรวจพบว่าเหลือระยะทางถึง ' + (destName ? '“' + destName + '”' : 'ปลายทาง') + ' เพียง ~' + meters + ' เมตร — จบเที่ยวเลยไหม? (ถ้ายังไม่ถึง กดยกเลิกแล้วกดเริ่มต่อได้)', 'warning', 'จบเที่ยวทันที');
+        const _distTxt = (window.voiceDistThai ? window.voiceDistThai(meters) : (meters + ' เมตร'));
+        const ok = await window.showCustomConfirm('ถึงปลายทางแล้วหรือยัง?', 'ระบบตรวจพบว่าเหลือระยะทางถึง ' + (destName ? '“' + destName + '”' : 'ปลายทาง') + ' เพียง ~' + _distTxt + ' — จบเที่ยวเลยไหม? (ถ้ายังไม่ถึง กดยกเลิกแล้วกดเริ่มต่อได้)', 'warning', 'จบเที่ยวทันที');
         if (!ok) return;
         // ยังไม่ได้กด "เริ่มต่อ" (เพิ่งเปิดแอป) → เริ่มจากข้อมูล payload ที่เบิกคืนแล้ว แล้วจบเที่ยวเลย
         if (!window.isManualRunning) {
@@ -16689,7 +16715,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '663b8ae2f9';
+    const APP_WEB_VERSION = '0d5c1d98a9';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -17138,6 +17164,9 @@
         ['2026-09-18', '🗺️ เริ่มนำทางแล้วมินิแมพยุบไว้ก่อน — เลิกเด้งโชว์เอง รอผู้ใช้กดเอง'],
         ['2026-09-18', '🔵 คนมีสิทธิ์เห็นปุ่มเปิดแผนที่สีฟ้าให้กดเอง · คนไม่มีสิทธิ์ปุ่มซ่อนเหมือนเดิม'],
         ['2026-09-18', '♻️ รีเฟรช/กลับเข้าแอปกลางเที่ยว ก็เริ่มจากยุบ — สองทางเหมือนกันเป๊ะ'],
+        ['2026-09-18', '🔊 เสียงบอกระยะ ≥1 กม. พูดเป็น “กิโล” — 2,000 ม. = “2 กิโล” · 2,300 ม. = “2.3 กิโล”'],
+        ['2026-09-18', '🛣️ เสียงทางด่วนใช้หน่วยเดียวกัน — “อีก 2.3 กิโล ถึงด่าน…” ไม่ใช่ท่องเป็นเมตรยาว ๆ'],
+        ['2026-09-18', '📞 กล่องยืนยัน “ถึงปลายทางแล้วหรือยัง?” ก็ใช้หน่วยกิโล/เมตรเดียวกัน'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -22046,12 +22075,10 @@
         } catch (e) {}
     }
     // แปลงระยะเป็นคำพูดไทย — ปัดให้พูดลื่น (ไม่พูด 287 เมตร)
+    //   ⛔ สูตรระยะอยู่ใน window.voiceDistThai ที่เดียว (ใช้ร่วมกับเสียงทางด่วน) — ห้ามเขียนสูตรซ้ำนี่
     function voiceDistText(m) {
-        m = Math.max(0, Math.round(m || 0));
-        if (m < 100) { return 'อีก ' + Math.max(10, Math.round(m / 10) * 10) + ' เมตร'; }
-        if (m < 1000) { return 'อีก ' + (Math.round(m / 50) * 50) + ' เมตร'; }
-        var km = m / 1000;
-        return 'อีก ' + (km < 10 ? km.toFixed(1) : String(Math.round(km))) + ' กิโลเมตร';
+        var txt = window.voiceDistThai ? window.voiceDistThai(m) : (Math.max(0, Math.round(m || 0)) + ' เมตร');
+        return 'อีก ' + txt;
     }
     function voiceTurnText(text, kind, distM) {
         if (!text) { return ''; }
@@ -22772,24 +22799,34 @@
     // ตัวช่วยตรวจสอบสถานะ Mini Map (ใช้ตอนทดสอบ/แก้ปัญหา)
     // ตำแหน่งบนจอที่ “ลูกศรรถถูกวาดจริง” (คำนวณสูตรเดียวกับ render) — ใช้ตรวจตอนทดสอบ/แก้ปัญหา
     //   ตอนตามรถ ต้องได้ (ความกว้าง/2 , ความสูง × CAR_ANCHOR) เสมอ · ลากเอง → ขยับตามนิ้ว 1:1
-    window.navMiniCarScreen = function () {
-        var pos = dispCar || car;
-        if (!pos) { return null; }
+    // 🧭 (18 ก.ย. 69) ตำแหน่งบนจอของ “จุดใดก็ได้” — ใช้สูตรเดียวกับ render เป๊ะ (ฉากหมุน -head รอบจุดยึด)
+    //    ทำไมต้องมี: ใช้พิสูจน์คำสั่งผู้ใช้ให้เป็นตัวเลข — “จุดนำทางสามเหลี่ยมชี้ขึ้นบนเสมอ แต่แมพหมุนตามรถ”
+    //    ⇒ จุดที่อยู่ “ข้างหน้า” บนเส้นทาง ต้องขึ้นไปด้านบนจอเสมอ ไม่ว่ารถจะหันไปทิศไหน
+    window.navMiniScreenOf = function (lat, lng) {
+        var la = Number(lat), ln = Number(lng);
+        if (!isFinite(la) || !isFinite(ln)) { return null; }
         var W = canvas.clientWidth || 168, H = canvas.clientHeight || 168;
         var zr = (smoothZoom === null) ? autoZoom(speedKmh) : smoothZoom;
-        var z = Math.round(zr), zScale = Math.pow(2, zr - z);
+        var z = Math.round(zr);
         var headDeg = ((dispCar ? dispHead : bearing) || 0);
-        var camPos = (follow && !panCenter && crawlM > 0.5) ? offsetPointM(pos, headDeg + 180, crawlM) : pos;
-        var center = (!follow && panCenter) ? panCenter : camPos;
+        var pos = dispCar || car;
+        var camPos = pos ? ((follow && !panCenter && crawlM > 0.5) ? offsetPointM(pos, headDeg + 180, crawlM) : pos) : null;
+        var center = (!follow && panCenter) ? panCenter : (camPos || (route.length ? { lat: route[0][0], lng: route[0][1] } : null));
+        if (!center || !isFinite(center.lat) || !isFinite(center.lng)) { return null; }
         var c = proj(center.lat, center.lng, z);
         var ax = W / 2, ay = H * CAR_ANCHOR;
-        var p = proj(pos.lat, pos.lng, z);
+        var p = proj(la, ln, z);
         var x = p.x + (ax - c.x), y = p.y + (ay - c.y);
-        var r = -(((dispCar ? dispHead : bearing) || 0) * Math.PI / 180);
+        var r = -(headDeg * Math.PI / 180);
         var dx = x - ax, dy = y - ay;
         return { x: Math.round((ax + dx * Math.cos(r) - dy * Math.sin(r)) * 10) / 10,
                  y: Math.round((ay + dx * Math.sin(r) + dy * Math.cos(r)) * 10) / 10,
-                 anchor: { x: Math.round(ax), y: Math.round(ay) }, W: W, H: H, follow: follow };
+                 anchor: { x: Math.round(ax), y: Math.round(ay) }, W: W, H: H, head: Math.round(headDeg), follow: follow };
+    };
+    window.navMiniCarScreen = function () {
+        var pos = dispCar || car;
+        if (!pos) { return null; }
+        return window.navMiniScreenOf(pos.lat, pos.lng);
     };
     window.navMiniDebug = function () {
         return {
