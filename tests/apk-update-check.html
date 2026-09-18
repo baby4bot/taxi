@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบ: เตือน “มีแอป Android (APK) รุ่นใหม่” + ติดตั้งจากในแอป</title>
+<style>
+  body { background: #0b1220; color: #e6e9f0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 16px; line-height: 1.55; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: #9aa4b2; font-size: 12.5px; margin-bottom: 14px; }
+  #summary { font-size: 15px; font-weight: 700; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; background: rgba(255,255,255,0.04); margin-bottom: 12px; }
+  ul { list-style: none; padding: 0; margin: 0; }
+  li { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; padding: 9px 11px; margin-bottom: 7px; font-size: 13px; white-space: pre-wrap; }
+  li.normal { border-color: rgba(34,197,94,0.55); }
+  li.fail { border-color: rgba(239,68,68,0.75); background: rgba(239,68,68,0.10); }
+  .detail { color: #9aa4b2; font-size: 12px; }
+  button { background: #1f6feb; color: #fff; border: 0; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 700; }
+  iframe { display: none; }
+</style>
+</head>
+<body>
+<h1>📦 ทดสอบระบบ “เลขรุ่น APK → เตือนจนกว่าจะอัปเดต → ติดตั้งจากในแอป”</h1>
+<div class="sub">รันออฟไลน์ได้ทั้งหมด — จำลองสะพาน Android (TaxiNative) ในหน้าแอปจริง ไม่ต้องใช้เน็ต</div>
+<div id="summary">กำลังเริ่ม…</div>
+<ul id="results"></ul>
+<p><button id="runBtn">รันใหม่</button></p>
+<iframe id="appFrame" src="../index.html?fsNowrite=1"></iframe>
+
+<script>
+(function () {
+  'use strict';
+  const frame = document.getElementById('appFrame');
+  const resultsEl = document.getElementById('results');
+  const summaryEl = document.getElementById('summary');
+  let passCount = 0, failCount = 0;
+  const failures = [];
+  const w = () => frame.contentWindow;
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+  function assert(cond, msg) { if (!cond) throw new Error(msg); }
+  async function scenario(name, fn) {
+    const row = document.createElement('li');
+    row.textContent = '⏳ ' + name;
+    resultsEl.appendChild(row);
+    try {
+      const out = await fn();
+      row.className = 'normal';
+      row.innerHTML = '<b>✅ ผ่าน</b> ' + name + (out ? '\n<span class="detail">' + out + '</span>' : '');
+      passCount++;
+    } catch (e) {
+      row.className = 'fail';
+      row.innerHTML = '<b>❌ ล้มเหลว</b> ' + name + '\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span>';
+      failures.push(name + ': ' + (e && e.message ? e.message : String(e)));
+      failCount++;
+    }
+    summaryEl.innerHTML = 'ผลรวม: ผ่าน ' + passCount + ' / ' + (passCount + failCount) + (failCount ? ' — ❌ ล้มเหลว ' + failCount : ' — ✅ ครบทุกข้อ');
+  }
+
+  async function bootApp() {
+    const t0 = Date.now();
+    while (Date.now() - t0 < 30000) {
+      const cw = w();
+      if (cw && typeof cw.__apkUpdateDecide === 'function' && typeof cw.__apkUpdateCheck === 'function') { await wait(200); return cw; }
+      await wait(100);
+    }
+    throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+  }
+
+  // 🧪 สะพานปลอม — เลียนแบบ MainActivity.Bridge (เฉพาะเมธอดที่หน้าเว็บเรียก)
+  function installFakeBridge(cw, opts) {
+    const o = opts || {};
+    const calls = [];
+    cw.__apkBridgeCalls = calls;
+    cw.TaxiNative = {
+      isNativeApp: () => o.native !== false,
+      appVersionCode: () => Number(o.code || 5),
+      appVersionName: () => String(o.name || '1.4.0'),
+      canInstallPackages: () => (o.canInstall !== false),
+      openInstallPermissionSettings: () => calls.push('openInstallPermissionSettings'),
+      downloadAndInstallApk: (u) => { calls.push('downloadAndInstallApk:' + u); },
+      platform: () => 'android-webview'
+    };
+    // APK รุ่นเก่า: มีสะพาน TaxiNative แต่ยังไม่มีเมธอดบอกเลขรุ่น (ของจริง = แอปที่ติดตั้งก่อนมีระบบอัปเดต)
+    if (o.noCode) { delete cw.TaxiNative.appVersionCode; delete cw.TaxiNative.appVersionName; }
+    // APK รุ่นเก่าที่ยังมีแต่ appVersion() แบบ “1.3.0 (4)” ⇒ ระบบต้องแกะเลขรุ่นออกมาใช้ได้
+    if (o.rawVersion) { delete cw.TaxiNative.appVersionCode; delete cw.TaxiNative.appVersionName; cw.TaxiNative.appVersion = () => String(o.rawVersion); }
+    return calls;
+  }
+
+  async function runAll() {
+    resultsEl.innerHTML = ''; passCount = 0; failCount = 0; failures.length = 0;
+    summaryEl.textContent = 'กำลังรัน…';
+
+    let cw;
+    try { cw = await bootApp(); } catch (e) {
+      summaryEl.innerHTML = '❌ ' + e.message;
+      return;
+    }
+
+    // 1) ฟังก์ชันตัดสินใจ — ติดตั้งรุ่นล่าสุดอยู่แล้ว = ไม่เตือน
+    await scenario('1. เลขรุ่นตรงกัน (ติดตั้ง 5 · เว็บ 5) → ไม่เตือน', async () => {
+      const d = cw.__apkUpdateDecide(5, { versionCode: 5, versionName: '1.4.0' }, {});
+      assert(d.show === false && d.why === 'up-to-date', 'ได้ ' + JSON.stringify(d));
+      return 'why = ' + d.why;
+    });
+
+    // 2) มีรุ่นใหม่กว่า = เตือน
+    await scenario('2. เว็บมีรุ่นใหม่กว่า (ติดตั้ง 5 · เว็บ 6) → เตือน พร้อมลิงก์+ชื่อรุ่น', async () => {
+      const d = cw.__apkUpdateDecide(5, { versionCode: 6, versionName: '1.5.0', url: 'https://x/app.apk' }, {});
+      assert(d.show === true && d.why === 'newer', 'ได้ ' + JSON.stringify(d));
+      assert(d.versionName === '1.5.0' && d.url === 'https://x/app.apk', 'ข้อมูลรุ่น/ลิงก์ไม่ครบ');
+      return 'why = newer · ' + d.versionCode + ' · ' + d.versionName;
+    });
+
+    // 3) เปิดบนเว็บเบราว์เซอร์ (ไม่มีสะพาน) = ไม่เตือนเรื่อง APK
+    await scenario('3. เปิดบนเว็บเบราว์เซอร์ (ไม่มีเลขรุ่นในแอป) → ไม่เตือน', async () => {
+      const d = cw.__apkUpdateDecide(0, { versionCode: 99 }, {});
+      assert(d.show === false && d.why === 'not-native-app', 'ได้ ' + JSON.stringify(d));
+      return 'why = ' + d.why;
+    });
+
+    // 3.5) แอป APK รุ่นเก่าที่ยังไม่มีสะพานเลขรุ่น → ต้องเตือน (ไม่งั้นเครื่องที่ติดตั้งรุ่นเก่าจะไม่มีทางรู้เลย)
+    await scenario('3.5 แอป APK รุ่นเก่า (ไม่มีสะพานเลขรุ่น) → เตือน + เลขรุ่นฝั่งแอป = -1', async () => {
+      installFakeBridge(cw, { noCode: true });
+      const mine = cw.__apkUpdateDiag().mineCode;
+      assert(mine === -1, 'เลขรุ่นฝั่งแอปควรเป็น -1 (ได้ ' + mine + ')');
+      const d = cw.__apkUpdateDecide(mine, { versionCode: 5, versionName: '1.4.0', url: 'https://x/app.apk' }, {});
+      assert(d.show === true && d.why === 'newer-unknown-version', 'ได้ ' + JSON.stringify(d));
+      const res = await cw.__apkUpdateCheck('old-apk');
+      assert(res === 'newer-unknown-version', 'why = ' + res);
+      const bar = cw.document.getElementById('apkUpdateBar');
+      assert(bar && /รุ่นก่อนมีระบบอัปเดต/.test(bar.textContent || ''), 'ป้ายไม่บอกว่าเป็นรุ่นเก่า: ' + (bar && bar.textContent));
+      bar.remove();
+      return 'why = ' + res;
+    });
+
+    // 3.6) แอป APK รุ่นเก่าที่ยังมีแต่ “appVersion() = 1.3.0 (4)” → ต้องแกะเลขรุ่นออกมาเทียบได้เอง
+    await scenario('3.6 แอปเก่าที่มีแต่ appVersion() “1.3.0 (4)” → อ่านเลขรุ่นได้ 4 แล้วเทียบถูก', async () => {
+      installFakeBridge(cw, { rawVersion: '1.3.0 (4)' });
+      const diag = cw.__apkUpdateDiag();
+      assert(diag.mineCode === 4, 'เลขรุ่นที่แกะได้ควรเป็น 4 (ได้ ' + diag.mineCode + ')');
+      assert(diag.mineName === '1.3.0', 'ชื่อรุ่นควรเป็น 1.3.0 (ได้ ' + diag.mineName + ')');
+      const older = cw.__apkUpdateDecide(4, { versionCode: 5, versionName: '1.4.0' }, {});
+      const same = cw.__apkUpdateDecide(4, { versionCode: 4, versionName: '1.3.0' }, {});
+      assert(older.show === true && older.why === 'newer', 'รุ่นใหม่กว่าควรเตือน: ' + JSON.stringify(older));
+      assert(same.show === false && same.why === 'up-to-date', 'รุ่นเดียวกันไม่ควรเตือน: ' + JSON.stringify(same));
+      return 'mineCode = 4 · mineName = 1.3.0 → newer / up-to-date ถูกต้อง';
+    });
+
+    // 4) ไฟล์รุ่นพัง/ไม่มีข้อมูล = เงียบ ไม่เตือนมั่ว
+    await scenario('4. apk-version.json พัง/ไม่มีค่า versionCode → เงียบไว้', async () => {
+      const a = cw.__apkUpdateDecide(5, null, {});
+      const b = cw.__apkUpdateDecide(5, { versionCode: 'abc' }, {});
+      const c = cw.__apkUpdateDecide(5, { versionCode: 0 }, {});
+      assert(a.why === 'no-info' && b.why === 'bad-info' && c.why === 'bad-info', JSON.stringify([a.why, b.why, c.why]));
+      return a.why + ' / ' + b.why;
+    });
+
+    // 5) กด “ซ่อนชั่วคราว” → เงียบในรอบเปิดแอปนี้
+    await scenario('5. ซ่อนชั่วคราวของรุ่นนี้ → เงียบ (why = snoozed-this-session)', async () => {
+      const d = cw.__apkUpdateDecide(5, { versionCode: 6 }, { snoozed: true });
+      assert(d.show === false && d.why === 'snoozed-this-session', 'ได้ ' + JSON.stringify(d));
+      return 'why = ' + d.why;
+    });
+
+    // 📄 อ่านเลขรุ่นจริงในไฟล์เว็บ (ไม่ฟิกค่าตายตัว — ไฟล์นี้ CI เขียนทับทุกครั้งที่สร้าง APK ใหม่)
+    let fileCode = 0, fileInfo = null;
+    await scenario('6. อ่าน apk-version.json จากเว็บได้ + มีเลขรุ่นให้เทียบ', async () => {
+      const r = await cw.fetch('apk-version.json?_=' + Date.now(), { cache: 'no-store' });
+      assert(r.ok, 'อ่าน apk-version.json ไม่ได้ (HTTP ' + r.status + ')');
+      fileInfo = await r.json();
+      fileCode = Number(fileInfo.versionCode) || 0;
+      assert(fileCode >= 2, 'versionCode ต้อง ≥ 2 (ได้ ' + fileCode + ')');
+      assert(typeof fileInfo.url === 'string' && /apk/.test(fileInfo.url), 'ไม่มีลิงก์ดาวน์โหลดในไฟล์: ' + fileInfo.url);
+      return 'versionCode = ' + fileCode + ' · versionName = ' + fileInfo.versionName;
+    });
+
+    // 7) ป้ายต้อง “กลับมาเตือนเอง” จนกว่าจะอัปเดต — สร้างป้ายจริงในหน้าจอ + ตรวจว่ามีปุ่มครบ
+    await scenario('7. ป้ายเตือนขึ้นจริงบนหน้าจอ (ติดตั้งเก่ากว่า 1 รุ่น) + ปุ่มครบ 3 ปุ่ม', async () => {
+      installFakeBridge(cw, { code: fileCode - 1, name: 'รุ่นเก่า' });
+      const res = await cw.__apkUpdateCheck('test');
+      assert(res === 'newer', 'why = ' + res + ' (ควรเป็น newer — ต้องอ่าน apk-version.json จากโฟลเดอร์โปรเจกต์ได้)');
+      const bar = cw.document.getElementById('apkUpdateBar');
+      assert(bar, 'ไม่พบป้าย apkUpdateBar');
+      const txt = bar.textContent || '';
+      assert(/มีแอปเวอร์ชันใหม่/.test(txt), 'ข้อความป้ายไม่ถูกต้อง: ' + txt);
+      assert(/ติดตั้งทันที/.test(txt) && /ดาวน์โหลดเอง/.test(txt) && /ซ่อนชั่วคราว/.test(txt), 'ปุ่มไม่ครบ: ' + txt);
+      return txt.replace(/\s+/g, ' ').slice(0, 120);
+    });
+
+    // 8) กด “ติดตั้งทันที” → เรียกสะพานดาวน์โหลด/ติดตั้งของ Android
+    await scenario('8. กด “ติดตั้งทันที” → เรียก TaxiNative.downloadAndInstallApk(ลิงก์รุ่นใหม่)', async () => {
+      const calls = cw.__apkBridgeCalls || [];
+      calls.length = 0;
+      const out = cw.apkUpdateNow();
+      assert(out === 'native', 'ผลลัพธ์ = ' + out);
+      assert(calls.length === 1 && /^downloadAndInstallApk:https?:/.test(calls[0]), 'ไม่เรียกสะพาน: ' + JSON.stringify(calls));
+      return calls[0].slice(0, 70) + '…';
+    });
+
+    // 9) ยังไม่ได้เปิดสิทธิ์ “ติดตั้งจากแหล่งที่ไม่รู้จัก” → พาไปหน้าเปิดสิทธิ์ก่อน (ไม่ดาวน์โหลดมั่ว)
+    await scenario('9. ยังไม่ให้สิทธิ์ติดตั้ง → พาไปหน้าเปิดสิทธิ์ แล้วยังไม่ดาวน์โหลด', async () => {
+      installFakeBridge(cw, { code: fileCode - 1, name: 'รุ่นเก่า', canInstall: false });
+      const calls = cw.__apkBridgeCalls || [];
+      calls.length = 0;
+      const out = cw.apkUpdateNow();
+      assert(out === 'need-install-permission', 'ผลลัพธ์ = ' + out);
+      assert(calls.indexOf('openInstallPermissionSettings') >= 0, 'ไม่พาไปเปิดสิทธิ์: ' + JSON.stringify(calls));
+      assert(!calls.some(x => /downloadAndInstallApk/.test(x)), 'ดาวน์โหลดทั้งที่ยังไม่มีสิทธิ์: ' + JSON.stringify(calls));
+      return 'พาไปเปิดสิทธิ์ก่อน 1 ครั้ง แล้วให้ผู้ใช้กดซ้ำ';
+    });
+
+    // 10) ไม่มีสะพาน (เว็บ) → กดติดตั้ง = เปิดลิงก์ดาวน์โหลดให้ (ทางสำรองต้องมีเสมอ)
+    await scenario('10. ไม่มีสะพาน Android → กดติดตั้ง = เปิดลิงก์ดาวน์โหลด (ทางสำรอง)', async () => {
+      delete cw.TaxiNative;
+      let opened = null;
+      cw.open = (u) => { opened = u; return null; };
+      const out = cw.apkUpdateNow();
+      assert(out === 'browser', 'ผลลัพธ์ = ' + out);
+      assert(opened && /app-release\.apk/.test(opened), 'ลิงก์สำรองไม่ถูกต้อง: ' + opened);
+      return (opened || '').slice(0, 70) + '…';
+    });
+
+    // 11) ติดตั้งรุ่นใหม่แล้ว → ตรวจรอบถัดไปต้องไม่เตือน + ป้ายหายไป
+    await scenario('11. อัปเดตเป็นรุ่นใหม่แล้ว (ติดตั้งใหม่กว่ารุ่นบนเว็บ) → ไม่เตือน และป้ายถูกถอดออก', async () => {
+      installFakeBridge(cw, { code: fileCode + 1, name: 'รุ่นใหม่กว่า' });
+      const res = await cw.__apkUpdateCheck('test-after-update');
+      assert(res === 'up-to-date', 'why = ' + res);
+      assert(!cw.document.getElementById('apkUpdateBar'), 'ป้ายยังค้างอยู่หลังอัปเดต');
+      return 'why = up-to-date · ป้ายถูกถอด';
+    });
+
+    // 12) ตรวจว่าป้าย “มีแอปเวอร์ชันใหม่” ไม่ถูกผูกกับป้ายอัปเดตเว็บ (คนละเรื่องกัน)
+    await scenario('12. เว็บยังทำงานเดิม — ฟังก์ชันเช็คเวอร์ชันเว็บยังอยู่ครบ', async () => {
+      assert(typeof cw.__webUpdateCheck === 'function', 'ไม่พบ __webUpdateCheck');
+      assert(typeof cw.__versionCheckDecide === 'function', 'ไม่พบ __versionCheckDecide');
+      assert(typeof cw.TaxiNative === 'object', 'สะพานทดสอบถูกติดตั้งอยู่');
+      return '✓ __webUpdateCheck + __versionCheckDecide ยังทำงาน';
+    });
+
+    document.title = (failCount ? '❌ ' : '✅ ') + 'APK update check ' + passCount + '/' + (passCount + failCount);
+    try { frame.contentWindow.__apkTestFailures = failures.slice(); } catch (e) {}
+  }
+
+  document.getElementById('runBtn').addEventListener('click', () => { runAll(); });
+  frame.addEventListener('load', () => { setTimeout(runAll, 400); });
+})();
+</script>
+</body>
+</html>

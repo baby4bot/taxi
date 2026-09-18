@@ -1373,6 +1373,18 @@
         /* 🧺 (18 ก.ย. 69) โหมดลาก: ซ่อนคำอธิบายยาว ⇒ แถวเตี้ยลง เห็นเมนูมากขึ้น และมีที่ให้ปุ่ม ▲▼/🔀 โดยไม่ตัดบรรทัด
            (ปุ่มใหม่จะดันให้แถวสูงขึ้นเป็น 2 เท่าถ้าไม่ซ่อน — เจอจริงตอนตรวจในพรีวิว: แถวสูงสุด 224px) */
         .reorder-mode .hub-item-desc { display: none; }
+        /* ---------- 📦 ป้าย “มีแอป Android (APK) รุ่นใหม่” — อยู่จนกว่าจะอัปเดต ---------- */
+        #apkUpdateBar { position: fixed; left: 0; right: 0; top: 0; z-index: 240060; display: none; padding: calc(9px + env(safe-area-inset-top)) 12px 10px; background: linear-gradient(180deg, rgba(255,159,67,0.98), rgba(230,81,0,0.96)); color: #1a1205; box-shadow: 0 8px 22px rgba(0,0,0,0.45); }
+        #apkUpdateBar .apk-upd-head { display: flex; align-items: center; gap: 8px; }
+        #apkUpdateBar .apk-upd-head .material-symbols-outlined { font-size: 22px; }
+        #apkUpdateBar .apk-upd-txt { display: flex; flex-direction: column; line-height: 1.3; }
+        #apkUpdateBar .apk-upd-txt b { font-size: 14px; }
+        #apkUpdateBar .apk-upd-txt span { font-size: 11.5px; opacity: 0.85; }
+        #apkUpdateBar .apk-upd-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        #apkUpdateBar .apk-upd-btn { flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 9px 12px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.28); background: rgba(255,255,255,0.92); color: #1a1205; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+        #apkUpdateBar .apk-upd-btn .material-symbols-outlined { font-size: 16px; }
+        #apkUpdateBar .apk-upd-btn.go { background: #16a34a; color: #fff; }
+        #apkUpdateBar .apk-upd-btn.ghost { background: rgba(255,255,255,0.34); font-weight: 600; }
         .reorder-mode .side-menu-item:hover, .reorder-mode .hub-item:hover { transform: none; }
         .reorder-mode .hub-chevron { display: none; }
         .reorder-grip {
@@ -5117,6 +5129,7 @@
     async function requestWakeLock() {
         // 📱 ในแอป Android: เริ่มเก็บพิกัดฉากหลังด้วย (ไม่ขึ้นกับสวิตช์จอค้าง — GPS ต้องเดินตลอดเที่ยว)
         try { window.nativeSync(true); } catch (e) {}
+        try { if (typeof window.__bgPermSync === 'function') window.__bgPermSync(); } catch (e) {}
         if (window.userKeepAwake === false) { wakeLockState = 'off-by-user'; return false; }
         try { window.nativeSetScreenOn(true); } catch (e) {}
         if (!('wakeLock' in navigator)) { wakeLockState = 'unsupported'; return false; }
@@ -5200,6 +5213,49 @@
         const n = taxiNative(); if (!n || typeof n.requestIgnoreBatteryOptimizations !== 'function') return false;
         try { n.requestIgnoreBatteryOptimizations(); return true; } catch (e) { return false; }
     };
+    // 🔋 แถบขอ “ยกเว้นการประหยัดแบตเตอรี่” ระหว่างจับเที่ยว (18 ก.ย. 69)
+    //    ทำไมตัวนี้คือหัวใจของ “เวลารถติดให้ตรง”: ถ้าเครื่องไม่ยกเว้นให้แอป → จอดับแล้วระบบเข้า Doze
+    //    → บริการเก็บพิกัดหยุดส่ง ⇒ ช่วงนั้นแอปไม่มีหลักฐานความเร็วจริง ⇒ เวลารถติดเพี้ยน
+    //    ⚠️ เดิมมี nativeAskBackground() แล้ว แต่ “ไม่มีที่ไหนเรียก” ⇒ คนขับไม่เคยรู้ว่าต้องกดอนุญาต
+    //    กติกา: โชว์เฉพาะในแอป Android + กำลังจับเที่ยว + ยังไม่ได้ยกเว้น + ยังไม่กด "ไว้ก่อน" ในรอบนี้
+    const BG_PERM_KEY = 'taxi_bg_perm_later_v1';
+    const bgPermDismissed = () => { try { return sessionStorage.getItem(BG_PERM_KEY) === '1'; } catch (e) { return false; } };
+    const bgPermEl = () => {
+        let el = document.getElementById('bgAllowBar');
+        if (el) return el;
+        el = document.createElement('div');
+        el.id = 'bgAllowBar';
+        el.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:240050;display:none;padding:calc(9px + env(safe-area-inset-top)) 12px 10px;background:linear-gradient(180deg,rgba(37,99,235,0.98),rgba(29,78,216,0.97));color:#fff;box-shadow:0 8px 22px rgba(0,0,0,0.45);font-family:inherit;';
+        el.innerHTML =
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+                '<span class="material-symbols-outlined" style="font-size:22px;">battery_charging_full</span>' +
+                '<div style="display:flex;flex-direction:column;line-height:1.3;">' +
+                    '<b style="font-size:14px;">ให้แอปเก็บพิกัดต่อแม้ปิดจอ</b>' +
+                    '<span style="font-size:11.5px;opacity:0.9;">กด “อนุญาต” 1 ครั้ง — เพื่อให้เวลารถติดตรงกับมิเตอร์</span>' +
+                '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;margin-top:8px;">' +
+                '<button type="button" onclick="window.bgPermAllow()" style="flex:1 1 auto;padding:9px 12px;border-radius:12px;border:1px solid rgba(0,0,0,0.28);background:#16a34a;color:#fff;font-size:12.5px;font-weight:700;">อนุญาต</button>' +
+                '<button type="button" onclick="window.bgPermLater()" style="flex:1 1 auto;padding:9px 12px;border-radius:12px;border:1px solid rgba(0,0,0,0.28);background:rgba(255,255,255,0.3);color:#fff;font-size:12.5px;font-weight:600;">ไว้ก่อน</button>' +
+            '</div>';
+        document.body.appendChild(el);
+        return el;
+    };
+    window.__bgPermSync = () => {
+        const st = (typeof window.nativeBackgroundStatus === 'function') ? window.nativeBackgroundStatus() : null;
+        if (!st || !window.isManualRunning) { const e = document.getElementById('bgAllowBar'); if (e) e.style.display = 'none'; return 'no-need'; }
+        if (st.exempt !== false) { const e = document.getElementById('bgAllowBar'); if (e) e.style.display = 'none'; return 'exempt'; }
+        if (bgPermDismissed()) { const e = document.getElementById('bgAllowBar'); if (e) e.style.display = 'none'; return 'dismissed'; }
+        bgPermEl().style.display = 'block';
+        return 'shown';
+    };
+    window.bgPermAllow = () => { const e = document.getElementById('bgAllowBar'); if (e) e.style.display = 'none'; try { window.nativeAskBackground(); } catch (err) {} return true; };
+    window.bgPermLater = () => { try { sessionStorage.setItem(BG_PERM_KEY, '1'); } catch (e) {} const el = document.getElementById('bgAllowBar'); if (el) el.style.display = 'none'; return true; };
+    window.bgPermResetAsk = () => { try { sessionStorage.removeItem(BG_PERM_KEY); } catch (e) {} return window.__bgPermSync(); };
+    if (taxiNative()) {
+        setInterval(() => { try { window.__bgPermSync(); } catch (e) {} }, 30000);
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { try { window.__bgPermSync(); } catch (e) {} } });
+    }
 
     // ─── 🧾 หลักฐานจริงจากพิกัดฉากหลัง (18 ก.ย. 69) ─────────────────────────────────
     //   ที่มา: BgLocationService เก็บ fix ทุก ~1 วิ ต่อให้จอดับ/ล็อกจอ → หน้าเว็บเบิกมาใส่ window.nativeFixes
@@ -8013,6 +8069,151 @@
         window.__webUpdateApplyIfPending('visible');
     });
     window.addEventListener('online', () => { window.__webUpdateCheck('online'); });
+
+    // ============================================================
+    // 📦 แจ้งเตือน “มีแอป Android (APK) รุ่นใหม่” — ทำงานเฉพาะเมื่อเปิดในแอป APK ตัวจริง
+    //    ผู้ใช้สั่ง 18 ก.ย. 69: “ฝังเลขเวอร์ชันไว้ในแอปแต่ไม่ต้องแสดง · ถ้ามีรุ่นใหม่ให้แจ้งตลอดจนกว่าจะอัปเดต
+    //    · ถ้าดาวน์โหลด/ติดตั้งเองได้ก็ให้ทำเลย ไม่งั้นมีปุ่มให้กดโหลด”
+    //    · เลขรุ่นของ “APK ที่ติดตั้งอยู่” = `TaxiNative.appVersionCode()` (สะพานชั้น Android · ไม่แสดงบนจอ)
+    //    · เลขรุ่นของ “รุ่นล่าสุดบนเว็บ”  = `apk-version.json` (CI เขียนตอนสร้าง APK · same-origin ⇒ ไม่ติด CORS)
+    //    · ป้ายจะ “อยู่จนกว่าจะอัปเดต” — กดปิดได้แค่ชั่วคราวของรอบเปิดแอปนี้ (sessionStorage)
+    //    · ตัวตัดสินใจเป็นฟังก์ชันล้วน (`__apkUpdateDecide`) → ทดสอบออฟไลน์ได้ (tests/apk-update-check.html)
+    //    ⚠️ ความจริงของ Android: แอปทั่วไป “ติดตั้งเงียบ” ไม่ได้ — ระบบบังคับให้ผู้ใช้กด “ติดตั้ง” ยืนยัน 1 ครั้ง
+    //       สิ่งที่ทำให้คือดาวน์โหลดให้เสร็จแล้วเปิดหน้าติดตั้งให้ทันที (+ พาไปเปิดสิทธิ์ถ้ายังไม่ได้ให้)
+    // ============================================================
+    const APK_INFO_EVERY_MS = 30 * 60 * 1000;   // ตรวจซ้ำทุก 30 นาที (ค้างเตือนจนกว่าจะอัปเดต)
+    const APK_INFO_FIRST_MS = 12000;            // ตรวจครั้งแรกหลังโหลด 12 วิ (ไม่แย่งจังหวะบูตแอป)
+    const APK_INFO_RETRY_MS = 60 * 1000;        // กลับเข้าหน้าจอ: ตรวจใหม่ถ้าครั้งก่อนเกิน 60 วิ
+    const APK_SNOOZE_KEY = 'apk_update_snooze_v1';   // { versionCode: N } — ซ่อนชั่วคราวของ “รอบเปิดแอปนี้”
+    let apkInfoServer = null, apkInfoLastAt = 0, apkInfoLastWhy = '';
+    window.__apkInfo = () => apkInfoServer;
+    const apkIsNative = () => { try { return !!(window.TaxiNative && window.TaxiNative.isNativeApp && window.TaxiNative.isNativeApp()); } catch (e) { return false; } };
+    // 📌 เลขรุ่นของ APK ที่ติดตั้งอยู่:  0 = เปิดบนเว็บเบราว์เซอร์ (ไม่ต้องเตือน)
+    //    -1 = เปิดในแอป APK รุ่นเก่าที่ยังไม่มีสะพานบอกเลขรุ่น ⇒ “ต้องมีรุ่นใหม่แน่นอน” ให้เตือนได้เลย
+    // 🪜 อ่าน “ข้อความรุ่น” จากสะพานเก่า (APK ที่ยังไม่มี appVersionCode) — รูปแบบ “1.3.0 (4)”
+    const apkMineRaw = () => { try { return apkIsNative() && window.TaxiNative.appVersion ? String(window.TaxiNative.appVersion() || '') : ''; } catch (e) { return ''; } };
+    const apkMineCode = () => {
+        try {
+            if (!apkIsNative()) return 0;
+            const n = Number(window.TaxiNative.appVersionCode ? window.TaxiNative.appVersionCode() : NaN);
+            if (isFinite(n) && n > 0) return n;
+            const m = apkMineRaw().match(/\((\d+)\)/);                                  // “1.3.0 (4)” ⇒ 4
+            if (m) { const k = Number(m[1]); if (isFinite(k) && k > 0) return k; }
+            return -1;                                                                  // แอปเก่าจริง ๆ ไม่รู้เลขรุ่น ⇒ เตือนไว้ก่อน
+        } catch (e) { return apkIsNative() ? -1 : 0; }
+    };
+    const apkMineName = () => {
+        try {
+            if (!apkIsNative()) return '';
+            const s = window.TaxiNative.appVersionName ? String(window.TaxiNative.appVersionName() || '') : '';
+            if (s) return s;
+            return apkMineRaw().replace(/\s*\(.*$/, '').trim();                        // “1.3.0 (4)” ⇒ “1.3.0”
+        } catch (e) { return ''; }
+    };
+    const apkSnoozedFor = (info) => {
+        try {
+            const s = JSON.parse(sessionStorage.getItem(APK_SNOOZE_KEY) || 'null');
+            const sn = s && Number(s.versionCode);
+            return !!(sn && Number(info && info.versionCode) <= sn);   // มีรุ่นใหม่กว่านี้ = เลิกสนใจการซ่อนเดิม
+        } catch (e) { return false; }
+    };
+    // 🧪 ตัวตัดสินใจ (ไม่แตะ DOM/เน็ต) — คืนเหตุผลเสมอ ไว้ตรวจในเทสต์ได้
+    window.__apkUpdateDecide = (mineCode, info, ctx) => {
+        const out = { show: false, why: '', versionCode: 0, versionName: '', url: '' };
+        const m = Number(mineCode);
+        if (!isFinite(m) || m === 0) { out.why = 'not-native-app'; return out; }   // เปิดบนเว็บเบราว์เซอร์ → ไม่ต้องเตือนเรื่อง APK
+        if (!info || typeof info !== 'object') { out.why = 'no-info'; return out; }
+        const s = parseInt(info.versionCode, 10);
+        if (!isFinite(s) || s <= 0) { out.why = 'bad-info'; return out; }  // ไฟล์รุ่นอ่านไม่ได้/พัง → เงียบไว้
+        out.versionCode = s; out.versionName = String(info.versionName || ''); out.url = String(info.url || '');
+        if (m > 0 && s <= m) { out.why = 'up-to-date'; return out; }       // ติดตั้งรุ่นล่าสุดอยู่แล้ว (m < 0 = แอปเก่า ไม่รู้เลขรุ่น ⇒ เตือนแน่)
+        if (ctx && ctx.snoozed) { out.why = 'snoozed-this-session'; return out; }
+        if (ctx && ctx.offline) { out.why = 'offline'; return out; }
+        out.show = true; out.why = (m < 0) ? 'newer-unknown-version' : 'newer';
+        return out;
+    };
+    const apkBarHide = () => { const el = document.getElementById('apkUpdateBar'); if (el) el.remove(); };
+    const apkBarShow = (d) => {
+        try {
+            let el = document.getElementById('apkUpdateBar');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'apkUpdateBar';
+                el.setAttribute('role', 'alert');
+                document.body.appendChild(el);
+            }
+            const myCode = apkMineCode();
+            const mine = (myCode < 0) ? 'รุ่นก่อนมีระบบอัปเดต' : (apkMineName() || ('รหัส ' + myCode));
+            el.innerHTML =
+                '<div class="apk-upd-head"><span class="material-symbols-outlined">system_update</span>' +
+                '<div class="apk-upd-txt"><b>มีแอปเวอร์ชันใหม่</b>' +
+                '<span>ติดตั้งอยู่ ' + wnEsc(mine) + (d.versionName ? ' → ใหม่ ' + wnEsc(d.versionName) : '') + ' · ' + (d.versionCode ? 'รหัส ' + d.versionCode : '') + '</span></div></div>' +
+                '<div class="apk-upd-btns">' +
+                '<button type="button" class="apk-upd-btn go" onclick="window.apkUpdateNow()"><span class="material-symbols-outlined">download</span> ติดตั้งทันที</button>' +
+                '<button type="button" class="apk-upd-btn" onclick="window.apkUpdateOpenDownload()"><span class="material-symbols-outlined">open_in_new</span> ดาวน์โหลดเอง</button>' +
+                '<button type="button" class="apk-upd-btn ghost" onclick="window.apkUpdateSnooze()">ซ่อนชั่วคราว</button>' +
+                '</div>';
+            el.style.display = 'block';
+        } catch (e) {}
+    };
+    // ⬇ กด “ติดตั้งทันที” — ในแอป APK = ดาวน์โหลด + เปิดหน้าติดตั้งให้ · บนเว็บ = เปิดลิงก์
+    window.apkUpdateNow = () => {
+        const info = apkInfoServer || {};
+        const url = String(info.url || window.SHARE_APK_URL || '');
+        if (!url) return 'no-url';
+        if (apkIsNative()) {
+            let can = true;
+            try { if (window.TaxiNative.canInstallPackages) can = !!window.TaxiNative.canInstallPackages(); } catch (e) { can = true; }
+            if (!can) {
+                // ยังไม่ได้เปิด “ติดตั้งจากแหล่งที่ไม่รู้จัก” → พาไปเปิดก่อน แล้วให้กดซ้ำ
+                try { window.TaxiNative.openInstallPermissionSettings(); } catch (e) {}
+                if (typeof window.showToast === 'function') window.showToast('เปิดหน้า “ติดตั้งจากแหล่งที่ไม่รู้จัก” ให้แล้ว — เปิดสิทธิ์ให้แอป “ค่าแท็กซี่” แล้วกลับมากดติดตั้งอีกครั้ง', false, null, true);
+                return 'need-install-permission';
+            }
+            try {
+                window.TaxiNative.downloadAndInstallApk(url);
+                if (typeof window.showToast === 'function') window.showToast('กำลังดาวน์โหลดรุ่นใหม่… เสร็จแล้วระบบจะให้กด “ติดตั้ง” ยืนยัน 1 ครั้ง', false, null, true);
+                return 'native';
+            } catch (e) { /* ตกไปเปิดลิงก์สำรอง */ }
+        }
+        window.apkUpdateOpenDownload();
+        return 'browser';
+    };
+    window.apkUpdateOpenDownload = () => {
+        const info = apkInfoServer || {};
+        const url = String(info.url || window.SHARE_APK_URL || '');
+        if (!url) return;
+        try { window.open(url, '_blank'); } catch (e) { try { location.href = url; } catch (e2) {} }
+    };
+    window.apkUpdateSnooze = () => {
+        try { sessionStorage.setItem(APK_SNOOZE_KEY, JSON.stringify({ versionCode: Number(apkInfoServer && apkInfoServer.versionCode) || 0, at: Date.now() })); } catch (e) {}
+        apkBarHide();
+        if (typeof window.showToast === 'function') window.showToast('ซ่อนไว้ชั่วคราว — เปิดแอปครั้งถัดไปจะเตือนอีกครั้งจนกว่าจะอัปเดต');
+    };
+    window.__apkUpdateCheck = async (why) => {
+        apkInfoLastAt = Date.now();
+        try {
+            const mine = apkMineCode();
+            if (mine === 0) { apkInfoLastWhy = 'not-native-app'; return apkInfoLastWhy; }   // เปิดบนเว็บ → ไม่มีการเตือน APK (-1 = แอปเก่า → เตือน)
+            if (navigator.onLine === false) { apkInfoLastWhy = 'offline'; return apkInfoLastWhy; }
+            const r = await fetch('apk-version.json?_=' + Date.now(), { cache: 'no-store' });
+            if (!r.ok) { apkInfoLastWhy = 'no-file'; return apkInfoLastWhy; }
+            apkInfoServer = await r.json();
+            const d = window.__apkUpdateDecide(mine, apkInfoServer, { snoozed: apkSnoozedFor(apkInfoServer) });
+            apkInfoLastWhy = d.why;
+            if (d.show) apkBarShow(d);
+            else if (d.why !== 'snoozed-this-session') apkBarHide();
+            return d.why;
+        } catch (e) { apkInfoLastWhy = 'error'; return 'error'; }
+    };
+    window.__apkUpdateDiag = () => ({ native: apkIsNative(), mineCode: apkMineCode(), mineName: apkMineName(), server: apkInfoServer, lastWhy: apkInfoLastWhy, bar: !!document.getElementById('apkUpdateBar'), lastCheckAgeSec: apkInfoLastAt ? Math.round((Date.now() - apkInfoLastAt) / 1000) : null });
+    setTimeout(() => { try { window.__apkUpdateCheck('boot'); } catch (e) {} }, APK_INFO_FIRST_MS);
+    setInterval(() => { try { window.__apkUpdateCheck('interval'); } catch (e) {} }, APK_INFO_EVERY_MS);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) return;
+        if (Date.now() - apkInfoLastAt >= APK_INFO_RETRY_MS) { try { window.__apkUpdateCheck('visible'); } catch (e) {} }
+    });
+    window.addEventListener('online', () => { try { window.__apkUpdateCheck('online'); } catch (e) {} });
 
     // 📤 (18 ก.ย. 69) หน้าต่าง “แชร์แอปพลิเคชัน” แยก 2 แท็บ (ผู้ใช้สั่ง):
     //    แท็บ 1 “ดาวน์โหลดโปรแกรม” = QR ชี้ไปไฟล์ APK โดยตรง + คัดลอกลิงก์ APK
@@ -12492,7 +12693,23 @@
             // ใช้ stoppedWholeGap ซึ่งทน GPS ลอย + ความเร็วเพี้ยนตอนเปิดใหม่ (speed ที่มือถือให้ตอนจอดนิ่งลอยได้ ~20 กม./ชม.)
             const speedKmh = (pos.coords.speed !== null && pos.coords.speed >= 0) ? pos.coords.speed * 3.6 : -1;
             const movedKm = hidePos ? calcGPS(hidePos.lat, hidePos.lon, p.lat, p.lon) : -1;
-            const stoppedWholeTime = hidePos !== null && stoppedWholeGap(movedKm, pos.coords.accuracy, gapSec, speedKmh);
+            // 🧾 หลักฐานจริงจากชั้น Android (18 ก.ย. 69): บริการเก็บพิกัดฉากหลังเก็บ fix ทุก ~1 วิ ต่อให้แอปถูกปิด/ปัดทิ้ง
+            //    ⚠️ เดิมสาขานี้ (กลับมาเปิดแอปหลังถูกปิด) ตัดสิน “จอดทั้งช่วงไหม” จาก 2 จุดเท่านั้น (ก่อนปิด/ตอนเปิด)
+            //       ⇒ รถที่ติดและคลานได้นิดเดียวถูกเหมาเป็น “จอดทั้งช่วง” = เบิกเวลาจอดเกินจริง
+            //       และรถที่วิ่งจริงแต่พิกัด 2 จุดใกล้กันก็ถูกประเมินต่ำ · สาขาซ่อนหน้าใช้ของจริงแล้วแต่สาขานี้ยังไม่ใช้
+            const nat = window.__gapNativeEvidence(gapStart, Date.now(), hidePos, p);
+            window.__catchTrace = window.__catchTrace || [];
+            const __rec = { at: Date.now(), path: 'kill', gapSec: Math.round(gapSec), hidePos: !!hidePos, kmAtEntry: Math.round((cur.km || 0) * 1000) / 1000 };
+            if (nat) __rec.native = { n: nat.n, cov: nat.coverage, km: nat.km, stopSec: nat.stopSec, moveSec: nat.moveSec, maxKmh: nat.maxKmh };
+            __rec.movedKm = Math.round(movedKm * 1000) / 1000;
+            window.__catchTrace.push(__rec);
+            if (window.__catchTrace.length > 5) window.__catchTrace.shift();
+            // 🛑 ห้ามเหมา “จอดทั้งช่วง” ถ้าหลักฐานจริงบอกว่ามีการวิ่ง (เกณฑ์เดียวกับสาขาซ่อนหน้า)
+            const natSaysMoved = !!(nat && nat.strong && nat.maxKmh > TRAFFIC_SPEED_KMH && nat.moveSec >= 10);
+            const judgeKm = (nat && nat.strong) ? nat.km : movedKm;
+            const stoppedWholeTime = !natSaysMoved && hidePos !== null && stoppedWholeGap(judgeKm, pos.coords.accuracy, gapSec, speedKmh);
+            __rec.stoppedWhole = stoppedWholeTime;
+            if (nat) __rec.judgeKm = Math.round(judgeKm * 1000) / 1000;
 
             let km = cur.km || 0, trafficSec = cur.trafficSec || 0;
             let remainKm = cur.remainKm || 0, remainSec = cur.remainSec || 0;
@@ -12510,7 +12727,15 @@
                 // หักส่วนต่างระยะเหลือถึงปลายทาง — แม่นกว่าเส้นตรง (เหมือนตอนซ่อนแอป)
                 let distanceAdded = false;
                 let gapEstTraffic = 0; // ⏱️ ประมาณเวลารถติดของช่วงที่ปิดแอป (มิเตอร์จริงคิดเวลาช้า/ติดด้วย ไม่ใช่แค่ระยะ) — เบิกตอนจบสาขานี้
-                if (cur.dest && gapSec > 20 && hidePos) {
+                // 🧾 ใช้หลักฐานจริงก่อน (เหมือนสาขาซ่อนหน้า): fix ที่ชั้น Android เก็บได้แม้แอปถูกปิด
+                //    ⇒ ได้ทั้ง “ระยะที่วิ่งจริง” และ “วินาทีที่ ≤ 6 กม./ชม.” จากของจริง ไม่ต้องเดาจากเส้นทาง/เส้นตรง
+                if (nat && nat.strong) {
+                    if (nat.km > 0.02) { caughtKm += nat.km; kmVia = 'gps-native'; }
+                    distanceAdded = true;                      // ตัดสินด้วยของจริงแล้ว — ไม่ต้องเดาต่อ ไม่ว่าขยับหรือไม่
+                    gapEstTraffic = Math.max(gapEstTraffic, nat.stopSec);
+                    remainKm = Math.max(0, remainKm - nat.km);
+                }
+                if (!distanceAdded && cur.dest && gapSec > 20 && hidePos) {
                     try {
                         const polyRes = await window.catchUpKmViaRoutePolyline(cur.dest, hidePos, p);
                         if (polyRes) {
@@ -12565,6 +12790,9 @@
                 const trafficTargetKill = Math.min(baseTraffic + gapSec, baseTraffic + Math.max(modelKillSec, observedDuringKill));
                 if (trafficTargetKill > trafficSec) { caughtTimeSec += (trafficTargetKill - trafficSec); trafficSec = trafficTargetKill; }
             }
+            // 🧾 ปิดร่องรอยของสาขานี้ (อ่านได้ผ่าน __gapAudit().trace) — ไว้ตอบคำถาม “ทำไมยอดไม่ถูกเบิก/เบิกเท่าไร” โดยไม่ต้องเดา
+            __rec.kmVia = kmVia; __rec.caughtKm = Math.round(caughtKm * 1000) / 1000; __rec.caughtTimeSec = Math.round(caughtTimeSec);
+            __rec.kmAfter = Math.round(km * 1000) / 1000; __rec.trafficAfter = Math.round(trafficSec);
             // มีอะไรเปลี่ยนจริงไหม (ยอดอาจ "ลดลง" ได้ = ถอนเวลาจอดที่นับเกิน) → ถ้าไม่เปลี่ยนก็ไม่ต้องทำอะไร
             const gapChanged = Math.abs(trafficSec - (cur.trafficSec || 0)) >= 1 || Math.abs(km - (cur.km || 0)) > 0.02;
             if (!gapChanged) return;
@@ -15536,7 +15764,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '7d3d599f03';
+    const APP_WEB_VERSION = '4a87440353';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -15945,6 +16173,11 @@
         ['2026-09-18', '🔗 เปิดหน้าต่างแชร์ใหม่กลับแท็บ “ดาวน์โหลดโปรแกรม” เสมอ (ไม่จำแท็บเดิม)'],
         ['2026-09-18', '🧩 เมนูใหม่ที่เพิ่มทีหลังย้ายได้เองทันที — ลำดับที่จัดไว้ไม่ถูกล้าง'],
         ['2026-09-18', '⬆⬇ ลำดับเมนู: ปุ่มเลื่อนทีละแถวบนทุกเมนู — ใช้ได้กับเมนูใหม่เอง'],
+        ['2026-09-18', '🔋 ขอยกเว้นประหยัดแบตเตอรี่เองตอนเริ่มเที่ยว — พิกัดเดินต่อแม้ปิดจอ'],
+        ['2026-09-18', '💾 พิกัดที่เก็บไว้อุกบันทึกลงเครื่อง — แอปถูกปัดทิ้ง/ถูกฆ่า หลักฐานก็ไม่หาย'],
+        ['2026-09-18', '🧾 แอปถูกปิด/ถูกฆ่า: เวลารถติดคิดจากพิกัดจริง — เลิกเหมาว่ารถจอดทั้งช่วง'],
+        ['2026-09-18', '📦 แอป Android รู้รหัสรุ่นของตัวเอง — เทียบกับรุ่นบนเว็บแล้วเตือนจนกว่าจะอัปเดต'],
+        ['2026-09-18', '⬇️ มีรุ่นใหม่กด “ติดตั้งทันที” ได้ในแอป — ดาวน์โหลดเสร็จเปิดหน้าติดตั้งให้เลย'],
         ['2026-09-18', '📐 โหมดจัดลำดับซ่อนคำอธิบายเมนู — เห็นหลายอันและปุ่ม ▲▼ จัดได้ลงตัว'],
         ['2026-09-18', '🔤 เปลี่ยนชื่อแท็บ “PIN ยืนยันสำคัญ” เป็น “ตั้งค่า PIN”'],
     ];

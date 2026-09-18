@@ -28,10 +28,10 @@
     <h1>🧾 ชุดทดสอบออฟไลน์ — “ใช้พิกัดจริงตอนล็อกจอ” แทนการเดา</h1>
     <p class="note">
         ตรวจ 2 ชั้น: <b>ชั้นสูตร</b> (<code>__gapNativeEvidence</code> อ่าน fix ที่ชั้น Android เก็บไว้ตอนจอดับ/ล็อกจอ) 7 เคส ·
-        <b>ชั้นเที่ยวจริง</b> (จำลองล็อกจอ แล้วดูว่ามิเตอร์เบิกคืนถูกไหม) 3 เคส
+        <b>ชั้นเที่ยวจริง</b> (จำลองล็อกจอ + จำลอง “แอปถูกปิด/ถูกฆ่า” แล้วดูว่ามิเตอร์เบิกคืนถูกไหม) 5 เคส
         <br>ไฟล์นี้ <b>ไม่ใช้เน็ต</b> — สตับ GPS/เวลา/การซ่อนหน้าเองทั้งหมด · รันได้ทั้งในเครื่อง (ผ่าน static server) และบน GitHub Pages
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (10 เคส)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (12 เคส)</button>
     <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
     <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
     <div id="summary"></div>
@@ -190,6 +190,28 @@
         cw.__nativeFixLastAt = cw.__fakeNow;
     }
     const clearNative = () => { try { w().nativeFixes.length = 0; } catch (e) {} };
+
+    // 💀 จำลอง “แอปถูกปิด/ถูกฆ่า”: เขียน payload ที่ค้างอยู่ + ปิดมิเตอร์สด → แล้วให้แอป “กลับมาเปิดใหม่”
+    //    ต่างจาก seedTrip (ที่เริ่มเที่ยวสด ๆ) ตรงที่ caughtUpAt = 0 + มีฐานช่วงปิด (gapAt/gapBase*) ⇒ เข้า “สาขาปิดแอป”
+    function seedKilledTrip(overrides) {
+        const cw = w();
+        const base = Object.assign({
+            v: 1, savedAt: cw.__fakeNow, startTime: cw.__fakeNow - 1800000, caughtUpAt: 0,
+            km: 5.0, trafficSec: 120, remainKm: 0, remainSec: 0,
+            lastPos: { lat: START.lat, lon: START.lon },
+            lastPath: [{ lat: START.lat - 0.004, lon: START.lon }, { lat: START.lat, lon: START.lon }],
+            dest: null, destName: '', surcharges: [], baseFare: 35,
+            pauseLog: [], pauseOpenAt: null, paused: false,
+            gapAt: cw.__fakeNow, gapBaseKm: 5.0, gapBaseTraffic: 120,
+            gapBasePos: { lat: START.lat, lon: START.lon },
+            rollingKm: 5.0, rollingSec: 600, crawlKm: 0, crawlSec: 0
+        }, overrides || {});
+        cw.isManualRunning = false;
+        cw.isMeterPaused = false;
+        try { cw.__liveCaughtUpKey = null; } catch (e) {}
+        cw.localStorage.setItem(TRIP_KEY, JSON.stringify(base));
+        return base;
+    }
 
     function seedTrip(overrides) {
         const cw = w();
@@ -545,6 +567,66 @@
             assert(tr && tr.native, 'ร่องรอยต้องมีหลักฐานพิกัดฉากหลัง' + info);
             assert(tr.stoppedWhole === true, 'หลักฐานยืนยันจอด → ต้องเหมาเป็น “จอดทั้งช่วง”' + info);
             return 'เบิกเวลา +' + Math.round(addTr) + ' วิ (จอด 150 วิ จริง) · ระยะผี ' + addKm.toFixed(2) + ' กม. · หลักฐาน ' + tr.native.n + ' จุด (ครอบคลุม ' + (tr.native.cov * 100) + '%)';
+        });
+
+        // ---------- 11) แอปถูก “ปิด/ฆ่า” 150 วิ ขณะรถวิ่ง + มีพิกัดจริง → ต้องใช้ของจริง (ไม่เหมาว่าจอดทั้งช่วง) ----------
+        await runScenario('11. แอปถูกปิด 150 วิ ขณะรถวิ่ง → ใช้พิกัดจริง: +0.75 กม. · เวลารถติด ≈60 วิ (ไม่เหมาว่าจอด)', async () => {
+            if (skip(11)) return;
+            const cw = w();
+            await wait(1100);
+            driveStep(4, 20);                                   // ขับด้วยจอเปิด ให้มีสมอตำแหน่ง (lastPath)
+            const killAt = cw.__fakeNow;
+            const anchor = { lat: pos.lat, lon: pos.lon };
+            seedKilledTrip({ gapAt: killAt, savedAt: killAt, gapBasePos: anchor, lastPos: anchor });
+            // 🛰️ ชั้น Android เก็บพิกัดต่อแม้แอปตาย: วิ่ง 30 กม./ชม. 90 วิ แล้วจอด 60 วิ
+            buildGapTrack(killAt, 90, 60, 30, { startLat: anchor.lat, startLon: anchor.lon });
+            pos = { lat: anchor.lat + (0.75 / KM_PER_DEG_LAT), lon: anchor.lon + ((0.75 * 0.1) / KM_PER_DEG_LON) };
+            cw.__advance(150000);                                // ⏰ ปิดแอปไป 150 วิ
+            cw.__pendingCur.length = 0;
+            for (let i = 0; i < 2; i++) { feedFix('cur', pos.lat, pos.lon, 8, 0); await wait(200); }
+            cw.resumeSavedTrip();                                // 🔁 เปิดแอปใหม่ → เที่ยวค้าง → เบิกคืน
+            await waitFor(() => !cw.crashCatchUpBusy, 25000, 'ให้สาขาปิดแอปเบิกคืนจบ');
+            await wait(400);
+            const after = tripStateFresh();
+            const tr = lastTrace();
+            const addKm = (after.km || 0) - 5.0, addTr = (after.trafficSec || 0) - 120;
+            const info = ' เพิ่ม กม. ' + addKm.toFixed(2) + ' · เวลารถติด ' + Math.round(addTr) + ' วิ · ร่องรอย ' + JSON.stringify(tr);
+            log('case11' + info);
+            assert(tr && tr.path === 'kill', 'ร่องรอยต้องมาจากสาขา “แอปถูกปิด” (path=kill)' + info);
+            assert(tr && tr.native, 'ร่องรอยต้องบอกว่าใช้หลักฐานพิกัดฉากหลัง' + info);
+            assert(tr.stoppedWhole === false, 'ห้ามเหมา “จอดทั้งช่วง” เพราะหลักฐานบอกว่ารถวิ่ง' + info);
+            assert(tr.kmVia === 'gps-native', 'ระยะต้องมาจากพิกัดจริง (gps-native) ไม่ใช่เส้นตรง/เส้นทาง' + info);
+            band(addKm, 0.60, 0.95, 'ระยะที่เบิกคืนจากพิกัดจริง' + info);
+            band(addTr, 40, 110, 'เวลารถติดที่เบิก (ต้องใกล้ 60 วิ ที่จอดจริง — เดิมเหมาได้ 150)' + info);
+            return 'เบิกคืน +' + addKm.toFixed(2) + ' กม. · +' + Math.round(addTr) + ' วิ (จริง: วิ่ง 90 วิ + จอด 60 วิ) · วิธี = ' + tr.kmVia + ' · หลักฐาน ' + tr.native.n + ' จุด';
+        });
+
+        // ---------- 12) แอปถูก “ปิด/ฆ่า” 150 วิ ขณะจอดนิ่ง → ยังต้องเบิกเวลาจอดครบ (ตรงมิเตอร์) ----------
+        await runScenario('12. แอปถูกปิด 150 วิ ขณะจอดนิ่ง → เบิกเวลาจอดครบทั้งช่วง (ไม่มีระยะผี)', async () => {
+            if (skip(12)) return;
+            const cw = w();
+            await wait(1100);
+            driveStep(4, 0);
+            const killAt = cw.__fakeNow;
+            const anchor = { lat: pos.lat, lon: pos.lon };
+            seedKilledTrip({ gapAt: killAt, savedAt: killAt, gapBasePos: anchor, lastPos: anchor });
+            buildGapTrack(killAt, 0, 150, 0, { startLat: anchor.lat, startLon: anchor.lon, driftM: 10, stepSec: 5 });
+            cw.__advance(150000);
+            cw.__pendingCur.length = 0;
+            for (let i = 0; i < 2; i++) { feedFix('cur', anchor.lat, anchor.lon, 8, 0); await wait(200); }
+            cw.resumeSavedTrip();
+            await waitFor(() => !cw.crashCatchUpBusy, 25000, 'ให้สาขาปิดแอปเบิกคืนจบ');
+            await wait(400);
+            const after = tripStateFresh();
+            const tr = lastTrace();
+            const addKm = (after.km || 0) - 5.0, addTr = (after.trafficSec || 0) - 120;
+            const info = ' เพิ่ม กม. ' + addKm.toFixed(2) + ' · เวลารถติด ' + Math.round(addTr) + ' วิ · ร่องรอย ' + JSON.stringify(tr);
+            log('case12' + info);
+            band(addTr, 130, 170, 'เวลารถติดช่วงจอด (ต้องได้ ~150 วิ เท่ามิเตอร์จริง)' + info);
+            assert(addKm <= 0.05, 'จอดนิ่งต้องไม่เกิดระยะผี' + info);
+            assert(tr && tr.path === 'kill' && tr.native, 'ร่องรอยสาขาปิดแอปต้องมีหลักฐานพิกัดฉากหลัง' + info);
+            assert(tr.stoppedWhole === true, 'หลักฐานยืนยันจอด → ต้องเหมาเป็น “จอดทั้งช่วง”' + info);
+            return 'เบิกเวลา +' + Math.round(addTr) + ' วิ (จอด 150 วิ จริงหลังแอปถูกปิด) · ระยะผี ' + addKm.toFixed(2) + ' กม. · หลักฐาน ' + tr.native.n + ' จุด';
         });
 
         // ---------- 10) ไม่มีพิกัดฉากหลัง (เบราว์เซอร์) → พฤติกรรมเดิมต้องไม่พัง ----------

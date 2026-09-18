@@ -23,7 +23,13 @@ import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 
 /**
  * 📍 บริการเก็บพิกัดฉากหลัง (หัวใจของความแม่นเรื่อง "เวลารถติด")
@@ -59,6 +65,20 @@ public class BgLocationService extends Service implements LocationListener {
     private static final ArrayDeque<JSONObject> FIXES = new ArrayDeque<>();
     private static volatile boolean running = false;
     private static volatile long lastFixAt = 0L;
+
+    // 💾 บันทึกคิวพิกัดลงดิสก์ (19 ก.ย. 69) — กันหลักฐานช่วงปิดจอ/ปิดแอปหายถาวรเมื่อโปรเซสถูกฆ่า
+    //   ทำไมต้องมี: คิวในหน่วยความจำหายทันทีที่โปรเซสตาย (ผู้ใช้ปัดแอปทิ้ง + OEM ฆ่า / RAM ต่ำ / ระบบรีสตาร์ต)
+    //   ⇒ ตอนนั้นแอปไม่มีหลักฐานความเร็วจริงเลย ⇒ ต้องกลับไป “เดา” เวลารถติดจาก 2 จุด = เพี้ยน (ต้นเหตุจริงบนเครื่องคนขับ)
+    //   กติกา: เขียนเว้นจังหวะ (ทุก ~3 วิ) + เก็บเฉพาะย้อนหลัง 3 ชม. + ตัดไฟล์เมื่อเกิน 6 MB (ไม่กินพื้นที่มือถือ)
+    private static final String FIX_LOG = "bg-fixes.log";
+    private static final long FIX_LOG_MAX_BYTES = 6L * 1024 * 1024;
+    private static final long FIX_LOG_KEEP_MS = 3L * 60 * 60 * 1000;
+    private static final long PERSIST_EVERY_MS = 3000L;
+    private static volatile long lastPersistAt = 0L;
+    // 🔖 “เวลาของ fix ล่าสุดที่หน้าเว็บเบิกไปแล้ว” — กันส่ง fix ซ้ำเมื่อเบิกซ้ำ/โหลดใหม่ (ต้องรอดข้ามการถูกฆ่า)
+    private static volatile long lastDrainedT = 0L;
+    private static volatile boolean drainedMarkLoaded = false;
+    private static Context APP = null;   // application context (ตั้งใน onCreate) — ใช้เขียน/อ่านไฟล์จาก static method
 
     private LocationManager lm;
     private PowerManager.WakeLock wake;
@@ -108,20 +128,38 @@ public class BgLocationService extends Service implements LocationListener {
         synchronized (LOCK) {
             FIXES.clear();
         }
+        // 🧹 จบเที่ยว/เริ่มเที่ยวใหม่ = ทิ้งหลักฐานเก่าให้หมด (ทั้งคิวและไฟล์) พร้อมตั้งหมุดว่าของเก่าถูกใช้ไปแล้ว
+        lastDrainedT = System.currentTimeMillis();
+        saveDrainMark();
+        try {
+            if (APP != null) {
+                File f = fixLog(APP);
+                if (f.isFile() && !f.delete()) {
+                    FileOutputStream fo = new FileOutputStream(f, false);
+                    fo.close();
+                }
+            }
+        } catch (Exception ignored) {
+        }
     }
 
-    /** เบิกพิกัดทั้งหมดที่เก็บไว้ (คืนเป็น JSON แล้วล้างคิว) — หน้าเว็บเรียกตัวนี้ */
+    /** เบิกพิกัดที่ยังไม่เคยเบิก (คืนเป็น JSON แล้วเอาออกจากคิว) — หน้าเว็บเรียกตัวนี้ */
     static String drainJson() {
         JSONArray a = new JSONArray();
+        long maxT = lastDrainedT;
         try {
             synchronized (LOCK) {
                 while (!FIXES.isEmpty()) {
-                    a.put(FIXES.pollFirst());
+                    JSONObject o = FIXES.pollFirst();
+                    if (o == null) continue;
+                    long t = o.optLong("t", 0L);
+                    if (t > lastDrainedT) { a.put(o); if (t > maxT) maxT = t; }
                 }
             }
         } catch (Exception ignored) {
             // org.json บางเวอร์ชันประกาศ throws ไว้ — ห่อไว้กันไม่ให้บริการล้ม
         }
+        if (maxT > lastDrainedT) { lastDrainedT = maxT; saveDrainMark(); }
         return a.toString();
     }
 
@@ -139,9 +177,132 @@ public class BgLocationService extends Service implements LocationListener {
         return o.toString();
     }
 
+    // ─────────────────────── 💾 ที่เก็บถาวรของคิวพิกัด (กันข้อมูลหายเมื่อโปรเซสตาย) ───────────────────────
+
+    private static File fixLog(Context c) {
+        return new File(c.getFilesDir(), FIX_LOG);
+    }
+
+    /** อ่านหมุด “เบิกไปถึงไหนแล้ว” จากดิสก์ (โหลดครั้งเดียวต่อโปรเซส) */
+    private static void loadDrainMark() {
+        if (drainedMarkLoaded) return;
+        drainedMarkLoaded = true;
+        try {
+            if (APP != null) lastDrainedT = APP.getSharedPreferences(PREFS, MODE_PRIVATE).getLong("last_drained_t", 0L);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static void saveDrainMark() {
+        drainedMarkLoaded = true;
+        try {
+            if (APP != null) APP.getSharedPreferences(PREFS, MODE_PRIVATE).edit().putLong("last_drained_t", lastDrainedT).apply();
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** เขียน fix ต่อท้ายไฟล์ — เว้นจังหวะ + ทำในเธรดแยก (ห้ามบล็อก main looper ของ GPS) */
+    private void persistFix(JSONObject o) {
+        long now = System.currentTimeMillis();
+        if (now - lastPersistAt < PERSIST_EVERY_MS) return;
+        lastPersistAt = now;
+        final String line = "{\"t\":" + o.optLong("t", 0L)
+                + ",\"lat\":" + o.optDouble("lat", 0d) + ",\"lon\":" + o.optDouble("lon", 0d)
+                + ",\"acc\":" + o.optDouble("acc", -1d) + ",\"spd\":" + o.optDouble("spd", -1d)
+                + ",\"brg\":" + o.optDouble("brg", -1d) + ",\"prov\":\"" + o.optString("prov", "gps") + "\"}";
+        final File f = fixLog(this);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    FileOutputStream fo = new FileOutputStream(f, true);
+                    try {
+                        fo.write((line + "\n").getBytes("UTF-8"));
+                    } finally {
+                        fo.close();
+                    }
+                    if (f.length() > FIX_LOG_MAX_BYTES) trimFixLog(f);
+                } catch (Exception ignored) {
+                }
+            }
+        }).start();
+    }
+
+    /** ตัดไฟล์ให้เหลือย้อนหลังตามที่กำหนด (เรียกจากเธรดแยกเท่านั้น) */
+    private static void trimFixLog(File f) {
+        try {
+            long keepFrom = System.currentTimeMillis() - FIX_LOG_KEEP_MS;
+            ArrayList<String> keep = new ArrayList<>();
+            BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(f), "UTF-8"));
+            try {
+                String ln;
+                while ((ln = br.readLine()) != null) {
+                    if (ln.length() == 0) continue;
+                    long t;
+                    try {
+                        t = new JSONObject(ln).optLong("t", 0L);
+                    } catch (Exception e) {
+                        continue;
+                    }
+                    if (t >= keepFrom) keep.add(ln);
+                }
+            } finally {
+                br.close();
+            }
+            FileOutputStream fo = new FileOutputStream(f, false);
+            try {
+                for (int i = 0; i < keep.size(); i++) fo.write((keep.get(i) + "\n").getBytes("UTF-8"));
+            } finally {
+                fo.close();
+            }
+            Log.i(TAG, "fix log trimmed: " + keep.size() + " lines kept");
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** โหลด fix ที่ค้างในไฟล์กลับเข้าคิว (เรียกตอนบริการเริ่ม) — เฉพาะที่ยังไม่เคยเบิก */
+    private static void loadPersisted() {
+        if (APP == null) return;
+        loadDrainMark();
+        try {
+            File f = fixLog(APP);
+            if (!f.isFile()) return;
+            long keepFrom = System.currentTimeMillis() - FIX_LOG_KEEP_MS;
+            ArrayList<JSONObject> back = new ArrayList<>();
+            BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(f), "UTF-8"));
+            try {
+                String ln;
+                while ((ln = br.readLine()) != null) {
+                    if (ln.length() == 0) continue;
+                    try {
+                        JSONObject o = new JSONObject(ln);
+                        long t = o.optLong("t", 0L);
+                        if (t > lastDrainedT && t >= keepFrom) back.add(o);
+                    } catch (Exception ignoredInner) {
+                    }
+                }
+            } finally {
+                br.close();
+            }
+            int added = 0;
+            synchronized (LOCK) {
+                for (int i = 0; i < back.size(); i++) {
+                    if (FIXES.size() >= MAX_FIXES) FIXES.pollFirst();
+                    FIXES.addLast(back.get(i));
+                    added++;
+                }
+            }
+            if (added > 0) Log.i(TAG, "restored " + added + " fixes from disk (survived process kill)");
+        } catch (Exception ignored) {
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
+        APP = getApplicationContext();
+        loadDrainMark();
+        loadPersisted();        // 🔁 โปรเซสเพิ่งเกิดใหม่หลังถูกฆ่า → คืนหลักฐานพิกัดที่ยังไม่ถูกเบิก
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
     }
 
@@ -277,6 +438,7 @@ public class BgLocationService extends Service implements LocationListener {
                 FIXES.addLast(o);
                 lastFixAt = System.currentTimeMillis();
             }
+            persistFix(o);      // 💾 กันข้อมูลหายถ้าโปรเซสถูกฆ่า (ผู้ใช้ปัดแอปทิ้ง / OEM ฆ่า / RAM ต่ำ)
         } catch (Exception ignored) {
         }
     }

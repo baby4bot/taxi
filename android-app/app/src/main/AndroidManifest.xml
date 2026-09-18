@@ -24,6 +24,11 @@
     <!-- 📳 สั่นเมื่อมีข้อความแจ้งเตือน (navigator.vibrate ในเว็บใช้สิทธิ์นี้) -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- 📦 ให้แอป "ดาวน์โหลดไฟล์ติดตั้งรุ่นใหม่แล้วเปิดหน้าติดตั้งให้เอง" ได้
+         · ระบบ Android ยังบังคับให้ผู้ใช้กด "ติดตั้ง" ยืนยันเอง 1 ครั้งเสมอ (ยกเว้นแอปแบบ MDM/เจ้าของเครื่อง)
+         · ผู้ใช้ต้องเปิด "ติดตั้งจากแหล่งที่ไม่รู้จัก" ให้แอปนี้ด้วย (แอปมีปุ่มพาไปหน้าตั้งค่านั้น) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <application
@@ -56,6 +61,14 @@
             android:exported="false"
             android:foregroundServiceType="location"
             android:stopWithTask="false" />
+
+        <!-- 📦 ตัวแจกไฟล์ APK ที่ดาวน์โหลดไว้ (แทน FileProvider ของ AndroidX — โปรเจกต์นี้ไม่พึ่งไลบรารีภายนอก)
+             exported=false + ให้สิทธิ์อ่านเป็นครั้ง ๆ ตอนเปิดหน้าติดตั้งเท่านั้น (ดู ApkFileProvider.java) -->
+        <provider
+            android:name=".ApkFileProvider"
+            android:authorities="${applicationId}.apkprovider"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
         <!-- ⏰ ตัวปลุกบริการเก็บพิกัด (ปัดแอปทิ้ง / OEM ฆ่าทิ้ง) — ดูเหตุผลใน BgWakeReceiver.java -->
         <receiver

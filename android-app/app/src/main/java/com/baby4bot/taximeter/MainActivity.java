@@ -34,6 +34,12 @@ import com.google.android.gms.common.api.ApiException;
 
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 
 /**
@@ -177,6 +183,87 @@ public class MainActivity extends Activity {
         if (u == null || u.trim().isEmpty()) u = BuildConfig.APP_URL;
         if (u == null || u.trim().isEmpty()) u = FALLBACK_URL;
         return u;
+    }
+
+    // ───────────────── 🌐 เปิดลิงก์นอกแอป (สำรองเวลาดาวน์โหลด/ติดตั้งในแอปทำไม่ได้) ─────────────────
+    private void openInBrowser(String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (Exception ignored) {
+        }
+    }
+
+    // ───────────────── 📦 ดาวน์โหลด APK รุ่นใหม่ + เปิดหน้าติดตั้งให้ (18 ก.ย. 2026) ─────────────────
+    //  ทำไมต้องมี: ผู้ใช้ขอ "ให้แอปรู้ว่ามีรุ่นใหม่ แล้วดาวน์โหลด/ติดตั้งให้เลย"
+    //  ความจริงของ Android ที่ต้องบอกตรง ๆ: แอปทั่วไป "ติดตั้งเงียบ" ไม่ได้ — ระบบจะให้ผู้ใช้กด
+    //  "ติดตั้ง" ยืนยันเสมอ 1 ครั้ง (ยกเว้นแอปแบบ MDM/เจ้าของเครื่อง) ⇒ สิ่งที่ทำให้ได้คือ
+    //  ดาวน์โหลดให้เองเสร็จ แล้ว "เปิดหน้าติดตั้ง" ให้ทันที เหลือแค่กดครั้งเดียว
+    //  ⚠️ ยังต้องให้ผู้ใช้เปิด "ติดตั้งจากแหล่งที่ไม่รู้จัก" ให้แอปนี้ (ปุ่มในเว็บเรียกให้เปิดหน้าตั้งค่าได้)
+    private static final long APK_MAX_BYTES = 60L * 1024 * 1024;   // กันไฟล์ผิดขนาด (APK จริง ~3-4 MB)
+
+    private File apkCacheDir() {
+        File d = new File(getCacheDir(), ApkFileProvider.APK_DIR);
+        if (!d.exists()) d.mkdirs();
+        return d;
+    }
+
+    /** ดาวน์โหลด APK (เธรดแยก — ห้ามทำในเธรด UI) แล้วเรียกติดตั้งบนเธรด UI */
+    private void downloadApkInBackground(final String url) {
+        final String u = url == null ? "" : url.trim();
+        if (u.isEmpty()) {
+            runOnUiThread(() -> Toast.makeText(MainActivity.this, "ไม่มีลิงก์ดาวน์โหลด", Toast.LENGTH_SHORT).show());
+            return;
+        }
+        runOnUiThread(() -> Toast.makeText(MainActivity.this, "กำลังดาวน์โหลดรุ่นใหม่…", Toast.LENGTH_SHORT).show());
+        new Thread(() -> {
+            File out = new File(apkCacheDir(), "update.apk");
+            try {
+                HttpURLConnection c = (HttpURLConnection) new URL(u).openConnection();   // GitHub Release → 302 ไป CDN
+                c.setInstanceFollowRedirects(true);
+                c.setConnectTimeout(15000);
+                c.setReadTimeout(60000);
+                c.setRequestProperty("User-Agent", "TaxiMeterApp/" + BuildConfig.VERSION_NAME);
+                int code = c.getResponseCode();
+                if (code != 200) throw new IOException("HTTP " + code);
+                long total = 0;
+                try (InputStream in = c.getInputStream(); FileOutputStream fo = new FileOutputStream(out)) {
+                    byte[] buf = new byte[16384];
+                    int n;
+                    while ((n = in.read(buf)) > 0) {
+                        total += n;
+                        if (total > APK_MAX_BYTES) throw new IOException("ไฟล์ใหญ่เกินคาด");
+                        fo.write(buf, 0, n);
+                    }
+                }
+                if (total < 1024 * 100) throw new IOException("ไฟล์เล็กเกินไป (" + total + " ไบต์)");
+                final long size = total;
+                Log.i(TAG, "downloaded apk: " + size + " bytes -> " + out.getAbsolutePath());
+                runOnUiThread(() -> installDownloadedApk(out, u));
+            } catch (Exception e) {
+                Log.w(TAG, "download apk failed: " + e.getMessage());
+                final String msg = String.valueOf(e.getMessage());
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "ดาวน์โหลดในแอปไม่สำเร็จ — เปิดลิงก์ดาวน์โหลดให้แทน", Toast.LENGTH_LONG).show();
+                    Log.w(TAG, "reason: " + msg);
+                    openInBrowser(u);
+                });
+            }
+        }).start();
+    }
+
+    /** เปิดหน้าติดตั้งของระบบด้วยไฟล์ที่โหลดไว้ (ต้องใช้ content:// จาก ApkFileProvider) */
+    private void installDownloadedApk(File apk, String fallbackUrl) {
+        try {
+            if (apk == null || !apk.isFile()) throw new IOException("ไม่พบไฟล์ที่ดาวน์โหลด");
+            Uri uri = Uri.parse("content://" + getPackageName() + ApkFileProvider.AUTHORITY_SUFFIX + "/" + apk.getName());
+            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setDataAndType(uri, "application/vnd.android.package-archive");
+            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Exception e) {
+            Toast.makeText(this, "เปิดหน้าติดตั้งไม่ได้ — เปิดลิงก์ดาวน์โหลดให้แทน", Toast.LENGTH_LONG).show();
+            openInBrowser(fallbackUrl);
+        }
     }
 
     /** คุมว่า URL ไหน "อยู่ในแอป" และ URL ไหน "ออกไปเบราว์เซอร์" */
@@ -457,6 +544,55 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String appVersion() {
             return BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")";
+        }
+
+        /** 🔢 รหัสรุ่นของ APK ที่ติดตั้งอยู่ (ตัวเลขล้วน — ใช้เทียบกับ apk-version.json ได้ตรง ๆ) */
+        @JavascriptInterface
+        public int appVersionCode() {
+            return BuildConfig.VERSION_CODE;
+        }
+
+        /** 🏷 ชื่อรุ่นที่มนุษย์อ่านได้ เช่น "1.4.0" (ไว้แสดงบนป้ายเตือนเท่านั้น) */
+        @JavascriptInterface
+        public String appVersionName() {
+            return BuildConfig.VERSION_NAME;
+        }
+
+        /** ผู้ใช้เปิดสิทธิ์ "ติดตั้งจากแหล่งที่ไม่รู้จัก" ให้แอปนี้แล้วหรือยัง (Android 8+ เท่านั้นที่ต้องขอ) */
+        @JavascriptInterface
+        public boolean canInstallPackages() {
+            try {
+                if (Build.VERSION.SDK_INT >= 26) return getPackageManager().canRequestPackageInstalls();
+                return true;
+            } catch (Exception e) {
+                return true;   // อ่านไม่ได้ = อย่าบล็อกผู้ใช้ ให้ลองเปิดหน้าติดตั้งแทน
+            }
+        }
+
+        /** เปิดหน้าตั้งค่า "ติดตั้งแอปที่ไม่รู้จัก" ของแอปนี้ (เรียกก่อนติดตั้งครั้งแรก) */
+        @JavascriptInterface
+        public void openInstallPermissionSettings() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (Build.VERSION.SDK_INT >= 26) {
+                            Intent i = new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName()));
+                            startActivity(i);
+                            return;
+                        }
+                    } catch (Exception ignored) {
+                    }
+                    openSystemAppSettings();
+                }
+            });
+        }
+
+        /** 📦 ดาวน์โหลด APK รุ่นใหม่แล้วเปิดหน้าติดตั้งให้ (เว็บเรียกตอนผู้ใช้กด "ติดตั้งทันที")
+         *  สำเร็จหรือไม่ ฝั่งเว็บรู้จาก canInstallPackages() และจากพฤติกรรมจริง (มี toast บอกผู้ใช้) */
+        @JavascriptInterface
+        public void downloadAndInstallApk(final String url) {
+            downloadApkInBackground(url == null ? "" : url.trim());
         }
 
         @JavascriptInterface

@@ -261,12 +261,42 @@ jobs:
             fi
           fi
           MODE_FILE="$GITHUB_WORKSPACE/android-app/keys/KEY-MODE.txt"
+          SIGN_MODE="temporary"
           if [ -f "$MODE_FILE" ] && grep -q '^secrets' "$MODE_FILE"; then
+            SIGN_MODE="permanent"
             echo "โหมดกุญแจ: ถาวร (มาจาก Secrets) — ติดตั้งทับของเดิมได้ ✅" >> "$INFO"
           else
             echo "โหมดกุญแจ: ชั่วคราว (สร้างใหม่ทุกบิลด์) ⛔ ติดตั้งทับของเดิม “ไม่ได้” — ตั้ง Secrets ก่อน" >> "$INFO"
             echo "::warning::APK นี้เซ็นด้วยกุญแจชั่วคราว — เครื่องที่ติดตั้งรุ่นก่อนจะอัปเดตทับไม่ได้ ต้องตั้ง Secrets KEYSTORE_BASE64 + KEYSTORE_PASSWORD"
           fi
+
+          # ----------------------------------------------------------------
+          # 🔢 apk-version.json — "เลขรุ่นของ APK ล่าสุด" ให้หน้าเว็บที่รันอยู่ในตัวแอปอ่านไปเทียบ
+          #    กับ TaxiNative.appVersionCode() (รหัสของ APK ที่ผู้ใช้ติดตั้งอยู่)
+          #    ⇒ เลขบนเซิร์ฟเวอร์มากกว่า = เด้งป้าย "มีแอปเวอร์ชันใหม่" ค้างไว้จนกว่าจะอัปเดต
+          #    ⚠️ ต้องอยู่ที่รากเว็บ (โฟลเดอร์เดียวกับ index.html) เพราะหน้าเว็บ fetch แบบ same-origin
+          #       ⇒ ไม่ติด CORS และไม่ต้องเพิ่มโดเมนอนุญาต (ต่างจากไฟล์ใน Release ที่เป็นคนละโดเมน)
+          # ----------------------------------------------------------------
+          SHA=$(sha256sum "$APK" | cut -d' ' -f1)
+          SIZE=$(stat -c%s "$APK")
+          VCODE=$(sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p" badging.txt 2>/dev/null | head -1)
+          VNAME=$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" badging.txt 2>/dev/null | head -1)
+          if [ -z "$VCODE" ] || [ -z "$VNAME" ]; then
+            VCODE=$(sed -n "s/^[[:space:]]*versionCode[[:space:]]\+\([0-9]\+\).*/\1/p" "$GITHUB_WORKSPACE/android-app/app/build.gradle" | head -1)
+            VNAME=$(sed -n "s/^[[:space:]]*versionName[[:space:]]\+'\{0,1\}\([0-9][0-9.]*\).*/\1/p" "$GITHUB_WORKSPACE/android-app/app/build.gradle" | head -1)
+          fi
+          SIGNER=$(grep -E "Signer #1 certificate SHA-256 digest" certs.txt 2>/dev/null | head -1 | awk '{print $NF}' | tr -d ':\r\n' | tr 'A-F' 'a-f')
+          cat > apk-version.json <<JSON
+          {"app":"ค่าแท็กซี่","versionCode":${VCODE:-0},"versionName":"${VNAME:-}","sha256":"$SHA","sizeBytes":$SIZE,"signMode":"$SIGN_MODE","signer":"$SIGNER","builtAt":"$(date -u '+%Y-%m-%d %H:%M UTC')","builtAtUnix":$(date -u +%s),"url":"https://github.com/baby4bot/taxi/releases/download/apk-latest/app-release.apk","note":"รหัส APK ล่าสุด — หน้าเว็บเทียบกับ TaxiNative.appVersionCode() แล้วเตือนถ้ามีรุ่นใหม่"}
+JSON
+          # ⚠️ heredoc ใน YAML ติดช่องว่างนำหน้าจากการย่อหน้า ⇒ ตัดออก (JSON ยังอ่านได้แม้มีช่องว่าง แต่ให้สะอาด)
+          sed -i 's/^[[:space:]]*//' apk-version.json
+          cp apk-version.json "$GITHUB_WORKSPACE/apk-version.json"
+          echo ""
+          echo "--- apk-version.json ---"
+          cat "$GITHUB_WORKSPACE/apk-version.json"
+          echo ""
+          echo "versionCode ที่อ่านได้ = ${VCODE:-?} · versionName = ${VNAME:-?}"
 
           echo "===== apk-info.txt ====="
           cat "$INFO"
@@ -331,6 +361,11 @@ jobs:
             upload_retry android-app/app/build/outputs/apk/release/apk-info.txt soft
           fi
 
+          # 🔢 เลขรุ่นล่าสุด (เครื่องอ่านได้) — แนบไว้ให้ตรวจจากหน้า Release ได้ด้วย
+          if [ -f android-app/app/build/outputs/apk/release/apk-version.json ]; then
+            upload_retry android-app/app/build/outputs/apk/release/apk-version.json soft
+          fi
+
           # 🧹 ลบไฟล์ที่ไม่ถูกเซ็นที่ค้างจากรอบก่อน — กันคนกดโหลดผิดไฟล์ไปติดตั้งไม่ได้
           for a in $(gh release view apk-latest --json assets --jq '.assets[].name' 2>/dev/null); do
             case "$a" in
@@ -339,6 +374,39 @@ jobs:
           done
           echo "--- ไฟล์ใน Release ตอนนี้ ---"
           gh release view apk-latest --json assets --jq '.assets[] | "\(.name)  \(.size) ไบต์\n\(.url)"'
+
+      # 🔢 ประกาศ "เลขรุ่นล่าสุด" ขึ้นเว็บ (ไฟล์เล็กมาก — ไม่กระทบขนาดหน้าเว็บ)
+      #    ⚠️ workflow นี้ถูกเรียกเมื่อ "android-app/**" เปลี่ยนเท่านั้น ⇒ commit ไฟล์รากเรโป
+      #       จะไม่ทำให้งานวนลูป (ไฟล์รากไม่อยู่ใน paths ของ trigger)
+      #    กันกับดัก: ถ้าเลขรุ่นไม่เปลี่ยน (สร้างซ้ำ) = ข้ามการ commit เงียบ ๆ ไม่สร้าง noise
+      - name: อัปเดต apk-version.json ขึ้นเว็บ (ให้แอปตรวจเจอรุ่นใหม่เอง)
+        run: |
+          set -e
+          cd "$GITHUB_WORKSPACE"
+          if [ ! -f apk-version.json ]; then
+            echo "::warning::ไม่พบ apk-version.json — ข้ามการประกาศรุ่น"
+            exit 0
+          fi
+          NEW_CODE=$(sed -n 's/.*"versionCode":\([0-9]*\).*/\1/p' apk-version.json | head -1)
+          # เทียบกับไฟล์ที่ commit ไว้เดิม (HEAD) ไม่ใช่ไฟล์ที่เพิ่งเขียนทับ
+          OLD_CODE=$(git show HEAD:apk-version.json 2>/dev/null | sed -n 's/.*"versionCode":\([0-9]*\).*/\1/p' | head -1 || true)
+          OLD_SHA=$(git show HEAD:apk-version.json 2>/dev/null | sed -n 's/.*"sha256":"\([a-f0-9]*\)".*/\1/p' | head -1 || true)
+          NEW_SHA=$(sed -n 's/.*"sha256":"\([a-f0-9]*\)".*/\1/p' apk-version.json | head -1)
+          if [ "$NEW_CODE" = "$OLD_CODE" ] && [ "$NEW_SHA" = "$OLD_SHA" ]; then
+            echo "เลขรุ่นเท่าเดิม (versionCode $NEW_CODE) — ไม่ต้อง commit"
+            exit 0
+          fi
+          git config user.name "taxi-apk-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apk-version.json
+          git commit -m "chore(apk): ประกาศเลขรุ่นล่าสุด versionCode $NEW_CODE (สร้างอัตโนมัติจาก CI)" || { echo "ไม่มีอะไรเปลี่ยน"; exit 0; }
+          for i in 1 2 3; do
+            if git push origin HEAD:main; then echo "อัปเดต apk-version.json ขึ้นเว็บแล้ว ✅"; exit 0; fi
+            echo "::warning::push ไม่สำเร็จ (ครั้งที่ $i) — ดึงของใหม่มา rebase แล้วลองใหม่"
+            git pull --rebase --autostash origin main || true
+            sleep 4
+          done
+          echo "::warning::อัปเดต apk-version.json ไม่สำเร็จในรอบนี้ — แอปจะเห็นรุ่นใหม่รอบถัดไป (ตัว APK ใน Release ยังครบถ้วน)"
 
       - name: สรุปวิธีใช้งาน
         if: always()
