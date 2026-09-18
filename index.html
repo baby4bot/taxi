@@ -7201,6 +7201,11 @@
     //    รับลำดับใหม่ **แบบเรียลไทม์** แล้วนำไปใช้กับเมนูที่เปิดอยู่ทันที (ไม่ต้องปิด-เปิดใหม่)
     window.__globalMenuOrder = null;
     let globalMenuOrderUnsub = null;
+    // 🌉 (18 ก.ย. 69) สะพานเขียนค่าลำดับส่วนกลาง (settings/menuOrder) สำหรับสคริปต์คลาสสิก
+    //    🐞 เหตุผลที่ต้องมี: สคริปต์คลาสสิกอ้าง `db`/`setDoc` ของโมดูลตรง ๆ ไม่ได้ (ReferenceError ถูกกลืนใน try/catch)
+    //       ⇒ การบันทึก “ลำดับ/ซ่อนบล็อกโปรไฟล์” เคยล้มเหลวเงียบ ๆ แล้วตกไปทาง REST (ซึ่งไม่มีการยืนยันสิทธิ์)
+    //    ใช้สะพานเดียวกับที่เมนู side/hub ใช้อยู่ ⇒ ช่องทางเดียวที่พิสูจน์แล้วว่าซิงก์เรียลไทม์ได้จริง
+    window.__fsPatchSettingsMenuOrder = (obj) => window.__fsTimeout(setDoc(doc(db, "settings", "menuOrder"), obj, { merge: true }), 8000);
     window.listenGlobalMenuOrder = () => {
         if (globalMenuOrderUnsub) return;
         try {
@@ -7234,7 +7239,11 @@
                         try { if (g.hubItemCat && typeof g.hubItemCat === 'object' && Object.keys(g.hubItemCat).length && window.hubItemCatWrite) window.hubItemCatWrite(g.hubItemCat); } catch (e) {}
                         // 🧱 ลำดับบล็อกหน้าโปรไฟล์ (17 ก.ย. 69) — แอดมินลากสลับ → ทุกเครื่องที่เปิดแอปอยู่เปลี่ยนตามทันที
                         //    ⚠️ รับเฉพาะเมื่อ “มีของจริง” — ค่าว่างต้องไม่ลบล้างลำดับที่ใช้อยู่
-                        try { if (Array.isArray(g[PF_ORDER_FIELD]) && g[PF_ORDER_FIELD].length && window.pfApplyOrder) { window.__pfOrder = g[PF_ORDER_FIELD]; localStorage.setItem('profile_order_v1', JSON.stringify(g[PF_ORDER_FIELD])); try { let h = g[PF_HIDE_FIELD]; if (typeof h === 'string') { try { h = JSON.parse(h); } catch (e2) { h = null; } } if (Array.isArray(h)) { window.__pfHidden = window.pfHiddenArr ? window.pfHiddenArr(h) : h; localStorage.setItem('profile_hidden_v1', JSON.stringify(h)); } } catch (e2) {} window.pfApplyOrder(g[PF_ORDER_FIELD]); } } catch (e) {}
+                        // 🐞 (18 ก.ย. 69) เดิมบรรทัดนี้เรียก `g[PF_ORDER_FIELD]` ตรง ๆ — แต่ PF_ORDER_FIELD ถูกประกาศด้วย const ใน “สคริปต์คลาสสิก” อีกก้อน
+                        //    ⇒ ในโมดูลเป็น ReferenceError ทุกครั้ง แล้วถูกกลืนใน catch ⇒ **ค่าลำดับ/การซ่อนจากเซิร์ฟเวอร์ไม่เคยถูกนำมาใช้เลย**
+                        //    (ผลจริงที่ผู้ใช้เจอ: แอดมินสลับ/ซ่อนแล้วเครื่องอื่นไม่เปลี่ยน และเครื่องแอดมินเองก็ไม่เปลี่ยนหลังรีเฟรช)
+                        //    ⇒ เรียกผ่าน window (ไม่พึ่ง scope) · ตัวช่วยจะรับทั้งลำดับและ “ซ่อน” พร้อมบันทึกร่องรอยไว้ที่ window.__pfLastApply
+                        try { if (typeof window.pfApplyFromServer === 'function') window.pfApplyFromServer(g); } catch (e) {}
                         window.__applyMenuOrderLive(); // 🔁 นำไปใช้กับเมนูที่เปิดอยู่ทันที (เรียลไทม์)
                     }
                 } else {
@@ -10835,6 +10844,10 @@
         if (typeof window.qrRefreshHint === 'function') window.qrRefreshHint(); // 🎴 อัปเดตข้อความขนาด/สถานะรูป QR ให้ตรงกับค่าจริงตอนเปิด
         if (typeof window.pinRefreshCard === 'function') window.pinRefreshCard(); // 🔑 อัปเดตสถานะ PIN ให้ตรงกับค่าจริงตอนเปิด
         if (typeof window.__refreshGoogleLinkUi === 'function') window.__refreshGoogleLinkUi(); // 🔐 อัปเดตสถานะการผูกบัญชี Google ตอนเปิดโปรไฟล์
+        // 🧱 (18 ก.ย. 69) จัดลำดับ + ซ่อน/แสดงบล็อกตามค่าส่วนกลาง “ทุกครั้งที่เปิดหน้าโปรไฟล์”
+        //    ⚠️ ค่าจากเซิร์ฟเวอร์อาจมาถึงหลังการบูต (ตัวฟังเรียลไทม์ทำงานหลังล็อกอิน) — ถ้าไม่จัดตอนเปิด ค่าที่มาถึงระหว่างนั้น
+        //       จะเก็บไว้เป็น __pfPendingApply ซึ่งต้องมีจุดทำจริง ไม่งั้นผู้ใช้จะเห็นลำดับเก่าค้างจนกว่าจะเปิดแอปใหม่
+        try { if (typeof window.pfApplyEffective === 'function') { window.pfApplyEffective(); window.__pfPendingApply = false; } } catch (e) {}
         window.toggleModal('profileModal', true);
     };
     
@@ -15764,7 +15777,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '4a87440353';
+    const APP_WEB_VERSION = '1cff94542a';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -16180,6 +16193,9 @@
         ['2026-09-18', '⬇️ มีรุ่นใหม่กด “ติดตั้งทันที” ได้ในแอป — ดาวน์โหลดเสร็จเปิดหน้าติดตั้งให้เลย'],
         ['2026-09-18', '📐 โหมดจัดลำดับซ่อนคำอธิบายเมนู — เห็นหลายอันและปุ่ม ▲▼ จัดได้ลงตัว'],
         ['2026-09-18', '🔤 เปลี่ยนชื่อแท็บ “PIN ยืนยันสำคัญ” เป็น “ตั้งค่า PIN”'],
+        ['2026-09-18', '🧱 จัดลำดับ/ซ่อนบล็อกโปรไฟล์ มีผลกับทุกคนจริง (เดิมค่าจากเซิร์ฟเวอร์ไม่เคยถูกใช้)'],
+        ['2026-09-18', '👁 ซ่อน/แสดงบล็อกโปรไฟล์ไม่ทำบล็อกหลุดจากระบบอีก (ทะเบียนรถ/เบอร์โทร เคยหาย)'],
+        ['2026-09-18', '🖥 เปิดหน้าตั้งค่าโปรไฟล์แล้วลำดับ/การซ่อนตรงกับที่แอดมินตั้ง — ไม่ต้องปิดเปิดแอปใหม่'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -22020,6 +22036,51 @@
     // 👁 (18 ก.ย. 69) ซ่อน/แสดงบล็อกกับทุกคน — ต่อจากเรื่องลำดับ · เก็บใน “doc เดิม” อีกฟิลด์หนึ่ง (⛔ ไม่สร้าง doc ใหม่)
     const PF_HIDE_KEY = 'profile_hidden_v1';   // สำเนาในเครื่อง (fallback ตอนออฟไลน์)
     const PF_HIDE_FIELD = 'profileHidden';     // ฟิลด์ใน settings/menuOrder
+    /* 🌍 (18 ก.ย. 69) รับค่าลำดับ + การซ่อนบล็อกจาก “ค่าส่วนกลาง” (settings/menuOrder) — ใช้ร่ว่มกัน 2 ทาง
+       1) ตัวฟังเรียลไทม์ (อยู่ใน <script type="module">) → เรียกผ่าน window.pfApplyFromServer (โมดูลอ้าง const ของสคริปต์นี้ตรง ๆ ไม่ได้)
+       2) ตัวโหลดตอนบูต (pfLoadGlobal) → เรียกผ่านทางเดียวกัน
+       ⛔ กฎที่ต้องคงไว้: ค่าว่าง ( [] หรือ ไม่มีฟิลด์ ) = “ไม่มีข้อมูล” → ห้ามลบค่าที่ใช้อยู่ (เจอจริง: เปิดแอปแล้วการจัดกลุ่ม/ลำดับหาย)
+          ยกเว้น `profileHidden: []` = แสดงทุกบล็อก (ค่าเจตนา ไม่ใช่ค่าไม่มีข้อมูล)
+       ⛔ ห้ามย้าย DOM ขณะผู้ใช้กำลังพิมพ์ในหน้าโปรไฟล์ (จะเก็บเป็น “ค้างอยู่” แล้วทำตอนเปิดหน้าครั้งถัดไป) */
+    window.__pfLastApply = null;
+    window.__pfPendingApply = false;
+    window.pfApplyFromServer = (g) => {
+        const out = { at: Date.now(), source: 'server', order: null, hidden: null, applied: false, why: '' };
+        try {
+            const src = (g && typeof g === 'object') ? g : {};
+            let arr = src[PF_ORDER_FIELD];
+            if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch (e) { arr = null; } }
+            let hid = src[PF_HIDE_FIELD];
+            if (typeof hid === 'string') { try { hid = JSON.parse(hid); } catch (e) { hid = null; } }
+            if (Array.isArray(hid)) { window.__pfHidden = pfHiddenArr(hid); pfLocalHiddenSave(window.__pfHidden); out.hidden = window.__pfHidden.slice(); }
+            if (!Array.isArray(arr) || !arr.length) {
+                out.why = 'server-has-no-order';
+                if (out.hidden) { try { window.pfApplyHidden(window.pfHiddenEffective()); out.applied = true; } catch (e) {} }
+            } else {
+                window.__pfOrder = window.pfOrderMigrate(arr);   // 🔁 ย้ายการ์ด Google ตามลำดับใหม่ (ดู pfOrderMigrate)
+                pfLocalSave(window.__pfOrder);
+                out.order = window.__pfOrder.slice();
+                // กันกรณีกำลังพิมพ์อยู่ในหน้าโปรไฟล์ — การย้าย DOM จะทำให้คีย์บอร์ด/โฟกัสสะดุด
+                const pm = document.getElementById('profileModal');
+                const typing = !!(pm && pm.style.display === 'flex' && document.activeElement && pm.contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));
+                if (typing) { window.__pfPendingApply = true; out.why = 'deferred-user-typing'; }
+                else { out.applied = !!window.pfApplyEffective(); window.__pfPendingApply = false; if (!out.applied) out.why = 'apply-failed'; }
+            }
+        } catch (e) { out.why = 'error:' + (e && e.message ? e.message : e); }
+        window.__pfLastApply = out;
+        return out;
+    };
+    // 🩺 ตรวจสุขภาพกลไก “ลำดับ/ซ่อนบล็อก” ได้ในบรรทัดเดียว (ไว้ตามอาการจริงบนเครื่องผู้ใช้)
+    window.pfDiag = () => {
+        const r = window.pfRanges ? window.pfRanges() : null;
+        return {
+            using: (window.__pfOrder && window.__pfOrder.length) ? 'server/local-order' : 'html-default',
+            order: window.__pfOrder, hidden: window.pfHiddenEffective(), foundBlocks: r ? Object.keys(r.out) : null,
+            lastServerApply: window.__pfLastApply, pendingApply: window.__pfPendingApply,
+            local: { order: (() => { try { return JSON.parse(localStorage.getItem(PF_ORDER_KEY) || 'null'); } catch (e) { return null; } })(), hidden: (() => { try { return JSON.parse(localStorage.getItem(PF_HIDE_KEY) || 'null'); } catch (e) { return null; } })() },
+            canManage: (typeof window.canManageProfileLayout === 'function') ? !!window.canManageProfileLayout() : null
+        };
+    };
     const PF_BLOCKS = [
         { k: 'avatar', name: 'รูปโปรไฟล์', pat: '<div style="display: flex; justify-content: center; align-items: stretch;' },
         { k: 'qr', name: 'QR Code รับเงิน', pat: '<div class="qr-card">' },
@@ -22047,10 +22108,15 @@
     // 👁 (18 ก.ย. 69) บาง pat ของบล็อกขึ้นต้นด้วย class (เช่น `<div class="qr-card">` ของ QR Code รับเงิน)
     //    พอเพิ่มคลาส “ซ่อน” ทำให้ class กลายเป็น `qr-card pf-block-off` → pat ไม่ตรงอีก ⇒ หาบล็อกไม่เจอ
     //    ⇒ ก่อนเทียบ pat ต้อง “ตัดคลาสซ่อนออกจากข้อความ” (กับดักเสียเวลาจริง: ซ่อน QR แล้วลำดับเพี้ยนเฉพาะบล็อกนั้น)
+    // 🐞 (18 ก.ย. 69) กับดักที่ 2 ที่เจอจริง: `classList.toggle(cls, false)` บนแท็กที่ **ไม่มี attribute class**
+    //    ทำให้เกิด `class=""` ค้างใน HTML → ค่าลายเซ็น pat ที่มี `>` ต่อท้ายแอตทริบิวต์เดิมไม่ตรงอีก
+    //    ⇒ บล็อกนั้น (เช่น ทะเบียนรถ, เบอร์โทรศัพท์) **หลุดออกจากระบบลำดับ/ซ่อนถาวร** และจำนวนลูกรวมไปกับบล็อกก่อนหน้า
+    //    ⇒ ต้องตัดทั้ง 'pf-block-off' และ `class=""` ออกก่อนเทียบ · พร้อมกับห้ามสร้าง class="" ใหม่ (ดู pfApplyHidden)
     const pfHtml = (el) => {
         const h = el.outerHTML;
-        if (h.indexOf('pf-block-off') < 0) return h;
-        return h.replace(/ pf-block-off/g, '').replace(/pf-block-off /g, '').replace(/pf-block-off/g, '');
+        if (h.indexOf('pf-block-off') < 0 && h.indexOf('class=""') < 0) return h;
+        return h.replace(/ pf-block-off/g, '').replace(/pf-block-off /g, '').replace(/pf-block-off/g, '')
+            .replace(/ class=""/g, '').replace(/class="" /g, '').replace(/class=""/g, '');
     };
     window.pfHtml = pfHtml;
     // 🧩 จับกลุ่มลูกของคอนเทนเนอร์เป็นบล็อก (ตามลำดับใน HTML) — คีย์ที่ไม่พบ = ไม่มีในหน้านั้น
@@ -22093,7 +22159,10 @@
         if (!r) return false;
         const set = new Set(pfHiddenArr(hidden));
         PF_BLOCKS.forEach((b) => {
-            (r.out[b.k] || []).forEach((el) => { el.classList.toggle('pf-block-off', set.has(b.k)); });
+            (r.out[b.k] || []).forEach((el) => {
+                if (set.has(b.k)) el.classList.add('pf-block-off');
+                else { el.classList.remove('pf-block-off'); if (el.getAttribute('class') === '') el.removeAttribute('class'); }   // ⛔ ห้ามทิ้ง class="" (ทำ pat เพี้ยน — ดู pfHtml)
+            });
         });
         return true;
     };
@@ -22236,9 +22305,9 @@
         let sent = false;
         try {
             if (typeof window.__testNoDbWrites !== 'undefined' && window.__testNoDbWrites) sent = true;
-            else if (db) {
+            else if (typeof window.__fsPatchSettingsMenuOrder === 'function') {
                 const patch = {}; patch[PF_ORDER_FIELD] = order; patch[PF_HIDE_FIELD] = hidden;
-                await window.__fsTimeout(setDoc(doc(db, 'settings', 'menuOrder'), patch, { merge: true }), 8000); // ⚠️ merge เท่านั้น — ห้ามทับ side/hub ของเมนู
+                await window.__fsPatchSettingsMenuOrder(patch); // 🌉 ผ่านสะพานของโมดูล — ที่นี่อ้าง db/setDoc ตรง ๆ ไม่ได้ (เดิม ReferenceError ถูกกลืน ⇒ บันทึกไม่ถึงเซิร์ฟเวอร์) · ⚠️ merge เท่านั้น — ห้ามทับ side/hub ของเมนู
                 sent = true;
             }
         } catch (e) { sent = false; }
