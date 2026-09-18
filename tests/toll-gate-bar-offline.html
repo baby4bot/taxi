@@ -37,8 +37,9 @@
         <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> แล้วเปิด
         <code>http://127.0.0.1:58911/tests/toll-gate-bar-offline.html</code>
         <br>เกณฑ์ที่ต้องผ่าน: แถบ<b>ห้ามทับ</b>ปุ่มแฮมเบอร์เกอร์/ปุ่มแชร์ (หน้าจอหลัก) และ<b>ห้ามทับ</b>เวลาเริ่ม/กม./เวลารถติด (จอมิเตอร์ใหญ่)
+        <br>🔕 <b>โหมดไม่กวน</b>: ด่านที่จำราคาได้แล้ว = ไม่แจ้งล่วงหน้าเลย (S6) · สรุปสั้น ๆ ครั้งเดียวตอนผ่านด่าน · ด่านที่ยังไม่รู้ราคายังแจ้งเหมือนเดิม (S6b)
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (9 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (11 สถานการณ์)</button>
     <button id="dbgBtn" class="alt">🔎 ดูค่าที่วัดได้สด ๆ</button>
     <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
     <div id="summary"></div>
@@ -359,19 +360,73 @@
             return 'ชิป ' + cs.length + ' อัน · แตะชิป 50 → ค่าทางด่วน [' + added.map(s => s.amount).join(',') + '] · จำคู่ ' + w().tollPairGet(BOOTH()) + '฿ · แถบปิด';
         });
 
-        await runScenario('S6 · โหมดรู้ราคาแล้ว: ไม่เด้งแป้นตัวเลข แต่มีปุ่มแก้ราคา', async () => {
+        await runScenario('S6 · โหมดไม่กวน: ด่านที่รู้ราคาแล้ว — ไม่แจ้งล่วงหน้าเลย + สรุปครั้งเดียวตอนผ่านด่าน', async () => {
             resetGate(); clearSurcharges();
-            w().tollGateBarShow('known', BOOTH(), 0, 0.9, 65);
+            const cw = w();
+            // เตรียม: จำราคาด่านนี้ไว้ 65 (เท่ากับเคส “เที่ยวนี้เคยคีย์แล้ว”)
+            try { cw.__tollPairs = {}; cw.tollPairsCache(); } catch (e) {}
+            assert(cw.tollLearnPair(BOOTH(), 65) === true, 'จำราคา 65 ไม่สำเร็จ');
+            cw.tollGateBarHide();
+            const toasts = [];
+            const origToast = cw.showToast;
+            cw.showToast = function (m) { toasts.push(String(m)); return origToast.apply(this, arguments); };
+            // (1) ตัวเฝ้าด่านเรียก “แจ้งล่วงหน้า” — ต้องเงียบสนิท: ไม่มีแถบ ไม่ toast
+            const ok = cw.tollGateNotifyKnown(BOOTH(), 0, 65, 2.4, true);
             await wait(60);
-            const e = bar();
-            assert(shown(), 'แถบไม่แสดง');
-            assert(!e.querySelector('#tollPad') && !e.querySelector('.toll-pad'), 'ต้องไม่มีแป้นตัวเลขในแถบ');
-            const cs = chips();
-            assert(cs.length === 1 && /แก้ราคา/.test(cs[0]), 'ควรมีชิป “✏️ แก้ราคา” อันเดียว ได้ ' + JSON.stringify(cs));
-            assert(/65/.test(e.innerText), 'แถบควรบอกยอด 65 ให้เห็น');
-            assert(w().surchargeList.length === 0, 'โหมดแจ้งยอดต้องไม่บวกเงินเอง');
-            w().tollGateBarHide();
-            return 'ชิป: ' + JSON.stringify(cs) + ' · ไม่มีแป้นตัวเลข · ยังไม่บวกเงิน (รอขึ้นด่านจริง)';
+            assert(ok === true, 'ควรจดว่าด่านนี้จัดการแล้ว (กันวนถามซ้ำ)');
+            assert(!shown(), 'โหมดไม่กวน: ต้องไม่มีแถบขึ้นเลย');
+            assert(toasts.length === 0, 'โหมดไม่กวน: ต้องไม่ toast ล่วงหน้า ได้ ' + JSON.stringify(toasts));
+            assert(cw.__tollGateState.notified[cw.__tollGateKey(BOOTH())] === 'silent', 'ต้องจดเป็น silent ได้ ' + JSON.stringify(cw.__tollGateState.notified));
+            // (2) ผ่านด่านจริง → บวกให้เอง + สรุปสั้น ๆ ครั้งเดียว
+            assert(cw.tollGateAutoAdd(BOOTH(), 0, 65, 0) === true, 'ผ่านด่านแล้วควรบวกให้เอง');
+            await wait(60);
+            cw.showToast = origToast;
+            const sums = toasts.filter(m => /ผ่านด่าน/.test(m));
+            const money = cw.surchargeList.filter(s => s.name === 'ค่าทางด่วน');
+            assert(sums.length === 1, 'ควรมีสรุป “ผ่านด่าน” ครั้งเดียว ได้ ' + JSON.stringify(toasts));
+            assert(money.length === 1 && money[0].amount === 65, 'ควรบวก 65 ครั้งเดียว ได้ ' + JSON.stringify(money));
+            assert(cw.tollGateAutoAdd(BOOTH(), 0, 65, 0) === false, 'เรียกซ้ำต้องไม่บวกซ้ำ');
+            const diag = cw.__tollDiag();
+            assert(diag.quietKnownGates === true && diag.passSummaries >= 1, 'diag ต้องบอกว่าโหมดไม่กวนเปิด และนับสรุปผ่านด่าน ได้ ' + JSON.stringify({ q: diag.quietKnownGates, n: diag.passSummaries }));
+            clearSurcharges();
+            try { cw.__tollPairs = {}; cw.tollPairsCache(); } catch (e) {}
+            cw.tollGateBarHide();
+            return 'ไม่แจ้งล่วงหน้า: แถบ 0 · toast 0 (จด ' + cw.__tollGateState.notified[cw.__tollGateKey(BOOTH())] + ') · ผ่านด่าน → ' + JSON.stringify(sums) + ' · บวก 65 ครั้งเดียว';
+        });
+
+        await runScenario('S6b · ด่านที่ยัง “ไม่รู้ราคา” ต้องยังแจ้ง (ไม่งั้นไม่มีค่าทางด่วนเลย)', async () => {
+            resetGate(); clearSurcharges();
+            const cw = w();
+            // ด่านที่ไม่รู้ชื่อด่านขึ้น = จำราคาไม่ได้ ⇒ ระบบไม่บวกให้เอง ⇒ ต้องแจ้งให้คนขับคีย์/ยืนยัน
+            const unknown = { system: 'motorway', line: '', sysFull: 'มอเตอร์เวย์', price: 45 };
+            cw.tollGateBarHide();
+            const toasts = [];
+            const origToast = cw.showToast;
+            cw.showToast = function (m) { toasts.push(String(m)); return origToast.apply(this, arguments); };
+            const ok = cw.tollGateNotifyKnown(unknown, 0, null, 2.0, false);
+            await wait(60);
+            cw.showToast = origToast;
+            assert(ok === true, 'ด่านที่ไม่รู้ราคาควรถูกแจ้ง');
+            assert(shown(), 'ต้องมีแถบขึ้น (ให้แตะยอด/คีย์เอง)');
+            assert(toasts.length >= 1, 'ต้องมี toast บอกยอดตามตาราง ได้ ' + JSON.stringify(toasts));
+            assert(toasts.some(m => /45/.test(m)), 'toast ควรบอกยอดตามตาราง 45 ได้ ' + JSON.stringify(toasts));
+            cw.tollGateBarHide();
+            return 'ไม่รู้ราคา/ไม่รู้ชื่อด่าน → แถบขึ้น + toast ' + JSON.stringify(toasts) + ' (ยังไม่บวกเอง เพราะจำคู่ไม่ได้)';
+        });
+
+        await runScenario('S6c · กติกาล้วน __tollRowWarnAllowed: รู้ราคา = ห้ามเตือน · ไม่รู้ราคา = ต้องเตือน', async () => {
+            const cw = w();
+            assert(typeof cw.__tollRowWarnAllowed === 'function', 'ไม่พบ __tollRowWarnAllowed (กติกาโหมดไม่กวนของแถวในแผนที่)');
+            try { cw.__tollPairs = {}; cw.tollPairsCache(); } catch (e) {}
+            // (1) ยังไม่รู้ราคา + รู้ชื่อด่านขึ้น → ต้องเตือน
+            assert(cw.__tollRowWarnAllowed(BOOTH()) === true, 'ยังไม่รู้ราคา ควรอนุญาตให้เตือน');
+            // (2) จำราคาได้แล้ว → ห้ามเตือน
+            assert(cw.tollLearnPair(BOOTH(), 65) === true, 'จำราคา 65 ไม่สำเร็จ');
+            assert(cw.__tollRowWarnAllowed(BOOTH()) === false, 'รู้ราคาแล้วต้องไม่เตือนซ้ำ');
+            // (3) ด่านที่ไม่รู้ชื่อด่านขึ้น (จำคู่ไม่ได้) → ยังต้องเตือน
+            assert(cw.__tollRowWarnAllowed({ system: 'motorway', price: 45 }) === true, 'ด่านที่ไม่รู้ชื่อขึ้น ต้องยังเตือน');
+            try { cw.__tollPairs = {}; cw.tollPairsCache(); } catch (e) {}
+            return 'ไม่รู้ราคา=true · จำได้ 65฿=false · ไม่รู้ชื่อด่าน=true';
         });
 
         await runScenario('S7 · ✕ ยกเลิก: ปิดแถบ + ไม่เด้งซ้ำเที่ยวนี้', async () => {

@@ -11500,25 +11500,33 @@
         return true;
     };
 
-    // 🔔 รู้ราคาอยู่แล้ว → “แจ้งยอด” ล่วงหน้าโดยไม่เด้งแป้น (ผู้ใช้สั่ง: ครั้งต่อไปไม่ต้องคีย์)
-    //    มีปุ่มให้แก้ได้ในกรณีที่ราคาเปลี่ยน (แตะเพื่อเปิดแป้น)
+    // 🔔 รู้ราคาอยู่แล้ว → “โหมดไม่กวน” (ผู้ใช้สั่ง 18 ก.ย. 69): เงียบสนิท ไม่เด้งแถบ ไม่ toast ไม่สั่น ไม่พูด
+    //    ทำไมเงียบได้: ราคาที่จำไว้จะถูก “บวกให้เอง” ตอนขึ้นด่านจริงอยู่แล้ว ⇒ ไม่มีอะไรให้คนขับต้องทำตอนนี้
+    //    แล้วค่อยโชว์ “สรุปสั้น ๆ ตอนผ่านด่าน” (tollGateAutoAdd) อันเดียวจบ
+    //    ⛔ ที่ยังต้อง “แจ้ง” = ด่านที่ยังไม่รู้ราคา (เด้งแป้นให้คีย์ครั้งเดียว) และด่านที่ไม่รู้ชื่อด่านขึ้น
+    //       (จำราคาไม่ได้ ⇒ ระบบไม่บวกให้เอง ⇒ ถ้าเงียบด้วยจะไม่มีค่าทางด่วนเลย)
     window.tollGateNotifyKnown = (booth, idx, price, awayKm, canLearn) => {
         if (!booth) return false;
         const st = __tollGateState;
         const key = window.__tollGateKey(booth);
         if (!key || st.notified[key] || st.prompted[key] || st.handled[key]) return false;
+        // 🛣️ รู้ราคาจริงแล้ว (จำจากครั้งก่อน) → จดไว้แล้วเงียบ (ยังกันไม่ให้ watcher วนมาถามซ้ำ)
+        if (price > 0 && canLearn !== false) { st.notified[key] = 'silent'; return true; }
         st.notified[key] = true;
         const sys = (window.tollSysFull && window.tollSysFull(booth)) || (window.tollSysLabel && window.tollSysLabel(booth)) || 'ทางด่วน';
         const gate = booth.gateIn ? (' ' + booth.gateIn) : '';
         const away = (typeof awayKm === 'number' && awayKm > 0) ? ('อีก ' + awayKm.toFixed(1) + ' กม. · ') : '';
+        // 💬 ยอดที่โชว์: ราคาที่เคยจ่าย > ราคาตามตาราง > “ยังไม่รู้ราคา” (ต้องแสดงให้คนขับเห็นยอดเสมอถ้ามี)
+        const tbl = Math.round(Number(booth.price) || 0);
+        const priceShown = (price > 0) ? price : tbl;
         const money = (price > 0)
             ? ((price) + '฿' + (canLearn === false ? ' (ตามตาราง)' : ' (ราคาที่เคยจ่าย)'))
-            : 'ยังไม่รู้ราคา (ตามตาราง)';
+            : (tbl > 0 ? (tbl + '฿ (ตามตาราง · ยังไม่รู้ราคาจริง)') : 'ยังไม่รู้ราคา (ตามตาราง)');
         try { window.showToast('🛣️ ' + away + 'ขึ้น ' + sys + gate + ' · ค่าทางด่วน ' + money + ' — บวกให้เองเมื่อขึ้นด่าน', false); } catch (e) {}
         try { if (navigator.vibrate && window.userVibrateGold !== false) { navigator.vibrate(120); } } catch (e) {}
         try {
             if (typeof window.navVoiceSpeak === 'function') {
-                window.navVoiceSpeak('อีก ' + Math.max(1, Math.round(awayKm * 1000 / 100)) * 100 + ' เมตร ถึงด่าน' + gate + ' ค่าทางด่วน ' + (price > 0 ? price + ' บาท' : 'ไม่ทราบราคา'));
+                window.navVoiceSpeak('อีก ' + Math.max(1, Math.round(awayKm * 1000 / 100)) * 100 + ' เมตร ถึงด่าน' + gate + ' ค่าทางด่วน ' + (priceShown > 0 ? priceShown + ' บาท' : 'ไม่ทราบราคา'));
             }
         } catch (e) {}
         // ✏️ แสดงเป็น “แถบเล็กด้านบน” เหมือนโหมดถาม (ผู้ใช้สั่งให้เลิกบังจอ) — มีปุ่มแก้ราคาในตัว
@@ -11541,7 +11549,8 @@
                 + '<button type="button" onclick="window.tollGateEditNow()" style="flex-shrink:0; padding:6px 12px; border-radius:10px; border:1px solid rgba(56,189,248,0.55); background:rgba(56,189,248,0.2); color:#7dd3fc; font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer;">แก้ราคา</button>';
             document.body.appendChild(el);
             if (window.__tollGateEditT) clearTimeout(window.__tollGateEditT);
-            window.__tollGateEditT = setTimeout(() => { const e2 = document.getElementById('tollGateEditChip'); if (e2 && e2.parentNode) e2.parentNode.removeChild(e2); }, 20000);
+            // ⏱ 12 วิ (เดิม 20) — โหมดไม่กวน: พอให้แตะแก้ แต่ไม่ค้างบังจอนาน
+            window.__tollGateEditT = setTimeout(() => { const e2 = document.getElementById('tollGateEditChip'); if (e2 && e2.parentNode) e2.parentNode.removeChild(e2); }, 12000);
         } catch (e) {}
     };
     window.tollGateEditNow = () => {
@@ -11576,6 +11585,7 @@
         const p = Math.round(Number(price) || 0);
         if (!(p > 0)) return false;
         st.handled[key] = 'auto';
+        st.quietPass = (st.quietPass || 0) + 1;   // 🔕 นับ “สรุปตอนผ่านด่าน” (โหมดไม่กวน) ไว้ให้ __tollDiag ตรวจได้
         try {
             window.addSurcharge(p, 'ค่าทางด่วน');
             // จดรหัสชิปที่เพิ่งเพิ่ม → เวลาแก้ราคาจะได้ “แทนที่” ไม่ใช่บวกซ้อน
@@ -11585,15 +11595,18 @@
             } catch (e) {}
         } catch (e) { return false; }
         const sys = (window.tollSysFull && window.tollSysFull(booth)) || (window.tollSysLabel && window.tollSysLabel(booth)) || 'ทางด่วน';
-        try { window.showToast('🛣️ บวกค่าทางด่วน ' + p + '฿ ให้แล้ว (' + sys + (booth.gateIn ? ' ' + booth.gateIn : '') + ') · ราคาที่เคยจ่าย', false); } catch (e) {}
-        // 🛣️ บวกให้เองแล้ว → ปิดแถบด้านบน (หน้าที่มันจบแล้ว) เหลือแค่ชิป “แก้ราคา” อันเล็กด้านล่าง
+        const gate = booth.gateIn ? (' ' + booth.gateIn) : '';
+        // 🔕 โหมดไม่กวน: ด่านที่รู้ราคาแล้ว “ไม่แจ้งก่อนถึงด่าน” — สรุปสั้น ๆ ครั้งเดียวตอนผ่านด่านจริง
+        try { window.showToast('🛣️ ผ่านด่าน' + gate + ' · +' + p + '฿', false); } catch (e) {}
+        // 🛣️ บวกให้เองแล้ว → ปิดแถบด้านบน (ถ้ามีค้างจากด่านอื่น) เหลือแค่ชิป “แก้ราคา” อันเล็กด้านล่าง
         try { window.tollGateBarHide(); } catch (e) {}
         // ✏️ ให้ชิป “แก้ราคา” ต่อด้วย — จ่ายจริงไม่ตรงกับที่จำไว้ = แตะครั้งเดียวแก้ (ระบบจะ “แทนที่” ไม่บวกซ้อน)
+        //    ⏱ 12 วิ (เดิม 20) — โหมดไม่กวน: ให้เวลาพอแตะแก้ แต่ไม่ค้างบังจอนาน
         try { window.showTollGateEditChip(booth, idx, p); } catch (e) {}
         try { if (navigator.vibrate && window.userVibrateGold !== false) { navigator.vibrate([130, 70, 130]); } } catch (e) {}
         try {
             if (typeof window.navVoiceSpeak === 'function') {
-                window.navVoiceSpeak('ขึ้น' + sys + ' ค่าทางด่วน ' + p + ' บาท ระบบบวกให้แล้ว');
+                window.navVoiceSpeak('ผ่านด่าน' + gate + ' ค่าทางด่วน ' + p + ' บาท บวกให้แล้ว');
             }
         } catch (e) {}
         return true;
@@ -13675,7 +13688,10 @@
         })),
         learnedPairs: Object.keys(window.__tollPairs || {}),
         gateState: JSON.parse(JSON.stringify(__tollGateState)),
-        lastAction: window.__tollGateLastAction || null
+        lastAction: window.__tollGateLastAction || null,
+        quietKnownGates: true,   // 🔕 โหมดไม่กวน: ด่านที่รู้ราคาแล้ว = ไม่แจ้งล่วงหน้า (สรุปตอนผ่านด่านเท่านั้น)
+        silentMarks: Object.keys(__tollGateState.notified || {}).filter((k) => __tollGateState.notified[k] === 'silent').length,
+        passSummaries: __tollGateState.quietPass || 0
     });
 
     /** วินิจฉัยบนเครื่องจริง: เปิดสะพานไหม · สแนปช็อตล่าสุดเป็นอย่างไร (ดูฝั่งแอปด้วย carStateDebug) */
@@ -16504,7 +16520,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = 'bed7a29a97';
+    const APP_WEB_VERSION = '9ea227f433';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -16941,6 +16957,9 @@
         ['2026-09-18', '🚕 กด “เริ่มมิเตอร์” แล้วอยู่จอมิเตอร์ใหญ่เลย — เลิกเด้งกลับหน้าแรกเป็นครั้งคราว'],
         ['2026-09-18', '🗺️ มีสิทธิ์มินิแมพ = เห็นทันทีตอนเริ่มเที่ยว — ไม่ต้องรีเฟรชหรือออกเข้าแอปใหม่'],
         ['2026-09-18', '🔒 สิทธิ์มาช้ากลางเที่ยว ระบบคืนมินิแมพให้เอง · กด ✕ เองแล้วจะไม่เด้งกลับ'],
+        ['2026-09-18', '🔕 โหมดไม่กวน: ด่านที่จำราคาได้แล้ว ไม่แจ้งล่วงหน้าอีก — เงียบจนกว่าจะผ่านด่าน'],
+        ['2026-09-18', '🛣️ ผ่านด่านแล้วขึ้นสรุปสั้น ๆ ครั้งเดียว “ผ่านด่านอโศก · +65฿” พร้อมปุ่มแก้ราคา 12 วิ'],
+        ['2026-09-18', '🗣 ด่านที่ยังไม่รู้ราคายังแจ้งเหมือนเดิม — บอกยอดตามตารางให้เห็นก่อนขึ้นด่าน'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -21706,6 +21725,15 @@
         var idx = nearestIndex(car);
         return (typeof cum[idx] === 'number') ? cum[idx] : null;
     }
+    // 🔕 กติกาล้วน (18 ก.ย. 69 · โหมดไม่กวน): จะ “เตือน/พูด” เกี่ยวกับด่านนี้ไหม
+    //    ด่านที่รู้ราคาจริงแล้ว (จำจากครั้งก่อน) = ห้ามเตือน เพราะระบบจะบวกให้เองแล้วสรุปครั้งเดียวตอนผ่านด่าน
+    //    ⛔ ยังต้องเตือนเมื่อ “ยังไม่รู้ราคาจริง” (ด่านไม่รู้ชื่อขึ้น ⇒ จำคู่ไม่ได้ ⇒ ไม่มีใครบวกให้)
+    window.__tollRowWarnAllowed = function (b) {
+        try {
+            var learned = (window.tollPairGet && b) ? window.tollPairGet(b) : null;
+            return !(learned > 0);
+        } catch (e) { return true; }
+    };
     // 🛣️ ช่วงทางด่วนที่ “กำลังจะขึ้น” หรือ “กำลังวิ่งอยู่” — จากข้อมูลเส้นทางจริง (ไม่กินโควตาเพิ่ม)
     function tollAheadKmCfg() { try { var v = Number((window.__tollRates || {}).aheadKm); return (isFinite(v) && v > 0) ? v : 2.5; } catch (e) { return 2.5; } }
     function paintTollRow() {
@@ -21740,9 +21768,13 @@
             var alertKey = (b.gateIn || b.from || '') + '@' + b.startKm + '@' + b.price;
             if (tollAlertKey !== alertKey) {
                 tollAlertKey = alertKey;
-                var msg = 'อีก ' + away.toFixed(1) + ' กม. · ขึ้น ' + (b.system === 'tollway' ? 'Tollway' : forSys) + (b.gateIn ? ' ' + b.gateIn : '') + ' ' + b.price + ' บาท';
-                try { if (window.showToast) { window.showToast('🛣️ ' + msg, false); } } catch (e) {}
-                try { if (window.navVoiceSpeak) { window.navVoiceSpeak(msg); } } catch (e) {}
+                // 🔕 โหมดไม่กวน (18 ก.ย. 69): ด่านที่จำราคาไว้แล้ว = เงียบ (เดี๋ยวมีสรุปตอนผ่านด่าน)
+                //    ⛔ ยังเตือนถ้าราคานี้ “ยังไม่รู้จริง” (ด่านไม่รู้ชื่อขึ้น = ระบบไม่บวกให้เอง)
+                if (window.__tollRowWarnAllowed(b)) {
+                    var msg = 'อีก ' + away.toFixed(1) + ' กม. · ขึ้น ' + (b.system === 'tollway' ? 'Tollway' : forSys) + (b.gateIn ? ' ' + b.gateIn : '') + ' ' + b.price + ' บาท';
+                    try { if (window.showToast) { window.showToast('🛣️ ' + msg, false); } } catch (e) {}
+                    try { if (window.navVoiceSpeak) { window.navVoiceSpeak(msg); } } catch (e) {}
+                }
             }
         }
         tollRow.style.display = '';
