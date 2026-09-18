@@ -1093,6 +1093,31 @@
             box-shadow: 0 6px 18px rgba(0,0,0,0.45);
         }
 
+        /* 🚕 (18 ก.ย. 69) แถบเตือน “มิเตอร์เดินแล้ว แต่เริ่มนำทางไม่ได้” — ผู้ใช้สั่ง:
+           “ถ้ากดเริ่มเที่ยวแล้วระบบเริ่มนำทางไม่ได้ มันจะเงียบ — ควรขึ้นแถบเตือนสั้น ๆ ให้รู้ตัวทันที”
+           ⇒ ไม่ใช้ toast เพราะต้อง **ค้างจนกด** อย่างใดอย่างหนึ่ง (ลองใหม่ / ปิด) จึงใช้แถบแบบเดียวกับแถบทางด่วน */
+        .nav-warn-bar {
+            position: fixed; left: 0; right: 0; top: var(--navwarn-top, 0px); z-index: 240065; display: none;
+            align-items: center; gap: 8px; padding: 7px 10px 8px;
+            background: linear-gradient(180deg, rgba(180,83,9,0.98), rgba(154,52,18,0.98));
+            color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.42); font-family: inherit;
+        }
+        .nav-warn-bar.show { display: flex; }
+        .nav-warn-bar .nwb-txt { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.45; font-weight: 600; }
+        .nav-warn-bar .nwb-txt b { font-weight: 800; }
+        .nav-warn-bar .nwb-btn {
+            flex-shrink: 0; padding: 7px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.18); color: #fff; font-size: 12.5px; font-weight: 700;
+            font-family: inherit; cursor: pointer; touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent; display: flex; align-items: center; gap: 5px;
+        }
+        .nav-warn-bar .nwb-btn:active { transform: scale(0.95); }
+        .nav-warn-bar .nwb-x {
+            flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.32); background: rgba(0,0,0,0.22); color: #fff;
+            font-size: 14px; line-height: 1; font-family: inherit; cursor: pointer;
+        }
+
         /* ⌨️ (18 ก.ย. 69) แป้นตัวเลขให้ “จิ้ม” กรอกค่าทางด่วน — ผู้ใช้สั่ง:
            “ให้เป็นตัวเลขให้เป็นจิ้ม ว่ากี่บาทกี่บาท” (ใช้ทั้งตอนกดเอง และตอนระบบเด้งถามเองก่อนถึงด่าน) */
         #tollModal .toll-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: var(--space-field); }
@@ -11355,6 +11380,96 @@
         } catch (e) {}
     };
 
+    // 🚕 (18 ก.ย. 69) แถบเตือน “มิเตอร์เดินแล้ว แต่เริ่มนำทางไม่ได้” — ผู้ใช้สั่ง:
+    //    “ถ้ากดเริ่มเที่ยวแล้วระบบเริ่มนำทางไม่ได้ มันจะเงียบ — ควรขึ้นแถบเตือนสั้น ๆ ให้รู้ตัวทันที”
+    //    ⛔ ไม่ใช้ toast เพราะ toast หายเอง — แถบนี้ต้องค้างจนผู้ใช้เลือก “ลองใหม่” หรือกดปิด
+    //    ⛔ ห้ามมี backdrop — ต้องไม่บล็อกการแตะส่วนอื่นของจอ (กติกาเดียวกับแถบทางด่วน)
+    window.__navWarnRetry = null;
+    window.__navWarnTop = () => {
+        try {
+            let t = window.__tollGateBarTop ? window.__tollGateBarTop() : 0;
+            const tb = document.getElementById('tollGateBar');   // แถบทางด่วนโชว์อยู่ด้วย → ต่อท้ายลงมา ไม่ทับกัน
+            if (tb && tb.className.indexOf('show') >= 0 && tb.className.indexOf('collapsed') < 0) {
+                t = Math.round(tb.getBoundingClientRect().bottom) + 4;
+            }
+            return Math.max(0, Math.round(Number(t) || 0));
+        } catch (e) {}
+        return 0;
+    };
+    window.__navWarnVisible = () => {
+        try {
+            const el = document.getElementById('navWarnBar');
+            return !!(el && el.className.indexOf('show') >= 0);
+        } catch (e) { return false; }
+    };
+    // 🐞 (เจอด้วย S11) กด ✕ แล้วแถบต้องไม่ “เด้งกลับเอง” จากตัวตรวจรอบที่ 2/3
+    //   ⇒ แยก “ระบบซ่อน” กับ “ผู้ใช้ปิด” ออกจากกัน — ธงปิดจะล้างเฉพาะเมื่อเริ่มเที่ยวใหม่
+    window.__navWarnMuted = false;
+    window.navWarnBarHide = () => {
+        try {
+            const el = document.getElementById('navWarnBar');
+            if (el) { el.className = 'nav-warn-bar'; el.innerHTML = ''; }
+            window.__navWarnRetry = null;
+        } catch (e) {}
+    };
+    window.navWarnBarDismiss = () => {   // ผู้ใช้กด ✕ เอง = ปิดเที่ยวนี้เลย (ระบบห้ามเปิดซ้ำ)
+        window.__navWarnMuted = true;
+        window.navWarnBarHide();
+    };
+    // text = ข้อความไทย (มี <b> ได้) · retry = ฟังก์ชัน “ลองใหม่” (ไม่ส่ง = ไม่มีปุ่ม)
+    window.navWarnBarShow = (text, retry) => {
+        try {
+            let el = document.getElementById('navWarnBar');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'navWarnBar';
+                el.className = 'nav-warn-bar';
+                document.body.appendChild(el);
+            }
+            window.__navWarnRetry = (typeof retry === 'function') ? retry : null;
+            el.innerHTML = '<span class="nwb-txt">' + String(text || '') + '</span>'
+                + (window.__navWarnRetry ? '<button type="button" class="nwb-btn" onclick="window.navWarnRetryNow()">🔄 ลองใหม่</button>' : '')
+                + '<button type="button" class="nwb-x" title="ปิด" onclick="window.navWarnBarDismiss()">✕</button>';
+            window.__navWarnText = String(text || '');
+            el.className = 'nav-warn-bar show';
+            window.__navWarnPlace(el);
+            if (!window.__navWarnPlaceHooked) {
+                window.__navWarnPlaceHooked = true;
+                const re = () => { if (window.__navWarnVisible()) window.__navWarnPlace(); };
+                window.addEventListener('resize', re);
+                window.addEventListener('orientationchange', () => setTimeout(re, 120));
+                const tick = setInterval(() => { if (!window.__navWarnVisible()) { clearInterval(tick); return; } re(); }, 1500);
+            }
+            return true;
+        } catch (e) { return false; }
+    };
+    // 🔄 ปุ่ม “ลองใหม่” — ซ่อนก่อนแล้วลองจริง · ถ้ายังล้มอีก ต้องบอกให้รู้ (ไม่ใช่หายเงียบ)
+    window.navWarnRetryNow = () => {
+        try {
+            const f = window.__navWarnRetry;
+            const txt = window.__navWarnText;
+            window.navWarnBarHide();
+            if (f) { f(); }
+            setTimeout(() => {
+                try {
+                    if (window.__navArmed === true) { window.navWarnBarHide(); return; }
+                    if (window.__navWarnMuted) { return; }
+                    if (!window.isManualRunning) { return; }
+                    window.navWarnBarShow(txt, f);
+                } catch (e) {}
+            }, 800);
+        } catch (e) {}
+    };
+    window.__navWarnPlace = (node) => {
+        try {
+            const el = node || document.getElementById('navWarnBar');
+            const t = window.__navWarnTop();
+            document.documentElement.style.setProperty('--navwarn-top', t + 'px');
+            if (el) el.style.top = t + 'px';
+            return t;
+        } catch (e) { return 0; }
+    };
+
     window.tollGateBarShow = (mode, booth, idx, awayKm, price) => {
         try {
             if (!booth) return false;
@@ -12679,11 +12794,38 @@
         //           ⇒ ไม่เริ่มนำทาง (navIntent ไม่ถูกตั้ง) ⇒ ตอนสิทธิ์โหลดเสร็จก็ไม่มีอะไรคืนมินิแมพให้
         //    ✅ ตอนนี้ใช้พิกัดจาก “เส้นทางที่เพิ่งคำนวณ” (`__pendingRouteStart`) เป็นหลัก — ไม่พึ่ง destLoc อีก
         try { window.startMeterAndTracking(); } catch (e) { try { console.warn('[startTrip] startMeterAndTracking ล้มเหลว:', e); } catch (e2) {} }
-        try {
-            if (p.sLat && p.sLon && p.dLat && p.dLon) {
-                window.startNavigationMap(p.sLat, p.sLon, p.dLat, p.dLon, p.name || ($('destInput') ? $('destInput').value : ''), currentTrueRemainKm || p.km || 0, p.coords);
-            }
-        } catch (e) { try { console.warn('[startTrip] startNavigationMap ล้มเหลว:', e); } catch (e2) {} }
+        // 🚕 (18 ก.ย. 69) ผู้ใช้สั่ง: “ถ้าเริ่มนำทางไม่ได้ มันจะเงียบ — ควรขึ้นแถบเตือนสั้น ๆ ให้รู้ตัวทันที”
+        //    ⇒ ตั้งธงก่อนเรียก แล้วตรวจซ้ำอีกครั้งหลังระบบมีเวลาเตรียม (GPS/สิทธิ์/เรนเดอร์) ⇒ ไม่ขึ้นถ้าล้ม
+        //    ⛔ เดิมเรียกเฉพาะตอนมี sLat/sLon/dLat/dLon ครบ — ถ้ามีแต่ `coords` (เส้นทางที่คำนวณได้)
+        //       มินิแมพจะไม่เริ่มเลยทั้งที่เส้นทางมี ⇒ ตอนนี้รับ `coords` ตรง ๆ ได้
+        window.__navWarnMuted = false;   // เที่ยวใหม่ = ล้าง “ผู้ใช้กดปิดแถบเตือนเที่ยวที่แล้ว”
+        window.navWarnBarHide();
+        const navName = p.name || ($('destInput') ? $('destInput').value : '');
+        const navKm = currentTrueRemainKm || p.km || 0;
+        const wantNav = !!(p.dLat || p.dLon || (p.coords && p.coords.length > 1) || p.dName);
+        const tryNav = () => {
+            window.__navArmed = false;
+            try {
+                if (p.sLat && p.sLon && p.dLat && p.dLon) {
+                    window.startNavigationMap(p.sLat, p.sLon, p.dLat, p.dLon, navName, navKm, p.coords);
+                } else if (p.coords && p.coords.length > 1) {
+                    window.startNavigationMap(null, null, null, null, navName, navKm, p.coords);
+                }
+            } catch (e) { try { console.warn('[startTrip] startNavigationMap ล้มเหลว:', e); } catch (e2) {} }
+            if (window.__navArmed === true) { window.navWarnBarHide(); }   // ลองใหม่แล้วสำเร็จ → เก็บแถบเตือน
+            return window.__navArmed === true;
+        };
+        tryNav();
+        // ตรวจซ้ำ 2 จังหวะ (GPS แรกมาช้า · สิทธิ์โหลดช้า) — ถ้ายังไม่ติดจริง ขึ้นแถบเตือนให้รู้ตัว
+        [900, 2600].forEach((ms) => setTimeout(() => {
+            try {
+                if (!window.isManualRunning) { return; }        // จบเที่ยวไปแล้ว = ไม่ต้องเตือน
+                if (!wantNav) { return; }                       // ไม่ได้ขอเส้นทางไว้แต่แรก = ไม่ใช่ความผิดพลาด
+                if (window.__navWarnMuted) { return; }          // ผู้ใช้กด ✕ ไปแล้ว = ห้ามเด้งกลับจนจบเที่ยว
+                if (window.__navArmed === true) { window.navWarnBarHide(); return; }
+                window.navWarnBarShow('🚕 <b>มิเตอร์เดินแล้ว แต่เริ่มนำทางไม่ได้</b><br>เส้นทางไม่พร้อม (เน็ต/พิกัด/สิทธิ์) — แตะ “ลองใหม่” หรือเริ่มนำทางจากช่องค้นหาได้เลย', tryNav);
+            } catch (e) {}
+        }, ms));
         // 🛣️ เริ่มเที่ยวแล้ว — รีเฟรชป้ายค่าทางด่วนบนหน้าหลักทันที (แบนเนอร์ส้ม + ปุ่ม "ทางด่วน X฿" ในช่องราคา)
         // ให้เห็นยอดรวมทางด่วนของเส้นทางที่เลือกต่อเนื่องระหว่างวิ่ง (มิเตอร์ยังโชว์เฉพาะค่าโดยสารจริง)
         if (window.updateTollDisplay) window.updateTollDisplay();
@@ -16547,7 +16689,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '6f8c3bf244';
+    const APP_WEB_VERSION = 'ba1e6c8a70';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -16990,6 +17132,9 @@
         ['2026-09-18', '🧪 โหมดทดสอบไม่เขียนตารางค่าทางด่วนขึ้นเซิร์ฟเวอร์อีก — ข้อมูลทดสอบไม่หลุด'],
         ['2026-09-18', '🛡 เริ่มเที่ยวแล้วจอใหญ่ไม่ค้าง — ตรวจซ้ำว่าเปิดอยู่ และไม่ดึงกลับถ้ากดปิดเอง'],
         ['2026-09-18', '🧭 มินิแมพใช้พิกัดจากเส้นทางที่เพิ่งคำนวณโดยตรง — คำขอเส้นทางล้มก็ยังเริ่มนำทางได้'],
+        ['2026-09-18', '🚕 เริ่มนำทางไม่ได้ตอนเริ่มเที่ยว → ขึ้นแถบเตือนทันที ไม่เงียบอีก'],
+        ['2026-09-18', '🔄 แถบเตือนมีปุ่ม “ลองใหม่” — กดแล้วยังล้มอีก แถบกลับมาเตือนเอง'],
+        ['2026-09-18', '✕ ปิดแถบเตือนได้เอง — ไม่เด้งกลับกวนจนกว่าจะจบเที่ยว'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -22607,6 +22752,7 @@
     window.navMiniHide = function (remember) {
         canReopen = false; // ปิดโดยระบบ (เช่น จบเที่ยว) — ไม่ต้องมีปุ่มเปิดคืน
         navIntent = false; // 🗺️ จบเที่ยว = ไม่ต้องการนำทางแล้ว (สิทธิ์กลับมาที่หลังก็ห้ามเปิดเอง)
+        try { if (window.navWarnBarHide) window.navWarnBarHide(); } catch (e) {}   // 🚕 จบเที่ยว = เก็บแถบเตือนเริ่มนำทางไม่ได้
         if (remember) { pref.hidden = true; savePref(); }
         hideNow();
     };
@@ -22679,6 +22825,8 @@
         try {
             // ไม่มีเส้นทางและไม่มีพิกัดต้น-ปลาย (เช่น เริ่มมิเตอร์ธรรมดา) → ไม่ต้องเปิดแผนที่ว่าง
             var hasLine = (coords && coords.length > 1) || (sLat && sLon && dLat && dLon);
+            // 🚕 (18 ก.ย. 69) ธงให้ “เริ่มนำทางสำเร็จจริงหรือไม่” — startTripFromPreview ใช้ตัดสินว่าจะขึ้นแถบเตือนไหม
+            window.__navArmed = false;
             if (!hasLine) { hideNow(); return; }
             // 🗺️ เริ่มนำทางจาก “ค้นหาเส้นทาง” → **ตัดสินจากสิทธิ์เท่านั้น** (📌 18 ก.ย. 69 · ผู้ใช้สั่ง)
             //    เดิมบังคับ "เริ่มจากปิดเสมอ" ⇒ แอดมินที่มีสิทธิ์เห็นมินิแมพ ต้องรีเฟรช/ออกเข้าแอปอีกครั้งถึงจะเห็น
@@ -22688,6 +22836,7 @@
             savePref();
             userClosedThisTrip = false;   // เที่ยวใหม่ = ยังไม่ได้ปิดเอง
             navIntent = true;             // เที่ยวนี้ต้องการนำทาง → ถ้าสิทธิ์เพิ่งมาถึง จะคืนแผนที่ให้เอง
+            window.__navArmed = true;     // 🚕 เริ่มนำทางสำเร็จแล้ว (มีเส้นทางจริง) — ใช้ตรวจว่า “เงียบ” หรือ “ล้ม”
             destLabel = destName ? String(destName).slice(0, 40) : '';
             if (coords && coords.length > 1) { window.navMiniSetRoute(coords, destLabel); }
             else if (sLat && sLon && dLat && dLon) { window.navMiniSetRoute([[sLat, sLon], [dLat, dLon]], destLabel); }
