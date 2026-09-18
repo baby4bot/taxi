@@ -1053,6 +1053,32 @@
             transition: transform 0.15s ease, filter 0.15s ease;
         }
         #tollModal .toll-step-btn:active { transform: scale(0.92); filter: brightness(1.1); }
+
+        /* ⌨️ (18 ก.ย. 69) แป้นตัวเลขให้ “จิ้ม” กรอกค่าทางด่วน — ผู้ใช้สั่ง:
+           “ให้เป็นตัวเลขให้เป็นจิ้ม ว่ากี่บาทกี่บาท” (ใช้ทั้งตอนกดเอง และตอนระบบเด้งถามเองก่อนถึงด่าน) */
+        #tollModal .toll-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: var(--space-field); }
+        #tollModal .toll-pad button {
+            height: 47px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.14);
+            background: rgba(255,255,255,0.07); color: #fff; font-size: 21px; font-weight: 600; line-height: 1;
+            padding: 0; cursor: pointer; font-family: inherit;
+            -webkit-user-select: none; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.08s ease, background 0.15s ease;
+        }
+        #tollModal .toll-pad button:active { transform: scale(0.94); background: rgba(255,255,255,0.18); }
+        #tollModal .toll-pad button.pad-fn { font-size: 15px; font-weight: 700; background: rgba(255,255,255,0.04); color: var(--text-dim); }
+        #tollModal .toll-pad button.pad-ok { background: rgba(34,197,94,0.22); border-color: rgba(34,197,94,0.55); color: #86efac; }
+        #tollModal .toll-pad button.pad-ok:active { background: rgba(34,197,94,0.38); }
+        /* ชิปยอดที่จำไว้/ตามตาราง — จิ้มครั้งเดียวเติมลงช่องเลย */
+        #tollModal .toll-quick { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; margin-bottom: var(--space-field); }
+        #tollModal .toll-quick button {
+            padding: 7px 13px; border-radius: 11px; border: 1px solid rgba(56,189,248,0.45);
+            background: rgba(56,189,248,0.14); color: #7dd3fc; font-size: 13.5px; font-weight: 600;
+            font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+        }
+        #tollModal .toll-quick button.learned { border-color: rgba(34,197,94,0.55); background: rgba(34,197,94,0.16); color: #86efac; }
+        #tollModal .toll-gate-hint { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 12px; text-align: center; }
+        #tollModal .toll-gate-hint b { color: #fff; }
         #tollModal #tollMinusBtn { background: linear-gradient(135deg, #ff7a88, #f43f5e); }
         #tollModal #tollPlusBtn { background: var(--green-grad); }
 
@@ -2498,6 +2524,8 @@
 <div id="tollModal" class="custom-confirm-overlay" style="display: none;">
     <div class="custom-confirm-box" style="padding: 25px 20px;">
         <h3 id="tollModalTitle" class="custom-confirm-title" style="margin-bottom: var(--space-field);">ค่าทางด่วน</h3>
+        <div id="tollModalHint" class="toll-gate-hint" style="display:none;"></div>
+        <div id="tollModalQuick" class="toll-quick" style="display:none;"></div>
         <div style="position:relative; width:100%; margin-bottom: var(--space-field);">
             <input type="text" inputmode="numeric" pattern="[0-9]*" id="tollInput" placeholder="ระบุจำนวนเงิน (บาท)" style="width: 100%; padding: 15px; border-radius: 15px; background: var(--input-bg); border: 1px solid var(--border-glass); color: white; text-align: center; font-size: 18px; box-sizing: border-box; outline:none;" autocomplete="off">
             <div style="position:absolute; top:50%; right:7px; transform:translateY(-50%); display:flex; gap:6px; z-index:2;">
@@ -2505,8 +2533,23 @@
                 <button type="button" id="tollPlusBtn" class="toll-step-btn flex-center" onpointerdown="window.tollHoldStart(5)" onpointerup="window.tollHoldEnd()" onpointerleave="window.tollHoldEnd()" onpointercancel="window.tollHoldEnd()" title="บวก 5 บาท (กดค้างเพื่อเพิ่มเร็ว ๆ)" aria-label="บวก 5 บาท">+</button>
             </div>
         </div>
+        <!-- ⌨️ แป้นตัวเลขให้จิ้ม (ผู้ใช้สั่ง 18 ก.ย. 69) — ใช้ทั้งตอนกดเองและตอนระบบเด้งถามก่อนถึงด่าน -->
+        <div class="toll-pad" id="tollPadGrid">
+            <button type="button" onclick="window.tollKey('1')">1</button>
+            <button type="button" onclick="window.tollKey('2')">2</button>
+            <button type="button" onclick="window.tollKey('3')">3</button>
+            <button type="button" onclick="window.tollKey('4')">4</button>
+            <button type="button" onclick="window.tollKey('5')">5</button>
+            <button type="button" onclick="window.tollKey('6')">6</button>
+            <button type="button" onclick="window.tollKey('7')">7</button>
+            <button type="button" onclick="window.tollKey('8')">8</button>
+            <button type="button" onclick="window.tollKey('9')">9</button>
+            <button type="button" class="pad-fn" onclick="window.tollKey('clear')">ล้าง</button>
+            <button type="button" onclick="window.tollKey('0')">0</button>
+            <button type="button" class="pad-fn" onclick="window.tollKey('del')" title="ลบหลักสุดท้าย"><span class="material-symbols-outlined" style="font-size:19px;">backspace</span></button>
+        </div>
         <div class="custom-confirm-actions">
-            <button onclick="window.toggleModal('tollModal', false)" class="btn-cc-cancel">ยกเลิก</button>
+            <button onclick="window.tollCancel()" class="btn-cc-cancel">ยกเลิก</button>
             <button id="tollModalOk" onclick="window.confirmToll()" class="btn-cc-ok">บวกเข้าค่าโดยสาร</button>
         </div>
     </div>
@@ -6609,6 +6652,9 @@
         if (title) title.innerText = 'แก้ค่าทางด่วน: ' + window.tollSysLabel(b) + (b.from ? ' · ' + b.from : '');
         if (ok) ok.innerText = 'บันทึกยอด';
         if (inp) { inp.value = String(b.price || ''); }
+        // 🚨 โหมดแก้ยอดของช่วงที่เลือก ≠ โหมด “ถามด่าน” → ตัดบริบทด่านทิ้ง (กันจำคู่ผิดด่าน)
+        window.__tollGateCtx = null;
+        try { if (typeof window.tollPadClear === 'function') window.tollPadClear(); } catch (e) {}
         window.toggleModal('tollModal', true);
         setTimeout(() => { if (inp) inp.focus(); }, 250);
     };
@@ -11070,10 +11116,83 @@
     window.addSurcharge = (amount, name) => { window.surchargeList.push({ name: name, amount: amount, id: Date.now() }); window.updateSurchargeUI(); };
 
     // สลับโหมดหน้าต่างค่าทางด่วน: add = บวกค่าทางด่วนเข้ากับค่าโดยสาร · edit = แก้ยอดของช่วงที่เลือก
+    // ───────── 🛣️ ตั๋วทางด่วน “เด้งถามเองก่อนถึงด่าน” + เรียนรู้ราคา (18 ก.ย. 69 · ผู้ใช้สั่ง) ─────────
+    // คำสั่งผู้ใช้: “พอใกล้ถึงทางด่วนที่เราจะขึ้น มันจะมีเมนูเด้งมาให้คีย์เลยว่าด่านนี้เสียเท่าไหร่
+    //   แล้วมันจะเก็บเป็นข้อมูลไว้ ครั้งต่อไปขึ้นด่านนี้ไม่ต้องคีย์ แล้วขึ้นแจ้งเตือนมาเลยว่าค่าทางด่วนเท่าไหร่
+    //   ให้เป็นตัวเลขให้จิ้ม · ถึงไม่เปิดมินิแมพก็ต้องเด้ง · ถ้าไม่เลือกขึ้นทางด่วนก็ไม่ต้องแจ้ง”
+    // ทำไมต้องเก็บสถานะแยกจาก currentTollInfo: ตัวนั้นคือ “ราคาตามเส้นทาง” ส่วนตัวนี้คือ “ด่านนี้ถามไปหรือยัง”
+    //   ⇒ 1 ด่านถาม/บวกครั้งเดียวต่อเที่ยว (กดยกเลิกก็ไม่เด้งซ้ำรบกวนตอนขับ)
+    window.__tollGateCtx = null;   // { idx, booth, key } = กำลังกรอกให้ด่านไหน (null = กรอกทั่วไป)
+    const __tollGateState = { notified: {}, prompted: {}, handled: {}, surchargeId: {} };
+    // รีเซ็ตทุกครั้งที่เส้นทาง/เที่ยวใหม่ — ห้ามจำข้ามเที่ยว (ด่าน/ทิศเปลี่ยน ต้องถามใหม่ได้)
+    window.__tollGateReset = () => {
+        window.__tollGateCtx = null;
+        __tollGateState.notified = {}; __tollGateState.prompted = {};
+        __tollGateState.handled = {}; __tollGateState.surchargeId = {};
+        try { const el = document.getElementById('tollGateEditChip'); if (el && el.parentNode) el.parentNode.removeChild(el); } catch (e) {}
+    };
+    window.__tollGateState = __tollGateState;
+    window.__tollGateKey = (b) => {
+        if (!b) return '';
+        const a = b.gateIn || b.from || '';
+        const z = b.gateOut || b.to || '';
+        const s = (typeof b.startKm === 'number') ? b.startKm : '';
+        return [b.system || '', a, z, s].join('@');
+    };
+
+    // ⌨️ แป้นตัวเลขให้จิ้ม (ผู้ใช้สั่ง: “ให้เป็นตัวเลขให้เป็นจิ้ม ว่ากี่บาทกี่บาท”)
+    window.tollKey = (k) => {
+        const inp = document.getElementById('tollInput');
+        if (!inp) return;
+        let v = String(inp.value || '').replace(/[^0-9]/g, '');
+        if (k === 'del') { v = v.slice(0, -1); }
+        else if (k === 'clear') { v = ''; }
+        else if (/^[0-9]$/.test(String(k))) { if (v.length < 6) { v = (v === '0' ? '' : v) + k; } }
+        inp.value = v;
+        if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} }
+    };
+    window.tollKeySet = (v) => {
+        const inp = document.getElementById('tollInput');
+        if (!inp) return;
+        inp.value = String(Math.round(Number(v) || 0) || '');
+        if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} }
+    };
+    // ชิปยอดให้จิ้มครั้งเดียวเติมช่อง: ราคาที่เคยจ่าย (เขียว) → ตามตาราง → ยอดปัดที่พบบ่อย
+    const TOLL_PAD_COMMON = [15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 75, 80, 100, 120];
+    window.tollPadClear = () => {
+        const hint = document.getElementById('tollModalHint');
+        const quick = document.getElementById('tollModalQuick');
+        if (hint) { hint.style.display = 'none'; hint.innerHTML = ''; }
+        if (quick) { quick.style.display = 'none'; quick.innerHTML = ''; }
+    };
+    const tollPadChips = (booth) => {
+        const hint = document.getElementById('tollModalHint');
+        const quick = document.getElementById('tollModalQuick');
+        if (!hint || !quick) return;
+        if (!booth) { window.tollPadClear(); return; }
+        const sys = (window.tollSysFull && window.tollSysFull(booth)) || (window.tollSysLabel && window.tollSysLabel(booth)) || 'ทางด่วน';
+        const gate = booth.gateIn ? (' ' + booth.gateIn + (booth.gateOut ? ' → ' + booth.gateOut : '')) : '';
+        let learned = null;
+        try { learned = window.tollPairGet(booth); } catch (e) { learned = null; }
+        hint.innerHTML = '🛣️ ขึ้น <b>' + sys + '</b>' + gate
+            + (learned ? '<br>ราคาที่เคยจ่ายคือ <b>' + learned + ' ฿</b> — แก้ได้ถ้าเปลี่ยนราคา' : '<br>กรอกครั้งเดียว ครั้งต่อไประบบจำไว้ให้เอง ไม่ต้องกรอกซ้ำ');
+        hint.style.display = '';
+        const chips = [];
+        if (learned) chips.push({ v: learned, label: learned + '฿ · ราคาที่เคยจ่าย', cls: 'learned' });
+        const tbl = Math.round(Number(booth.price) || 0);
+        if (tbl > 0 && tbl !== learned) chips.push({ v: tbl, label: tbl + '฿ · ตามตาราง', cls: '' });
+        TOLL_PAD_COMMON.forEach((v) => { if (v !== learned && v !== tbl) chips.push({ v: v, label: v + '฿', cls: '' }); });
+        quick.innerHTML = chips.slice(0, 9).map((c) => '<button type="button" class="' + c.cls + '" onclick="window.tollKeySet(' + c.v + ')">' + c.label + '</button>').join('');
+        quick.style.display = '';
+    };
+
     const setTollModalMode = (mode, label) => {
         const title = document.getElementById('tollModalTitle');
         const ok = document.getElementById('tollModalOk');
-        if (mode === 'edit') {
+        if (mode === 'gate') {
+            if (title) title.innerText = 'ขึ้นด่านนี้เสียเท่าไหร่?';
+            if (ok) ok.innerText = 'บันทึกค่าทางด่วน';
+        } else if (mode === 'edit') {
             if (title) title.innerText = 'แก้ค่าทางด่วน: ' + (label || '');
             if (ok) ok.innerText = 'บันทึกยอด';
         } else {
@@ -11082,12 +11201,159 @@
         }
     };
 
+    // 🚨 ระบบเรียกเองเมื่อ “ใกล้ถึงด่านขึ้น” (ดู navMiniTollWatch) — เปิดแป้นให้คีย์ทันที
+    window.tollGatePrompt = (booth, idx, awayKm) => {
+        if (!booth) return false;
+        const st = __tollGateState;
+        const key = window.__tollGateKey(booth);
+        if (!key || st.prompted[key] || st.handled[key]) return false;
+        st.prompted[key] = 'asked';
+        window.__tollGateCtx = { idx: (typeof idx === 'number' ? idx : -1), booth: booth, key: key };
+        window.__tollEditIdx = -1;   // ❗ อย่าให้ไปทับโหมด “แก้ยอดช่วงที่เลือก” ของหน้าสรุปทางด่วน
+        setTollModalMode('gate');
+        const inp = document.getElementById('tollInput');
+        let learned = null;
+        try { learned = window.tollPairGet(booth); } catch (e) { learned = null; }
+        const pre = learned || Math.round(Number(booth.price) || 0);
+        if (inp) inp.value = pre > 0 ? String(pre) : '';
+        tollPadChips(booth);
+        try { window.toggleModal('tollModal', true); } catch (e) {}
+        const away = (typeof awayKm === 'number' && awayKm > 0) ? ('อีก ' + awayKm.toFixed(1) + ' กม. · ') : '';
+        try { window.showToast('🛣️ ' + away + 'ใกล้ถึงด่านขึ้น — ใส่ค่าทางด่วนครั้งเดียว', false); } catch (e) {}
+        try { if (navigator.vibrate && window.userVibrateGold !== false) { navigator.vibrate([130, 70, 130]); } } catch (e) {}
+        try { if (window.userToastSound !== false && typeof window.playSound === 'function') { window.playSound('turnFar'); } } catch (e) {}
+        try {
+            if (typeof window.navVoiceSpeak === 'function') {
+                window.navVoiceSpeak('ใกล้ถึงด่านเก็บค่าทางด่วน กรุณาใส่ค่าทางด่วน');
+            }
+        } catch (e) {}
+        return true;
+    };
+
+    // 🔔 รู้ราคาอยู่แล้ว → “แจ้งยอด” ล่วงหน้าโดยไม่เด้งแป้น (ผู้ใช้สั่ง: ครั้งต่อไปไม่ต้องคีย์)
+    //    มีปุ่มให้แก้ได้ในกรณีที่ราคาเปลี่ยน (แตะเพื่อเปิดแป้น)
+    window.tollGateNotifyKnown = (booth, idx, price, awayKm, canLearn) => {
+        if (!booth) return false;
+        const st = __tollGateState;
+        const key = window.__tollGateKey(booth);
+        if (!key || st.notified[key] || st.prompted[key] || st.handled[key]) return false;
+        st.notified[key] = true;
+        const sys = (window.tollSysFull && window.tollSysFull(booth)) || (window.tollSysLabel && window.tollSysLabel(booth)) || 'ทางด่วน';
+        const gate = booth.gateIn ? (' ' + booth.gateIn) : '';
+        const away = (typeof awayKm === 'number' && awayKm > 0) ? ('อีก ' + awayKm.toFixed(1) + ' กม. · ') : '';
+        const money = (price > 0)
+            ? ((price) + '฿' + (canLearn === false ? ' (ตามตาราง)' : ' (ราคาที่เคยจ่าย)'))
+            : 'ยังไม่รู้ราคา (ตามตาราง)';
+        try { window.showToast('🛣️ ' + away + 'ขึ้น ' + sys + gate + ' · ค่าทางด่วน ' + money + ' — บวกให้เองเมื่อขึ้นด่าน', false); } catch (e) {}
+        try { if (navigator.vibrate && window.userVibrateGold !== false) { navigator.vibrate(120); } } catch (e) {}
+        try {
+            if (typeof window.navVoiceSpeak === 'function') {
+                window.navVoiceSpeak('อีก ' + Math.max(1, Math.round(awayKm * 1000 / 100)) * 100 + ' เมตร ถึงด่าน' + gate + ' ค่าทางด่วน ' + (price > 0 ? price + ' บาท' : 'ไม่ทราบราคา'));
+            }
+        } catch (e) {}
+        // ปุ่ม “แก้ราคา” — เปิดแป้นในกรณีที่จ่ายจริงไม่ตรง (เก็บไว้นาน 20 วิ)
+        try {
+            window.showTollGateEditChip(booth, idx, price);
+        } catch (e) {}
+        return true;
+    };
+
+    // ✏️ ชิป “แก้ราคา” ลอย ๆ (20 วิ) — ราคาที่จำไว้ไม่ตรงกับที่จ่ายจริง แตะครั้งเดียวแก้ได้
+    //    ทำไมต้องมี: การแจ้งยอดล่วงหน้าไม่ควรบังคับให้เปิดหน้าอื่นเพื่อแก้ — แต่ก็ไม่ควรเด้งแป้นทับหน้าจอขับรถ
+    window.showTollGateEditChip = (booth, idx, price) => {
+        try {
+            const old = document.getElementById('tollGateEditChip');
+            if (old && old.parentNode) old.parentNode.removeChild(old);
+            window.__tollGateEditTarget = { booth: booth, idx: idx };
+            const sys = (window.tollSysFull && window.tollSysFull(booth)) || (window.tollSysLabel && window.tollSysLabel(booth)) || 'ทางด่วน';
+            const el = document.createElement('div');
+            el.id = 'tollGateEditChip';
+            el.style.cssText = 'position:fixed; left:50%; transform:translateX(-50%); bottom:98px; z-index:100060; display:flex; align-items:center; gap:9px; background:rgba(15,23,42,0.96); border:1px solid rgba(56,189,248,0.5); border-radius:14px; padding:9px 12px; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-family:inherit; max-width:92vw;';
+            el.innerHTML = '<span style="font-size:12.5px; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">🛣️ ' + sys + (booth.gateIn ? ' ' + booth.gateIn : '') + (price > 0 ? ' · ' + price + '฿' : '') + '</span>'
+                + '<button type="button" onclick="window.tollGateEditNow()" style="flex-shrink:0; padding:6px 12px; border-radius:10px; border:1px solid rgba(56,189,248,0.55); background:rgba(56,189,248,0.2); color:#7dd3fc; font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer;">แก้ราคา</button>';
+            document.body.appendChild(el);
+            if (window.__tollGateEditT) clearTimeout(window.__tollGateEditT);
+            window.__tollGateEditT = setTimeout(() => { const e2 = document.getElementById('tollGateEditChip'); if (e2 && e2.parentNode) e2.parentNode.removeChild(e2); }, 20000);
+        } catch (e) {}
+    };
+    window.tollGateEditNow = () => {
+        try {
+            const el = document.getElementById('tollGateEditChip');
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+            const tg = window.__tollGateEditTarget;
+            if (!tg || !tg.booth) return;
+            const key = window.__tollGateKey(tg.booth);
+            delete __tollGateState.notified[key];
+            delete __tollGateState.prompted[key];
+            delete __tollGateState.handled[key];         // อนุญาตให้ “บวกใหม่” แทนยอดเดิม
+            window.__tollGateCtx = { idx: tg.idx, booth: tg.booth, key: key };
+            window.__tollEditIdx = -1;
+            setTollModalMode('gate');
+            const inp = document.getElementById('tollInput');
+            let learned = null;
+            try { learned = window.tollPairGet(tg.booth); } catch (e) {}
+            const pre = learned || Math.round(Number(tg.booth.price) || 0);
+            if (inp) inp.value = pre > 0 ? String(pre) : '';
+            tollPadChips(tg.booth);
+            window.toggleModal('tollModal', true);
+        } catch (e) {}
+    };
+
+    // 🧠 รู้ราคาอยู่แล้ว → บวกให้เองเมื่อขึ้นด่านจริง (ครั้งเดียวต่อด่าน) ไม่ต้องคีย์เลย
+    window.tollGateAutoAdd = (booth, idx, price, awayKm) => {
+        if (!booth) return false;
+        const st = __tollGateState;
+        const key = window.__tollGateKey(booth);
+        if (!key || st.handled[key]) return false;
+        const p = Math.round(Number(price) || 0);
+        if (!(p > 0)) return false;
+        st.handled[key] = 'auto';
+        try {
+            window.addSurcharge(p, 'ค่าทางด่วน');
+            // จดรหัสชิปที่เพิ่งเพิ่ม → เวลาแก้ราคาจะได้ “แทนที่” ไม่ใช่บวกซ้อน
+            try {
+                const last = window.surchargeList[window.surchargeList.length - 1];
+                if (last && last.id) st.surchargeId[key] = last.id;
+            } catch (e) {}
+        } catch (e) { return false; }
+        const sys = (window.tollSysFull && window.tollSysFull(booth)) || (window.tollSysLabel && window.tollSysLabel(booth)) || 'ทางด่วน';
+        try { window.showToast('🛣️ บวกค่าทางด่วน ' + p + '฿ ให้แล้ว (' + sys + (booth.gateIn ? ' ' + booth.gateIn : '') + ') · ราคาที่เคยจ่าย', false); } catch (e) {}
+        // ✏️ ให้ชิป “แก้ราคา” ต่อด้วย — จ่ายจริงไม่ตรงกับที่จำไว้ = แตะครั้งเดียวแก้ (ระบบจะ “แทนที่” ไม่บวกซ้อน)
+        try { window.showTollGateEditChip(booth, idx, p); } catch (e) {}
+        try { if (navigator.vibrate && window.userVibrateGold !== false) { navigator.vibrate([130, 70, 130]); } } catch (e) {}
+        try {
+            if (typeof window.navVoiceSpeak === 'function') {
+                window.navVoiceSpeak('ขึ้น' + sys + ' ค่าทางด่วน ' + p + ' บาท ระบบบวกให้แล้ว');
+            }
+        } catch (e) {}
+        return true;
+    };
+
+    window.tollCancel = () => {
+        const ctx = window.__tollGateCtx;
+        if (ctx && ctx.key) { __tollGateState.handled[ctx.key] = 'declined'; }  // ไม่เด้งซ้ำเที่ยวนี้
+        window.__tollGateCtx = null;
+        window.__tollEditIdx = -1;
+        tollPadChips(null);
+        try { window.toggleModal('tollModal', false); } catch (e) {}
+    };
+
     window.promptToll = () => {
         window.__tollEditIdx = -1;
+        window.__tollGateCtx = null;
         setTollModalMode('add');
+        tollPadChips(null);
         const inp = document.getElementById('tollInput');
         const t = window.currentTollInfo;
         const hasAuto = !!(t && t.hasTolls && t.booths && t.booths.length > 0);
+        // มีค่าทางด่วนตามเส้นทางอยู่แล้ว → ทำปุ่ม “ยกยอดนี้” ให้จิ้มครั้งเดียว
+        if (hasAuto && t.total > 0) {
+            const quick = document.getElementById('tollModalQuick');
+            if (quick) {
+                quick.innerHTML = '<button type="button" class="learned" onclick="window.tollKeySet(' + t.total + ')">' + t.total + '฿ · ยอดตามเส้นทางนี้</button>';
+                quick.style.display = '';
+            }
+        }
         if (!hasAuto) {
             const hasDestLocPrompt = destLoc || (typeof window !== 'undefined' && window.destLoc);
             if (hasDestLocPrompt && typeof window.routeHasToll === 'function' && !window.routeHasToll()) {
@@ -11142,6 +11408,7 @@
         let amt = parseInt(document.getElementById('tollInput').value, 10);
         if (!(amt > 0)) { window.showToast('กรุณาระบุจำนวนเงินที่ถูกต้อง', true); return; }
         const i = window.__tollEditIdx;
+        const gate = window.__tollGateCtx;   // 🚨 มาจาก “เด้งถามก่อนถึงด่าน” ไหม
         const t = window.currentTollInfo;
         if (i >= 0 && t && t.booths && t.booths[i]) {
             // โหมดแก้ยอดของช่วงที่เลือก — ใช้ยอดที่จ่ายจริง แล้วคิดยอดรวมใหม่ทันที
@@ -11152,16 +11419,39 @@
             let learned = false;
             try { learned = window.tollLearnPair(t.booths[i], amt); } catch (e) { learned = false; }
             window.__tollEditIdx = -1;
+            window.__tollGateCtx = null;
+            tollPadChips(null);
             window.toggleModal('tollModal', false);
             window.updateTollDisplay();
             window.showToast('✏️ แก้เป็น ' + amt + '฿ — รวม ' + t.total + '฿' + (learned ? ' · จำราคานี้ไว้ใช้ครั้งต่อไปแล้ว' : ''));
             return;
         }
+        let learnedGate = false;
         try {
+            // ♻️ ถ้าด่านนี้ “บวกอัตโนมัติไปแล้ว” (ราคาที่จำไว้) ⇒ เอายอดเก่าออกก่อน จะได้ “แทนที่” ไม่ใช่บวกซ้อน
+            if (gate && gate.key && __tollGateState.surchargeId[gate.key]) {
+                try { window.removeSurcharge(__tollGateState.surchargeId[gate.key]); } catch (e) {}
+                delete __tollGateState.surchargeId[gate.key];
+            }
             window.addSurcharge(amt, 'ค่าทางด่วน');
             try { localStorage.setItem(LAST_TOLL_KEY, String(amt)); } catch (e) {}
+            // 🧠 สำคัญ: เดิม “เส้นทางกรอกเอง” ไม่เคยจำราคาเลย ⇒ ต้องคีย์ทุกครั้งตลอดไป
+            //    ตอนนี้ถ้ามาจากการถามของด่าน → จำคู่ (ระบบ|สาย|ด่านขึ้น|ด่านลง) ไว้ใช้ครั้งหน้า
+            if (gate && gate.booth) {
+                try { learnedGate = window.tollLearnPair(gate.booth, amt); } catch (e) { learnedGate = false; }
+                __tollGateState.handled[gate.key] = 'keyed';
+            }
         } finally {
+            window.__tollEditIdx = -1;
+            window.__tollGateCtx = null;
+            tollPadChips(null);
             window.toggleModal('tollModal', false);
+        }
+        if (gate && gate.booth) {
+            const sys = (window.tollSysFull && window.tollSysFull(gate.booth)) || 'ทางด่วน';
+            window.showToast(learnedGate
+                ? ('🧠 จำไว้แล้ว: ขึ้น' + sys + (gate.booth.gateIn ? ' ' + gate.booth.gateIn : '') + ' = ' + amt + '฿ · ครั้งต่อไประบบบวกให้เอง ไม่ต้องกรอก')
+                : ('💰 บวกค่าทางด่วน ' + amt + '฿ เข้าค่าโดยสารแล้ว'));
         }
     };
 
@@ -13102,6 +13392,22 @@
         return true;
     };
 
+    // 🔎 วินิจฉัยบนเครื่องจริง: ด่านไหนถามไปแล้ว/บวกไปแล้ว ด้วยวิธีอะไร
+    //   ใช้ตอบคำถาม “ทำไมเที่ยวนี้ไม่เด้งถาม” หรือ “ทำไมยอดไม่ขึ้น” ได้ทันที
+    window.__tollDiag = () => ({
+        mode: !!window.isTollwayMode,
+        haveRouteTolls: !!(window.currentTollInfo && window.currentTollInfo.hasTolls),
+        aheadKm: (typeof window.tollAheadKm === 'function') ? window.tollAheadKm() : null,
+        booths: (((window.currentTollInfo || {}).booths) || []).map((b) => ({
+            gateIn: b.gateIn || '', gateOut: b.gateOut || '', price: b.price,
+            startKm: b.startKm, basis: b.basis || '',
+            learned: (() => { try { return window.tollPairGet(b); } catch (e) { return null; } })()
+        })),
+        learnedPairs: Object.keys(window.__tollPairs || {}),
+        gateState: JSON.parse(JSON.stringify(__tollGateState)),
+        lastAction: window.__tollGateLastAction || null
+    });
+
     /** วินิจฉัยบนเครื่องจริง: เปิดสะพานไหม · สแนปช็อตล่าสุดเป็นอย่างไร (ดูฝั่งแอปด้วย carStateDebug) */
     window.__carDiag = () => ({ on: !!window.__carBridgeOn, snapshot: window.__carSnapshot() });
 
@@ -13271,6 +13577,10 @@
             window.saveActiveTrip(); 
             // 📡 GPS ตายเงียบ (Android พัก watchPosition ตอนล็อกจอ) → ปลุกใหม่ ไม่งั้นระยะทางหยุดนับทั้งที่มิเตอร์วิ่ง
             if (typeof window.gpsWatchdog === 'function') window.gpsWatchdog(nowTick);
+            // 🛣️ (18 ก.ย. 69) เฝ้าด่านทางด่วน — เด้งให้คีย์ / แจ้งยอดที่จำไว้ / บวกให้เองเมื่อขึ้นด่าน
+            //    ⚠️ ทำงาน “นอกมินิแมพ” โดยเจตนา ⇒ ถึงปิดมินิแมพ (หรือไม่มีสิทธิ์ใช้) ก็ยังแจ้ง
+            //    ⚠️ ทำงานเฉพาะเส้นทางที่มีทางด่วนจริง (ไม่เลือกขึ้นทางด่วน = ไม่มีข้อมูล = เงียบ)
+            if (typeof window.navMiniTollWatch === 'function') { try { window.navMiniTollWatch(); } catch (e) {} }
         }, 1000);
         
         if(watchId) navigator.geolocation.clearWatch(watchId);
@@ -15922,7 +16232,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = 'c5c80e51d0';
+    const APP_WEB_VERSION = '4316b7a63f';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -16348,6 +16658,12 @@
         ['2026-09-18', '🛡 ห้ามจบเที่ยวจากจอรถโดยเจตนา — กันกดพลาดตอนขับ จบเที่ยวทำจากมือถือเท่านั้น'],
         ['2026-09-18', '🕒 จอรถบอก “อัปเดตล่าสุดกี่วินาทีที่แล้ว” — รู้ทันทีถ้าตัวเลขเริ่มไม่สด'],
         ['2026-09-18', '📱 APK 1.6.0 ขึ้นจอรถ Android Auto + เลขมิเตอร์บนสแนปช็อต 8 ฟิลด์ (ทดสอบออฟไลน์ 12/12)'],
+        ['2026-09-18', '🛣️ ใกล้ถึงด่านทางด่วน ระบบเด้งถามค่าทางด่วนให้เอง — ไม่ต้องเปิดมินิแมพก็ขึ้น'],
+        ['2026-09-18', '⌨️ แป้นตัวเลขให้จิ้มกรอกค่าทางด่วน (ไม่ต้องพิมพ์) + ชิปยอดให้แตะครั้งเดียว'],
+        ['2026-09-18', '🧠 จำค่าทางด่วนเป็นรายด่าน (ขึ้นด่านไหน → ลงด่านไหน กี่บาท) ครั้งต่อไปบวกให้เอง'],
+        ['2026-09-18', '🔔 รู้ราคาแล้ว: แจ้งยอดล่วงหน้าแทนการเด้งให้กรอกซ้ำ — ทุกเครื่องใช้ราคาเดียวกัน'],
+        ['2026-09-18', '✏️ ปุ่ม “แก้ราคา” แทนที่ยอดเดิม (ไม่บวกซ้อน) + กันแจ้งซ้ำ/บวกซ้ำต่อเที่ยว'],
+        ['2026-09-18', '⏱️ ล็อกจอ/แอปถูกพักตอนขึ้นด่าน ก็ยังเบิกค่าทางด่วนคืนได้ (ภายใน 5 กม. หลังด่าน)'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -21779,7 +22095,67 @@
     // 🛣️ ให้ข้อมูลค่าทางด่วนของเส้นทาง (เรียกจากฝั่งแอปเมื่อเส้นทาง/ทางด่วนเปลี่ยน)
     window.navMiniSetTolls = function (t) {
         nTolls = (t && t.hasTolls && t.booths && t.booths.length) ? t : null;
+        try { if (window.__tollGateReset) window.__tollGateReset(); } catch (e) {}   // 🛣️ เส้นทางใหม่ = เริ่มนับด่านใหม่
         try { paintTollRow(); } catch (e) {}
+    };
+
+    // ─── 🛣️ (18 ก.ย. 69) เฝ้าด่านทางด่วน “นอกมินิแมพ” — ผู้ใช้สั่ง:
+    //   “ถึงไม่เปิดมินิแมพก็ต้องแจ้ง · ถ้าไม่เลือกขึ้นทางด่วนก็ไม่ต้องแจ้ง”
+    // ทำไมต้องอยู่นี่: ตำแหน่งรถเทียบกับกิโลบนเส้นทาง (carAlongKm) คำนวณในโมดูลนี้
+    //   ⛔ ห้ามเขียนสูตรซ้ำที่อื่น (จะเพี้ยนคนละทาง) และ ⛔ ห้ามเช็ค permOk()/visible/pref.hidden
+    //      เพราะ “สิทธิ์ใช้มินิแมพ” ≠ “สิทธิ์รู้ค่าทางด่วน” — ต้องเตือนทุกคนที่เลือกขึ้นทางด่วน
+    // ทำงานเฉพาะตอน: มีเส้นทางที่มีทางด่วนจริง (nTolls ≠ null = โหมดขึ้นทางด่วน) + เที่ยวเดินอยู่
+    window.navMiniTollWatch = function () {
+        if (!nTolls || !nTolls.booths || !nTolls.booths.length) return null;
+        if (!window.isManualRunning || window.isMeterPaused) return null;   // ⏸ หยุดมิเตอร์ = ไม่รบกวน
+        var km = carAlongKm();
+        if (km === null) return null;
+        var ahead = tollAheadKmCfg();
+        var st = window.__tollGateState || null;
+        if (!st) { return null; }
+        for (var i = 0; i < nTolls.booths.length; i++) {
+            var b = nTolls.booths[i];
+            if (!b || typeof b.startKm !== 'number') continue;
+            var key = window.__tollGateKey ? window.__tollGateKey(b) : '';
+            if (!key) continue;
+            if (st.handled[key]) continue;                     // ด่านนี้จัดการแล้ว/กดยกเลิกไปแล้ว
+            var away = b.startKm - km;
+            // ⚠️ กับดักที่เจอตอนทดสอบ (18 ก.ย. 69): เดิมกันด้วย “เลยด่านไม่เกิน 150 ม.” ⇒ ถ้า จอล็อก/แอปถูกพัก
+            //    ตอนขับผ่านด่าน จะ “พลาดจังหวะ” แล้วไม่ได้ค่าทางด่วนเลยทั้งที่จ่ายไปแล้ว
+            //    ⇒ ยอมรับการเบิกทีหลังได้ถึง 5 กม. หลังด่าน (ยังอยู่ในช่วงทางด่วนจริง ไม่ไปคิดด่านที่เลยมาคนละช่วง)
+            var lag = km - b.startKm;
+            if (lag > 5) continue;
+            var learned = null;
+            try { learned = window.tollPairGet(b); } catch (e) {}
+            var canLearn = !!b.gateIn;                         // ไม่รู้ชื่อด่านขึ้น = จำคู่ไม่ได้ → ห้ามถาม (จะได้ข้อมูลขยะ)
+            // (1) ขึ้นด่านจริงแล้ว → รู้ราคา = บวกให้เองครั้งเดียว (ไม่ต้องคีย์เลย) · ไม่รู้ = เงียบ (ถามไปตั้งแต่ก่อนถึงด่านแล้ว)
+            if (away <= 0) {
+                if (learned && window.tollGateAutoAdd) {
+                    if (window.tollGateAutoAdd(b, i, learned, 0)) {
+                        window.__tollGateLastAction = { at: Date.now(), act: 'auto', key: key, price: learned, lagKm: Math.round(lag * 100) / 100 };
+                        return 'auto';
+                    }
+                }
+                continue;
+            }
+            // (2) ยังไม่ถึงด่าน และอยู่ในระยะเตือน → แจ้งครั้งเดียวต่อด่าน
+            if (away <= ahead && !st.notified[key] && !st.prompted[key]) {
+                if (learned || !canLearn) {
+                    // รู้ราคาอยู่แล้ว → “แจ้งยอด” ไม่เด้งแป้น (ผู้ใช้สั่ง: ครั้งต่อไปไม่ต้องคีย์)
+                    if (window.tollGateNotifyKnown && window.tollGateNotifyKnown(b, i, learned, away, canLearn)) {
+                        window.__tollGateLastAction = { at: Date.now(), act: 'notify', key: key, price: learned, awayKm: Math.round(away * 100) / 100 };
+                        return 'notify';
+                    }
+                } else if (window.tollGatePrompt) {
+                    // ไม่รู้ราคา + รู้ชื่อด่าน → เด้งแป้นให้คีย์ครั้งเดียว
+                    if (window.tollGatePrompt(b, i, away)) {
+                        window.__tollGateLastAction = { at: Date.now(), act: 'prompt', key: key, awayKm: Math.round(away * 100) / 100 };
+                        return 'prompt';
+                    }
+                }
+            }
+        }
+        return null;
     };
     window.navMiniSetRoute = function (coords, label) {
         tollAlertKey = '';   // เส้นทางใหม่ → ให้เตือนด่านขึ้นได้อีกครั้ง
