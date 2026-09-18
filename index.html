@@ -4995,7 +4995,9 @@
         // ---------- สิทธิ์ชุดที่ 6 (17 ก.ย. — ผู้ใช้ขอ) : กรอบรูปอวตารตามเทศกาล ----------
         { id: 'perm_canManageAvatarFrames', label: 'จัดการกรอบรูปอวตาร (คลังกรอบ · ให้ตามยศ · มอบรายคน)' },
         // ---------- สิทธิ์ชุดที่ 7 (17 ก.ย. — ผู้ใช้ขอ) : อัตราค่าทางด่วน (ขึ้นด่าน–ลงด่าน) ----------
-        { id: 'perm_canManageTollRates', label: 'จัดการอัตราค่าทางด่วน (ราคาตามสาย/ด่าน · ราคาจริงที่จำไว้)' }
+        { id: 'perm_canManageTollRates', label: 'จัดการอัตราค่าทางด่วน (ราคาตามสาย/ด่าน · ราคาจริงที่จำไว้)' },
+        // ---------- สิทธิ์ชุดที่ 8 (18 ก.ย. 69 — ผู้ใช้ขอ) : ยศไหนให้มินิแมพ “เปิดเอง” ตอนเริ่มเที่ยว ----------
+        { id: 'perm_miniMapAutoOpen', label: 'เปิดมินิแมพอัตโนมัติเมื่อเริ่มเที่ยว (ปิด = เริ่มจากยุบเสมอ)' }
     ];
     window.currentPermConfig = [...window.defaultPermConfig];
 
@@ -5004,8 +5006,8 @@
     // ⚙️ สิทธิ์ลาเอียดใหม่ (15 ก.ย.): ค่าเริ่มต้นของ Manager = พฤติกรรมเดิมของแอปก่อนมีสิทธิ์นี้ (ไม่ทำอะไรที่เคยทำได้หาย)
     //    ส่วนหน้าใหม่ (แก้ข้อความ/จัดกลุ่มเมนู/หน้าจอโหลด/แถบเลื่อน/โควตา) เดิมเป็นแอดมินเท่านั้น → ค่าเริ่มต้น false
     window.DEFAULT_ROLE_PERMS = {
-        Manager: { canViewUsers: true, canAdd: true, canEdit: true, canChangeUserRole: false, canViewPassword: false, canBan: true, canDelete: false, canCallStaff: true, canViewLogs: true, canViewGlobalLogs: true, canSetStaffPrefs: false, canEditOwn: true, canDeleteMedia: true, canManageService: false, canManageToastMsg: false, canManageRoles: false, canEditAppTexts: false, canManageHubLayout: false, canManageLoadingScreen: false, canManageScrollbar: false, canManageNavMap: false, canViewQuota: false, canViewNotifCenter: true, canSetSignupDate: true, canCreateRole: false, canEditManagedSettings: false, canManageFavoritesDefault: false, canExportTrips: true, canUseDeviceUnlock: true, canManageReservedNames: false, canUseMiniMap: false, canManageAvatarFrames: false, canManageProfileLayout: false, canManageTollRates: false },
-        User: { canViewUsers: false, canAdd: false, canEdit: false, canChangeUserRole: false, canViewPassword: false, canBan: false, canDelete: false, canCallStaff: false, canViewLogs: false, canViewGlobalLogs: false, canSetStaffPrefs: false, canEditOwn: true, canDeleteMedia: false, canManageService: false, canManageToastMsg: false, canManageRoles: false, canEditAppTexts: false, canManageHubLayout: false, canManageLoadingScreen: false, canManageScrollbar: false, canManageNavMap: false, canViewQuota: false, canViewNotifCenter: false, canSetSignupDate: false, canCreateRole: false, canEditManagedSettings: false, canManageFavoritesDefault: false, canExportTrips: true, canUseDeviceUnlock: true, canManageReservedNames: false, canUseMiniMap: false, canManageProfileLayout: false, canManageTollRates: false }
+        Manager: { canViewUsers: true, canAdd: true, canEdit: true, canChangeUserRole: false, canViewPassword: false, canBan: true, canDelete: false, canCallStaff: true, canViewLogs: true, canViewGlobalLogs: true, canSetStaffPrefs: false, canEditOwn: true, canDeleteMedia: true, canManageService: false, canManageToastMsg: false, canManageRoles: false, canEditAppTexts: false, canManageHubLayout: false, canManageLoadingScreen: false, canManageScrollbar: false, canManageNavMap: false, canViewQuota: false, canViewNotifCenter: true, canSetSignupDate: true, canCreateRole: false, canEditManagedSettings: false, canManageFavoritesDefault: false, canExportTrips: true, canUseDeviceUnlock: true, canManageReservedNames: false, canUseMiniMap: false, miniMapAutoOpen: false, canManageAvatarFrames: false, canManageProfileLayout: false, canManageTollRates: false },
+        User: { canViewUsers: false, canAdd: false, canEdit: false, canChangeUserRole: false, canViewPassword: false, canBan: false, canDelete: false, canCallStaff: false, canViewLogs: false, canViewGlobalLogs: false, canSetStaffPrefs: false, canEditOwn: true, canDeleteMedia: false, canManageService: false, canManageToastMsg: false, canManageRoles: false, canEditAppTexts: false, canManageHubLayout: false, canManageLoadingScreen: false, canManageScrollbar: false, canManageNavMap: false, canViewQuota: false, canViewNotifCenter: false, canSetSignupDate: false, canCreateRole: false, canEditManagedSettings: false, canManageFavoritesDefault: false, canExportTrips: true, canUseDeviceUnlock: true, canManageReservedNames: false, canUseMiniMap: false, miniMapAutoOpen: false, canManageProfileLayout: false, canManageTollRates: false }
     };
     // ⭐ สมาชิก VIP (เพิ่ม 17 ก.ย. 69) = ยศระดับกลาง ระหว่าง “ผู้จัดการ” กับ “ผู้ใช้ทั่วไป”
     //    ค่าเริ่มต้นเท่าผู้ใช้ทั่วไป · แอดมินติ๊กเพิ่มได้ในหน้า “ตั้งค่าสิทธิ์การใช้งาน” (เช่น เปิด Mini Map ให้ VIP)
@@ -5076,6 +5078,24 @@
             const role = (typeof currentUserRole === 'string' && currentUserRole) ? currentUserRole : 'User';
             return !!window.effectiveRolePerms(role).canUseMiniMap;           // สิทธิ์ตามยศที่แอดมินติ๊กไว้
         } catch (e) { return false; }                                          // อ่านไม่ได้ = ปิด (กันหลุด)
+    };
+    // 🗺️ (18 ก.ย. 69 · ผู้ใช้ขอ) “เปิดมินิแมพอัตโนมัติเมื่อเริ่มเที่ยว” — แอดมินตั้ง “ต่อตำแหน่ง” ในหน้าตั้งค่าสิทธิ์
+    //    · ที่เก็บ: settings/roles → <role>.miniMapAutoOpen (คีย์เดียวกับสิทธิ์ ⇒ snapshot ตัวเดิมพาเข้ามาเอง = ไม่มี listener เพิ่ม = ไม่กินโควตา)
+    //    · ⛔ ค่าเริ่มต้น = false ทุกยศ (รวมแอดมิน) ⇒ เริ่มจาก “ยุบเสมอ” เหมือนที่ตกลงกันไว้ — แอดมินต้องติ๊กเองถึงจะเปิดเอง
+    //    · ⛔ ต้องมีสิทธิ์ canUseMiniMap ของยศนั้นก่อน — ไม่มีสิทธิ์ใช้แผนที่ = เปิดเองไม่ได้ (ไม่งั้นเท่ากับข้ามสิทธิ์)
+    window.miniMapAutoOpenFor = (role) => {
+        try {
+            const p = window.effectiveRolePerms(role || 'User') || {};
+            if (!p.canUseMiniMap) return false;   // ไม่มีสิทธิ์ใช้มินิแมพ = ไม่มีอะไรให้เปิด
+            return !!p.miniMapAutoOpen;
+        } catch (e) { return false; }
+    };
+    // 🧑‍✈️ ของผู้ล็อกอินคนนี้ (อ่านจากยศปัจจุบัน · ใช้ __testRole ได้ตอนทดสอบออฟไลน์)
+    window.canMiniMapAutoOpen = () => {
+        try {
+            if (!(window.canUseMiniMap && window.canUseMiniMap())) return false;
+            return window.miniMapAutoOpenFor(window.myRoleKey());
+        } catch (e) { return false; }
     };
     // ให้มอดูลมินิแมพบังคับใช้ทันที (ซ่อน/ล้างปุ่มเปิดคืน) — แอดมินติ๊กเปลี่ยนแล้วมีผลกับคนที่กำลังขับอยู่
     window.navMiniApplyPerm = () => { try { return window.__navMiniApplyPerm ? window.__navMiniApplyPerm() : window.canUseMiniMap(); } catch (e) { return false; } };
@@ -17033,7 +17053,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '1fa65775d3';
+    const APP_WEB_VERSION = '1419bff1e0';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -17499,6 +17519,9 @@
         ['2026-09-18', '🔴 ตัวเลขบนปุ่มคิดในเครื่อง (snap บนเส้นทาง) → ไม่ยิงเน็ต ⇒ ไม่กินโควตา TomTom'],
         ['2026-09-18', '📏 อ่านง่าย: เกิน 1 กม. = “อีก 49.7 กม.” · ไม่ถึง 1 กม. = “อีก 350 ม.”'],
         ['2026-09-18', '🐞 ล้างจุดหมาย/ขึ้นเที่ยวใหม่แบบไม่มีจุดหมาย = ล้างระยะเที่ยวเก่าด้วย'],
+        ['2026-09-18', '🗺️ ตั้งค่าสิทธิ์: เลือกได้ว่ายศไหน “เปิดมินิแมพเองเมื่อเริ่มเที่ยว”'],
+        ['2026-09-18', '🗺️ ค่าเริ่มต้น = เริ่มจากยุบเสมอทุกยศ (รวมแอดมิน) — ต้องติ๊กเอง'],
+        ['2026-09-18', '🛡️ เปิดเองได้ต้องมีสิทธิ์ Mini Map ของยศก่อน · ไม่มีสิทธิ์ติ๊กก็ไม่เปิด'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -21359,6 +21382,7 @@
         'perm_canExportTrips': 'กดปุ่ม “ส่งออก CSV” ในเมนูประวัติ — ได้ไฟล์เที่ยว/รายได้ไปเปิดใน Excel',
         'perm_canUseDeviceUnlock': 'ผูกเครื่องนี้ไว้ปลดล็อกแทน PIN ด้วยลายนิ้วมือ / Face ID (WebAuthn)',
         'perm_canUseMiniMap': 'เปิดแผนที่นำทางขนาดย่อ (Mini Map) ให้ตำแหน่งนี้ใช้ตอนขับ — มินิแมพกินโควตาแผนที่ต่อเนื่อง ค่าเริ่มต้น = ปิดทุกยศ (รวมแอดมิน)',
+        'perm_miniMapAutoOpen': 'ยศนี้เปิดแผนที่นำทางให้อัตโนมัติเมื่อกดเริ่มเที่ยว (ปกติจะเริ่มจาก “ยุบ” เสมอ ต้องกดปุ่มเปิดเอง) — ต้องเปิด “ใช้แผนที่นำทาง (Mini Map) ตอนขับ” ของยศนี้ก่อนจึงมีผล · ค่าเริ่มต้น = ปิด (เริ่มจากยุบเสมอ)',
         'perm_canManageAvatarFrames': 'เลือกกรอบรูปอวตาร (20 แบบตามเทศกาล) ให้แต่ละตำแหน่ง และมอบกรอบพิเศษให้สมาชิกรายคนได้',
     };
     window.renderPermList = () => {
@@ -23026,6 +23050,18 @@
         visible = false; el.classList.remove('show'); syncReopenBtns();
         if (animId) { cancelAnimationFrame(animId); animId = 0; } animLast = 0; // 🎞️ หยุดตัวขับเคลื่อนตอนแผนที่ปิด (ไม่กินแบต)
     }
+    // 🗺️ (18 ก.ย. 69) “เปิดมินิแมพอัตโนมัติเมื่อเริ่มเที่ยว” — ใช้เฉพาะยศที่แอดมินติ๊กไว้ (ค่าเริ่มต้น = ปิดทุกยศ)
+    //    ⛔ ห้ามเรียกฟังก์ชันนี้โดยไม่มี canMiniMapAutoOpen() กัน — ไม่งั้นจะกลายเป็น “เปิดเองทุกคน” เหมือนที่ผู้ใช้เคยสั่งห้าม
+    //    ⛔ ผู้ใช้กด ✕ เองระหว่างเที่ยว → ระบบห้ามเปิดคืนเอง (userClosedThisTrip คุมไว้ — ดู navMiniApplyPerm)
+    function autoOpenAtStart() {
+        if (userClosedThisTrip) { hideNow(); return false; }
+        if (!permOk()) { hideNow(); return false; }
+        pref.hidden = false;
+        savePref();
+        canReopen = false;   // เปิดอยู่แล้ว = ไม่ต้องมีปุ่มเปิดคืน
+        show();              // แสดงแผนที่ + เริ่มวาด/โหลดกระเบื้อง (ตัวเองเรียก syncReopenBtns ให้แล้ว)
+        return visible;
+    }
 
     // ---------- ปุ่ม "เปิดแผนที่กลับมา" (โผล่เมื่อผู้ใช้กด ✕ ซ่อนแผนที่เองระหว่างเที่ยว) ----------
     //   ทำไมต้องมี: เดิมกด ✕ แล้วแผนที่หายถาวรจนกว่าจะเริ่มเที่ยวใหม่ → ตอนนี้มีปุ่มเปิดคืนในแถบสรุปเส้นทาง
@@ -23279,12 +23315,14 @@
             snapAnim(); // 🎞️ กลับเข้าแอป = เริ่มวาดจากตำแหน่งจริงทันที (ไม่ไถลจากพิกัดเก่า)
             // 🗺️ กลับเข้าแอป/รีเฟรช — ต้องได้ผล “เหมือนตอนเริ่มเที่ยว” เป๊ะ (เริ่มจากยุบเสมอ)
             //    เดิมรีเฟรชแล้วเด้งโชว์เอง = ไม่ตรงกับตอนเริ่มเที่ยวที่ยุบไว้ ⇒ ตอนนี้ทั้งสองทางเริ่มจาก “ยุบ”
+            //    🆕 ยกเว้นยศที่แอดมินติ๊ก “เปิดอัตโนมัติ” — ทางสองทางนี้ต้องตรงกันเสมอ (ไม่งั้นรีเฟรชแล้วหาย)
             pref.hidden = true;
             savePref();
             userClosedThisTrip = false;
             navIntent = true;      // กลับเข้าแอปกลางเที่ยว = ยังนำทางอยู่
             canReopen = permOk();  // มีสิทธิ์ = เห็นปุ่มเปิดคืน
-            hideNow();
+            if (window.canMiniMapAutoOpen && window.canMiniMapAutoOpen()) { autoOpenAtStart(); }
+            else { hideNow(); }
             syncReopenBtns();
         } catch (e) {}
     };
@@ -23381,11 +23419,13 @@
                 try { window.navFailSet('noRoute', 'no route coords'); } catch (e) {}
                 hideNow(); return;
             }
-            // 🗺️ เริ่มนำทางจาก “ค้นหาเส้นทาง” → **เริ่มจาก “ยุบ” เสมอ ให้ผู้ใช้กดเปิดเอง** (📌 18 ก.ย. 69 · ผู้ใช้สั่งย้ำ)
+            // 🗺️ เริ่มนำทางจาก “ค้นหาเส้นทาง” → ค่าเริ่มต้น **เริ่มจาก “ยุบ” เสมอ ให้ผู้ใช้กดเปิดเอง** (📌 18 ก.ย. 69 · ผู้ใช้สั่งย้ำ)
             //    ผู้ใช้สั่งชัด: “มินิแมพที่โชว์เข้ามาหลังสรุปเส้นทางแล้วเริ่มนำทาง ให้ยุบไว้ก่อน ยังไม่ต้องแสดง รอผู้ใช้กดเอง
             //                    ถ้าเป็นคนที่มีสิทธิ์ ปุ่มนี้ยังต้องแสดงด้วย · คนไม่มีสิทธิ์ = ปุ่มถูกซ่อนเหมือนเดิม”
             //    ⇒ pref.hidden = true **ทุกเที่ยว** + canReopen = permOk() → มีสิทธิ์ = ปุ่มเปิดคืนสีฟ้าขึ้นให้กดเอง
             //    ⛔ ห้ามกลับไปใช้ pref.hidden = !permOk() (เปิดโชว์เอง) — และห้ามจำว่า “เปิดค้างจากเที่ยวก่อน”
+            //    🆕 (18 ก.ย. 69 ต่อมา · ผู้ใช้ขอเพิ่ม): แอดมินติ๊ก “เปิดมินิแมพอัตโนมัติเมื่อเริ่มเที่ยว” ให้ยศไหน → ยศนั้นเปิดเอง
+            //       (ค่าเริ่มต้นยังเป็น “ยุบทุกยศ” — ดู canMiniMapAutoOpen())
             pref.hidden = true;
             savePref();
             userClosedThisTrip = false;   // เที่ยวใหม่ = ยังไม่ได้ปิดเอง
@@ -23399,7 +23439,10 @@
             snapAnim();               // 🎞️ เที่ยวใหม่ = เริ่มวาดจากจุดเริ่มจริง (ไม่ไถลจากเที่ยวเก่า)
             follow = true; panCenter = null;
             canReopen = permOk();     // มีสิทธิ์ = ปุ่มเปิดคืนสีฟ้าขึ้นให้กดเอง · ไม่มีสิทธิ์ = ซ่อนปุ่ม
-            hideNow();                // ⛔ อย่า show() ที่นี่ — เที่ยวใหม่ต้องเริ่มจาก “ยุบ” เสมอ (ผู้ใช้กดเปิดเอง)
+            // 🗺️ (18 ก.ย. 69) ถ้ายศนี้ถูกแอดมินติ๊ก “เปิดมินิแมพอัตโนมัติเมื่อเริ่มเที่ยว” → เปิดให้เลย
+            //    ⛔ ห้ามเปลี่ยนเป็นเช็ค !permOk() ตรง ๆ — ต้องผ่าน canMiniMapAutoOpen() (คุมด้วยค่า “ต่อยศ” ที่ค่าเริ่มต้น = ปิด)
+            if (window.canMiniMapAutoOpen && window.canMiniMapAutoOpen()) { autoOpenAtStart(); }
+            else { hideNow(); }       // ค่าเริ่มต้น: เที่ยวใหม่เริ่มจาก “ยุบ” เสมอ (ผู้ใช้กดเปิดเอง)
             syncReopenBtns();
         } catch (e) {}
     };

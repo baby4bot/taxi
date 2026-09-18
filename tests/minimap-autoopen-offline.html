@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — สิทธิ์ “เปิดมินิแมพอัตโนมัติเมื่อเริ่มเที่ยว” ต่อยศ</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 940px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 940px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: แอดมินเลือกได้ว่ายศไหน “เปิดมินิแมพอัตโนมัติเมื่อเริ่มเที่ยว”</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ตรวจของจริง 3 ชั้น:
+        <br>① <b>ค่าเริ่มต้น = ยุบเสมอ</b> ทุกยศ (รวมแอดมิน) — ต้องติ๊กเองถึงจะเปิดเอง
+        <br>② <b>สิทธิ์สองชั้น</b> — เปิดอัตโนมัติได้ต้องมี “ใช้แผนที่นำทาง (Mini Map) ตอนขับ” ของยศนั้นก่อน (กันข้ามสิทธิ์)
+        <br>③ <b>ใช้จริงตอนเริ่มเที่ยว/รีเฟรช</b> — เปิดเองทุกครั้งที่เริ่มเที่ยว · ผู้ใช้กด ✕ เองแล้วห้ามเปิดคืน
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/minimap-autoopen-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (9 สถานการณ์)</button>
+    <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const CACHE_KEYS = ['taxi_active_trip_v1', 'taxi_chg_note_days_v1'];
+    const START = { lat: 13.7563, lon: 100.5018 };
+    const DEST = { lat: 13.6900, lon: 100.7501, name: 'ท่าอากาศยานสุวรรณภูมิ' };
+    const COORDS = [[START.lat, START.lon], [13.72, 100.60], [DEST.lat, DEST.lon]];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[autoopen-test]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตออกทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;      // 🚫 ห้ามเขียนเที่ยวลง Firestore จริง
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) {
+                    cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return;
+                }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test: ไม่ใช้ GPS' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.startNavigationMap === 'function' && typeof cw.navMiniResume === 'function' && typeof cw.renderPermList === 'function') {
+                installStubs();
+                await wait(200);
+                try { cw.isManualRunning = false; } catch (e) {}
+                try { CACHE_KEYS.forEach(k => cw.localStorage.removeItem(k)); } catch (e) {}
+                await closeAllModals();
+                await waitForNoLoader(12000);
+                await wait(200);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    // ============================ เครื่องมือทดสอบ ============================
+    const mapShown = () => { const e = w().document.getElementById('navMini'); return !!(e && e.classList.contains('show')); };
+    const btnState = () => { const b = w().document.getElementById('btnLiveMapZoom'); return b ? { hidden: b.classList.contains('is-hidden'), blue: b.classList.contains('map-ready') } : null; };
+
+    // ให้ยศหนึ่งมีสิทธิ์ (สตับ canUseMiniMap เหมือนชุดทดสอบเดิม) — autoOpen = true/false
+    function grant(role, autoOpen, withMapPerm) {
+        const cw = w();
+        const withMap = (withMapPerm === undefined) ? true : !!withMapPerm;
+        cw.__testRole = role;
+        const all = Object.assign({}, cw.globalPermissions || {});
+        all[role] = Object.assign({}, all[role] || {}, { canUseMiniMap: withMap, miniMapAutoOpen: !!autoOpen });
+        cw.globalPermissions = all;
+        cw.canUseMiniMap = () => withMap;    // 🧪 สตับสิทธิ์ระดับผู้ใช้ (แนวเดียวกับ tests/start-flow-offline.html)
+    }
+    function noPerms() {
+        const cw = w();
+        cw.__testRole = 'User';
+        cw.canUseMiniMap = () => false;
+        const all = Object.assign({}, cw.globalPermissions || {});
+        all.User = { canUseMiniMap: false, miniMapAutoOpen: true };   // ติ๊กเปิดอัตโนมัติไว้แต่ไม่มีสิทธิ์ใช้แผนที่
+        cw.globalPermissions = all;
+    }
+    // เริ่มเที่ยวแบบมีเส้นทางจริง (เรียกฟังก์ชันจริงของแอป)
+    function startNav() {
+        const cw = w();
+        cw.startNavigationMap(START.lat, START.lon, DEST.lat, DEST.lon, DEST.name, 48.32, COORDS);
+    }
+
+    // ============================ รัน 1 สถานการณ์ ============================
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            await closeAllModals();
+            await wait(120);
+            const out = await Promise.race([fn(), wait(30000).then(() => { throw new Error('สถานการณ์ timeout 30 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ล้มเหลว</span> ' + name + '\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span>';
+            failures.push({ name: name, error: e && e.message ? e.message : String(e) });
+            failCount++;
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ล้มเหลว ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        const n = (w() && w().__net) ? w().__net : { blockedFetch: 0, blockedXhr: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: บล็อกคำขอออกนอกเครื่อง ' + (n.blockedFetch + n.blockedXhr) + ' ครั้ง (fetch ' + n.blockedFetch + ' · xhr ' + n.blockedXhr + ')';
+    }
+
+    // ============================ ชุดทดสอบ ============================
+    async function runAll() {
+        resultsEl.innerHTML = ''; passCount = 0; failCount = 0; failures.length = 0;
+        await loadApp();
+        const cw = w();
+
+        await runScenario('S1 · ค่าเริ่มต้น "ยุบเสมอ" ทุกยศ (Admin/Manager/VIP/User) — แอดมินต้องติ๊กเอง', async () => {
+            const defs = cw.DEFAULT_ROLE_PERMS || {};
+            const rows = [];
+            ['Admin', 'Manager', 'VIP', 'User'].forEach((r) => {
+                const v = (defs[r] || {}).miniMapAutoOpen;
+                rows.push(r + '=' + String(v));
+                assert(v === false, 'ค่าเริ่มต้นของ ' + r + ' ต้องเป็น false (ยุบเสมอ) แต่ได้ ' + String(v));
+            });
+            assert(cw.miniMapAutoOpenFor('Manager') === false, 'ยศที่ยังไม่ติ๊กต้องไม่เปิดเอง');
+            return 'ค่าเริ่มต้น: ' + rows.join(' · ') + ' → miniMapAutoOpenFor ทุกยศ = false ✅';
+        });
+
+        await runScenario('S2 · มีสวิตช์นี้ในหน้าตั้งค่าสิทธิ์จริง (แอดมินเลือกได้ต่อยศ)', async () => {
+            const sel = cw.document.getElementById('settingRoleSelect');
+            assert(sel, 'ไม่พบตัวเลือกตำแหน่ง (settingRoleSelect)');
+            try { if (typeof cw.fillRoleSelects === 'function') cw.fillRoleSelects(); } catch (e) {}
+            sel.value = 'VIP';
+            cw.renderPermList();
+            const box = cw.document.getElementById('perm_miniMapAutoOpen');
+            assert(box, 'ไม่พบสวิตช์ perm_miniMapAutoOpen ในรายการสิทธิ์ (แอดมินหาไม่เจอ = ตั้งไม่ได้)');
+            const item = box.closest('.perm-item');
+            const text = item ? item.textContent : '';
+            assert(text.indexOf('เปิดมินิแมพอัตโนมัติเมื่อเริ่มเที่ยว') >= 0, 'ชื่อสวิตช์ไม่ตรง: ' + text.slice(0, 80));
+            assert(text.indexOf('เริ่มจากยุบเสมอ') >= 0, 'ต้องบอกด้วยว่า “ปิด = เริ่มจากยุบเสมอ”');
+            assert(box.checked === false, 'ค่าเริ่มต้นของ VIP ต้องยังไม่ติ๊ก');
+            // ติ๊กแล้วอ่านค่ากลับจาก UI (เหมือนตอนแอดมินกดบันทึกสิทธิ์)
+            box.checked = true;
+            assert(cw.effectiveRolePerms('VIP').miniMapAutoOpen !== true, 'ติ๊กใน UI แล้วยังไม่บันทึก = ต้องยังไม่เปลี่ยนค่าที่ใช้จริง');
+            box.checked = false;
+            return 'พบสวิตช์ในรายการสิทธิ์ + ชื่อ/คำอธิบายครบ + ค่าเริ่มต้นไม่ติ๊ก ✅';
+        });
+
+        await runScenario('S3 · สิทธิ์สองชั้น: ติ๊กเปิดอัตโนมัติ แต่ไม่มีสิทธิ์ใช้มินิแมพ = ต้องไม่เปิดเอง', async () => {
+            cw.globalPermissions = Object.assign({}, cw.globalPermissions || {}, { User: { canUseMiniMap: false, miniMapAutoOpen: true } });
+            assert(cw.miniMapAutoOpenFor('User') === false, 'ไม่มีสิทธิ์ใช้แผนที่ แต่ระบบบอกให้เปิดเอง = ข้ามสิทธิ์ (ผิด)');
+            cw.globalPermissions = Object.assign({}, cw.globalPermissions, { VIP: { canUseMiniMap: true, miniMapAutoOpen: true } });
+            assert(cw.miniMapAutoOpenFor('VIP') === true, 'มีทั้งสองสิทธิ์ แต่ระบบบอกว่าไม่ต้องเปิดเอง');
+            cw.globalPermissions = Object.assign({}, cw.globalPermissions, { VIP: { canUseMiniMap: true, miniMapAutoOpen: false } });
+            assert(cw.miniMapAutoOpenFor('VIP') === false, 'ปิดสวิตช์แล้วยังบอกให้เปิดเอง');
+            return 'ไม่มีสิทธิ์ใช้มินิแมพ + ติ๊กเปิดเอง → ไม่เปิด (กันข้ามสิทธิ์) ✅ · มีทั้งคู่ → เปิด ✅ · ปิดสวิตช์ → ไม่เปิด ✅';
+        });
+
+        await runScenario('S4 · ยศที่ติ๊กไว้: กดเริ่มเที่ยว → แผนที่เปิดเองทันที (ไม่ต้องกดปุ่ม)', async () => {
+            grant('VIP', true, true);
+            startNav();
+            await wait(400);
+            assert(mapShown(), 'ติ๊กเปิดอัตโนมัติไว้ แต่กดเริ่มเที่ยวแล้วแผนที่ยังไม่เปิด (ต้องเห็นเลย)');
+            const b = btnState();
+            assert(b && b.hidden, 'แผนที่เปิดอยู่แล้วไม่ควรมีปุ่ม “เปิดมินิแมพ” ค้างอีก');
+            assert(cw.navMiniCanReopen() === false, 'canReopen ต้องเป็น false เมื่อเปิดอยู่');
+            return 'ยศ VIP (ติ๊กเปิดอัตโนมัติ) → เริ่มเที่ยวแล้วแผนที่ขึ้นเอง ✅ · ไม่มีปุ่มเปิดค้าง · canReopen=false ✅';
+        });
+
+        await runScenario('S5 · ยศที่มีสิทธิ์แต่ยังไม่ติ๊ก (ค่าเริ่มต้น) → เริ่มจากยุบ + ปุ่มเปิดสีฟ้า', async () => {
+            grant('Manager', false, true);
+            startNav();
+            await wait(350);
+            assert(!mapShown(), 'ยังไม่ติ๊กเปิดอัตโนมัติ แต่แผนที่ขึ้นเอง = ผิดคำสั่งเดิม (ต้องเริ่มจากยุบ)');
+            const b = btnState();
+            assert(b && !b.hidden, 'มีสิทธิ์+มีเส้นทาง → ต้องมีปุ่มเปิดให้กด');
+            assert(b.blue, 'ปุ่มต้องเป็นสีฟ้า (map-ready) ไม่ใช่สีเทา');
+            // กดปุ่มแล้วต้องเปิดได้จริง
+            cw.navMiniReopen();
+            await wait(250);
+            assert(mapShown(), 'กดปุ่มเองแล้วแผนที่ยังไม่เปิด');
+            return 'ไม่ติ๊ก → ยุบ + ปุ่มสีฟ้า ✅ · กดปุ่มเอง → เปิดได้ ✅';
+        });
+
+        await runScenario('S6 · ยศไม่มีสิทธิ์เลย (แม้ติ๊กเปิดอัตโนมัติ) → ไม่มีแผนที่ ไม่มีปุ่ม', async () => {
+            noPerms();
+            startNav();
+            await wait(350);
+            assert(!mapShown(), 'ไม่มีสิทธิ์ใช้มินิแมพ แต่แผนที่เปิด = ผิด (และกินโควตา)');
+            const b = btnState();
+            assert(b && b.hidden, 'ไม่มีสิทธิ์ → ต้องซ่อนปุ่มเปิด (ไม่ให้เห็นระยะด้วย)');
+            return 'ไม่มีสิทธิ์ → แผนที่ปิด · ปุ่มซ่อน · ติ๊กเปิดอัตโนมัติไว้ก็ไม่มีผล (กันข้ามสิทธิ์) ✅';
+        });
+
+        await runScenario('S7 · ผู้ใช้กด ✕ เองระหว่างเที่ยว → ระบบห้ามเปิดคืนเอง (แม้ติ๊กเปิดอัตโนมัติ)', async () => {
+            grant('VIP', true, true);
+            startNav();
+            await wait(350);
+            assert(mapShown(), 'เที่ยวนี้ต้องเปิดเองก่อน (ยศติ๊กไว้)');
+            cw.navMiniHideByUser();           // = ผู้ใช้กด ✕ บนแผนที่
+            await wait(250);
+            assert(!mapShown(), 'กด ✕ แล้วแผนที่ยังไม่ปิด');
+            for (let i = 0; i < 3; i++) { cw.navMiniApplyPerm(); await wait(120); }
+            assert(!mapShown(), 'ผู้ใช้ปิดเองแล้วแต่ระบบเปิดคืนเอง (น่ารำคาญและผิดคำสั่ง)');
+            return 'กด ✕ → ปิด · apply สิทธิ์ซ้ำ 3 ครั้ง → ไม่เปิดคืน ✅ (userClosedThisTrip คุมไว้)';
+        });
+
+        await runScenario('S8 · รีเฟรช/กลับเข้าแอปกลางเที่ยว → ได้ผลเหมือนตอนเริ่มเที่ยว (ตรงกันทั้งสองทาง)', async () => {
+            grant('VIP', true, true);
+            cw.navMiniResume({ dest: DEST, destName: DEST.name, routeCoords: COORDS, lastPos: { lat: START.lat, lng: START.lon } });
+            await wait(350);
+            assert(mapShown(), 'ยศที่ติ๊กไว้: กลับเข้าแอปแล้วแผนที่ต้องเปิดเองเหมือนตอนเริ่มเที่ยว (ไม่งั้นรีเฟรชแล้วหาย)');
+            grant('Manager', false, true);
+            cw.navMiniResume({ dest: DEST, destName: DEST.name, routeCoords: COORDS, lastPos: { lat: START.lat, lng: START.lon } });
+            await wait(350);
+            assert(!mapShown(), 'ยศที่ยังไม่ติ๊ก: กลับเข้าแอปต้องยุบไว้ก่อน (เหมือนเริ่มเที่ยว)');
+            const b = btnState();
+            assert(b && !b.hidden && b.blue, 'ยศที่มีสิทธิ์แต่ไม่ติ๊ก → ต้องมีปุ่มเปิดสีฟ้าให้กดเอง');
+            return 'ติ๊กไว้ → เปิดเองทั้งสองทาง ✅ · ไม่ติ๊ก → ยุบ + ปุ่มสีฟ้า ✅';
+        });
+
+        await runScenario('S9 · สายไฟในโค้ดจริง: ทั้ง 2 ทางที่เริ่มแผนที่ต้องผ่าน canMiniMapAutoOpen() (กันถอดออก)', async () => {
+            const res = await fetch('../index.html?cb=' + Date.now());
+            const txt = await res.text();
+            const call = 'if (window.canMiniMapAutoOpen && window.canMiniMapAutoOpen()) { autoOpenAtStart(); }';
+            const callCount = txt.split(call).length - 1;
+            assert(callCount === 2, 'ต้องมีการเรียก canMiniMapAutoOpen() 2 จุด (เริ่มเที่ยว + กลับเข้าแอป) แต่พบ ' + callCount);
+            assert(txt.indexOf('function autoOpenAtStart()') >= 0, 'ไม่พบ autoOpenAtStart()');
+            assert(txt.indexOf('if (userClosedThisTrip) { hideNow(); return false; }') >= 0, 'ไม่มีการกัน “ผู้ใช้ปิดเอง” ใน autoOpenAtStart()');
+            assert(txt.indexOf("{ id: 'perm_miniMapAutoOpen'") >= 0, 'ไม่พบสวิตช์ perm_miniMapAutoOpen ในรายการสิทธิ์');
+            return 'พบครบ: จุดเรียก 2 ที่ · autoOpenAtStart · กันผู้ใช้ปิดเอง · สวิตช์ในรายการสิทธิ์ ✅';
+        });
+
+        renderSummary();
+        const bad = failures.length;
+        summaryEl.innerHTML += bad ? ' — <span style="color:var(--red)">ดูรายการที่ล้มเหลวด้านบน</span>' : ' — 🎉 ทั้งชุดผ่าน';
+        try { console.log('[autoopen-test] DONE', { passCount: passCount, failCount: failCount, failures: failures }); } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', () => { runAll().catch(e => { summaryEl.textContent = 'ชุดทดสอบล้ม: ' + (e && e.message ? e.message : e); }); });
+    document.getElementById('dbgBtn').addEventListener('click', () => {
+        const cw = w();
+        const info = {
+            role: cw.__testRole || '(ไม่ตั้ง)',
+            mapShown: mapShown(),
+            btn: btnState(),
+            canUseMiniMap: cw.canUseMiniMap ? cw.canUseMiniMap() : null,
+            canMiniMapAutoOpen: cw.canMiniMapAutoOpen ? cw.canMiniMapAutoOpen() : null,
+            globals: cw.globalPermissions
+        };
+        alert(JSON.stringify(info, null, 2));
+    });
+
+    window.addEventListener('load', () => { runAll().catch(e => { summaryEl.textContent = 'ชุดทดสอบล้ม: ' + (e && e.message ? e.message : e); }); });
+})();
+</script>
+</body>
+</html>
