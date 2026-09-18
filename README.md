@@ -1883,6 +1883,35 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/static-server.ps1 -Por
 > ⚠️ บางกรณีทดสอบที่ต้องใช้ Firestore/TomTom จะไม่ผ่านเมื่อรันจาก `127.0.0.1`
 > (CORS บล็อกช่องเชื่อมต่อ) — ให้เทสต์บน GitHub Pages เพื่อผลที่ครบถ้วน
 
+## 🧹 ลบโค้ดตายชุดแผนที่ใหญ่ที่ปิดใช้งานไปแล้ว (19 ก.ย. 69 · ผู้ใช้ขอ)
+
+ผู้ใช้สั่ง: *“ลบโค้ดตายของชุดแผนที่ใหญ่ที่ถูกปิดใช้งาน (รวม `startNavigationMap` ตัวเก่าแบบ arrow) ออกให้หมด
+แล้วรันด่าน + ชุดทดสอบเดิมยืนยันว่าไม่มีอะไรพังก่อน push”*
+
+`index.html` เล็กลง **265 บรรทัด** — ไม่มีอย่างอื่นเปลี่ยน (พฤติกรรมเดิมทุกอย่าง)
+
+| ลบอะไร | เพราะอะไร |
+|---|---|
+| `<script>` ทั้งบล็อก “Full-screen Navigation Map” (`navMap` · `navCarMarker` · `navDestMarker` · `navRoute` · `navRouteCoords` · `navCurrentIndex` · `navLastPosition`) | แผนที่เต็มจอเดิมใช้ **Leaflet** ที่แอปนี้ **ไม่ได้โหลดแล้ว** (ไม่มี `L.*` ที่ไหนในไฟล์) ⇒ เรียกแล้วพังทุกทาง · `startNavigationMap` ตัวจริงในมอดูลมินิแมพทับอยู่แล้ว |
+| `startNavigationMap` ตัวเก่า (arrow) · `recenterMap` · `updateNavPosition` · `closeNavigation` · `endNavigation` | ไม่มีใครเรียกเลย (grep ทั้งโปรเจกต์ 0 จุด) · `updateNavPosition` เรียกจาก `if (navMap && …)` ที่เป็น `false` ตลอด |
+| `initMap` · `updateCarDirection` · `taxiMap` · `mapMarker` · `mapRoute` · `mapDestMarker` · `window.currentRouteCoords/Index` | `initMap` ไม่มีใครเรียก · ตัวที่เหลือทำงานกับ `#mapContainer`/`#taxiMap`/`#mapDistance`/`carMarker` ที่ **ไม่มีใน HTML แล้ว** |
+| สาขา `if (navMap && …)` / `if (mapMarker && taxiMap)` ใน `updateMapPosition` · `hideMap` | `updateMapPosition` ยังอยู่ (เสาหลักคือ `navMiniUpdate`) แต่เหลือเท่าที่ทำงานจริง |
+| `if (document.getElementById('navDistance'))` ในเส้นทางคำนวณใหม่ + จุดที่อ้าง `navLastPosition` 4 จุด | อ่าน `#navDistance` ที่ไม่มีอยู่ · `navLastPosition` ถูกตั้งจากชุดที่ลบไปเท่านั้น ⇒ เปลี่ยนเป็น `null` ตรง ๆ (ผลลัพธ์เท่าเดิมเป๊ะ) |
+
+### 🔍 หลักฐานว่าไม่พัง
+
+```
+tests/start-flow-offline.html            13/13 ✅      tests/nav-heading-offline.html      6/6 ✅
+tests/reopen-dist-offline.html           13/13 ✅      tests/speed-zone-offline.html      10/10 ✅
+tests/minimap-autoopen-offline.html      13/13 ✅      tests/native-fixes-offline.html    12/12 ✅
+tests/cause-offline.html                 14/14 ✅      tests/locked-screen-offline.html   11/11 ✅
+tests/applook-tabs-offline.html          11/11 ✅      tests/car-auto-offline.html        12/12 ✅
+ด่านก่อน push: minimap-start-guard 8/8 (+ self-test จับได้ 4/4) · switch-check 20 สวิตช์ (0 ช่องติกดิบ) · pwa-check · ประวัติเวอร์ชัน
+```
+
+> 🧷 `tests/catchup-regression.html` ได้ 5/18 จาก `127.0.0.1` — **เท่ากันเป๊ะทั้งก่อนและหลังลบ** (A/B กับสำรอง `index - 273`)
+> ตรงกับหมายเหตุในหัวข้อ “การทดสอบ” ด้านบน: เคสที่ต้องใช้ Firestore/TomTom จะไม่ผ่านเมื่อรันจากในเครื่อง ให้เทสต์บน GitHub Pages
+
 ## 📉 แถบสาเหตุ “โควตาหมด / เรียกถี่” บอกตัวเลขจริง + เวลารีเซ็ต (19 ก.ย. 69 · ผู้ใช้ขอ)
 
 ผู้ใช้สั่ง: *“ในแถบเตือนสาเหตุโควตาหมด/เรียกถี่ ให้โชว์ตัวเลขว่าใช้ไปกี่ครั้งจากเพดานเท่าไหร่ พร้อมเวลารีเซ็ต”*
@@ -2070,7 +2099,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/minimap-start-guard.ps
 🧪 `-SelfTest` จะจงใจฝังจุดหลุด 4 แบบ (pref.hidden แบบเก่า · show() ตอนเริ่มเที่ยว · บังคับเปิด · show() ตอนสิทธิ์มาช้า)
 ลงในสำเนาไฟล์ แล้วต้องจับได้ทั้ง 4 — เพราะด่านที่ไม่เคยเห็นว่าล้ม เป็นด่านที่เชื่อถือไม่ได้
 
-> 💡 ตอนเขียนด่านนี้เจอกับตัวเอง 2 ครั้ง: (1) `startNavigationMap` ในไฟล์มี 2 นิยาม (ตัวเก่าแบบ arrow ที่แผนที่ใหญ่ถูกปิด + ตัวจริงในมอดูลมินิแมพ) ⇒ ต้องใช้ marker ที่ไม่ซ้ำ (2) ผลลัพธ์ลิสต์ที่มีชิ้นเดียวถูก PowerShell กระจายออกจน `.Count` เป็นค่าว่าง ⇒ ต้องห่อ `@()` ทุกจุด
+> 💡 ตอนเขียนด่านนี้เจอกับตัวเอง 2 ครั้ง: (1) `startNavigationMap` ในไฟล์เคยมี 2 นิยาม (ตัวเก่าแบบ arrow ที่แผนที่ใหญ่ถูกปิด + ตัวจริงในมอดูลมินิแมพ) ⇒ ต้องใช้ marker ที่ไม่ซ้ำ — **ตัวเก่าถูกลบไปแล้ว 19 ก.ย. 69 เหลือนิยามเดียว** ⇒ marker `window.startNavigationMap = function (` ยังจับตัวจริงได้ตามเดิม (2) ผลลัพธ์ลิสต์ที่มีชิ้นเดียวถูก PowerShell กระจายออกจน `.Count` เป็นค่าว่าง ⇒ ต้องห่อ `@()` ทุกจุด
 
 ### 🧪 ชุดทดสอบออฟไลน์: สิทธิ์เปิดมินิแมพอัตโนมัติ (18 ก.ย. 2569)
 

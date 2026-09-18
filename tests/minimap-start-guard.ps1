@@ -103,10 +103,11 @@ function Invoke-Guard([string]$path, [switch]$Quiet) {
   }
 
   # --- 2..4) start paths must only open through autoOpenAtStart() -------------
-  # ⚠️ ต้องใช้ marker ที่ไม่ซ้ำ: ในไฟล์มี startNavigationMap 2 นิยาม (ตัวเก่าแบบ arrow
+  # ⚠️ ต้องใช้ marker ที่ไม่ซ้ำ: เคยมี startNavigationMap 2 นิยาม (ตัวเก่าแบบ arrow
   #    `window.startNavigationMap = (startLat, ...) => {` ที่แผนที่ใหญ่ถูกปิดใช้งาน กับตัวจริง
   #    `window.startNavigationMap = function (sLat, ...) {` ในมอดูลมินิแมพ) ⇒ ต้องมีคำว่า `function (`
-  #    ไม่งั้นด่านจะไปตรวจผิดตัว (เคสจริงที่เจอตอนเขียนด่านนี้)
+  #    ไม่งั้นด่านจะไปตรวจผิดตัว (เคสจริงที่เจอตอนเขียนด่านนี้).
+  #    ✅ 19 ก.ย. 69: ตัวเก่าแบบ arrow ถูกลบออกจาก index.html แล้ว ⇒ เหลือนิยามเดียว และ marker นี้ยังจับตัวจริงได้เหมือนเดิม
   $paths = @(
     @{ marker = 'window.startNavigationMap = function ('; label = 'startNavigationMap'; mustCollapse = $true },
     @{ marker = 'window.navMiniResume = function';       label = 'navMiniResume';       mustCollapse = $true },

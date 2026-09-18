@@ -6322,9 +6322,6 @@
             if (lastPos) {
                 startLat = lastPos.lat;
                 startLon = lastPos.lon;
-            } else if (navLastPosition) {
-                startLat = navLastPosition.lat;
-                startLon = navLastPosition.lng;
             } else if (window.__testUserPos && typeof window.__testUserPos.lat === 'number') {
                 // 🧪 test hook — preview/เทสต์ที่ GPS ถูกบล็อก (ตั้ง window.__testUserPos แทน fix สด)
                 startLat = window.__testUserPos.lat; startLon = window.__testUserPos.lon;
@@ -6337,11 +6334,6 @@
                     currentTrueRemainSec = route.sec;
                     window.currentTollInfo = route.tolls || null;
                     window.invalidateRouteBase(); // 🧭 เส้นทางถูกเปลี่ยนกลางเที่ยว → ตั้งฐานระยะใหม่รอบัดไป
-                    
-                    // Update nav distance
-                    if (document.getElementById('navDistance')) {
-                        document.getElementById('navDistance').innerText = route.km.toFixed(1);
-                    }
                     
                     // Update remaining km display
                     if (document.getElementById('tzRemainKm')) {
@@ -6369,19 +6361,10 @@
                         toldDiff = true;
                     }
                     
-                    // Redraw route on map if navigation is active
                     // 🗺️ เส้นทางถูกคำนวณใหม่กลางเที่ยว (สลับเลี่ยง/ขึ้นทางด่วน) → อัปเดตเส้นบน Mini Map ด้วย
                     if (window.navMiniSetRoute && route.coords && route.coords.length > 1) { try { window.navMiniSetRoute(route.coords); } catch(e) {} }
                     // 🛣️ ส่งข้อมูลค่าทางด่วนของเส้นใหม่ให้ Mini Map (แถบ “อีก X กม. ขึ้นทางด่วน … = Y฿”)
                     if (window.navMiniSetTolls) { try { window.navMiniSetTolls(route.tolls || null); } catch(e) {} }
-                    if (navMap && navRouteCoords && navRouteCoords.length > 0) {
-                        try {
-                            if (navRoute) navMap.removeLayer(navRoute);
-                            let newCoords = route.coords || navRouteCoords;
-                            navRouteCoords = newCoords;
-                            navRoute = L.polyline(newCoords, { color: '#4caf50', weight: 5, opacity: 0.9 }).addTo(navMap);
-                        } catch(e) {}
-                    }
                     
                     // Update live tracker display
                     window.updateLiveMeterDisplay();
@@ -13190,133 +13173,16 @@
         return rows.slice(0, 4); // จำกัด 4 รายการบนสุด กันรก
     };
 
-    let taxiMap = null;
-    let mapMarker = null;
-    let mapRoute = null;
-    let mapDestMarker = null;
-    
+    // 🧹 (19 ก.ย. 69) เก็บกวาดชุดแผนที่ใหญ่ที่ถูกปิดใช้งานไปแล้ว (taxiMap/initMap/navMap พร้อม CSS/HTML ที่ไม่มีอยู่จริง)
+    //    เดิมฟังก์ชันนี้ทำงาน 2 อย่าง: รื้อแผนที่ทิ้ง + คืนจอราคา ⇒ เหลืออย่างหลังอย่างเดียว (ตัวเรียก 3 จุดยังใช้ชื่อเดิม)
     window.hideMap = () => {
-        const resultContainer = document.querySelector('.result-container');
         const fareDisplay = document.getElementById('fareDisplay');
-        const navInfoOverlay = document.getElementById('navInfoOverlay');
-        const navMapContainer = document.getElementById('navMapContainer');
-        
-        resultContainer.classList.remove('has-map');
-        fareDisplay.style.display = 'block';
-        if (navInfoOverlay) navInfoOverlay.classList.remove('active');
-        if (navMapContainer) navMapContainer.style.display = 'none';
-        
-        if (taxiMap) { taxiMap.remove(); taxiMap = null; mapMarker = null; mapDestMarker = null; mapRoute = null; }
-        if (navMap) { navMap.remove(); navMap = null; navCarMarker = null; navDestMarker = null; navRoute = null; }
-    };
-    
-    window.initMap = (startLat, startLon, destLat, destLon, routeKm, routeCoords) => {
-        const mapContainer = document.getElementById('mapContainer');
-        const mapDiv = document.getElementById('taxiMap');
-        const resultContainer = document.querySelector('.result-container');
-        const fareDisplay = document.getElementById('fareDisplay');
-        const bubbleBg = document.querySelector('.bubble-bg-container');
-        
-        // Show map, hide price display
-        mapContainer.style.display = 'block';
-        resultContainer.classList.add('has-map');
-        fareDisplay.classList.add('hidden');
-        bubbleBg.style.display = 'none';
-        
-        // Update distance info
-        if (routeKm) {
-            document.getElementById('mapDistance').innerText = routeKm.toFixed(1) + ' กม.';
-        }
-        
-        // Store route for tracking
-        window.currentRouteCoords = routeCoords || [];
-        window.currentRouteIndex = 0;
-        
-        if (!taxiMap) {
-            taxiMap = L.map('taxiMap', {
-                zoomControl: false,
-                attributionControl: false,
-                dragging: true
-            }).setView([startLat, startLon], 16);
-            
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19
-            }).addTo(taxiMap);
-        }
-        
-        // Clear previous markers
-        if (mapMarker) taxiMap.removeLayer(mapMarker);
-        if (mapDestMarker) taxiMap.removeLayer(mapDestMarker);
-        if (mapRoute) taxiMap.removeLayer(mapRoute);
-        
-        // Start marker (car) - with rotation support
-        let carIcon = L.divIcon({
-            className: '',
-            html: '<div id="carMarker" style="width:32px; height:32px; background:linear-gradient(135deg, #4caf50, #2e7d32); border-radius:50%; border:3px solid white; display:flex; align-items:center; justify-content:center; box-shadow: 0 0 20px rgba(76,175,80,0.9), 0 4px 8px rgba(0,0,0,0.3); transition: transform 0.3s;"><span style="font-size:16px;">🚕</span></div>',
-            iconSize: [32, 32],
-            iconAnchor: [16, 16]
-        });
-        mapMarker = L.marker([startLat, startLon], {icon: carIcon}).addTo(taxiMap);
-        
-        // Destination marker
-        let destIcon = L.divIcon({
-            className: '',
-            html: '<div style="width:28px; height:28px; background:linear-gradient(135deg, #ef4444, #b91c1c); border-radius:50%; border:3px solid white; display:flex; align-items:center; justify-content:center; box-shadow: 0 0 15px rgba(239,68,68,0.9);"><span style="font-size:14px;">📍</span></div>',
-            iconSize: [28, 28],
-            iconAnchor: [14, 14]
-        });
-        mapDestMarker = L.marker([destLat, destLon], {icon: destIcon}).addTo(taxiMap);
-        
-        // Draw actual route on map
-        let routePoints = routeCoords && routeCoords.length > 0 ? routeCoords : [[startLat, startLon], [destLat, destLon]];
-        mapRoute = L.polyline(routePoints, {
-            color: '#4caf50',
-            weight: 4,
-            opacity: 0.8,
-            lineCap: 'round'
-        }).addTo(taxiMap);
-        
-        // Zoom in close to start point
-        taxiMap.setView([startLat, startLon], 16);
-        
-        // Invalidate size after display change
-        setTimeout(() => { taxiMap.invalidateSize(); }, 100);
-    };
-    
-    // Update car marker with rotation based on direction
-    window.updateCarDirection = (lat, lon) => {
-        if (!mapMarker || !window.currentRouteCoords || window.currentRouteCoords.length === 0) return;
-        
-        // Find nearest point on route and calculate heading
-        let minDist = Infinity;
-        let nearestIdx = 0;
-        for (let i = 0; i < window.currentRouteCoords.length; i++) {
-            let d = Math.abs(window.currentRouteCoords[i][0] - lat) + Math.abs(window.currentRouteCoords[i][1] - lon);
-            if (d < minDist) { minDist = d; nearestIdx = i; }
-        }
-        
-        // Calculate heading from current to next point
-        if (nearestIdx < window.currentRouteCoords.length - 1) {
-            let curr = window.currentRouteCoords[nearestIdx];
-            let next = window.currentRouteCoords[Math.min(nearestIdx + 5, window.currentRouteCoords.length - 1)];
-            let angle = Math.atan2(next[1] - curr[1], next[0] - curr[0]) * 180 / Math.PI;
-            let carEl = document.getElementById('carMarker');
-            if (carEl) carEl.style.transform = `rotate(${90 - angle}deg)`;
-        }
+        if (fareDisplay) fareDisplay.style.display = 'block';
     };
     
     window.updateMapPosition = (lat, lon) => {
-        if (mapMarker && taxiMap) {
-            mapMarker.setLatLng([lat, lon]);
-            taxiMap.setView([lat, lon], 17);
-            window.updateCarDirection(lat, lon);
-        }
         // 🗺️ Mini Map นำทาง (canvas) — อัปเดตตำแหน่งรถ/ทิศ/ความเร็ว ทุกครั้งที่ได้ fix GPS
         if (window.navMiniUpdate) { try { window.navMiniUpdate(lat, lon, currentSpeedKmh); } catch(e) {} }
-        // Update full-screen navigation map
-        if (navMap && navCarMarker) {
-            window.updateNavPosition(lat, lon, currentSpeedKmh / 3.6);
-        }
     };
     
     window.selectLocation = (name, lat, lon) => { 
@@ -16339,8 +16205,8 @@
         try {
             const lat = d.lat;
             const lng = (typeof d.lon === 'number') ? d.lon : d.lng;
-            const originLat = (lastPos ? lastPos.lat : (navLastPosition ? navLastPosition.lat : null));
-            const originLng = (lastPos ? lastPos.lon : (navLastPosition ? navLastPosition.lng : null));
+            const originLat = (lastPos ? lastPos.lat : null);
+            const originLng = (lastPos ? lastPos.lon : null);
             let link;
             if (typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent || '')) {
                 link = `google.navigation:q=${lat},${lng}&mode=d`;
@@ -16367,8 +16233,8 @@
             if (isMobile && typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent || '')) {
                 window.location.href = `google.navigation:q=${lat},${lng}&mode=d`;
             } else {
-                const originLat = (lastPos ? lastPos.lat : (navLastPosition ? navLastPosition.lat : null));
-                const originLng = (lastPos ? lastPos.lon : (navLastPosition ? navLastPosition.lng : null));
+                const originLat = (lastPos ? lastPos.lat : null);
+                const originLng = (lastPos ? lastPos.lon : null);
                 const originStr = (originLat && originLng) ? `${originLat},${originLng}` : '';
                 window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originStr)}&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`, '_blank', 'noopener');
             }
@@ -17515,7 +17381,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = 'ae39118859';
+    const APP_WEB_VERSION = 'f80865367a';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -18009,6 +17875,8 @@
         ['2026-09-19', '🗺️ มินิแมพเปิดเองเฉพาะเที่ยวที่เลือก “ขึ้นทางด่วน” (ถนนปกติยังเริ่มจากยุบ)'],
         ['2026-09-19', '⚙️ แอดมินปิด/เปิดตัวคุมนี้ได้จากหน้าตั้งค่าสิทธิ์ (มีผลทุกเครื่อง)'],
         ['2026-09-19', '💾 จำโหมดทางด่วนของเที่ยว — ปิด/รีเฟรชกลางเที่ยวแล้วเปิดเองได้เหมือนเดิม'],
+        ['2026-09-19', '🧹 ลบโค้ดตายชุดแผนที่ใหญ่ที่ปิดไปแล้ว (แผนที่เต็มจอเดิม + ที่ไม่มีในแอป)'],
+        ['2026-09-19', '📦 ไฟล์เล็กลง 265 บรรทัด · เปิดแอปไวขึ้นเล็กน้อย · พฤติกรรมเดิมทุกอย่าง'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -22596,176 +22464,6 @@
             if(catIndex !== -1) { newData[catIndex].items = newData[catIndex].items.filter(i => i.id !== itemId); if(newData[catIndex].items.length === 0) { newData.splice(catIndex, 1); } }
             try { await setDoc(doc(db, "system", "service_data"), { categories: newData }); window.showToast("ลบเรียบร้อย"); window.cancelEditService(); } catch(e) {}
         }
-    };
-</script>
-
-<!-- Full-screen Navigation Map -->
-
-
-<script>
-    let navMap = null;
-    let navCarMarker = null;
-    let navDestMarker = null;
-    let navRoute = null;
-    let navRouteCoords = [];
-    let navCurrentIndex = 0;
-    
-    window.startNavigationMap = (startLat, startLon, destLat, destLon, destName, routeKm, routeCoords) => {
-        // Show navigation inside result container
-        const resultContainer = document.querySelector('.result-container');
-        const navInfoOverlay = document.getElementById('navInfoOverlay');
-        const navMapContainer = document.getElementById('navMapContainer');
-        const fareDisplay = document.getElementById('fareDisplay');
-        
-        // แผนที่ถูกปิดใช้งานแล้ว — แสดงราคาค่าโดยสารตามปกติ
-        if (resultContainer) resultContainer.classList.remove('has-map');
-        if (navInfoOverlay) navInfoOverlay.classList.remove('active');
-        if (navMapContainer) navMapContainer.style.display = 'none';
-        if (fareDisplay) fareDisplay.style.display = 'block';
-        navRouteCoords = [];
-        navCurrentIndex = 0;
-        navLastPosition = null;
-        
-        // Display toll info on all displays
-        window.updateTollDisplay();
-        window.updateNavTollDisplay();
-        return; // แผนที่ถูกปิดใช้งานแล้ว — ไม่สร้างแผนที่อีกต่อไป
-        setTimeout(() => {
-            if (!navMap) {
-                navMap = L.map('navMap', {
-                    zoomControl: false,
-                    attributionControl: false,
-                    dragging: true,
-                    touchZoom: true
-                }).setView([startLat, startLon], 17);
-                
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    maxZoom: 19
-                }).addTo(navMap);
-            } else {
-                navMap.setView([startLat, startLon], 17);
-            }
-            
-            // Clear previous
-            if (navCarMarker) navMap.removeLayer(navCarMarker);
-            if (navDestMarker) navMap.removeLayer(navDestMarker);
-            if (navRoute) navMap.removeLayer(navRoute);
-            
-            // Car marker
-            let carIcon = L.divIcon({
-                className: '',
-                html: '<div class="nav-car-marker" id="navCarIcon">🚕</div>',
-                iconSize: [40, 40],
-                iconAnchor: [20, 20]
-            });
-            navCarMarker = L.marker([startLat, startLon], {icon: carIcon}).addTo(navMap);
-            
-            // Destination marker
-            let destIcon = L.divIcon({
-                className: '',
-                html: '<div class="nav-dest-marker">📍</div>',
-                iconSize: [32, 32],
-                iconAnchor: [16, 32]
-            });
-            navDestMarker = L.marker([destLat, destLon], {icon: destIcon}).addTo(navMap);
-            
-            // Draw route
-            if (navRouteCoords.length > 0) {
-                navRoute = L.polyline(navRouteCoords, {
-                    color: '#4caf50',
-                    weight: 5,
-                    opacity: 0.9
-                }).addTo(navMap);
-            }
-            
-            navMap.setView([startLat, startLon], 16);
-            navMap.invalidateSize();
-            
-            // Show recenter button when user drags the map
-            navMap.on('dragstart', () => {
-                document.getElementById('recenterBtn').style.display = 'flex';
-            });
-            
-            // Hide recenter button when map is centered
-            navMap.on('moveend', () => {
-                if (navLastPosition) {
-                    let center = navMap.getCenter();
-                    let dist = Math.sqrt(Math.pow(center.lat - navLastPosition.lat, 2) + Math.pow(center.lng - navLastPosition.lng, 2));
-                    if (dist < 0.0001) {
-                        document.getElementById('recenterBtn').style.display = 'none';
-                    }
-                }
-            });
-        }, 200);
-    };
-    
-    let navLastPosition = null;
-    
-    window.recenterMap = () => {
-        if (navMap) {
-            // Use car marker position if available, otherwise use lastPosition
-            let pos = navCarMarker ? navCarMarker.getLatLng() : navLastPosition;
-            if (pos) {
-                navMap.setView([pos.lat, pos.lng], 17);
-                document.getElementById('recenterBtn').style.display = 'none';
-            }
-        }
-    };
-    
-    window.updateNavPosition = (lat, lon, speed) => {
-        if (!navMap || !navCarMarker) return;
-        
-        navLastPosition = {lat: lat, lng: lon};
-        navCarMarker.setLatLng([lat, lon]);
-        navMap.setView([lat, lon], 17);
-        
-        // Update speed
-        let speedKmh = speed ? (speed * 3.6).toFixed(0) : '0';
-        document.getElementById('navSpeed').innerText = speedKmh;
-        
-        // Calculate remaining distance
-        if (navRouteCoords.length > 0) {
-            let minDist = Infinity;
-            let nearestIdx = 0;
-            for (let i = 0; i < navRouteCoords.length; i++) {
-                let d = Math.sqrt(Math.pow(navRouteCoords[i][0] - lat, 2) + Math.pow(navRouteCoords[i][1] - lon, 2));
-                if (d < minDist) { minDist = d; nearestIdx = i; }
-            }
-            navCurrentIndex = nearestIdx;
-            
-            // Calculate remaining distance in km
-            let remainMeters = 0;
-            for (let i = nearestIdx; i < navRouteCoords.length - 1; i++) {
-                let d = Math.sqrt(Math.pow(navRouteCoords[i+1][0] - navRouteCoords[i][0], 2) + Math.pow(navRouteCoords[i+1][1] - navRouteCoords[i][1], 2));
-                remainMeters += d * 111000; // approx meters
-            }
-            document.getElementById('navDistance').innerText = (remainMeters / 1000).toFixed(1);
-            
-            // ETA
-            let etaMin = speed > 0 ? Math.ceil((remainMeters / 1000) / (speed * 3.6) * 60) : '-';
-            document.getElementById('navETA').innerText = etaMin + ' น.';
-            
-            // Rotate car
-            if (nearestIdx < navRouteCoords.length - 1) {
-                let curr = navRouteCoords[nearestIdx];
-                let next = navRouteCoords[Math.min(nearestIdx + 3, navRouteCoords.length - 1)];
-                let angle = Math.atan2(next[1] - curr[1], next[0] - curr[0]) * 180 / Math.PI;
-                let carEl = document.getElementById('navCarIcon');
-                if (carEl) carEl.style.transform = `rotate(${90 - angle}deg)`;
-            }
-        }
-    };
-    
-    window.closeNavigation = () => {
-        const resultContainer = document.querySelector('.result-container');
-        const fareDisplay = document.getElementById('fareDisplay');
-        if (resultContainer) resultContainer.classList.remove('has-map');
-        if (fareDisplay) fareDisplay.style.display = 'block';
-    };
-    
-    window.endNavigation = () => {
-        window.closeNavigation();
-        window.stopTracking();
     };
 </script>
 
