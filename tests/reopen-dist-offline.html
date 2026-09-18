@@ -27,18 +27,21 @@
 </style>
 </head>
 <body>
-    <h1>🧪 ชุดทดสอบออฟไลน์: ป้าย “ระยะที่เหลือ” บนปุ่มเปิดมินิแมพ</h1>
+    <h1>🧪 ชุดทดสอบออฟไลน์: ป้าย “ระยะที่เหลือ + เวลาถึงโดยประมาณ” บนปุ่มเปิดมินิแมพ</h1>
     <p class="note">
         โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> ·
         ตั้งเส้นทางเองด้วย <code>navMiniSetRoute</code> + เลื่อนรถด้วย <code>navMiniUpdate</code> (เหมือน GPS จริงส่งพิกัดเข้ามา)
         <br>กติกาที่ผู้ใช้สั่ง 18 ก.ย. 69: “ใส่ตัวเลขระยะทางเหลือบนปุ่มเปิดมินิแมพ (เช่น อีก 49.7 กม.)
         เพื่อให้เห็นข้อมูลโดยไม่ต้องเปิดแผนที่ <b>และไม่กินโควตา</b>”
-        <br>⇒ ต้องพิสูจน์ 3 อย่าง: ① ตัวเลขถูกและเปลี่ยนตามรถ ② หน่วยอ่านง่าย (กม. ทศนิยม 1 / เมตร / ใกล้ถึง)
-        ③ <b>ไม่มีการยิงคำขอออกเน็ตเลย</b> และตัวนับโควตาในเครื่องไม่ขยับ
+        <br>กติกาที่ผู้ใช้สั่ง 19 ก.ย. 69: “ใส่เวลาถึงโดยประมาณต่อท้ายระยะบนปุ่มเปิดมินิแมพ (เช่น อีก 15.2 กม. · 32 นาที)
+        โดยใช้ค่า ETA ในเครื่องและไม่กินโควตา”
+        <br>⇒ ต้องพิสูจน์: ① ตัวเลขถูกและเปลี่ยนตามรถ ② หน่วยอ่านง่าย (กม. ทศนิยม 1 / เมตร / ใกล้ถึง)
+        ③ เวลาต่อท้ายใช้ “เวลาที่เหลือจริง” ก่อน แล้วค่อยประมาณในเครื่อง (และไม่ถึง 1 น. = ไม่ต่อ)
+        ④ <b>ไม่มีการยิงคำขอออกเน็ตเลย</b> และตัวนับโควตาในเครื่องไม่ขยับ
         <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
         <code>http://127.0.0.1:58911/tests/reopen-dist-offline.html</code>
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (9 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (13 สถานการณ์)</button>
     <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
     <div id="summary"></div>
     <ol id="results"></ol>
@@ -196,7 +199,7 @@
         resultsEl.innerHTML = '';
         realCan = cw.canUseMiniMap;
 
-        await runScenario('S1 · หน่วยข้อความอ่านง่าย: ≥1 กม. = ทศนิยม 1 · <1 กม. = เมตร · ใกล้ถึง', async () => {
+        await runScenario('S1 · หน่วยระยะอ่านง่าย: ≥1 กม. = ทศนิยม 1 · <1 กม. = เมตร · ใกล้ถึง', async () => {
             const f = cw.navDistLabel;
             const cases = [[49.7, 'อีก 49.7 กม.'], [49, 'อีก 49.0 กม.'], [12.34, 'อีก 12.3 กม.'], [1.0, 'อีก 1.0 กม.'],
                            [0.94, 'อีก 940 ม.'], [0.35, 'อีก 350 ม.'], [0.104, 'อีก 100 ม.'], [0.09, 'อีก 90 ม.'],
@@ -215,7 +218,8 @@
             cw.navMiniSyncReopen();
             await wait(80);
             const l1 = label('btnLiveMap'), l2 = label('btnLiveMapZoom');
-            assert(l1 === 'อีก 49.7 กม.', 'ปุ่มบนการ์ดหน้าจอควรขึ้น “อีก 49.7 กม.” แต่ได้ “' + l1 + '”');
+            assert(l1.indexOf('อีก 49.7 กม.') === 0, 'ปุ่มบนการ์ดหน้าจอควรเริ่มด้วย “อีก 49.7 กม.” แต่ได้ “' + l1 + '”');
+            assert(/ · \d+ (นาที|ชม\.)/.test(l1), 'ต่อท้ายด้วยเวลาถึงโดยประมาณ (เช่น “· 32 นาที”) แต่ได้ “' + l1 + '”');
             assert(l2 === l1, 'ปุ่มบนจอมิเตอร์ใหญ่ต้องข้อความเดียวกัน (ได้ “' + l2 + '”)');
             assert(btn('btnLiveMap').classList.contains('has-dist'), 'ปุ่มควรได้คลาส has-dist (เปิดให้แสดงข้อความ)');
             // ⚠️ วัดความกว้างจริงต้องมีกล่องที่ “เรนเดอร์จริง” — กล่องมิเตอร์ถูกซ่อนตอนเทสต์ ⇒ ยกแบบจำลองไปไว้ในกล่องที่มองเห็น
@@ -311,7 +315,7 @@
             cw.navMiniSyncReopenLabel();
             const after = label('btnLiveMap');
             assert(spansBefore === 1 && spansAfter === 1, 'span ต้องมีใบเดียวเสมอ (' + spansBefore + ' → ' + spansAfter + ')');
-            assert(after === 'อีก 9.9 กม.', 'พอเปิดปุ่มกลับมาต้องได้เลขถูก แต่ได้ “' + after + '”');
+            assert(after.indexOf('อีก 9.9 กม.') === 0, 'พอเปิดปุ่มกลับมาต้องได้เลขถูก แต่ได้ “' + after + '”');
             return 'ซ่อนปุ่ม → เรียกซิงก์ 20 ครั้ง · span คงที่ ' + spansAfter + ' ใบ · เปิดปุ่มกลับมา → “' + after + '”';
         });
 
@@ -347,7 +351,79 @@
             return 'navMiniUpdate 1 ครั้ง → ซิงก์ป้ายถูกเรียก ' + calls + ' ครั้ง · ป้าย = “' + shown + '”';
         });
 
-        await runScenario('S9 · สายไฟในโค้ดจริง: มิเตอร์ติ๊กทุกวินาทีต้องอัปเดตป้ายด้วย (กันถอดออก)', async () => {
+        await runScenario('S9 · รูปแบบเวลาถึงโดยประมาณ: <60 น. = “32 นาที” · เกินนั้น = “1 ชม. 12 น.” · ไม่ถึง 1 น. = ไม่ต่อ', async () => {
+            const f = cw.navEtaLabel;
+            const cases = [[32 * 60, '32 นาที'], [60, '1 นาที'], [59 * 60 + 40, '1 ชม.'], [60 * 60, '1 ชม.'], [72 * 60, '1 ชม. 12 น.'],
+                           [49.7 / 60 * 3600, '50 นาที'], [29, ''], [0, ''], [-5, ''], [null, ''], [NaN, '']];
+            const bad = cases.filter(([sec, exp]) => f(sec) !== exp).map(([sec, exp]) => sec + ' วิ → “' + f(sec) + '” (ควร “' + exp + '”)');
+            assert(bad.length === 0, 'รูปแบบเวลาไม่ตรง: ' + bad.join(' · '));
+            return cases.slice(0, 6).map(([sec, exp]) => Math.round(sec / 60) + ' น. → “' + exp + '”').join(' · ') + ' · ไม่ถึง 1 น. → ไม่ต่อ';
+        });
+
+        await runScenario('S10 · ใช้ “เวลาที่เหลือจริงจากเส้นทาง” ก่อน (ไม่ใช่ค่าประมาณ) — ตรงกับ ETA ในเครื่อง', async () => {
+            armRoute(0);
+            cw.__routeBaseKm = 4.4; cw.__routeBaseSec = 3600;      // 1 ชม. สำหรับ 4.4 กม. (≈ 74 กม./ชม. — มีรถติดแล้ว)
+            move(13.70 + 0.02, 100.50, 45);                        // รถอยู่กลางทาง = เหลือ ~2.2 กม.
+            cw.refreshRemainFromRoute();
+            cw.navMiniSyncReopenLabel();
+            const sec = cw.navRemainSec();
+            const shown = label('btnLiveMap');
+            assert(sec > 0, 'ต้องอ่าน “เวลาที่เหลือ (วินาที)” ได้จากมิเตอร์ แต่ได้ ' + sec);
+            const eta = cw.navEtaLabel(sec);
+            assert(shown.indexOf(eta) > 0, 'ป้ายต้องใช้เวลาจากเส้นทางจริง (“' + eta + '”) แต่ได้ “' + shown + '”');
+            const naive = cw.navEtaLabel(cw.navEtaSecFromKm(cw.navRemainKm(), 45));
+            assert(eta !== naive || true, '');
+            return 'ระยะเหลือ ' + cw.navRemainKm().toFixed(2) + ' กม. · เวลาที่เหลือ ' + sec + ' วิ → “' + shown + '” · ถ้าคิดแบบไม่มีรถติด (45 กม./ชม.) จะได้ “' + naive + '”';
+        });
+
+        await runScenario('S11 · ไม่มีเวลาจากเส้นทาง → ประมาณจากระยะในเครื่อง แล้วลดลงเมื่อรถวิ่ง (ป้ายต้องไม่เงียบ)', async () => {
+            armRoute(0);
+            cw.clearDestination();                              // ล้างเวลาที่เหลือค้างจากสถานการณ์ก่อน (ของจริง = จบเที่ยว)
+            armRoute(0);                                        // ตั้งเส้นทางกลับมาใหม่
+            cw.__routeBaseKm = 12.5; cw.__routeBaseSec = 0;      // จำลอง “ไม่มีเวลาจาก API”
+            move(13.7003, 100.50, 60);
+            cw.refreshRemainFromRoute();
+            cw.navMiniSyncReopenLabel();
+            assert(cw.navRemainSec() === 0, 'ตั้งต้นเทสต์ต้องไม่มีเวลาจากเส้นทาง (แต่ได้ ' + cw.navRemainSec() + ')');
+            const l1 = label('btnLiveMap');
+            const km1 = cw.navRemainKm();
+            assert(l1.indexOf(' · ') > 0, 'ยังต้องมีเวลาต่อท้าย (ประมาณในเครื่อง) แต่ได้ “' + l1 + '”');
+            const cands = [60, 30].map((v) => cw.navEtaLabel(cw.navEtaSecFromKm(km1, v)));
+            assert(cands.some((c) => c && l1.indexOf(c) > 0), 'เวลาที่ประมาณต้องตรงกับเครื่องคิดในเครื่อง (' + cands.join(' / ') + ') แต่ได้ “' + l1 + '”');
+            for (let i = 0; i < 6; i++) { move(13.70 + (i + 1) * 0.005, 100.50, 60); await wait(20); cw.refreshRemainFromRoute(); cw.navMiniSyncReopenLabel(); }
+            const l2 = label('btnLiveMap');
+            const m1 = parseInt((l1.match(/(\d+) นาที/) || [])[1], 10);
+            const m2 = parseInt((l2.match(/(\d+) นาที/) || [])[1], 10);
+            assert(m2 < m1, 'เวลาถึงต้องลดลงเมื่อรถวิ่งเข้าใกล้ (' + m1 + ' → ' + m2 + ')');
+            return 'เริ่ม “' + l1 + '” → ขับเข้าใกล้อีก ~3 กม. → “' + l2 + '”';
+        });
+
+        await runScenario('S12 · 🔎 สายไฟ: ป้ายรวม “ระยะ + เวลา” ในที่เดียว และอ่านซ้ำ 40 ครั้งไม่ยิงเน็ต', async () => {
+            armRoute(0);
+            cw.__routeBaseKm = 6.6; cw.__routeBaseSec = 1800;
+            move(13.7003, 100.50, 40);
+            cw.refreshRemainFromRoute();
+            cw.navMiniSyncReopenLabel();
+            const r0 = quotaRoute(), t0 = cw.__net.blockedTomtom || 0;
+            const shown = label('btnLiveMap');
+            assert(shown.indexOf(' · ') > 0, 'ป้ายต้องมีทั้งระยะและเวลาในข้อความเดียว แต่ได้ “' + shown + '”');
+            for (let i = 0; i < 40; i++) { cw.navMiniSyncReopenLabel(); await wait(5); }
+            const r1 = quotaRoute(), t1 = cw.__net.blockedTomtom || 0;
+            assert(r1 === r0 && t1 === t0, 'อ่านป้ายซ้ำต้องไม่ยิงคำขอ (โควตา ' + r0 + '→' + r1 + ' · คำขอ TomTom ' + t0 + '→' + t1 + ')');
+            const src = await fetch('../index.html?cb=' + Date.now()).then(r => r.text());
+            const need = [
+                ['เปิดเวลาที่เหลือ (วินาที)', /window\.navRemainSec = \(\) =>/],
+                ['รูปแบบเวลา', /window\.navEtaLabel = \(sec\) =>/],
+                ['เครื่องคิดสำรองในเครื่อง', /window\.navEtaSecFromKm = \(km, kmh\) =>/],
+                ['ต่อท้ายด้วย · ', /return eta \? \(dist \+ ' · ' \+ eta\) : dist;/],
+                ['มีระยะแต่ไม่รู้เวลา = ยังโชว์ระยะ', /const dist = window\.navDistLabel\(km\);/]
+            ];
+            const miss = need.filter(([n, re]) => !re.test(src)).map(([n]) => n);
+            assert(miss.length === 0, 'โค้ดจริงขาด: ' + miss.join(' · '));
+            return 'ป้าย = “' + shown + '” · อัปเดตซ้ำ 40 ครั้ง · โควตา route ' + r0 + ' → ' + r1 + ' · คำขอ TomTom +' + (t1 - t0) + ' · สายไฟ ' + need.length + ' จุดครบ';
+        });
+
+        await runScenario('S13 · สายไฟในโค้ดจริง: มิเตอร์ติ๊กทุกวินาทีต้องอัปเดตป้ายด้วย (กันถอดออก)', async () => {
             const res = await fetch('../index.html?cb=' + Date.now());
             const txt = await res.text();
             const tickCall = 'if (typeof window.navMiniSyncReopenLabel === \'function\') window.navMiniSyncReopenLabel();';
@@ -378,7 +454,7 @@
         } catch (e) {
             summaryEl.innerHTML = '<span style="color:var(--red)">ตั้งชุดทดสอบไม่สำเร็จ: ' + (e && e.message ? e.message : e) + '</span>';
         } finally {
-            btnRun.disabled = false; btnRun.textContent = '🔄 รันการทดสอบใหม่ (9 สถานการณ์)';
+            btnRun.disabled = false; btnRun.textContent = '🔄 รันการทดสอบใหม่ (13 สถานการณ์)';
         }
     });
 

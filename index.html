@@ -16180,6 +16180,9 @@
     //    ⚠️ ตัวแปรจริงเป็น `let` ระดับสคริปต์ → ห้ามให้สคริปต์อื่นอ้างชื่อตรง ๆ ให้เรียกฟังก์ชันนี้
     //    · เป็นค่าที่คำนวณในเครื่อง (snap บนเส้นทาง) ⇒ อ่านซ้ำกี่ครั้งก็ไม่กินโควตา
     window.navRemainKm = () => (typeof currentTrueRemainKm === 'number' && isFinite(currentTrueRemainKm)) ? currentTrueRemainKm : 0;
+    // ⏱️ (19 ก.ย. 69) เผย “เวลาที่เหลือ (วินาที)” ให้ปุ่มเปิดมินิแมพใช้ต่อท้ายระยะ — ผู้ใช้ขอ “อีก 15.2 กม. · 32 นาที”
+    //    ค่านี้คือ ETA ที่คำนวณในเครื่องอยู่แล้ว (จากเส้นทางที่ขอไว้แล้ว/ตัวนับถอยหลังรายวินาที) ⇒ อ่านซ้ำไม่กินโควตา
+    window.navRemainSec = () => (typeof currentTrueRemainSec === 'number' && isFinite(currentTrueRemainSec) && currentTrueRemainSec > 0) ? currentTrueRemainSec : 0;
 
     window.startDynamicRouting = () => { 
         if(routeUpdateTimer) clearInterval(routeUpdateTimer); 
@@ -17469,7 +17472,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '56e23ac28a';
+    const APP_WEB_VERSION = '5101eb7ab8';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -17957,6 +17960,9 @@
         ['2026-09-19', '📅 บอกเวลารีเซ็ตโควตา TomTom + นับถอยหลัง (รอบใหม่ต้นเดือนหน้า)'],
         ['2026-09-19', '⏱️ สาเหตุ “เรียกถี่” บอกจำนวนครั้งที่ยิงไปใน 1 นาทีล่าสุด'],
         ['2026-09-19', '🚗 เพดานโควตาดูเป็นรายเดือนตามแผนจริง (เส้นทาง 20,000 · ค้นหา 2,500)'],
+        ['2026-09-19', '⏱️ ปุ่มเปิดมินิแมพโชว์เวลาถึงด้วย (อีก 15.2 กม. · 32 นาที)'],
+        ['2026-09-19', '🚦 เวลาที่โชว์ใช้เวลาที่เหลือจริงจากเส้นทางก่อน แล้วค่อยประมาณในเครื่อง'],
+        ['2026-09-19', '🔇 เหลือไม่ถึง 1 นาที = ไม่ต่อเวลาให้รก (ยังขึ้น “ใกล้ถึง” เหมือนเดิม)'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -23684,13 +23690,39 @@
     // 🔎 รู้ว่า “มีเส้นทางที่คำนวณไว้แล้ว” หรือยัง — ระยะ 0 มี 2 ความหมายต่างกัน:
     //    ไม่มีเส้นทางเลย (ต้องเงียบ) กับ ถึงปลายทางแล้ว (ต้องขึ้น “ใกล้ถึง”)
     window.navHasRouteBase = () => (typeof window.__routeBaseKm === 'number' && window.__routeBaseKm > 0);
+    // ⏱️ (19 ก.ย. 69) “เวลาถึงโดยประมาณ” ต่อท้ายระยะบนปุ่ม — ผู้ใช้ขอ: “อีก 15.2 กม. · 32 นาที”
+    //    ✅ ใช้ค่า ETA ที่มีอยู่ในเครื่อง (จากเส้นทางที่ขอไว้แล้ว / ตัวนับถอยหลังรายวินาที) ⇒ ไม่ยิงคำขอใหม่ ⇒ ไม่กินโควตา
+    //    · เกณฑ์เดียวกับที่มินิแมพแสดงเอง: <60 น. = “32 นาที” · เกินนั้น = “1 ชม. 12 น.” · น้อยกว่า 1 น. = ไม่ต้องต่อ (กันอ่านรก)
+    window.navEtaLabel = (sec) => {
+        const s = Number(sec);
+        if (!isFinite(s) || s <= 0) return '';
+        const mins = Math.round(s / 60);
+        if (mins < 1) return '';
+        if (mins < 60) return mins + ' นาที';
+        const h = Math.floor(mins / 60), m = mins % 60;
+        return h + ' ชม.' + (m > 0 ? ' ' + m + ' น.' : '');
+    };
+    // เครื่องคิด ETA สำรอง (ในเครื่องล้วน) — ใช้เมื่อยังไม่ได้ค่าจากเส้นทาง แต่มีระยะเหลือ
+    window.navEtaSecFromKm = (km, kmh) => {
+        const n = Number(km), v = Number(kmh);
+        if (!isFinite(n) || n <= 0.05) return 0;
+        const speed = (isFinite(v) && v > 8) ? v : 30;   // เกณฑ์เดียวกับที่มินิแมพใช้ (ต่ำกว่า 8 = จอด/คลาน → คิด 30)
+        return n / speed * 3600;
+    };
     function reopenDistText() {
         try {
             // ⛔ เงื่อนไขสำคัญ: ต้อง “มีเส้นทางที่คำนวณไว้” ก่อน ⇒ ไม่เอาเลขค้างจากเที่ยวก่อนมาโชว์
             //    (เจอจริงตอนทดสอบ: ล้างฐานเส้นทางแล้วยังขึ้น “อีก 1.1 กม.” ค้างจากเที่ยวก่อน)
             if (!window.navHasRouteBase()) return '';
             const km = (typeof window.navRemainKm === 'function') ? window.navRemainKm() : 0;
-            return window.navDistLabel(km);   // เหลือ 0 แต่มีเส้นทาง = “ใกล้ถึง”
+            const dist = window.navDistLabel(km);   // เหลือ 0 แต่มีเส้นทาง = “ใกล้ถึง”
+            if (!dist) return '';
+            // ⏱️ ต่อท้ายด้วยเวลาถึงโดยประมาณ — ใช้ค่าที่มีในเครื่องก่อน แล้วค่อยประมาณจากระยะถ้ายังไม่มี
+            let sec = 0;
+            try { if (typeof window.navRemainSec === 'function') sec = window.navRemainSec(); } catch (e) {}
+            if (!(sec > 0)) sec = window.navEtaSecFromKm(km, (typeof speedKmh === 'number') ? speedKmh : 0);
+            const eta = window.navEtaLabel(sec);
+            return eta ? (dist + ' · ' + eta) : dist;
         } catch (e) { return ''; }
     }
     function syncReopenLabels() {
