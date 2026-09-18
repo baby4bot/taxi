@@ -2,6 +2,7 @@ package com.baby4bot.taximeter;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -586,6 +587,107 @@ public class MainActivity extends Activity {
                     openSystemAppSettings();
                 }
             });
+        }
+
+        /** 🏷 ยี่ห้อเครื่อง (Build.MANUFACTURER) — ฝั่งเว็บใช้ปรับคำเตือนเฉพาะรุ่น เช่น Samsung Auto Blocker
+         *  ⚠️ userAgent ของ WebView บอกยี่ห้อเครื่องไม่ได้ ⇒ ต้องถามสะพานนี้ (ตัวพิมพ์เล็กเสมอ) */
+        @JavascriptInterface
+        public String deviceBrand() {
+            try {
+                String b = Build.MANUFACTURER;
+                return (b == null) ? "" : b.toLowerCase(java.util.Locale.ROOT);
+            } catch (Exception e) {
+                return "";
+            }
+        }
+
+        /** 🧱 เครื่อง Samsung (One UI 6+) มี “ตัวบล็อกอัตโนมัติ (Auto Blocker)” ที่บล็อกการติดตั้ง APK
+         *  ⇒ ถ้าเปิดอยู่ กด “ติดตั้งทันที” แล้วจะ “เงียบ” ไม่ขึ้นอะไรเลย (ผู้ใช้หาสาเหตุไม่ได้)
+         *  วิธีหา: ค้น activity ที่ชื่อเกี่ยวกับ autoblock ในแอปตั้งค่าของเครื่องก่อน (แม่นสุด — ไม่ต้องเดาชื่อ)
+         *  แล้วค่อยไล่ทางสำรอง: component ที่รู้จัก → Security & privacy → หน้าอนุญาตติดตั้งจากแหล่งที่ไม่รู้จัก */
+        @JavascriptInterface
+        public void openAutoBlockerSettings() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        ComponentName autoBlocker = findAutoBlockerActivity();
+                        if (autoBlocker != null) {
+                            Intent i = new Intent();
+                            i.setComponent(autoBlocker);
+                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            if (startActivitySafely(i)) {
+                                toastShort("ปิด “ตัวบล็อกอัตโนมัติ” แล้วกลับมากดติดตั้งอีกครั้ง");
+                                return;
+                            }
+                        }
+                        String[][] candidates = new String[][]{
+                                {"com.samsung.android.settings", "com.samsung.android.settings.autoblocker.AutoBlockerActivity"},
+                                {"com.samsung.android.settings", "com.samsung.android.settings.autoblocker.AutoBlockerTopActivity"},
+                                {"com.samsung.android.settings", "com.samsung.android.settings.Settings$AutoBlockerSettingsActivity"}
+                        };
+                        for (String[] c : candidates) {
+                            Intent i = new Intent();
+                            i.setComponent(new ComponentName(c[0], c[1]));
+                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            if (startActivitySafely(i)) {
+                                toastShort("ปิด “ตัวบล็อกอัตโนมัติ” แล้วกลับมากดติดตั้งอีกครั้ง");
+                                return;
+                            }
+                        }
+                        if (startActivitySafely(new Intent("android.settings.SECURITY_SETTINGS"))) {
+                            toastShort("เปิด “ความปลอดภัยและความเป็นส่วนตัว” ให้แล้ว — เลือก “ตัวบล็อกอัตโนมัติ” แล้วปิด");
+                            return;
+                        }
+                        openInstallPermissionSettings();
+                        toastShort("เปิดหน้าตั้งค่าให้แล้ว — ปิด “ตัวบล็อกอัตโนมัติ” แล้วติดตั้งอีกครั้ง");
+                    } catch (Exception e) {
+                        try {
+                            openInstallPermissionSettings();
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+            });
+        }
+
+        /** 🔎 หา activity ของ “ตัวบล็อกอัตโนมัติ” ในแอปตั้งค่าของเครื่อง (คืน null = ไม่เจอ)
+         *  ต้องมี <queries> ของ package นี้ใน manifest ไม่งั้น Android 11+ จะไม่ให้มองเห็น activity */
+        private ComponentName findAutoBlockerActivity() {
+            ComponentName anyMatch = null;
+            String[] pkgs = new String[]{"com.samsung.android.settings", "com.android.settings"};
+            for (String pkg : pkgs) {
+                try {
+                    android.content.pm.PackageInfo pi = getPackageManager().getPackageInfo(pkg, PackageManager.GET_ACTIVITIES);
+                    if (pi == null || pi.activities == null) continue;
+                    for (android.content.pm.ActivityInfo a : pi.activities) {
+                        if (a == null || a.name == null) continue;
+                        String n = a.name.toLowerCase(java.util.Locale.ROOT);
+                        if (!n.contains("autoblock")) continue;
+                        // ตัวที่เปิดให้แอปอื่นเรียกได้ = ใช้เลย · ตัวที่ไม่ exported เก็บไว้ลองเป็นทางเลือกท้ายสุด (เผื่อรุ่นที่ไม่ได้ตั้งค่าไว้)
+                        if (a.exported) return new ComponentName(pkg, a.name);
+                        if (anyMatch == null) anyMatch = new ComponentName(pkg, a.name);
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            return anyMatch;
+        }
+
+        private boolean startActivitySafely(Intent i) {
+            try {
+                startActivity(i);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        private void toastShort(final String msg) {
+            try {
+                Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+            } catch (Exception ignored) {
+            }
         }
 
         /** 📦 ดาวน์โหลด APK รุ่นใหม่แล้วเปิดหน้าติดตั้งให้ (เว็บเรียกตอนผู้ใช้กด "ติดตั้งทันที")

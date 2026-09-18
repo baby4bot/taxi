@@ -31,6 +31,20 @@
 
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
+    <!-- 🔎 มองเห็น “แอปตั้งค่า” ของเครื่อง (Android 11+ ซ่อนไว้โดยค่าเริ่มต้น)
+         จำเป็นสำหรับการค้นหาหน้าจอ “ตัวบล็อกอัตโนมัติ (Auto Blocker)” ของ Samsung เพื่อพาผู้ใช้ไปปิดก่อนติดตั้ง APK
+         ไม่เห็นรายการนี้ = ค้นไม่เจอ แล้วตกไปใช้ทางสำรอง (Security & privacy) แทน -->
+    <queries>
+        <package android:name="com.samsung.android.settings" />
+        <package android:name="com.android.settings" />
+        <intent>
+            <action android:name="android.settings.SECURITY_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.MANAGE_UNKNOWN_APP_SOURCES" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="false"
         android:hardwareAccelerated="true"
