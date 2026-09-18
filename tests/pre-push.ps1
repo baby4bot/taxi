@@ -167,6 +167,32 @@ if (Test-Path $stamper) {
   Fail 'tests/stamp-web-version.ps1 missing'
 }
 
+# --- 3c-bis) the mini map must never open by itself again ---------------------
+#   (owner request 18 Sep 2026: "add a pre-push gate that stops any code from going
+#    back to pref.hidden = !permOk() or calling show() at navigation start, and
+#    report the leaking spots" - Thai detail goes to the guard's own report file)
+#   Regression A: pref.hidden = !permOk()  = "has permission => open it right away"
+#   Regression B: show() / pref.hidden = false inside a start path (startNavigationMap,
+#   navMiniResume, __navMiniApplyPerm) bypasses autoOpenAtStart(), which is the only
+#   place that honours "the user pressed X, keep it closed" and the per-role setting.
+$mmChecker = Resolve-FromRoot 'tests/minimap-start-guard.ps1'
+if (Test-Path $mmChecker) {
+  $mOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $mmChecker -Index $Index 2>&1 | Out-String
+  $mBad = @($mOut -split "`r?`n" | Where-Object { $_ -match '^\[FAIL\]' })
+  if ($mBad.Count) {
+    Fail 'minimap-start-guard not clean -> the mini map can open by itself again'
+    foreach ($l in $mBad) { Say ('        ' + $l.Trim()) }
+    foreach ($l in @($mOut -split "`r?`n" | Where-Object { $_ -match 'line \d+' })) { Say ('        ' + $l.Trim()) }
+    Say  '       (fix: those start paths may only open through autoOpenAtStart(); otherwise stay collapsed)'
+    Say  '       (full Thai detail with line numbers: tests/minimap-start-guard-report.txt)'
+  } else {
+    $mRes = ([regex]::Match($mOut, 'RESULT:[^\r\n]*')).Value
+    Pass ('minimap-start-guard: mini map cannot self-open -> ' + $mRes.Trim())
+  }
+} else {
+  Fail 'tests/minimap-start-guard.ps1 missing'
+}
+
 # --- 3d) never ship the APK signing key -------------------------------------
 #   (owner request 18 Sep 2026: "ติดตั้งทับได้เลย ไม่ต้องถอนของเก่า" -> the key at
 #    .freebuff/signing-key/ + GitHub Actions secrets keeps one identity forever.
