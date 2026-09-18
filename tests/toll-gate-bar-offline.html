@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — แถบ “ค่าทางด่วน” ด้านบน: ต้องไม่บังหน้าจอขับรถ + แตะยอดจบในคลิกเดียว</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 940px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 940px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    /* iframe ต้องมองเห็นได้ (ไม่ display:none) ไม่งั้นวัดเรขาคณิตจริงไม่ได้ */
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: แถบ “ค่าทางด่วน” ด้านบน (เดิมเป็นหน้าต่างเต็มจอ)</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe แล้ว <b>ตัดเน็ตทั้งหมด</b> (Firestore/TomTom/CDN)
+        แล้ววัดด้วยของจริง 3 อย่าง: <b>เรขาคณิต</b> (<code>getBoundingClientRect</code> + <code>elementFromPoint</code> ว่าแถบไปทับปุ่ม/ตัวเลขไหม)
+        · <b>พฤติกรรม</b> (แตะชิป = บวกเงินครั้งเดียว · ยุบ/กาง · ยกเลิกไม่เด้งซ้ำ) · <b>กติกาล้วน</b> (<code>__tollBarTopDecide</code>)
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> แล้วเปิด
+        <code>http://127.0.0.1:58911/tests/toll-gate-bar-offline.html</code>
+        <br>เกณฑ์ที่ต้องผ่าน: แถบ<b>ห้ามทับ</b>ปุ่มแฮมเบอร์เกอร์/ปุ่มแชร์ (หน้าจอหลัก) และ<b>ห้ามทับ</b>เวลาเริ่ม/กม./เวลารถติด (จอมิเตอร์ใหญ่)
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (9 สถานการณ์)</button>
+    <button id="dbgBtn" class="alt">🔎 ดูค่าที่วัดได้สด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ขนาดเท่าเครื่องจริง ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    // คีย์แคชในเครื่องที่จะถูกเขียนระหว่างทดสอบ — ล้างทิ้งหลังจบ (ไม่ให้ค่าทดสอบค้างในเบราว์เซอร์ที่เปิดแอปอยู่)
+    const CACHE_KEYS = ['taxi_toll_pairs_v1', 'taxi_toll_rates_v1', 'taxi_active_trip_v1'];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[tollbar-test]', ...a); } catch (e) {} };
+
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตออกทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) {
+                    cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return;
+                }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        // GPS ไม่ใช้ในชุดนี้ แต่ตัดไว้ไม่ให้ค้าง
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test: ไม่ใช้ GPS' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    // ============================ บูตแอป ============================
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000;
+        const t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function loadApp() {
+        // 🧹 กันเที่ยวเก่า/สถานะค้างจากเบราว์เซอร์นี้ (ออริจินเดียวกับพรีวิว) ที่จะทำให้แอป "เริ่มต่อเที่ยวเอง"
+        //    แล้วเปิดจอมิเตอร์ใหญ่ทับ — ทำให้วัดเรขาคณิตของหน้าจอหลักผิด
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.tollGateBarShow === 'function' && typeof cw.__tollBarTopDecide === 'function' && typeof cw.tollGateBarApply === 'function') {
+                installStubs();
+                await wait(200);
+                // หยุดเที่ยวที่แอปอาจกู้ขึ้นมาเองจาก localStorage ร่วมกัน แล้วปิดทุกโมดัล/ตัวโหลด
+                try { cw.isManualRunning = false; } catch (e) {}
+                clearLocalCache();
+                try { cw.resumeSavedTrip && cw.localStorage.removeItem('taxi_active_trip_v1'); } catch (e) {}
+                await closeAllModals();
+                await waitForNoLoader(12000);
+                await wait(200);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    // ปิดทุกอย่างที่ทับหน้าจอ (จอมิเตอร์ใหญ่/โมดัล/ตัวโหลด) — สถานการณ์ที่วัดเรขาคณิตต้องเริ่มจากจอว่าง
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    // ============================ ตัวช่วยวัด ============================
+    const BOOTH = () => ({
+        system: 'expressway',
+        line: 'ทางพิเศษศรีรัช',
+        sysFull: 'ทางพิเศษศรีรัช',
+        gateIn: 'ด่านอโศก',
+        gateOut: 'ด่านบางนา',
+        price: 50
+    });
+
+    const bar = () => w().document.getElementById('tollGateBar');
+    const rectOf = (el) => { const r = el.getBoundingClientRect(); return { t: Math.round(r.top), b: Math.round(r.bottom), l: Math.round(r.left), w: Math.round(r.width), h: Math.round(r.height) }; };
+    const shown = () => { const e = bar(); return !!(e && e.className.indexOf('show') >= 0); };
+    const chips = () => Array.from(bar().querySelectorAll('.tgb-chip')).map(b => b.textContent.trim());
+
+    // ⚠️ วัด “ทับหรือไม่” ด้วยจุดศูนย์กลางขององค์ประกอบ + elementFromPoint (จุดเดียวกับที่นิ้วแตะ)
+    function covered(sel) {
+        const cw = w();
+        const el = cw.document.querySelector(sel);
+        if (!el) return { sel: sel, missing: true, covered: null };
+        const r = el.getBoundingClientRect();
+        const cx = Math.round(r.left + r.width / 2), cy = Math.round(r.top + r.height / 2);
+        const hit = cw.document.elementFromPoint(cx, cy);
+        const own = !!(hit && (el === hit || el.contains(hit) || hit.contains(el)));
+        return { sel: sel, cy: cy, covered: !own, by: own ? null : (hit ? (hit.id || String(hit.className || '').slice(0, 30) || hit.tagName) : 'null') };
+    }
+
+    // ทำให้แถบหัวจอ/หน้าหลัก “มองเห็นได้จริง” เพื่อวัดเรขาคณิต (ไม่ต้องล็อกอิน)
+    function showMainChrome(show) {
+        const cw = w();
+        try {
+            const main = cw.document.getElementById('mainApp');
+            if (main) main.style.display = show ? 'flex' : 'none';
+            const auth = cw.document.getElementById('authScreen') || cw.document.getElementById('loginScreen');
+            if (auth) auth.style.display = show ? 'none' : 'flex';
+        } catch (e) {}
+    }
+    // ⚠️ ต้อง "ล้างค่าข้างใน" ไม่ใช่แทนที่อ็อบเจกต์ — แอปอ้างอ็อบเจกต์ตัวในโมดูลอยู่
+    //    (ถ้าแทนที่ แอปจะยังเขียน/อ่านอีกตัวหนึ่ง แล้วเทสต์จะอ่านไม่เจอ = ผ่าน/ไม่ผ่านผิด)
+    function resetGate() {
+        const cw = w();
+        try {
+            const st = cw.__tollGateState;
+            if (st) {
+                st.prompted = {}; st.handled = {}; st.notified = {};
+            } else {
+                cw.__tollGateState = { prompted: {}, handled: {}, notified: {} };
+            }
+        } catch (e) {}
+        w().tollGateBarHide();
+    }
+    function clearSurcharges() { try { w().surchargeList = []; w().updateSurchargeUI(); } catch (e) {} }
+    function clearLocalCache() { try { CACHE_KEYS.forEach(k => w().localStorage.removeItem(k)); } catch (e) {} }
+
+    // ============================ รัน 1 สถานการณ์ ============================
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(30000).then(() => { throw new Error('สถานการณ์ timeout 30 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ล้มเหลว</span> ' + name + '\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span>';
+            failures.push({ name: name, error: e && e.message ? e.message : String(e) });
+            failCount++;
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ล้มเหลว ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        const n = (w() && w().__net) ? w().__net : { blockedFetch: 0, blockedXhr: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: คำขอออกนอกเครื่องที่ถูกบล็อกทั้งหมด ' + (n.blockedFetch + n.blockedXhr) +
+            ' ครั้ง (fetch ' + n.blockedFetch + ' · XHR ' + n.blockedXhr + ') — ชุดทดสอบนี้ไม่ต้องใช้อินเทอร์เน็ต';
+    }
+
+    // ============================ สถานการณ์ทั้งหมด ============================
+    async function runAll() {
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+        renderSummary();
+
+        await runScenario('S1 · กติกาล้วน __tollBarTopDecide (ตารางตัดสิน 5 แบบ)', async () => {
+            const d = w().__tollBarTopDecide;
+            const gap = w().__TOLLBAR_MIN_GAP;
+            assert(typeof d === 'function', 'ไม่พบ __tollBarTopDecide');
+            assert(gap === 96, 'ค่า __TOLLBAR_MIN_GAP ควรเป็น 96 ได้ ' + gap);
+            const cases = [
+                { in: [[], 84], want: 84, why: 'ไม่มีโมดัล → หลบใต้หัวจอ (84)' },
+                { in: [[], 0], want: 0, why: 'ไม่มีหัวจอ → ชิดบนสุด' },
+                { in: [[153], 84], want: 0, why: 'โมดัลเริ่มที่ 153 (มีที่ว่าง) → ชิดบนสุด ไม่บังตัวเลขในกล่อง' },
+                { in: [[20], 84], want: 84, why: 'โมดัลเริ่มชิดบน (20) → หลบใต้หัวจอแทน' },
+                { in: [[0, 153], 84], want: 0, why: 'มีโมดัลตัวหนึ่งมีที่ว่าง → ชิดบนสุด' },
+                { in: [[10, 20], 84], want: 84, why: 'ทุกโมดัลชิดบน → หลบ' },
+                { in: [['x', null, 200], 84], want: 0, why: 'ค่าขยะต้องถูกกรอง ไม่ทำให้ตัดสินพลาด' }
+            ];
+            const got = cases.map(c => d(c.in[0], c.in[1]));
+            const bad = cases.filter((c, i) => got[i] !== c.want);
+            assert(bad.length === 0, 'ตัดสินผิด: ' + bad.map((c, i) => c.why + ' → ได้ ' + got[cases.indexOf(c)] + ' ควร ' + c.want).join(' · '));
+            return 'ทดสอบ ' + cases.length + ' แบบ ผ่านหมด: ' + cases.map((c, i) => c.in[0].length + 'โมดัล/' + c.in[1] + '→' + got[i]).join(' · ');
+        });
+
+        await runScenario('S2 · หน้าจอหลัก: วางใต้แถบหัวจอ และไม่ทับปุ่มแฮมเบอร์เกอร์/ปุ่มแชร์', async () => {
+            resetGate(); clearSurcharges(); showMainChrome(true);
+            await closeAllModals();
+            await waitForNoLoader(8000);
+            await wait(150);
+            const hb = w().__tollGateBarTop();
+            w().tollGateBarShow('ask', BOOTH(), 0, 1.3, 0);
+            await wait(60);
+            const r = rectOf(bar());
+            assert(shown(), 'แถบไม่แสดง');
+            const hdr = w().document.querySelector('#mainApp .app-header');
+            assert(!!hdr, 'ไม่พบแถบหัวจอ (.app-header)');
+            const hdrBottom = Math.round(hdr.getBoundingClientRect().bottom);
+            assert(hdrBottom > 0, 'หัวจอไม่ถูกเรนเดอร์ (สูง 0) — วัดไม่ได้');
+            assert(r.t === hdrBottom, 'แถบควรอยู่ที่ ' + hdrBottom + ' แต่ได้ ' + r.t);
+            const h1 = covered('#mainApp .app-header .hamburger-btn');
+            const h2 = covered('#fabMainBtn');
+            assert(h1.covered === false, 'ปุ่มแฮมเบอร์เกอร์ถูกทับ (โดย ' + h1.by + ')');
+            assert(h2.covered === false, 'ปุ่มแชร์ถูกทับ (โดย ' + h2.by + ')');
+            const pct = +(r.h / w().innerHeight * 100).toFixed(1);
+            assert(pct <= 15, 'แถบสูงเกิน 15% ของจอ (' + pct + '%)');
+            w().tollGateBarHide();
+            return 'top=' + r.t + ' (ขอบล่างหัวจอ) · สูง ' + r.h + 'px = ' + pct + '% ของจอ · แฮมเบอร์เกอร์ ' + h1.cy + 'px ไม่ถูกทับ · ปุ่มแชร์ ' + h2.cy + 'px ไม่ถูกทับ';
+        });
+
+        await runScenario('S3 · จอมิเตอร์ใหญ่เปิด: ชิดบนสุด และไม่ทับเวลาเริ่ม/กม./เวลารถติด', async () => {
+            resetGate(); clearSurcharges(); showMainChrome(true);
+            await closeAllModals();
+            await waitForNoLoader(8000);
+            const keys = ['#tzStartTime', '#tzElapsedTime', '#tzDrivenKm', '#tzTrafficTime'];
+            try {
+                try { w().toggleModal('trackerZoomOverlay', true); } catch (e) {}
+                const ov = w().document.getElementById('trackerZoomOverlay');
+                if (ov && w().getComputedStyle(ov).display === 'none') ov.style.display = 'flex';
+                await wait(180);
+                const box = w().document.querySelector('#trackerZoomOverlay .modal-box');
+                assert(!!box, 'ไม่พบกล่องจอมิเตอร์ใหญ่');
+                const boxTop = Math.round(box.getBoundingClientRect().top);
+                assert(boxTop >= 96, 'กล่องมิเตอร์เริ่มต่ำกว่า 96px (ได้ ' + boxTop + ') — สถานการณ์นี้ต้องมีที่ว่างด้านบน');
+                w().tollGateBarShow('ask', BOOTH(), 0, 1.3, 0);
+                await wait(60);
+                const r = rectOf(bar());
+                assert(shown(), 'แถบไม่แสดง');
+                assert(r.t === 0, 'ควรชิดบนสุด (0) แต่ได้ ' + r.t);
+                const bad = keys.map(covered).filter(c => c.covered !== false);
+                assert(bad.length === 0, 'ทับตัวเลขสำคัญ: ' + bad.map(b => b.sel + ' (โดย ' + b.by + ')').join(', '));
+                const pct = +(r.h / w().innerHeight * 100).toFixed(1);
+                assert(pct <= 15, 'แถบสูงเกิน 15% ของจอ (' + pct + '%)');
+                return 'แถบ top=0 สูง ' + r.h + 'px = ' + pct + '% · กล่องมิเตอร์เริ่มที่ ' + boxTop + 'px ⇒ ไม่ทับ ' + keys.join(', ');
+            } finally {
+                w().tollGateBarHide();
+                await closeAllModals();
+            }
+        });
+
+        await runScenario('S4 · ไม่มี backdrop — ห้ามบล็อกการแตะส่วนอื่นของจอ', async () => {
+            resetGate(); showMainChrome(true);
+            w().tollGateBarShow('ask', BOOTH(), 0, 1.3, 0);
+            await wait(60);
+            const e = bar();
+            assert(shown(), 'แถบไม่แสดง');
+            assert(!e.querySelector('.toll-backdrop'), 'พบ backdrop ภายในแถบ (ต้องไม่มี)');
+            const cw = w();
+            // จุดที่อยู่ “นอกแถบ” ต้องยังแตะถึงของจริง (ไม่ถูก overlay โปร่งใสกลืน)
+            const outsideY = Math.min(cw.innerHeight - 5, rectOf(e).b + 40);
+            const hit = cw.document.elementFromPoint(20, outsideY);
+            assert(!!hit, 'elementFromPoint นอกแถบได้ null');
+            assert(!e.contains(hit), 'จุดนอกแถบถูกแถบกลืน (ได้ ' + (hit.id || hit.tagName) + ')');
+            const cs = cw.getComputedStyle(e);
+            assert(cs.position === 'fixed', 'แถบควรเป็น position:fixed ได้ ' + cs.position);
+            w().tollGateBarHide();
+            return 'ไม่มี backdrop · position=' + cs.position + ' · จุด y=' + outsideY + 'px ยังแตะ ' + (hit.id || hit.tagName) + ' ได้ (ไม่ถูกแถบกลืน)';
+        });
+
+        await runScenario('S5 · โหมดถาม: มีชิปให้แตะ และแตะแล้วบวกเงินครั้งเดียว + ปิดแถบ + จำคู่', async () => {
+            resetGate(); clearSurcharges();
+            try { delete w().__tollPairs['expressway|ทางพิเศษศรีรัช|ด่านอโศก|ด่านบางนา']; } catch (e) {}
+            w().tollGateBarShow('ask', BOOTH(), 0, 1.3, 0);
+            await wait(60);
+            const cs = chips();
+            assert(cs.length >= 2, 'ควรมีชิปอย่างน้อย 2 อัน (ตามตาราง + คีย์เอง) ได้ ' + JSON.stringify(cs));
+            assert(cs.some(c => /ตามตาราง/.test(c)), 'ไม่พบชิป “ตามตาราง”');
+            assert(cs.some(c => /คีย์เอง/.test(c)), 'ไม่พบปุ่ม “คีย์เอง” (ทางออกเมื่อยอดไม่ตรง)');
+            const before = w().surchargeList.length;
+            const target = Array.from(bar().querySelectorAll('.tgb-chip')).find(b => /50/.test(b.textContent));
+            assert(!!target, 'ไม่พบชิปยอด 50');
+            target.click();
+            await wait(80);
+            const added = w().surchargeList.filter(s => s.name === 'ค่าทางด่วน');
+            assert(added.length === 1 && added[0].amount === 50, 'ควรบวกค่าทางด่วน 50 หนึ่งครั้ง ได้ ' + JSON.stringify(added));
+            assert(!shown(), 'แตะชิปแล้วแถบต้องปิด');
+            assert(w().tollPairGet(BOOTH()) === 50, 'ควรจำคู่ด่านไว้ 50 ได้ ' + w().tollPairGet(BOOTH()));
+            clearSurcharges();
+            return 'ชิป ' + cs.length + ' อัน · แตะชิป 50 → ค่าทางด่วน [' + added.map(s => s.amount).join(',') + '] · จำคู่ ' + w().tollPairGet(BOOTH()) + '฿ · แถบปิด';
+        });
+
+        await runScenario('S6 · โหมดรู้ราคาแล้ว: ไม่เด้งแป้นตัวเลข แต่มีปุ่มแก้ราคา', async () => {
+            resetGate(); clearSurcharges();
+            w().tollGateBarShow('known', BOOTH(), 0, 0.9, 65);
+            await wait(60);
+            const e = bar();
+            assert(shown(), 'แถบไม่แสดง');
+            assert(!e.querySelector('#tollPad') && !e.querySelector('.toll-pad'), 'ต้องไม่มีแป้นตัวเลขในแถบ');
+            const cs = chips();
+            assert(cs.length === 1 && /แก้ราคา/.test(cs[0]), 'ควรมีชิป “✏️ แก้ราคา” อันเดียว ได้ ' + JSON.stringify(cs));
+            assert(/65/.test(e.innerText), 'แถบควรบอกยอด 65 ให้เห็น');
+            assert(w().surchargeList.length === 0, 'โหมดแจ้งยอดต้องไม่บวกเงินเอง');
+            w().tollGateBarHide();
+            return 'ชิป: ' + JSON.stringify(cs) + ' · ไม่มีแป้นตัวเลข · ยังไม่บวกเงิน (รอขึ้นด่านจริง)';
+        });
+
+        await runScenario('S7 · ✕ ยกเลิก: ปิดแถบ + ไม่เด้งซ้ำเที่ยวนี้', async () => {
+            resetGate();
+            w().tollGateBarShow('ask', BOOTH(), 0, 1.3, 0);
+            await wait(50);
+            const key = w().__tollGateKey(BOOTH());
+            w().tollGateBarDecline();
+            await wait(50);
+            assert(!shown(), 'กดยกเลิกแล้วแถบต้องปิด');
+            assert(w().__tollGateState.handled[key] === 'declined', 'ต้องจดว่า “ยกเลิกแล้ว” แต่ได้ ' + JSON.stringify(w().__tollGateState.handled));
+            const retry = w().tollGatePrompt(BOOTH(), 0, 1.0);
+            assert(retry === false, 'ต้องไม่เด้งซ้ำเที่ยวเดิม แต่ tollGatePrompt คืน ' + retry);
+            return 'จด declined ที่คีย์ ' + key + ' · tollGatePrompt ซ้ำ = false (ไม่กวนซ้ำ)';
+        });
+
+        await runScenario('S8 · ครบ 25 วิ → ยุบเป็นปุ่มเล็ก แล้วแตะกางกลับได้', async () => {
+            resetGate(); showMainChrome(true);
+            await closeAllModals();
+            await wait(150);
+            w().tollGateBarShow('ask', BOOTH(), 0, 1.3, 0);
+            await wait(50);
+            assert(w().tollGateBarCollapse() === true, 'สั่งยุบไม่สำเร็จ');
+            const r = rectOf(bar());
+            assert(bar().className.indexOf('collapsed') >= 0, 'ไม่เข้าโหมดยุบ');
+            assert(r.h <= 60, 'ปุ่มเล็กสูงเกิน 60px (ได้ ' + r.h + ')');
+            assert(/ค่าทางด่วน/.test(bar().innerText), 'ปุ่มเล็กควรบอกค่าทางด่วน ได้ ' + bar().innerText.trim());
+            assert(w().tollGateBarExpand() === true, 'สั่งกางกลับไม่สำเร็จ');
+            assert(bar().className.indexOf('collapsed') < 0, 'กางกลับแล้วยังติดคลาส collapsed');
+            // ปุ่มเล็กต้องยังไม่ทับปุ่มแชร์ (วางใต้หัวจอเหมือนกัน)
+            w().tollGateBarCollapse();
+            await wait(40);
+            const t = rectOf(bar()).t;
+            const hdrBottom = Math.round(w().document.querySelector('#mainApp .app-header').getBoundingClientRect().bottom);
+            assert(t >= hdrBottom, 'ปุ่มเล็กควรอยู่ใต้หัวจอ (' + hdrBottom + ') ได้ ' + t);
+            w().tollGateBarHide();
+            return 'ยุบแล้วสูง ' + r.h + 'px · วางที่ top=' + t + ' (ใต้หัวจอ ' + hdrBottom + ') · กางกลับได้';
+        });
+
+        await runScenario('S9 · แถบทำงานได้เองโดยไม่ต้องเปิดมินิแมพ', async () => {
+            resetGate(); clearSurcharges();
+            const cw = w();
+            // ล้างราคาที่จำไว้ เพื่อให้ชิปเป็นไปตามเงื่อนไขที่กำหนดแน่นอน
+            try { cw.__tollPairs = {}; if (typeof cw.tollPairsCache === 'function') cw.tollPairsCache(); } catch (e) {}
+            assert(cw.tollPairGet(BOOTH()) === null, 'ล้างราคาที่จำไว้ไม่สำเร็จ (ยังได้ ' + cw.tollPairGet(BOOTH()) + ')');
+            // ปิดมินิแมพให้สนิท (#navMini = ตัวห่อจริงของแผนที่นำทาง)
+            ['navMini', 'navMiniMapOverlay'].forEach((id) => {
+                const e = cw.document.getElementById(id);
+                if (e) e.style.display = 'none';
+            });
+            try { cw.navMiniOpen = false; cw.navMiniMapOpen = false; } catch (e) {}
+            const mini = cw.document.getElementById('navMini');
+            assert(!!mini, 'ไม่พบตัวห่อมินิแมพ #navMini — เทสต์นี้ต้องพิสูจน์ว่าปิดมินิแมพแล้วแถบยังขึ้น');
+            const hid = '#navMini=' + cw.getComputedStyle(mini).display;
+            // ยิง “ใกล้ถึงด่านขึ้น” ตรง ๆ เหมือนที่ตัวเฝ้าด่านเรียก (ไม่ผ่านมินิแมพ)
+            const ok = w().tollGatePrompt(BOOTH(), 0, 2.1);
+            await wait(80);
+            assert(ok === true, 'tollGatePrompt ต้องทำงานได้แม้มินิแมพปิด (คืน ' + ok + ')');
+            assert(shown(), 'แถบไม่ขึ้นทั้งที่ไม่มีมินิแมพ');
+            const cs = chips();
+            assert(cs.length >= 1, 'แถบควรมีชิปให้แตะ ได้ ' + JSON.stringify(cs));
+            w().tollGateBarHide();
+            return 'ปิดมินิแมพ (' + hid + ') → tollGatePrompt = true · แถบขึ้นพร้อมชิป ' + JSON.stringify(cs);
+        });
+
+        clearLocalCache();
+        try { w().tollGateBarHide(); } catch (e) {}
+        clearSurcharges();
+        renderSummary();
+        log('สรุป: ผ่าน', passCount, 'ล้มเหลว', failCount, failures);
+    }
+
+    // ============================ ปุ่มควบคุม ============================
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('runBtn');
+        btn.disabled = true; btn.textContent = '⏳ กำลังรัน…';
+        try {
+            if (!stubsInstalled || !w() || !w().tollGateBarShow) {
+                frame.src = 'about:blank';
+                await wait(60);
+                await loadApp();
+            }
+            await runAll();
+        } catch (e) {
+            resultsEl.innerHTML += '<li class="fail"><span class="st">❌ รันชุดไม่สำเร็จ</span>\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span></li>';
+            failCount++;
+            renderSummary();
+        }
+        btn.disabled = false; btn.textContent = '🔄 รันการทดสอบใหม่ (9 สถานการณ์)';
+    });
+
+    document.getElementById('dbgBtn').addEventListener('click', async () => {
+        try {
+            const cw = w();
+            const e = bar();
+            const hdr = cw.document.querySelector('#mainApp .app-header');
+            const info = {
+                headerBottom: hdr ? Math.round(hdr.getBoundingClientRect().bottom) : null,
+                barTop: e ? rectOf(e).t : null,
+                barClass: e ? e.className : null,
+                shown: shown(),
+                chips: shown() ? chips() : [],
+                surcharges: (cw.surchargeList || []).map(s => s.name + ':' + s.amount),
+                tollBarTopDecide: cw.__tollBarTopDecide([[153], hdr ? Math.round(hdr.getBoundingClientRect().bottom) : 0]),
+                net: cw.__net,
+                tollPairs: cw.__tollPairs
+            };
+            resultsEl.innerHTML += '<li><span class="st">🔎 สถานะสด</span>\n<span class="detail">' + JSON.stringify(info, null, 1) + '</span></li>';
+        } catch (e) {
+            resultsEl.innerHTML += '<li class="fail"><span class="st">🔎 อ่านสถานะไม่ได้</span>\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span></li>';
+        }
+    });
+
+    // รันอัตโนมัติเมื่อเปิดหน้า (โหลดแอปก่อน)
+    (async () => {
+        try {
+            document.getElementById('runBtn').click();
+        } catch (e) {}
+    })();
+})();
+</script>
+</body>
+</html>

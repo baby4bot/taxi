@@ -1054,6 +1054,45 @@
         }
         #tollModal .toll-step-btn:active { transform: scale(0.92); filter: brightness(1.1); }
 
+        /* 🛣️ (18 ก.ย. 69) แถบเล็กด้านบน “ขึ้นด่านนี้เสียเท่าไหร่?” — ผู้ใช้สั่ง:
+           “เปลี่ยนจุดเด้งถามจากหน้าต่างเต็มจอเป็นแถบเล็กด้านบนที่กดยอดที่จำไว้ได้เลย โดยไม่บังหน้าจอขับรถ”
+           ⇒ ใช้ ••ไม่มี backdrop** (ไม่บล็อกการใช่งานส่วนอื่น) + แตะยอด = จบในคลิกเดียว
+           ดูแบบอย่างเดียวกับ #bgAllowBar (แถบขอสิทธิ์) เพื่อให้หน้าตา/ตำแหน่งคงเส้นคงวา */
+        .toll-gate-bar {
+            /* 📍 (18 ก.ย. 69) วางใต้แถบหัวจอเสมอ — ตั้งค่าจริงจาก JS ผ่าน --tollbar-top
+               เหตุผล: เดิม top:0 ทับปุ่มแฮมเบอร์เกอร์/ปุ่มแชร์ของหน้าขับรถ ⇒ กดไม่ได้ตอนขับ */
+            position: fixed; left: 0; right: 0; top: var(--tollbar-top, 0px); z-index: 240060; display: none;
+            padding: 6px 9px 7px;
+            background: linear-gradient(180deg, rgba(120,53,15,0.98), rgba(146,64,14,0.97));
+            color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.4); font-family: inherit;
+            /* ⛔ บางที่สุดเท่าที่อ่านออก — ผู้ใช้สั่ง “ไม่บังหน้าจอขับรถ” (วัดจริงต้อง ≤ ~12% ของจอ) */
+        }
+        .toll-gate-bar.show { display: block; }
+        /* ครบ 25 วิ ไม่มีใครแตะ → ยุบเป็นปุ่มเล็กมุมขวา (ไม่บังจอ แต่ยังแตะได้) */
+        .toll-gate-bar.collapsed {
+            left: auto; right: 10px; background: none; box-shadow: none; padding: 0;
+        }
+        .toll-gate-bar .tgb-x {
+            flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.32); background: rgba(0,0,0,0.22); color: #fff;
+            font-size: 14px; line-height: 1; font-family: inherit; cursor: pointer;
+        }
+        .toll-gate-bar .tgb-chip {
+            padding: 6px 11px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.35);
+            background: rgba(255,255,255,0.14); color: #fff; font-size: 12.5px; font-weight: 700;
+            font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .toll-gate-bar .tgb-chip.learned { border-color: rgba(134,239,172,0.7); background: rgba(34,197,94,0.35); }
+        .toll-gate-bar .tgb-chip.alt { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.5); }
+        .toll-gate-bar .tgb-chip:active { transform: scale(0.95); }
+        .toll-gate-bar .tgb-pill {
+            display: flex; align-items: center; gap: 6px; padding: 7px 11px; border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.4); background: rgba(24,16,3,0.9); color: #fff;
+            font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+        }
+
         /* ⌨️ (18 ก.ย. 69) แป้นตัวเลขให้ “จิ้ม” กรอกค่าทางด่วน — ผู้ใช้สั่ง:
            “ให้เป็นตัวเลขให้เป็นจิ้ม ว่ากี่บาทกี่บาท” (ใช้ทั้งตอนกดเอง และตอนระบบเด้งถามเองก่อนถึงด่าน) */
         #tollModal .toll-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: var(--space-field); }
@@ -11129,6 +11168,7 @@
         window.__tollGateCtx = null;
         __tollGateState.notified = {}; __tollGateState.prompted = {};
         __tollGateState.handled = {}; __tollGateState.surchargeId = {};
+        try { if (typeof window.tollGateBarHide === 'function') window.tollGateBarHide(); } catch (e) {}
         try { const el = document.getElementById('tollGateEditChip'); if (el && el.parentNode) el.parentNode.removeChild(el); } catch (e) {}
     };
     window.__tollGateState = __tollGateState;
@@ -11201,7 +11241,228 @@
         }
     };
 
-    // 🚨 ระบบเรียกเองเมื่อ “ใกล้ถึงด่านขึ้น” (ดู navMiniTollWatch) — เปิดแป้นให้คีย์ทันที
+    // ───────── 🛣️ แถบเล็กด้านบน “ขึ้นด่านนี้เสียเท่าไหร่?” (18 ก.ย. 69 · ผู้ใช้สั่งให้เลิกบังจอ) ─────────
+    // ทำไมเปลี่ยนจากหน้าต่างเต็มจอ: ตอนขับรถ หน้าต่างเต็มจอบังมิเตอร์/แผนที่ และจิ้มพลาดง่าย
+    //   ⇒ ใช้แถบบางด้านบน (แบบเดียวกับแถบขอสิทธิ์ #bgAllowBar) ที่ **ไม่มี backdrop**
+    //   ⇒ “แตะยอดที่จำไว้” = จบในคลิกเดียว · มีช่อง “คีย์เอง” เมื่อยอดไม่ตรง
+    // ⛔ กติกา: แถบนี้ต้องไม่บล็อกการแตะส่วนอื่นของจอ — ห้ามเพิ่ม overlay/backdrop เด็ดขาด
+    window.__tollGateBarCtx = null;      // { booth, idx, key, mode }
+    window.__tollGateBarOpts = null;     // เก็บอาร์กิวเมนต์ล่าสุดไว้กางกลับหลังยุบ
+    let tollGateCollapseT = null;
+    let tollGatePlaceT = null;   // 📍 ตัวจัดตําแหน่งซํ้า (เผื่อโมดัลเปิด/ปิดหรือหมุนจอระหว่างที่แถบโชว์)
+
+    // 📍 (18 ก.ย. 69) หา “แถบว่างด้านบน” ที่ไม่ทับอะไรที่ต้องอ่าน/ต้องกด — คำนวณสด (ไม่ใช้ค่าคงที่)
+    //   เหตุผล: ความสูงหัวจอ/ตําแหน่งกล่องโมดัลต่างกันตามรุ่นเครื่อง โหมดเต็มจอ และ safe-area
+    //   ① หน้าจอที่เป็นโมดัล (จอมิเตอร์ใหญ่ trackerZoomOverlay / มินิแมพ) — ด้านบนเหนือกล่องเป็น backdrop
+    //      ⇒ วางชิดบนสุดได้ ไม่บังเวลาเริ่ม/กม./เวลารถติด (ซึ่งอยู่ในกล่องที่เริ่มต่ำกว่า)
+    //   ② หน้าจอหลัก — ต้องวาง “ใต้แถบหัวจอ” ไม่งั้นทับปุ่มแฮมเบอร์เกอร์/ปุ่มแชร์
+    // 🧪 กติกาล้วน (ทดสอบออฟไลน์ได้ใน tests/toll-gate-bar-offline.html) — แยกจาก DOM เพื่อทดสอบได้จริง
+    //    คืน ‘ตําแหน่งบนสุดที่ปลอดภัย’ (px) ของแถบ: 0 = ชิดบนสุด · >0 = ต้องหลบลงมา
+    window.__tollBarTopDecide = (modalBoxTops, headerBottom) => {
+        const tops = Array.isArray(modalBoxTops)
+            ? modalBoxTops.filter((n) => typeof n === 'number' && isFinite(n) && n > 0) : [];
+        for (let i = 0; i < tops.length; i++) {
+            if (tops[i] >= window.__TOLLBAR_MIN_GAP) return 0;   // ① มีช่องว่างเหนือกล่องโมดัล → ชิดบนสุด
+        }
+        const hb = Math.round(Number(headerBottom) || 0);
+        return hb > 0 ? hb : 0;                                  // ② หน้าจอหลัก → ใต้แถบหัวจอ
+    };
+    window.__TOLLBAR_MIN_GAP = 96;   // ความสูงขั้นต่ําที่ถือว่า “วางชิดบนสุดได้” (≈ 1 แถบ)
+    window.__tollGateBarTop = () => {
+        try {
+            const modals = Array.prototype.slice.call(document.querySelectorAll('.modal-overlay'))
+                .filter((m) => { try { return getComputedStyle(m).display !== 'none'; } catch (e) { return false; } });
+            const boxTops = modals.map((m) => {
+                const box = m.querySelector('.modal-box') || m.firstElementChild;
+                return box ? Math.round(box.getBoundingClientRect().top) : 0;
+            });
+            let hb = 0;
+            const hdr = document.querySelector('#mainApp .app-header')
+                || document.querySelector('.app-header')
+                || document.querySelector('#mainApp .header-left');
+            if (hdr) {
+                const cs = getComputedStyle(hdr);
+                if (cs.display !== 'none' && cs.visibility !== 'hidden') {
+                    const b = Math.round(hdr.getBoundingClientRect().bottom);
+                    if (b > 0) hb = b;
+                }
+            }
+            return window.__tollBarTopDecide(boxTops, hb);
+        } catch (e) {}
+        return 0;   // ไม่มีอะไรให้หลบ → ชิดบนสุด
+    };
+    window.__tollGateBarPlace = (el) => {
+        try {
+            const e = el || document.getElementById('tollGateBar');
+            const t = window.__tollGateBarTop();
+            document.documentElement.style.setProperty('--tollbar-top', t + 'px');
+            if (e) e.style.top = t + 'px';
+            return t;
+        } catch (e) { return 0; }
+    };
+    if (!window.__tollBarPlaceHooked) {
+        window.__tollBarPlaceHooked = true;
+        const re = () => {
+            try {
+                const e = document.getElementById('tollGateBar');
+                if (e && e.className.indexOf('show') >= 0) window.__tollGateBarPlace(e);
+            } catch (err) {}
+        };
+        window.addEventListener('resize', re);
+        window.addEventListener('orientationchange', () => setTimeout(re, 120));
+        setTimeout(re, 400);
+    }
+
+    const tollGateBarEl = () => {
+        let el = document.getElementById('tollGateBar');
+        if (el) return el;
+        el = document.createElement('div');
+        el.id = 'tollGateBar';
+        el.className = 'toll-gate-bar';
+        document.body.appendChild(el);
+        return el;
+    };
+    window.tollGateBarHide = () => {
+        try {
+            const el = document.getElementById('tollGateBar');
+            if (el) { el.className = 'toll-gate-bar'; el.innerHTML = ''; }
+            if (tollGateCollapseT) { clearTimeout(tollGateCollapseT); tollGateCollapseT = null; }
+            if (tollGatePlaceT) { clearInterval(tollGatePlaceT); tollGatePlaceT = null; }
+            window.__tollGateBarCtx = null;
+            window.__tollGateBarCollapsed = false;
+        } catch (e) {}
+    };
+
+    window.tollGateBarShow = (mode, booth, idx, awayKm, price) => {
+        try {
+            if (!booth) return false;
+            const el = tollGateBarEl();
+            const key = window.__tollGateKey(booth);
+            window.__tollGateBarOpts = { mode: mode, booth: booth, idx: idx, awayKm: awayKm, price: price };
+            window.__tollGateBarCtx = { booth: booth, idx: (typeof idx === 'number' ? idx : -1), key: key, mode: mode };
+            const sys = (window.tollSysFull && window.tollSysFull(booth)) || (window.tollSysLabel && window.tollSysLabel(booth)) || 'ทางด่วน';
+            const gate = booth.gateIn ? (' ' + booth.gateIn + (booth.gateOut ? ' → ' + booth.gateOut : '')) : '';
+            const away = (typeof awayKm === 'number' && awayKm > 0) ? (' · อีก ' + awayKm.toFixed(1) + ' กม.') : '';
+            let learned = null;
+            try { learned = window.tollPairGet(booth); } catch (e) { learned = null; }
+            const tbl = Math.round(Number(booth.price) || 0);
+            const head = (mode === 'ask')
+                ? ('🛣️ ขึ้น <b>' + sys + '</b>' + gate + away + ' — ด่านนี้เสียเท่าไหร่?')
+                : ('🛣️ <b>' + sys + '</b>' + gate + away + ' · ค่าทางด่วน <b>' + (price > 0 ? price : tbl) + ' ฿</b>');
+            const sub = (mode === 'ask')
+                ? 'แตะยอดที่เคยจ่ายได้เลย — ไม่ต้องเปิดหน้าต่างอะไร'
+                : 'ราคาที่เคยจ่าย — บวกให้เองเมื่อขึ้นด่าน (แตะ “แก้ราคา” ถ้าไม่ตรง)';
+            // ⚠️ จำกัดจำนวนชิปเป็น 3 ตัว — ไม่งั้นแถบสูงเกิน 12% ของจอ (บังหน้าจอขับรถ)
+            const chips = [];
+            if (mode === 'ask') {
+                if (learned) chips.push({ v: learned, label: learned + '฿ · ที่เคยจ่าย', cls: 'learned' });
+                if (tbl > 0 && tbl !== learned) chips.push({ v: tbl, label: tbl + '฿ · ตามตาราง', cls: '' });
+                TOLL_PAD_COMMON.forEach((v) => { if (chips.length < 3 && v !== learned && v !== tbl) chips.push({ v: v, label: v + '฿', cls: '' }); });
+            }
+            el.innerHTML = '<div style="display:flex;align-items:flex-start;gap:7px;">'
+                + '<div style="flex:1;min-width:0;font-size:12.5px;line-height:1.4;">'
+                + '<div>' + head + '</div>'
+                + '<div style="font-size:10.5px;opacity:0.85;margin-top:1px;">' + sub + '</div>'
+                + '</div>'
+                + '<button type="button" class="tgb-x" onclick="window.tollGateBarDecline()" title="ปิด (ไม่ใส่ค่าทางด่วนด่านนี้)">✕</button>'
+                + '</div>'
+                + '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;">'
+                + chips.map((c) => '<button type="button" class="tgb-chip' + (c.cls === 'learned' ? ' learned' : '') + '" onclick="window.tollGateBarApply(' + c.v + ')">' + c.label + '</button>').join('')
+                + '<button type="button" class="tgb-chip alt" onclick="window.tollGateBarOpenPad()">' + (mode === 'ask' ? '⌨️ คีย์เอง' : '✏️ แก้ราคา') + '</button>'
+                + '</div>';
+            window.__tollGateBarPlace(el);   // 📍 ใต้แถบหัวจอ (ไม่ทับปุ่มแฮมเบอร์เกอร์)
+            el.className = 'toll-gate-bar show';
+            window.__tollGateBarCollapsed = false;
+            // 📍 ตามตําแหน่งซํ้าเบา ๆ — จอเปลี่ยน (เปิด/ปิดจอมิเตอร์ใหญ่) แล้วแถบต้องขยับตาม ไม่ทับเลข
+            if (tollGatePlaceT) clearInterval(tollGatePlaceT);
+            tollGatePlaceT = setInterval(() => {
+                try {
+                    const e2 = document.getElementById('tollGateBar');
+                    if (!e2 || e2.className.indexOf('show') < 0) { clearInterval(tollGatePlaceT); tollGatePlaceT = null; return; }
+                    window.__tollGateBarPlace(e2);
+                } catch (e) {}
+            }, 1500);
+            // ⏱️ 25 วิ ไม่มีใครแตะ → ยุบเป็นปุ่มเล็กมุมขวา (ไม่บังจอ แต่ยังแตะกลับมาได้)
+            if (tollGateCollapseT) clearTimeout(tollGateCollapseT);
+            tollGateCollapseT = setTimeout(() => { try { window.tollGateBarCollapse(); } catch (e) {} }, 25000);
+            return true;
+        } catch (e) { return false; }
+    };
+
+    // ยุบเป็นปุ่มเล็ก (กดค้าง/แตะ = กางกลับ)
+    window.tollGateBarCollapse = () => {
+        try {
+            const el = document.getElementById('tollGateBar');
+            const o = window.__tollGateBarOpts;
+            if (!el || !o) return false;
+            if (el.className.indexOf('show') < 0) return false;
+            let learned = null;
+            try { learned = window.tollPairGet(o.booth); } catch (e) {}
+            const label = (o.mode === 'ask')
+                ? (learned ? ('ค่าทางด่วน ' + learned + '฿') : 'ใส่ค่าทางด่วน')
+                : ('ค่าทางด่วน ' + (o.price > 0 ? o.price : Math.round(Number(o.booth.price) || 0)) + '฿');
+            el.innerHTML = '<button type="button" class="tgb-pill" onclick="window.tollGateBarExpand()">🛣️ ' + label + '</button>';
+            window.__tollGateBarPlace(el);   // 📍 ปุ่มเล็กก็ต้องอยู่ใต้หัวจอเช่นกัน (ไม่ทับปุ่มแชร์)
+            el.className = 'toll-gate-bar show collapsed';
+            window.__tollGateBarCollapsed = true;
+            return true;
+        } catch (e) { return false; }
+    };
+    window.tollGateBarExpand = () => {
+        const o = window.__tollGateBarOpts;
+        if (!o) return false;
+        return window.tollGateBarShow(o.mode, o.booth, o.idx, o.awayKm, o.price);
+    };
+
+    // แตะยอดที่จำไว้/ตามชิป → บวกเข้าค่าโดยสาร + จำคู่ + จบในคลิกเดียว (ไม่มีหน้าต่างเต็มจอ)
+    window.tollGateBarApply = (amount) => {
+        try {
+            const c = window.__tollGateBarCtx;
+            const amt = Math.round(Number(amount) || 0);
+            if (!c || !c.booth || !(amt > 0)) return false;
+            window.addSurcharge(amt, 'ค่าทางด่วน');
+            let learned = false;
+            try { learned = window.tollLearnPair(c.booth, amt); } catch (e) { learned = false; }
+            __tollGateState.handled[c.key] = 'bar';
+            window.tollGateBarHide();
+            const sys = (window.tollSysFull && window.tollSysFull(c.booth)) || 'ทางด่วน';
+            try {
+                window.showToast('🛣️ บวกค่าทางด่วน ' + amt + '฿ (' + sys + (c.booth.gateIn ? ' ' + c.booth.gateIn : '') + ')'
+                    + (learned ? ' · จำไว้แล้ว ครั้งต่อไประบบบวกให้เอง' : ''), false);
+            } catch (e) {}
+            try { if (navigator.vibrate && window.userVibrateGold !== false) { navigator.vibrate(130); } } catch (e) {}
+            return true;
+        } catch (e) { return false; }
+    };
+
+    // เปิดแป้นให้คีย์เอง (โหมด “แก้ราคา” ใช้ทางเดียวกัน) — ซ่อนแถบก่อน เพราะแป้นมี backdrop
+    window.tollGateBarOpenPad = () => {
+        try {
+            const c = window.__tollGateBarCtx;
+            if (!c || !c.booth) return false;
+            window.tollGateBarHide();
+            window.__tollGateCtx = { idx: c.idx, booth: c.booth, key: c.key };
+            window.__tollEditIdx = -1;   // ❗ อย่าไปทับโหมด “แก้ยอดช่วงที่เลือก” ของหน้าสรุปทางด่วน
+            setTollModalMode('gate');
+            const inp = document.getElementById('tollInput');
+            let learned = null;
+            try { learned = window.tollPairGet(c.booth); } catch (e) {}
+            const pre = learned || Math.round(Number(c.booth.price) || 0);
+            if (inp) inp.value = pre > 0 ? String(pre) : '';
+            tollPadChips(c.booth);
+            window.toggleModal('tollModal', true);
+            return true;
+        } catch (e) { return false; }
+    };
+
+    window.tollGateBarDecline = () => {
+        const c = window.__tollGateBarCtx;
+        if (c && c.key) { __tollGateState.handled[c.key] = 'declined'; }   // ไม่เด้งซ้ำเที่ยวนี้
+        window.tollGateBarHide();
+        return true;
+    };
+
+    // 🚨 ระบบเรียกเองเมื่อ “ใกล้ถึงด่านขึ้น” (ดู navMiniTollWatch) — แถบเล็กด้านบน (ไม่เด้งหน้าต่างเต็มจอ)
     window.tollGatePrompt = (booth, idx, awayKm) => {
         if (!booth) return false;
         const st = __tollGateState;
@@ -11209,22 +11470,15 @@
         if (!key || st.prompted[key] || st.handled[key]) return false;
         st.prompted[key] = 'asked';
         window.__tollGateCtx = { idx: (typeof idx === 'number' ? idx : -1), booth: booth, key: key };
-        window.__tollEditIdx = -1;   // ❗ อย่าให้ไปทับโหมด “แก้ยอดช่วงที่เลือก” ของหน้าสรุปทางด่วน
-        setTollModalMode('gate');
-        const inp = document.getElementById('tollInput');
-        let learned = null;
-        try { learned = window.tollPairGet(booth); } catch (e) { learned = null; }
-        const pre = learned || Math.round(Number(booth.price) || 0);
-        if (inp) inp.value = pre > 0 ? String(pre) : '';
-        tollPadChips(booth);
-        try { window.toggleModal('tollModal', true); } catch (e) {}
+        window.__tollEditIdx = -1;
+        window.tollGateBarShow('ask', booth, idx, awayKm, 0);
         const away = (typeof awayKm === 'number' && awayKm > 0) ? ('อีก ' + awayKm.toFixed(1) + ' กม. · ') : '';
-        try { window.showToast('🛣️ ' + away + 'ใกล้ถึงด่านขึ้น — ใส่ค่าทางด่วนครั้งเดียว', false); } catch (e) {}
+        try { window.showToast('🛣️ ' + away + 'ใกล้ถึงด่านขึ้น — แตะยอดที่เคยจ่ายบนแถบด้านบน', false); } catch (e) {}
         try { if (navigator.vibrate && window.userVibrateGold !== false) { navigator.vibrate([130, 70, 130]); } } catch (e) {}
         try { if (window.userToastSound !== false && typeof window.playSound === 'function') { window.playSound('turnFar'); } } catch (e) {}
         try {
             if (typeof window.navVoiceSpeak === 'function') {
-                window.navVoiceSpeak('ใกล้ถึงด่านเก็บค่าทางด่วน กรุณาใส่ค่าทางด่วน');
+                window.navVoiceSpeak('ใกล้ถึงด่านเก็บค่าทางด่วน แตะยอดบนแถบด้านบนเพื่อบันทึก');
             }
         } catch (e) {}
         return true;
@@ -11251,10 +11505,8 @@
                 window.navVoiceSpeak('อีก ' + Math.max(1, Math.round(awayKm * 1000 / 100)) * 100 + ' เมตร ถึงด่าน' + gate + ' ค่าทางด่วน ' + (price > 0 ? price + ' บาท' : 'ไม่ทราบราคา'));
             }
         } catch (e) {}
-        // ปุ่ม “แก้ราคา” — เปิดแป้นในกรณีที่จ่ายจริงไม่ตรง (เก็บไว้นาน 20 วิ)
-        try {
-            window.showTollGateEditChip(booth, idx, price);
-        } catch (e) {}
+        // ✏️ แสดงเป็น “แถบเล็กด้านบน” เหมือนโหมดถาม (ผู้ใช้สั่งให้เลิกบังจอ) — มีปุ่มแก้ราคาในตัว
+        try { window.tollGateBarShow('known', booth, idx, awayKm, price); } catch (e) {}
         return true;
     };
 
@@ -11318,6 +11570,8 @@
         } catch (e) { return false; }
         const sys = (window.tollSysFull && window.tollSysFull(booth)) || (window.tollSysLabel && window.tollSysLabel(booth)) || 'ทางด่วน';
         try { window.showToast('🛣️ บวกค่าทางด่วน ' + p + '฿ ให้แล้ว (' + sys + (booth.gateIn ? ' ' + booth.gateIn : '') + ') · ราคาที่เคยจ่าย', false); } catch (e) {}
+        // 🛣️ บวกให้เองแล้ว → ปิดแถบด้านบน (หน้าที่มันจบแล้ว) เหลือแค่ชิป “แก้ราคา” อันเล็กด้านล่าง
+        try { window.tollGateBarHide(); } catch (e) {}
         // ✏️ ให้ชิป “แก้ราคา” ต่อด้วย — จ่ายจริงไม่ตรงกับที่จำไว้ = แตะครั้งเดียวแก้ (ระบบจะ “แทนที่” ไม่บวกซ้อน)
         try { window.showTollGateEditChip(booth, idx, p); } catch (e) {}
         try { if (navigator.vibrate && window.userVibrateGold !== false) { navigator.vibrate([130, 70, 130]); } } catch (e) {}
@@ -14994,6 +15248,8 @@
     window.resetAll = () => {  
         $('kmInput').value = "0"; $('destInput').value = ""; $('suggestionList').style.display = 'none'; $('historyList').style.display = 'none'; 
         window.isManualRunning = false; window.surchargeList = []; trafficSeconds = 0; pauseLog = []; pauseOpenAt = null; window.updateSurchargeUI(); window.clearActiveTrip();
+        // 🛣️ จบเที่ยว → ปิดแถบเตือนด่าน/ล้างสถานะด่าน (ไม่ค้างข้ามเที่ยว)
+        try { if (typeof window.__tollGateReset === 'function') window.__tollGateReset(); } catch (e) {}
         // 🔄 จบเที่ยว + ปิดหน้าสรุปแล้ว: ถ้ามีเวอร์ชันเว็บใหม่ค้างอยู่ ให้อัปเดตให้ตอนนี้ (ไม่รบกวนกลางเที่ยว)
         try { if (typeof window.__webUpdateApplyIfPending === 'function') window.__webUpdateApplyIfPending('trip-end'); } catch (e) {}
         window.hideCatchUpStatus();
@@ -16232,7 +16488,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '4316b7a63f';
+    const APP_WEB_VERSION = 'dbe761b13e';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -16664,6 +16920,8 @@
         ['2026-09-18', '🔔 รู้ราคาแล้ว: แจ้งยอดล่วงหน้าแทนการเด้งให้กรอกซ้ำ — ทุกเครื่องใช้ราคาเดียวกัน'],
         ['2026-09-18', '✏️ ปุ่ม “แก้ราคา” แทนที่ยอดเดิม (ไม่บวกซ้อน) + กันแจ้งซ้ำ/บวกซ้ำต่อเที่ยว'],
         ['2026-09-18', '⏱️ ล็อกจอ/แอปถูกพักตอนขึ้นด่าน ก็ยังเบิกค่าทางด่วนคืนได้ (ภายใน 5 กม. หลังด่าน)'],
+        ['2026-09-18', '🛣️ ถามค่าทางด่วนเลิกเด้งทับจอ — เปลี่ยนเป็นแถบเล็กด้านบน แตะยอดที่เคยจ่ายจบในคลิกเดียว'],
+        ['2026-09-18', '📍 แถบค่าทางด่วนหลบอัตโนมัติ — ไม่ทับปุ่มแฮมเบอร์เกอร์ และไม่ทับเลขมิเตอร์'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
