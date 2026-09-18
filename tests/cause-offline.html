@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — แถบเตือน “เริ่มนำทางไม่ได้” บอกสาเหตุจริง + ปุ่มแก้ตรงจุด</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: แถบเตือน “เริ่มนำทางไม่ได้” → บอกสาเหตุจริง + ปุ่มแก้ตรงจุด</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> แล้ว <b>สตับคำตอบของ TomTom</b>
+        (จำลอง HTTP 401/403/429/5xx · เน็ตหลุด · คำขอค้างจนหมดเวลา · ไม่มีเส้นทาง) เพื่อดูว่าแถบเตือนแยกสาเหตุถูกไหม
+        <br>กติกาที่ผู้ใช้สั่ง 18 ก.ย. 69: เดิมแถบเขียนรวม ๆ “เส้นทางไม่พร้อม (เน็ต/พิกัด/สิทธิ์)” ⇒ ผู้ใช้ไม่รู้ว่าต้องแก้ตรงไหน
+        · ต้องบอก <b>สาเหตุจริง</b> (เน็ตหลุด · ไม่ได้สิทธิ์ตำแหน่ง · GPS ไม่มีสัญญาณ · โควตาหมด · เรียกถี่ · คีย์แผนที่ · เซิร์ฟเวอร์ล่ม · ไม่มีเส้นทาง)
+        พร้อม <b>ปุ่มแก้ตรงจุด</b> (ลองใหม่ · เปิดสิทธิ์ตำแหน่ง · ตั้งค่าแอป · ดูโควตา)
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/cause-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (14 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const CACHE_KEYS = ['taxi_active_trip_v1', 'taxi_toll_pairs_v1', 'taxi_toll_rates_v1'];
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[cause-test]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ต + สตับคำตอบ TomTom ============================
+    let stubsInstalled = false;
+    let blocked = 0;
+    const mkRes = (status, body) => ({
+        ok: status >= 200 && status < 300,
+        status: status,
+        text: async () => String(body || ''),
+        json: async () => JSON.parse(String(body || '{}'))
+    });
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        // โหมดคำตอบของ TomTom: 'ok' · 'netfail' · 'slow' · 'http:<รหัส>:<ข้อความ>'
+        cw.__apiMode = 'ok';
+        cw.__apiCalls = [];
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            if (u.indexOf('api.tomtom.com') >= 0) {
+                cw.__apiCalls.push(u);
+                const mode = String(cw.__apiMode || 'ok');
+                if (mode === 'netfail') return Promise.reject(new TypeError('Failed to fetch'));
+                if (mode === 'slow') {
+                    return new Promise((res, rej) => {
+                        try { opts.signal.addEventListener('abort', () => { const e = new Error('Aborted'); e.name = 'AbortError'; rej(e); }); } catch (e) {}
+                    });
+                }
+                if (mode === 'ok') {
+                    return Promise.resolve(mkRes(200, JSON.stringify({
+                        routes: [{ summary: { lengthInMeters: 1200, travelTimeInSeconds: 180, noTrafficTravelTimeInSeconds: 150 }, legs: [{ points: '' }], sections: [] }]
+                    })));
+                }
+                // ⚠️ ห้ามใช้ split(':') — ตัว body เป็น JSON ที่มี ':' ได้ (เจอจริง: {"routes":[]} ถูกตัดกลางทาง → เทสต์พังเอง)
+                const m = /^http:(\d+):([\s\S]*)$/.exec(mode);
+                return Promise.resolve(mkRes(m ? Number(m[1]) : 500, m ? m[2] : ''));
+            }
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { blocked++; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) {
+                    blocked++; x.__blocked = true; return;
+                }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        // 🛰️ GPS: ปิดไว้ก่อน แล้วเปิดทีละกรณีด้วย __gpsFix / __gpsErr
+        cw.__gpsFix = null;
+        cw.__gpsErr = null;
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => {
+                if (cw.__gpsFix) return ok({ coords: { latitude: cw.__gpsFix.lat, longitude: cw.__gpsFix.lon } });
+                try { if (err) err(cw.__gpsErr || { code: 2, message: 'offline-test: ไม่มีสัญญาณ' }); } catch (e) {}
+            };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        // ⏱️ AbortController ปลอม — ให้ “หมดเวลา” เกิดเร็ว ๆ ในเทสต์ (ของจริง 15 วิ)
+        const RealAbort = cw.AbortController;
+        cw.__apiAbortMs = 0;
+        cw.AbortController = function () {
+            const sig = new cw.EventTarget();
+            sig.aborted = false;
+            const self = this;
+            this.signal = sig;
+            this.abort = () => { if (sig.aborted) return; sig.aborted = true; try { sig.dispatchEvent(new cw.Event('abort')); } catch (e) {} };
+            if (cw.__apiAbortMs > 0) setTimeout(() => self.abort(), cw.__apiAbortMs);
+        };
+        cw.__realAbortController = RealAbort;
+        stubsInstalled = true;
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.navWarnShowCause === 'function' && typeof cw.fetchRouteFromTomTom === 'function'
+                && typeof cw.__navWarnVisible === 'function' && typeof cw.showToast === 'function') {
+                installStubs();
+                await wait(200);
+                try { CACHE_KEYS.forEach(k => cw.localStorage.removeItem(k)); } catch (e) {}
+                await closeAllModals();
+                await waitForNoLoader(12000);
+                await wait(200);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    // ============================ เครื่องมือทดสอบ ============================
+    const bar = () => w().document.getElementById('navWarnBar');
+    const barVisible = () => w().__navWarnVisible();
+    const tags = () => Array.from(bar().querySelectorAll('.nwb-tag')).map(n => n.textContent);
+    const btnLabels = () => Array.from(bar().querySelectorAll('.nwb-btn')).map(n => n.textContent);
+    const whyText = () => { const n = bar().querySelector('.nwb-why'); return n ? n.textContent : ''; };
+    const barCls = () => String(bar().className || '');
+    const resetBar = () => { try { w().__navWarnMuted = false; w().navFailClear(); w().navWarnBarHide(); } catch (e) {} };
+    async function callRoute() { return await w().fetchRouteFromTomTom(13.7, 100.5, 13.8, 100.4); }
+    // ⏳ รอจนเงื่อนไขเป็นจริง (แทนการหน่วงเวลาตายตัว — เบราว์เซอร์ช้าได้ตอนรันหลายสถานการณ์ติดกัน)
+    async function waitFor(cond, ms, label) {
+        const lim = ms || 4000, t0 = Date.now();
+        while (Date.now() - t0 < lim) { try { if (cond()) return true; } catch (e) {} await wait(60); }
+        return false;
+    }
+
+    // ============================ รัน 1 สถานการณ์ ============================
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(30000).then(() => { throw new Error('สถานการณ์ timeout 30 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ไม่ผ่าน</span> ' + name + '\n<span class="detail">' + ((e && e.message) ? e.message : e) + '</span>';
+            failCount++;
+            failures.push(name + ' → ' + ((e && e.message) ? e.message : e));
+        }
+    }
+
+    // ============================ ชุดสถานการณ์ ============================
+    async function runAll() {
+        const cw = w();
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+
+        await runScenario('S1 · แปลง HTTP ของ TomTom → สาเหตุถูกต้อง (401 คีย์ · 403 โควตา · 429 เรียกถี่ · 5xx ล่ม · 400/404 ไม่มีเส้นทาง)', async () => {
+            const t = [
+                [401, '', 'key'], [403, 'You have exceeded your quota', 'quota'], [403, 'Invalid API key', 'key'],
+                [429, 'Too Many Requests', 'rate'], [429, 'Daily quota exceeded', 'quota'], [402, 'Payment Required', 'quota'],
+                [400, 'Bad request', 'noRoute'], [404, 'Not found', 'noRoute'], [500, 'Server error', 'api'], [503, 'Unavailable', 'api']
+            ];
+            const bad = t.filter(([s, b, exp]) => cw.navFailFromHttp(s, b) !== exp);
+            assert(bad.length === 0, 'แปลงผิด: ' + JSON.stringify(bad));
+            return t.map(([s, b, e]) => s + (b ? ' (“' + b.slice(0, 22) + '”)' : '') + '→' + e).join(' · ');
+        });
+
+        await runScenario('S2 · สาเหตุที่ประทับไว้ต้องมีอายุจำกัด — เก่ากว่า 2 นาที = ไม่เอามาใช้ตัดสิน', async () => {
+            cw.navFailClear();
+            assert(cw.navFailGet() === null, 'ตอนล้างแล้วต้องไม่มีสาเหตุค้าง');
+            cw.navFailSet('quota', 'ทดสอบ');
+            const freshCode = cw.navFailCode();
+            const at = cw.__navFail.at;
+            cw.__navFail.at = at - 200000;               // ย้อนเวลา 200 วิ (เกิน 120 วิ)
+            const stale = cw.navFailGet();
+            cw.navFailClear();
+            assert(freshCode === 'quota', 'สาเหตุสดควรอ่านได้ quota แต่ได้ ' + freshCode);
+            assert(stale === null, 'สาเหตุเก่าเกิน 2 นาทีต้องถูกมองข้าม แต่ยังได้ค่า');
+            return 'สด → อ่านได้ “quota” ✓ · ย้อน 200 วิ → มองข้าม ✓ (ค่าเพดาน = ' + (cw.NAV_FAIL_FRESH_MS / 1000) + ' วิ)';
+        });
+
+        await runScenario('S3 · ทุกสาเหตุมีข้อความไทย + ปุ่มของตัวเอง (และปุ่มปรับตามสะพานแอป)', async () => {
+            const codes = ['offline', 'net', 'timeout', 'perm', 'gps', 'quota', 'rate', 'key', 'api', 'noRoute', 'unknown'];
+            const rows = codes.map(c => {
+                const i = cw.navCauseInfo(c);
+                assert(i && i.tag && i.head && i.why, 'สาเหตุ ' + c + ' ข้อความไม่ครบ');
+                assert(i.acts && i.acts.length >= 1, 'สาเหตุ ' + c + ' ไม่มีปุ่มแก้');
+                return c + '→' + i.acts.join('+');
+            });
+            const web = cw.navCauseInfo('perm').acts.join('+');
+            assert(web.indexOf('perm') >= 0, 'บนเว็บยังต้องมีปุ่มขอสิทธิ์ (ได้ ' + web + ')');
+            assert(web.indexOf('appset') < 0, 'บนเว็บต้องไม่มีปุ่ม “ตั้งค่าแอป” (ได้ ' + web + ')');
+            cw.TaxiNative = {
+                isNativeApp: () => true,
+                requestLocationPermission: () => { cw.__permAsked = (cw.__permAsked || 0) + 1; },
+                openSystemAppSettings: () => { cw.__appSetOpened = (cw.__appSetOpened || 0) + 1; }
+            };
+            const nat = cw.navCauseInfo('perm');
+            const natActs = nat.acts.join('+');
+            const natWhy = nat.why;
+            delete cw.TaxiNative;
+            assert(natActs === 'perm+appset+retry', 'ในแอปต้องมี 3 ปุ่ม (perm+appset+retry) แต่ได้ ' + natActs);
+            assert(natWhy.indexOf('อนุญาต') >= 0, 'ข้อความในแอปต้องบอกให้กดอนุญาต (ได้: ' + natWhy + ')');
+            return rows.join(' · ') + ' · บนเว็บ: ' + web + ' · ในแอป: ' + natActs;
+        });
+
+        await runScenario('S4 · เน็ตหลุด → แถบขึ้นจริง สี/ป้ายถูก · มีปุ่ม “ลองใหม่” · ไม่มีฉากหลังบังการแตะ', async () => {
+            resetBar();
+            cw.isManualRunning = true;
+            cw.navFailSet('offline', 'ทดสอบ');
+            const code = cw.navWarnShowCause(() => {});
+            await waitFor(barVisible, 3000);
+            assert(barVisible(), 'แถบต้องขึ้น');
+            assert(code === 'offline', 'ต้องวาดด้วยสาเหตุ offline แต่ได้ ' + code);
+            assert(barCls().indexOf('c-offline') >= 0, 'ต้องได้สีตามสาเหตุ c-offline แต่ได้ ' + barCls());
+            assert(tags()[0] === 'เน็ตหลุด', 'ป้ายสาเหตุต้องเป็น “เน็ตหลุด” แต่ได้ ' + tags()[0]);
+            assert(whyText().indexOf('ออฟไลน์') >= 0, 'คำอธิบายต้องบอกว่าออฟไลน์ (ได้: ' + whyText() + ')');
+            assert(btnLabels()[0].indexOf('ลองใหม่') >= 0, 'ต้องมีปุ่มลองใหม่ แต่ได้ ' + btnLabels().join(','));
+            const r = bar().getBoundingClientRect();
+            const h = Math.round(r.height);
+            assert(h <= 140, 'แถบต้องสูงไม่เกิน 140px (ได้ ' + h + ')');
+            const pt = cw.document.elementFromPoint(Math.round(cw.innerWidth / 2), Math.min(cw.innerHeight - 4, Math.round(r.bottom) + 40));
+            assert(pt && pt !== bar() && !bar().contains(pt), 'ใต้แถบต้องแตะของจริงได้ (ไม่มี backdrop) แต่ได้ ' + (pt && pt.id));
+            resetBar(); cw.isManualRunning = false;
+            return 'ป้าย = ' + tags()[0] + ' · สี = c-offline · ปุ่ม = ' + btnLabels().join(' / ') + ' · สูง ' + h + 'px · ใต้แถบ = ' + (pt ? (pt.id || pt.tagName) : '—') + ' (แตะได้)';
+        });
+
+        await runScenario('S5 · TomTom ตอบ 401 → สาเหตุ = คีย์แผนที่ (ไม่ใช่ “โควตาหมด”)', async () => {
+            cw.navFailClear(); cw.__apiMode = 'http:401:Unauthorized';
+            const res = await callRoute();
+            const code = cw.navFailCode();
+            cw.__apiMode = 'ok';
+            assert(res === null, 'ต้องคืน null เมื่อคำขอล้ม');
+            assert(code === 'key', 'ต้องเป็น key แต่ได้ ' + code);
+            return '401 Unauthorized → ' + code + ' · แถบจะบอก “🔑 คีย์แผนที่ใช้ไม่ได้” + ปุ่มดูโควตา';
+        });
+
+        await runScenario('S6 · TomTom ตอบ 403 “โควตาเกิน” → สาเหตุ = โควตาหมด (พร้อมปุ่มดูโควตา)', async () => {
+            cw.navFailClear(); cw.__apiMode = 'http:403:You have exceeded your daily quota';
+            await callRoute();
+            const code = cw.navFailCode();
+            cw.__apiMode = 'ok';
+            assert(code === 'quota', 'ต้องเป็น quota แต่ได้ ' + code);
+            const acts = cw.navCauseInfo('quota').acts.join('+');
+            assert(acts.indexOf('quota') >= 0, 'ต้องมีปุ่มดูโควตา (ได้ ' + acts + ')');
+            return '403 + ข้อความโควตา → ' + code + ' · ปุ่ม = ' + acts;
+        });
+
+        await runScenario('S7 · 429 เรียกถี่ → “เรียกถี่เกินไป” · 503 เซิร์ฟเวอร์ล่ม → “เซิร์ฟเวอร์ขัดข้อง”', async () => {
+            cw.navFailClear(); cw.__apiMode = 'http:429:Too Many Requests';
+            await callRoute();
+            const a = cw.navFailCode();
+            cw.navFailClear(); cw.__apiMode = 'http:503:Service Unavailable';
+            await callRoute();
+            const b = cw.navFailCode();
+            cw.__apiMode = 'ok';
+            assert(a === 'rate', '429 ควรได้ rate แต่ได้ ' + a);
+            assert(b === 'api', '503 ควรได้ api แต่ได้ ' + b);
+            return '429 → ' + a + ' (“' + cw.navCauseInfo(a).head + '”) · 503 → ' + b + ' (“' + cw.navCauseInfo(b).head + '”)';
+        });
+
+        await runScenario('S8 · เน็ตหลุดตอนยิงคำขอ (navigator.onLine = false) → แยกจาก “เซิร์ฟเวอร์ล่ม” ได้', async () => {
+            cw.navFailClear(); cw.__apiMode = 'netfail';
+            const realOnLine = Object.getOwnPropertyDescriptor(cw.navigator, 'onLine') || Object.getOwnPropertyDescriptor(cw.Navigator.prototype, 'onLine');
+            let setOk = true;
+            try { Object.defineProperty(cw.navigator, 'onLine', { configurable: true, get: () => false }); } catch (e) { setOk = false; }
+            await callRoute();
+            const offCode = cw.navFailCode();
+            if (setOk && realOnLine) { try { Object.defineProperty(cw.navigator, 'onLine', realOnLine); } catch (e) {} }
+            cw.navFailClear();
+            await callRoute();                     // ยัง netfail แต่ onLine = true → “ต่อเซิร์ฟเวอร์ไม่ได้”
+            const netCode = cw.navFailCode();
+            cw.__apiMode = 'ok';
+            assert(offCode === 'offline' || !setOk, 'ตอน onLine=false ควรได้ offline แต่ได้ ' + offCode);
+            assert(netCode === 'net', 'ตอน onLine=true แต่ต่อไม่ได้ ควรได้ net แต่ได้ ' + netCode);
+            return 'onLine=false → ' + offCode + ' (“' + cw.navCauseInfo(offCode).head + '”) · onLine=true → ' + netCode + ' (“' + cw.navCauseInfo(netCode).head + '”)';
+        });
+
+        await runScenario('S9 · คำขอค้างเกิน 15 วิ → ถูกตัดจบด้วย “หมดเวลา” (เดิมรอไม่จบ)', async () => {
+            cw.navFailClear(); cw.__apiMode = 'slow'; cw.__apiAbortMs = 80;
+            const t0 = Date.now();
+            const res = await callRoute();
+            const ms = Date.now() - t0;
+            const code = cw.navFailCode();
+            cw.__apiAbortMs = 0; cw.__apiMode = 'ok';
+            assert(res === null, 'หมดเวลาต้องคืน null');
+            assert(code === 'timeout', 'ต้องเป็น timeout แต่ได้ ' + code);
+            assert(ms < 5000, 'ต้องถูกตัดจบเร็ว (ไม่ค้างรอ) แต่ใช้ ' + ms + ' ms');
+            return 'คำขอค้าง → ตัดจบใน ' + ms + ' ms · สาเหตุ = ' + code + ' (“' + cw.navCauseInfo(code).head + '”)';
+        });
+
+        await runScenario('S10 · ต่อติดแต่ไม่มีเส้นทาง → “หาเส้นทางไม่เจอ” (ไม่โทษเน็ต)', async () => {
+            cw.navFailClear(); cw.__apiMode = 'http:200:{"routes":[]}';
+            await callRoute();
+            const code = cw.navFailCode();
+            cw.__apiMode = 'ok';
+            assert(code === 'noRoute', 'ต้องเป็น noRoute แต่ได้ ' + code);
+            return 'routes ว่าง → ' + code + ' (“' + cw.navCauseInfo(code).head + '”)';
+        });
+
+        await runScenario('S11 · ได้เส้นทางจริง → ล้างสาเหตุเก่าทิ้ง (แถบจะไม่หยิบเหตุเก่ามาโชว์)', async () => {
+            cw.navFailSet('quota', 'เหตุเก่า');
+            cw.__apiMode = 'ok';
+            const res = await callRoute();
+            const left = cw.navFailGet();
+            assert(left === null, 'สำเร็จแล้วต้องล้างสาเหตุ แต่ยังเหลือ ' + JSON.stringify(left));
+            return 'ประทับเหตุเก่า “quota” → ยิงคำขอสำเร็จ → สาเหตุ = ' + (left === null ? 'null (ล้างแล้ว)' : JSON.stringify(left)) + ' · ได้เส้นทางกลับมา = ' + (res ? 'ใช่' : 'ไม่ใช่ (สตับไม่มีพิกัดเส้นทาง)');
+        });
+
+        await runScenario('S12 · กด “ลองใหม่” แล้วยังพลาด → แถบกลับมาพร้อม “สาเหตุใหม่” (ไม่ใช่ข้อความเก่า)', async () => {
+            resetBar();
+            cw.isManualRunning = true;
+            cw.__navArmed = false;
+            cw.navFailSet('offline', 'รอบแรก');
+            let tries = 0;
+            cw.navWarnShowCause(() => { tries++; cw.navFailSet('quota', 'รอบสอง'); cw.__navArmed = false; });
+            await waitFor(() => tags()[0] === 'เน็ตหลุด', 3000);
+            const first = tags()[0];
+            cw.isManualRunning = true;   // ⛔ กันกรณีมีตัวอื่นปิดเที่ยวไปก่อนหน้า
+            cw.__navWarnMuted = false;
+            cw.navWarnRetryNow();
+            await waitFor(() => tries >= 1, 4000);
+            const snapped = { running: cw.isManualRunning, muted: cw.__navWarnMuted, armed: cw.__navArmed, cause: cw.__navWarnCause, tries: tries, vis: barVisible(), cls: barCls(), fail: cw.__navFail && cw.__navFail.code };
+            await waitFor(() => tags()[0] === 'โควตา', 4000);
+            const second = tags()[0];
+            const color2 = barCls();
+            // ⚠️ ตรวจก่อน แล้วค่อยล้างสถานะ — เดิมล้างก่อน = แถบถูกซ่อนก่อนตรวจ ⇒ เทสต์ลวงตัวเอง (เจอจริง)
+            assert(tries === 1, 'ต้องเรียกฟังก์ชันลองใหม่ 1 ครั้ง แต่ได้ ' + tries);
+            assert(barVisible(), 'ลองใหม่แล้วยังพลาด → แถบต้องกลับมา · สภาพ: ' + JSON.stringify(snapped));
+            assert(first === 'เน็ตหลุด' && second === 'โควตา', 'สาเหตุต้องเปลี่ยนตามของใหม่ (ได้ ' + first + ' → ' + second + ') · สภาพตอนกดลองใหม่: ' + JSON.stringify(snapped));
+            assert(color2.indexOf('c-quota') >= 0, 'สีต้องเปลี่ยนตามสาเหตุใหม่ (ได้ ' + color2 + ')');
+            resetBar(); cw.isManualRunning = false; cw.__navArmed = false;
+            return 'รอบแรก “' + first + '” → กดลองใหม่ → รอบสอง “' + second + '” + สีแดงโควตา ✓ (เรียกฟังก์ชัน ' + tries + ' ครั้ง)';
+        });
+
+        await runScenario('S13 · เน็ตกลับมา (event online) → ระบบลองนำทางให้เองโดยไม่ต้องกดปุ่ม', async () => {
+            resetBar();
+            cw.isManualRunning = true;
+            cw.__navArmed = false;
+            cw.navFailSet('offline', 'ทดสอบ auto retry');
+            let tries = 0;
+            cw.navWarnShowCause(() => { tries++; cw.__navArmed = true; });   // ลองใหม่แล้วสำเร็จ
+            await waitFor(barVisible, 3000);
+            assert(barVisible(), 'ต้องมีแถบอยู่ก่อนยิง event');
+            try { cw.dispatchEvent(new cw.Event('online')); } catch (e) {}
+            await waitFor(() => tries >= 1, 4000);
+            await waitFor(() => !barVisible(), 4000);
+            const gone = !barVisible();
+            resetBar(); cw.isManualRunning = false;
+            assert(tries === 1, 'ต้องลองเอง 1 ครั้ง แต่ได้ ' + tries);
+            assert(gone, 'นำทางสำเร็จแล้วแถบต้องหายเอง');
+            return 'ยิง event “online” → ลองใหม่เอง ' + tries + ' ครั้ง → __navArmed = true → แถบหายเอง ✓';
+        });
+
+        await runScenario('S14 · กด ✕ แล้วต้องไม่เด้งกลับ (แม้ตัวตรวจ/ลองใหม่ทำงานซ้ำ)', async () => {
+            resetBar();
+            cw.isManualRunning = true;
+            cw.__navArmed = false;
+            cw.navFailSet('api', 'ทดสอบปิด');
+            cw.navWarnShowCause(() => {});
+            await waitFor(barVisible, 3000);
+            assert(barVisible(), 'ต้องมีแถบก่อนกด ✕');
+            cw.navWarnBarDismiss();
+            await wait(100);
+            const muted = cw.__navWarnMuted === true;
+            cw.navWarnRetryNow();                 // ตัวตรวจภายในเรียกซ้ำ → ต้องไม่กลับมา
+            await wait(1400);
+            const stillGone = !barVisible();
+            resetBar(); cw.isManualRunning = false;
+            assert(muted, 'ต้องติดธง muted เมื่อผู้ใช้กด ✕');
+            assert(stillGone, 'กด ✕ แล้วแถบต้องไม่เด้งกลับ');
+            return 'กด ✕ → muted = ' + muted + ' · เรียกตัวตรวจซ้ำอีกครั้ง → แถบยังไม่กลับ ✓';
+        });
+
+        // คืนค่าเดิม: เลิกใช้สตับทั้งหมด
+        try {
+            cw.__apiMode = 'ok'; cw.__apiAbortMs = 0;
+            cw.isManualRunning = false; cw.__navArmed = false;
+            if (cw.__realAbortController) cw.AbortController = cw.__realAbortController;
+        } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('runBtn');
+        btn.disabled = true; btn.textContent = '⏳ กำลังรัน...';
+        try {
+            if (!stubsInstalled) await loadApp();
+            await runAll();
+            offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งหมดในชุดทดสอบ (บล็อกคำขอออกนอกเครื่อง ' + blocked + ' ครั้ง)';
+        } catch (e) {
+            summaryEl.innerHTML = '<span style="color:var(--red)">ตั้งชุดทดสอบไม่สำเร็จ: ' + (e && e.message ? e.message : e) + '</span>';
+        } finally {
+            btn.disabled = false; btn.textContent = '🔄 รันการทดสอบใหม่ (14 สถานการณ์)';
+        }
+    });
+
+    // สรุปผลอัตโนมัติทุกครั้งที่รันจบ
+    const realSummary = () => {
+        summaryEl.innerHTML = (failCount === 0
+            ? '<span style="color:var(--green)">✅ ผ่านทั้งหมด ' + passCount + ' / ' + (passCount + failCount) + ' สถานการณ์</span>'
+            : '<span style="color:var(--red)">❌ ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + '</span>\n' + failures.join('\n'));
+    };
+    setInterval(realSummary, 500);
+
+    // โหลดแอปให้เลย แล้วค่อยรันอัตโนมัติ (เปิดหน้าแล้วเห็นผลได้ทันที)
+    (async () => {
+        try { await loadApp(); await runAll(); offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งหมดในชุดทดสอบ (บล็อกคำขอออกนอกเครื่อง ' + blocked + ' ครั้ง)'; }
+        catch (e) { log('auto-load failed', e); }
+    })();
+})();
+</script>
+</body>
+</html>

@@ -357,9 +357,14 @@
                 cw.startTripFromPreview();
                 await wait(1400);
                 assert(cw.__navWarnVisible(), 'เริ่มนำทางไม่ได้แต่ไม่มีอะไรขึ้นเลย (ผู้ใช้ไม่รู้ตัว)');
+                // 🧭 (18 ก.ย. 69) แถบใหม่ “รู้สาเหตุ” — ข้อความหัวเรื่องจะเปลี่ยนตามสาเหตุ (เช่น GPS/สิทธิ์/โควตา/ไม่มีเส้นทาง)
+                //    ⇒ ตรวจเจตนาเดิมคือ “ต้องไม่เงียบ + มีปุ่มลองใหม่” และเพิ่มตรวจ “ป้ายสาเหตุ” ต้องมีจริง
                 const txt = cw.document.getElementById('navWarnBar').textContent.replace(/\s+/g, ' ');
-                assert(txt.indexOf('เริ่มนำทางไม่ได้') >= 0, 'ข้อความแถบไม่ตรง: ' + txt);
-                assert(txt.indexOf('ลองใหม่') >= 0, 'ต้องมีปุ่ม “ลองใหม่”');
+                const tagEl = cw.document.querySelector('#navWarnBar .nwb-tag');
+                assert(!!tagEl, 'แถบต้องมีป้ายสาเหตุ (บอกว่าเน็ต/GPS/สิทธิ์/โควตา/ไม่มีเส้นทาง): ' + txt);
+                const TAG_OK = ['เน็ตหลุด', 'ต่อเน็ตไม่ได้', 'เน็ตช้า', 'สิทธิ์ตำแหน่ง', 'GPS', 'โควตา', 'เรียกถี่', 'คีย์แผนที่', 'เซิร์ฟเวอร์', 'ไม่มีเส้นทาง', 'นำทาง'];
+                assert(TAG_OK.indexOf(tagEl.textContent) >= 0, 'ป้ายสาเหตุไม่รู้จัก: ' + tagEl.textContent);
+                assert(!!cw.document.querySelector('#navWarnBar [data-k="retry"]'), 'ต้องมีปุ่ม “ลองใหม่”: ' + txt);
                 assert(!!cw.isManualRunning, 'มิเตอร์ต้องยังเดินอยู่ (ไม่ใช่ยกเลิกเที่ยว)');
                 const wm = w();
                 const rect = cw.document.getElementById('navWarnBar').getBoundingClientRect();
@@ -395,8 +400,9 @@
                 cw.startTripFromPreview();
                 await wait(1400);
                 assert(cw.__navWarnVisible(), 'ต้องมีแถบก่อนทดสอบปุ่มลองใหม่');
+                assert(!!cw.document.querySelector('#navWarnBar [data-k="retry"]'), 'ต้องมีปุ่มลองใหม่ให้กด');
                 cw.startNavigationMap = real;                 // เน็ตกลับมา = ตัวจริงทำงานได้
-                cw.document.querySelector('#navWarnBar .nwb-btn').click();
+                cw.document.querySelector('#navWarnBar [data-k="retry"]').click();
                 await wait(500);
                 assert(cw.__navArmed === true, 'กดลองใหม่แล้วเส้นทางควรอาร์มจริง');
                 assert(!cw.__navWarnVisible(), 'กดลองใหม่แล้วสำเร็จ แต่แถบยังค้างอยู่');
@@ -418,7 +424,8 @@
                 cw.startTripFromPreview();
                 await wait(1400);
                 assert(cw.__navWarnVisible(), 'ต้องมีแถบก่อนทดสอบ');
-                cw.document.querySelector('#navWarnBar .nwb-btn').click();
+                assert(!!cw.document.querySelector('#navWarnBar [data-k="retry"]'), 'ต้องมีปุ่มลองใหม่ให้กด');
+                cw.document.querySelector('#navWarnBar [data-k="retry"]').click();
                 await wait(1300);
                 assert(cw.__navWarnVisible(), 'กดลองใหม่แล้วยังล้ม แต่แถบไม่กลับมา = ผู้ใช้คิดว่าสำเร็จ');
                 return 'ลองใหม่ → ยังล้ม → แถบกลับมาพร้อมปุ่มลองใหม่ (ไม่หายเงียบ)';

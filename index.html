@@ -1118,8 +1118,22 @@
             background: linear-gradient(180deg, rgba(180,83,9,0.98), rgba(154,52,18,0.98));
             color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.42); font-family: inherit;
         }
-        .nav-warn-bar.show { display: flex; }
-        .nav-warn-bar .nwb-txt { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.45; font-weight: 600; }
+        .nav-warn-bar.show { display: flex; flex-wrap: wrap; row-gap: 6px; }
+        /* 🧭 (18 ก.ย. 69) สีของแถบ = “สาเหตุ” ⇒ มองแวบเดียวรู้ว่าต้องแก้เรื่องอะไร ไม่ต้องอ่าน */
+        .nav-warn-bar.c-offline { background: linear-gradient(180deg, rgba(51,65,85,0.98), rgba(30,41,59,0.98)); }
+        .nav-warn-bar.c-perm { background: linear-gradient(180deg, rgba(109,40,217,0.98), rgba(76,29,149,0.98)); }
+        .nav-warn-bar.c-gps { background: linear-gradient(180deg, rgba(14,116,144,0.98), rgba(21,94,117,0.98)); }
+        .nav-warn-bar.c-quota { background: linear-gradient(180deg, rgba(190,18,60,0.98), rgba(159,18,57,0.98)); }
+        .nav-warn-bar .nwb-act { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; flex-shrink: 0; max-width: 100%; }
+        .nav-warn-bar .nwb-tag {
+            flex-shrink: 0; font-size: 10.5px; font-weight: 800; letter-spacing: 0.2px; white-space: nowrap;
+            padding: 3px 8px; border-radius: 999px; background: rgba(0,0,0,0.34); border: 1px solid rgba(255,255,255,0.24);
+        }
+        .nav-warn-bar .nwb-why { display: block; font-weight: 400; font-size: 11.5px; opacity: 0.94; margin-top: 2px; }
+        /* ⚠️ (18 ก.ย. 69) ต้องมี min-width — ถ้าปล่อยให้บีบได้ ปุ่ม 3 ปุ่ม (เปิดสิทธิ์+ตั้งค่าแอป+ลองใหม่)
+           จะบีบข้อความจนเหลือคอลัมน์แคบ ๆ → ตัดบรรทัดทุกตัวอักษร → แถบสูงครึ่งจอ (วัดได้ 395/800px = 50%)
+           ⇒ กำหนดพื้นข้อความ 170px แล้วให้ “กลุ่มปุ่ม” ตกลงบรรทัดใหม่เองเมื่อที่ไม่พอ */
+        .nav-warn-bar .nwb-txt { flex: 1 1 170px; min-width: 170px; font-size: 12.5px; line-height: 1.45; font-weight: 600; }
         .nav-warn-bar .nwb-txt b { font-weight: 800; }
         .nav-warn-bar .nwb-btn {
             flex-shrink: 0; padding: 7px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.4);
@@ -6792,25 +6806,46 @@
             //    (บั๊กจริง 16 ก.ย. 69: แอปคิดเวลารถติด 0:26 ขณะมิเตอร์จริง 1:47:35) — ดู noTrafficSec ที่ตั้งเป็น null ด้านล่าง
             const url = `https://api.tomtom.com/routing/1/calculateRoute/${startLat},${startLon}:${dLat},${dLon}/json?key=${TOMTOM_KEY}&traffic=true&departAt=now&routeType=${routeType}&routeRepresentation=polyline&language=th-TH&sectionType=toll&sectionType=traffic&computeTravelTimeFor=all&instructionsType=text${avoidParam}`;
             
-            let res = await fetch(url);
+            // ⏱️ (18 ก.ย. 69) หมดเวลา 15 วิ — เดิมไม่มีเลย ⇒ เน็ตค้าง = รอไม่จบและไม่รู้สาเหตุ
+            //    + แยก “เน็ตหลุด” ออกจาก “เน็ตช้า” และ “เซิร์ฟเวอร์ล่ม” ให้ผู้ใช้รู้ว่าต้องแก้ตรงไหน
+            const _ph = (typeof AbortController === 'function') ? new AbortController() : null;
+            const _to = _ph ? setTimeout(() => { try { _ph.abort(); } catch (e) {} }, 15000) : null;
+            let res;
+            try {
+                res = await fetch(url, _ph ? { signal: _ph.signal } : undefined);
+            } catch (err) {
+                if (_to) clearTimeout(_to);
+                const aborted = !!(err && err.name === 'AbortError');
+                const off = (typeof navigator !== 'undefined' && navigator.onLine === false);
+                window.navFailSet(aborted ? 'timeout' : (off ? 'offline' : 'net'), (err && err.message) || 'fetch failed');
+                return null;
+            }
+            if (_to) clearTimeout(_to);
             countTomTomCall('route'); // นับรอบที่ถึงเซิร์ฟเวอร์จริง (สำเร็จหรือโดนจำกัดโควตาก็ใช้สิทธิ์ไปแล้ว) — ถัง Routing
             if (!res.ok) {
                 // TomTom ปฏิเสธ (โควตาหมด/คีย์ผิด/ถูกจำกัดอัตรา) → เตือนทอง ครั้งเดียว/ชั่วโมง กันโพล 120 วิ รบกวนซ้ำ
                 const errTxt = await res.text().catch(() => '');
+                const fCode = window.navFailFromHttp(res.status, errTxt);   // 🧭 ประทับสาเหตุจริงก่อนคืน null
+                window.navFailSet(fCode, 'HTTP ' + res.status + ' ' + String(errTxt).slice(0, 120));
                 if (/quota|forbidden|denied|rate ?limit|inactive|invalid key|too many/i.test(errTxt) || res.status === 403 || res.status === 429) {
                     const now = Date.now();
                     if (!window.__tomtomBlockWarnAt || now - window.__tomtomBlockWarnAt > 3600000) {
                         window.__tomtomBlockWarnAt = now;
-                        window.showToast('⚠️ TomTom โควตาหมด/ใช้งานไม่ได้ (' + res.status + ') — ระบบจะประเมินจากระยะทางที่กรอกแทนชั่วคราว', false, null, true);
+                        const why = (fCode === 'key') ? 'คีย์แผนที่ใช้ไม่ได้' : (fCode === 'rate' ? 'เรียกถี่เกินไป' : (fCode === 'noRoute' ? 'จุดหมายนี้ไม่มีเส้นทาง' : 'โควตาหมด/ใช้งานไม่ได้'));
+                        window.showToast('⚠️ TomTom ' + why + ' (HTTP ' + res.status + ') — ระบบจะประเมินจากระยะทางที่กรอกแทนชั่วคราว', false, null, true);
                     }
                 }
                 return null;
             }
             let data = await res.json();
             
-            if (!data.routes || data.routes.length === 0) return null;
+            if (!data.routes || data.routes.length === 0) {
+                window.navFailSet('noRoute', 'routes empty');   // 🧭 ต่อติดแต่ไม่มีเส้นทาง — คนละเรื่องกับ “เน็ตหลุด”
+                return null;
+            }
             
             let r = data.routes[0];
+            window.navFailClear();   // ✅ เส้นทางมาจริงแล้ว → ล้างสาเหตุเก่า (ไม่งั้นแถบเตือนจะหยิบเหตุเก่าไปโชว์)
             let km = r.summary.lengthInMeters / 1000;
             let sec = r.summary.travelTimeInSeconds; // รวมรถติดจริงแล้ว (trafficDelayInSeconds คือเวลาที่เสียไปกับรถติด)
             // ⛔ ค่า noTrafficSec ต้องคงเป็น null เสมอ (เหมือนก่อนเพิ่มพารามิเตอร์นี้) — ไม่งั้น gap model ตอนล็อกจอจะเปลี่ยนพฤติกรรมเงียบ ๆ
@@ -11475,12 +11510,199 @@
     };
     // 🐞 (เจอด้วย S11) กด ✕ แล้วแถบต้องไม่ “เด้งกลับเอง” จากตัวตรวจรอบที่ 2/3
     //   ⇒ แยก “ระบบซ่อน” กับ “ผู้ใช้ปิด” ออกจากกัน — ธงปิดจะล้างเฉพาะเมื่อเริ่มเที่ยวใหม่
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🧭 (18 ก.ย. 69) แถบเตือน “เริ่มนำทางไม่ได้” ต้องบอก “สาเหตุจริง” + ปุ่มแก้ตรงจุด
+    //    ⛔ ปัญหาเดิม: ข้อความเดียวรวม ๆ “เส้นทางไม่พร้อม (เน็ต/พิกัด/สิทธิ์)”
+    //       ⇒ ผู้ใช้ไม่รู้ว่าต้องแก้ตรงไหน (ต่อ wifi? เปิด GPS? ให้สิทธิ์? โควตาหมด?)
+    //    ✅ วิธีทำ: ทุกจุดที่ล้มเหลว “ประทับรหัสสาเหตุ” ไว้ที่ window.__navFail แล้วแถบเตือนอ่านรหัสนั้น
+    //       ไปเลือกข้อความ + ปุ่มที่กดแก้ได้ตรงจุด · รหัสที่แยกได้:
+    //       offline · net · timeout · perm · gps · quota · rate · key · api · noRoute · unknown
+    window.__navFail = null;
+    window.NAV_FAIL_FRESH_MS = 120000;   // ผลวินิจฉัยเก่ากว่านี้ = ไม่ใช้ตัดสิน (กันเดาสาเหตุเก่าที่หมดสภาพแล้ว)
+    window.navFailSet = (code, detail) => {
+        try { window.__navFail = { code: String(code || 'unknown'), detail: String(detail || '').slice(0, 160), at: Date.now() }; } catch (e) {}
+        return window.__navFail;
+    };
+    window.navFailClear = () => { window.__navFail = null; };
+    window.navFailGet = () => {
+        const f = window.__navFail; if (!f) return null;
+        if ((Date.now() - f.at) > window.NAV_FAIL_FRESH_MS) return null;
+        return f;
+    };
+    window.navFailCode = () => { const f = window.navFailGet(); return f ? f.code : 'unknown'; };
+    // 🔎 HTTP status + ข้อความจาก TomTom → รหัสสาเหตุ (แยก “คีย์ผิด” ออกจาก “โควตาหมด” ให้ได้จริง)
+    window.navFailFromHttp = (status, body) => {
+        const s = Number(status) || 0;
+        const t = String(body || '').toLowerCase();
+        if (s === 401) return 'key';
+        // ⚠️ TomTom ใช้ 403 ทั้ง “คีย์ผิด/ถูกปิด” และ “โควตาหมด” — ข้อความบอกได้ว่าอันไหน
+        //    ⇒ ถ้าข้อความพูดถึง “คีย์” จริง ๆ = key · นอกนั้นถือเป็นโควตา (ตรงกับพฤติกรรมจริงของ TomTom ที่ 403 = เกินโควตา)
+        if (s === 403) return (/invalid key|api key|no access|not authorized|unauthorized|key is|disabled key/i.test(t) ? 'key' : 'quota');
+        if (s === 429) return (/quota|exceed|per day|daily/i.test(t) ? 'quota' : 'rate');
+        if (s === 402) return 'quota';
+        if (s === 400 || s === 404) return 'noRoute';
+        if (s >= 500) return 'api';
+        return 'api';
+    };
+    // 📍 สิทธิ์ตำแหน่ง: อ่านสถานะที่เบราว์เซอร์/แอปบอก (denied = ผู้ใช้กดบล็อกไปแล้ว → ต้องเปิดเอง)
+    window.__geoPermState = 'unknown';
+    window.navGeoPermNow = () => new Promise((resolve) => {
+        try {
+            if (!navigator.geolocation) { window.__geoPermState = 'unsupported'; return resolve('unsupported'); }
+            if (!navigator.permissions || !navigator.permissions.query) return resolve(window.__geoPermState);
+            navigator.permissions.query({ name: 'geolocation' }).then((st) => {
+                window.__geoPermState = (st && st.state) || 'unknown';
+                resolve(window.__geoPermState);
+            }).catch(() => resolve(window.__geoPermState));
+        } catch (e) { resolve(window.__geoPermState); }
+    });
+    // 🛰️ มีพิกัดแล้วหรือยัง — อ่านจาก __gapAudit ที่มีอยู่ (ไม่เพิ่มตัวนับใหม่ให้ซ้ำซ้อน)
+    window.navGpsHasFix = () => {
+        try {
+            const a = (typeof window.__gapAudit === 'function') ? window.__gapAudit() : null;
+            return !!(a && typeof a.fixAgeSec === 'number' && a.fixAgeSec >= 0);
+        } catch (e) { return false; }
+    };
+    // 🩺 “สาเหตุตอนนี้” — ใช้รหัสที่เพิ่งประทับไว้ก่อน · ไม่มีก็เช็คสดตามลำดับ (เน็ต → สิทธิ์ → GPS)
+    window.navCauseNow = () => new Promise((resolve) => {
+        try {
+            const fresh = window.navFailGet();
+            if (fresh) return resolve(fresh.code);
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) return resolve('offline');
+            window.navGeoPermNow().then((st) => {
+                if (st === 'denied') return resolve('perm');
+                if (!window.navGpsHasFix()) return resolve('gps');
+                resolve('noRoute');
+            }).catch(() => resolve('unknown'));
+        } catch (e) { resolve('unknown'); }
+    });
+    // 🧰 ข้อความ + ปุ่ม ของแต่ละสาเหตุ (ปุ่มส่งเป็น “คีย์” แล้วให้ navActionRun จัดการ)
+    window.navCauseInfo = (code) => {
+        const C = window.TaxiNative;
+        const native = !!(C && typeof C.isNativeApp === 'function' && C.isNativeApp());
+        const canAskPerm = !!((C && typeof C.requestLocationPermission === 'function') || (navigator.permissions && navigator.permissions.query));
+        const canAppSet = !!(C && typeof C.openSystemAppSettings === 'function');
+        const acts = (list) => list.filter((k) => (k !== 'perm') || canAskPerm).filter((k) => (k !== 'appset') || canAppSet);
+        switch (String(code)) {
+            case 'offline': return { tag: 'เน็ตหลุด', cls: 'c-offline', head: '📴 เน็ตหลุด', why: 'เครื่องตอนนี้ออฟไลน์/สัญญาณหลุด — พอเน็ตกลับมา ระบบจะลองนำทางให้เองอัตโนมัติ', acts: acts(['retry']) };
+            case 'net': return { tag: 'ต่อเน็ตไม่ได้', cls: 'c-offline', head: '📴 ต่อเซิร์ฟเวอร์เส้นทางไม่ได้', why: 'สัญญาณอ่อน/ถูกบล็อก — ขยับที่หรือเปลี่ยนเป็นเน็ตมือถือแล้วลองใหม่', acts: acts(['retry']) };
+            case 'timeout': return { tag: 'เน็ตช้า', cls: 'c-offline', head: '🐢 คำขอเส้นทางหมดเวลา (15 วิ)', why: 'เน็ตช้ากว่าที่คำนวณเส้นทางต้องใช้ — ลองใหม่อีกครั้ง', acts: acts(['retry']) };
+            case 'perm': return { tag: 'สิทธิ์ตำแหน่ง', cls: 'c-perm', head: '📍 ยังไม่ได้ให้สิทธิ์ตำแหน่ง', why: native ? 'แตะ “เปิดสิทธิ์ตำแหน่ง” แล้วกด “อนุญาต” — ระบบจะเริ่มนำทางให้ทันที' : 'เปิดสิทธิ์ “ตำแหน่ง” ให้เว็บนี้ (ไอคอนกุญแจข้างที่อยู่เว็บ) แล้วลองใหม่', acts: acts(['perm', 'appset', 'retry']) };
+            case 'gps': return { tag: 'GPS', cls: 'c-gps', head: '🛰️ ยังไม่จับสัญญาณ GPS', why: 'เปิด GPS / ออกที่โล่งแล้วรอสักครู่ — มิเตอร์เดินได้ ระยะทางจะเริ่มนับเมื่อจับสัญญาณได้', acts: acts(['perm', 'appset', 'retry']) };
+            case 'quota': return { tag: 'โควตา', cls: 'c-quota', head: '📉 โควตาแผนที่ (TomTom) หมด', why: 'ระหว่างนี้ระบบประเมินจากระยะทางที่กรอกให้ก่อน — โควตารีเซ็ตเที่ยงคืน PST (บ่าย 2-3 โมงไทย)', acts: acts(['retry', 'quota']) };
+            case 'rate': return { tag: 'เรียกถี่', cls: 'c-quota', head: '⏱️ เรียกเส้นทางถี่เกินไป', why: 'เซิร์ฟเวอร์จำกัดอัตราชั่วคราว — รอสัก 10-20 วินาทีแล้วลองใหม่', acts: acts(['retry']) };
+            case 'key': return { tag: 'คีย์แผนที่', cls: 'c-quota', head: '🔑 คีย์แผนที่ใช้ไม่ได้', why: 'คีย์ถูกปิด/ผิด หรือบิลลิ่งมีปัญหา — ต้องให้ผู้ดูแลตรวจในคอนโซล TomTom', acts: acts(['quota', 'retry']) };
+            case 'api': return { tag: 'เซิร์ฟเวอร์', cls: 'c-quota', head: '🌐 เซิร์ฟเวอร์เส้นทางขัดข้อง', why: 'ฝั่ง TomTom ตอบ error (5xx) — ปกติหายเองในไม่กี่นาที', acts: acts(['retry']) };
+            case 'noRoute': return { tag: 'ไม่มีเส้นทาง', cls: '', head: '🧭 หาเส้นทางไม่เจอ', why: 'พิกัดต้นทาง/ปลายทางไม่ครบ หรือจุดหมายอยู่ในที่ที่รถเข้าไม่ถึง — เลือกจุดหมายใหม่จากช่องค้นหา', acts: acts(['retry']) };
+            default: return { tag: 'นำทาง', cls: '', head: '🚕 มิเตอร์เดินแล้ว แต่เริ่มนำทางไม่ได้', why: 'ยังระบุสาเหตุไม่ได้ — แตะ “ลองใหม่” หรือเริ่มนำทางจากช่องค้นหาได้เลย', acts: acts(['retry']) };
+        }
+    };
+    window.__navWarnCause = null;   // รหัสสาเหตุของแถบที่โชว์อยู่ (null = แถบแบบเดิม)
+    // 🆘 ปุ่มแก้ตรงจุด (กดได้จริง ไม่ใช่แค่บอกให้ไปหาที่แก้)
+    window.navPermHelp = () => {
+        try {
+            const C = window.TaxiNative;
+            const native = !!(C && typeof C.isNativeApp === 'function' && C.isNativeApp());
+            window.showToast('📍 วิธีเปิดสิทธิ์ตำแหน่ง: ' + (native
+                ? 'ตั้งค่าเครื่อง → แอป → ค่าแท็กซี่ → สิทธิ์ → ตำแหน่ง → อนุญาต'
+                : 'แตะไอคอนกุญแจ/รูปกุญแจข้างที่อยู่เว็บ → สิทธิ์ → ตำแหน่ง → อนุญาต แล้วลองใหม่'), false, null, true);
+        } catch (e) {}
+    };
+    window.navFixPermission = () => {
+        try {
+            const C = window.TaxiNative;
+            if (C && typeof C.requestLocationPermission === 'function') {
+                C.requestLocationPermission();
+                window.showToast('📡 ขอสิทธิ์ตำแหน่งอีกครั้งแล้ว — กด “อนุญาต” ระบบจะเริ่มนำทางให้เอง', true);
+                return true;
+            }
+        } catch (e) {}
+        window.navPermHelp();
+        return false;
+    };
+    window.navActionRun = (k) => {
+        try {
+            if (k === 'retry') { window.navWarnRetryNow(); return true; }
+            if (k === 'perm') { window.navFixPermission(); return true; }
+            if (k === 'appset') { if (window.TaxiNative && window.TaxiNative.openSystemAppSettings) window.TaxiNative.openSystemAppSettings(); return true; }
+            if (k === 'quota') { window.navWarnBarHide(); if (window.openQuotaMonitor) window.openQuotaMonitor(); return true; }
+        } catch (e) {}
+        return false;
+    };
+    // 🎯 โชว์แถบเตือนแบบ “รู้สาเหตุ” — retry = ฟังก์ชันลองใหม่ (ปุ่มใช้ตัวเดียวกัน)
+    window.navWarnShowCause = (retry) => {
+        const paint = (code) => {
+            try {
+                const info = window.navCauseInfo(code);
+                window.__navWarnCause = code;
+                const html = '<span class="nwb-tag">' + info.tag + '</span><span class="nwb-txt">' + info.head
+                    + '<span class="nwb-why">' + info.why + '</span></span>';
+                window.navWarnBarShow(html, retry, info.acts, info.cls);
+                return code;
+            } catch (e) {
+                try { window.navWarnBarShow('🚕 เริ่มนำทางไม่ได้', retry); } catch (e2) {}
+                return 'unknown';
+            }
+        };
+        try {
+            const fresh = window.navFailGet();
+            if (fresh) return paint(fresh.code);
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) return paint('offline');
+            // ยังไม่มีรหัส → เช็คสด (1 คำถามเรื่องสิทธิ์) แล้วค่อยวาด · มีเพดานเวลา กันแถบไม่ขึ้นเลย
+            let done = false;
+            const t = setTimeout(() => { if (!done) { done = true; paint('unknown'); } }, 700);
+            window.navCauseNow()
+                .then((code) => { if (done) return; done = true; clearTimeout(t); paint(code); })
+                .catch(() => { if (!done) { done = true; clearTimeout(t); paint('unknown'); } });
+            return 'pending';
+        } catch (e) { return paint('unknown'); }
+    };
+    // 🔁 เน็ตกลับมา / ผู้ใช้เพิ่งอนุญาตสิทธิ์ ⇒ ลองนำทางให้เองทันที (ไม่ต้องรอผู้ใช้กดปุ่ม)
+    window.__navAutoRetryHook = () => {
+        try {
+            if (!window.__navWarnVisible()) return false;
+            if (!window.isManualRunning) return false;
+            if (!window.__navWarnRetry) return false;
+            const c = window.__navWarnCause;
+            const ok = ['offline', 'net', 'timeout', 'perm', 'gps', 'quota', 'api'];
+            if (ok.indexOf(c) < 0) return false;
+            setTimeout(() => { try { if (window.__navWarnVisible()) window.navWarnRetryNow(); } catch (e) {} }, 600);
+            return true;
+        } catch (e) { return false; }
+    };
+    try {
+        window.addEventListener('online', () => { try { window.navFailClear(); window.__navAutoRetryHook(); } catch (e) {} });
+        window.addEventListener('offline', () => { try { window.navFailSet('offline', 'browser offline event'); } catch (e) {} });
+        if (navigator.permissions && navigator.permissions.query) {
+            navigator.permissions.query({ name: 'geolocation' }).then((st) => {
+                window.__geoPermState = (st && st.state) || 'unknown';
+                try {
+                    st.onchange = () => {
+                        window.__geoPermState = st.state;
+                        if (st.state === 'granted') { window.navFailClear(); window.__navAutoRetryHook(); }
+                    };
+                } catch (e) {}
+            }).catch(() => {});
+        }
+    } catch (e) {}
+    // 🛰️ GPS error → ประทับสาเหตุ (1 = ไม่ได้สิทธิ์ · 2 = หาสัญญาณไม่ได้ · 3 = หมดเวลา)
+    window.onGpsError = (err) => {
+        try {
+            const c = (err && typeof err.code === 'number') ? err.code : 0;
+            if (c === 1) window.navFailSet('perm', 'position permission denied');
+            else if (c === 2) window.navFailSet('gps', 'position unavailable');
+            else if (c === 3) window.navFailSet('gps', 'position timeout');
+        } catch (e) {}
+    };
     window.__navWarnMuted = false;
     window.navWarnBarHide = () => {
         try {
             const el = document.getElementById('navWarnBar');
             if (el) { el.className = 'nav-warn-bar'; el.innerHTML = ''; }
             window.__navWarnRetry = null;
+            window.__navWarnActions = [];
+            window.__navWarnCls = '';
+            window.__navWarnCause = null;   // ล้างสาเหตุด้วย — เที่ยวใหม่จะได้วินิจฉัยสด
         } catch (e) {}
     };
     window.navWarnBarDismiss = () => {   // ผู้ใช้กด ✕ เอง = ปิดเที่ยวนี้เลย (ระบบห้ามเปิดซ้ำ)
@@ -11488,7 +11710,12 @@
         window.navWarnBarHide();
     };
     // text = ข้อความไทย (มี <b> ได้) · retry = ฟังก์ชัน “ลองใหม่” (ไม่ส่ง = ไม่มีปุ่ม)
-    window.navWarnBarShow = (text, retry) => {
+    // 🧭 (18 ก.ย. 69) เพิ่ม actions = รายการ “ปุ่มแก้ตรงจุด” (คีย์: retry · perm · appset · quota)
+    //    และ cls = สีของแถบตามสาเหตุ (c-offline · c-perm · c-gps · c-quota)
+    window.navWarnBtnLabel = (k) => ({
+        retry: '🔄 ลองใหม่', perm: '📡 เปิดสิทธิ์', appset: '⚙️ ตั้งค่าแอป', quota: '📊 ดูโควตา'
+    })[k] || String(k);
+    window.navWarnBarShow = (text, retry, actions, cls) => {
         try {
             let el = document.getElementById('navWarnBar');
             if (!el) {
@@ -11498,11 +11725,18 @@
                 document.body.appendChild(el);
             }
             window.__navWarnRetry = (typeof retry === 'function') ? retry : null;
+            // ถ้าไม่ได้ส่ง actions มา แต่มี retry → ถอยหลังได้เสมอ (ปุ่มเดิม “🔄 ลองใหม่”)
+            window.__navWarnActions = Array.isArray(actions) ? actions.filter(Boolean).slice(0, 3)
+                : (window.__navWarnRetry ? ['retry'] : []);
+            window.__navWarnCls = String(cls || '');
+            const actHtml = window.__navWarnActions
+                .map((k) => '<button type="button" class="nwb-btn" data-k="' + String(k) + '" onclick="window.navActionRun(\'' + String(k) + '\')">' + window.navWarnBtnLabel(k) + '</button>')
+                .join('');
             el.innerHTML = '<span class="nwb-txt">' + String(text || '') + '</span>'
-                + (window.__navWarnRetry ? '<button type="button" class="nwb-btn" onclick="window.navWarnRetryNow()">🔄 ลองใหม่</button>' : '')
+                + (actHtml ? '<span class="nwb-act">' + actHtml + '</span>' : '')
                 + '<button type="button" class="nwb-x" title="ปิด" onclick="window.navWarnBarDismiss()">✕</button>';
             window.__navWarnText = String(text || '');
-            el.className = 'nav-warn-bar show';
+            el.className = 'nav-warn-bar show' + (window.__navWarnCls ? ' ' + window.__navWarnCls : '');
             window.__navWarnPlace(el);
             if (!window.__navWarnPlaceHooked) {
                 window.__navWarnPlaceHooked = true;
@@ -11519,6 +11753,7 @@
         try {
             const f = window.__navWarnRetry;
             const txt = window.__navWarnText;
+            const smart = !!window.__navWarnCause;   // แถบนี้วาดแบบ “รู้สาเหตุ” อยู่ไหม → ถ้าใช่ ต้องวาดสาเหตุใหม่ (อาจเปลี่ยนไปแล้ว)
             window.navWarnBarHide();
             if (f) { f(); }
             setTimeout(() => {
@@ -11526,6 +11761,7 @@
                     if (window.__navArmed === true) { window.navWarnBarHide(); return; }
                     if (window.__navWarnMuted) { return; }
                     if (!window.isManualRunning) { return; }
+                    if (smart) { window.navWarnShowCause(f); return; }   // ยังพลาด → บอก “สาเหตุใหม่” ไม่ใช่ซ่อนหายเงียบ
                     window.navWarnBarShow(txt, f);
                 } catch (e) {}
             }, 800);
@@ -12161,7 +12397,7 @@
             if (!navigator.geolocation) { window.__geoFailAt = Date.now(); resolve(posFallback()); return; }
             navigator.geolocation.getCurrentPosition(
                 (pos) => { cachedUserPos = { lat: pos.coords.latitude, lon: pos.coords.longitude, at: Date.now(), src: 'gps' }; cachedUserPosAt = cachedUserPos.at; window.__geoFailAt = 0; window.__geoFailedOnce = false; resolve(cachedUserPos); },
-                () => { window.__geoFailAt = Date.now(); window.__geoFailedOnce = true; resolve(posFallback()); },
+                (err) => { try { if (window.onGpsError) window.onGpsError(err); } catch (e) {} window.__geoFailAt = Date.now(); window.__geoFailedOnce = true; resolve(posFallback()); },
                 { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
             );
         });
@@ -12685,7 +12921,7 @@
                 const pos = await new Promise((resolve) => {
                     navigator.geolocation.getCurrentPosition(
                         (p) => resolve(p),
-                        () => { window.__geoFailAt = Date.now(); window.__geoFailedOnce = true; resolve(null); },
+                        (err) => { try { if (window.onGpsError) window.onGpsError(err); } catch (e) {} window.__geoFailAt = Date.now(); window.__geoFailedOnce = true; resolve(null); },
                         { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
                     );
                 });
@@ -12897,7 +13133,9 @@
                 if (!wantNav) { return; }                       // ไม่ได้ขอเส้นทางไว้แต่แรก = ไม่ใช่ความผิดพลาด
                 if (window.__navWarnMuted) { return; }          // ผู้ใช้กด ✕ ไปแล้ว = ห้ามเด้งกลับจนจบเที่ยว
                 if (window.__navArmed === true) { window.navWarnBarHide(); return; }
-                window.navWarnBarShow('🚕 <b>มิเตอร์เดินแล้ว แต่เริ่มนำทางไม่ได้</b><br>เส้นทางไม่พร้อม (เน็ต/พิกัด/สิทธิ์) — แตะ “ลองใหม่” หรือเริ่มนำทางจากช่องค้นหาได้เลย', tryNav);
+                // 🧭 (18 ก.ย. 69) เดิมข้อความเดียวรวม ๆ “เส้นทางไม่พร้อม (เน็ต/พิกัด/สิทธิ์)” ⇒ ผู้ใช้เดาเอง
+                //    ⇒ ตอนนี้ใช้ตัววินิจฉัย: บอกสาเหตุจริง (เน็ต/GPS/สิทธิ์/โควตา/API/คีย์/ไม่มีเส้นทาง) + ปุ่มแก้ตรงจุด
+                try { window.navWarnShowCause(tryNav); } catch (e) { window.navWarnBarShow('🚕 <b>มิเตอร์เดินแล้ว แต่เริ่มนำทางไม่ได้</b><br>แตะ “ลองใหม่” หรือเริ่มนำทางจากช่องค้นหาได้เลย', tryNav); }
             } catch (e) {}
         }, ms));
         // 🛣️ เริ่มเที่ยวแล้ว — รีเฟรชป้ายค่าทางด่วนบนหน้าหลักทันที (แบนเนอร์ส้ม + ปุ่ม "ทางด่วน X฿" ในช่องราคา)
@@ -14096,7 +14334,7 @@
             lastPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
             lastPosTime = Date.now();
             window.updateMapPosition(pos.coords.latitude, pos.coords.longitude);
-        }, null, { enableHighAccuracy: true });
+        }, window.onGpsError, { enableHighAccuracy: true });
         
         if(tripTimer) clearInterval(tripTimer);
         // ตัวจับเวลานี้ใช้แค่ "เตือนให้อัปเดตหน้าจอ" — การนับเวลาจริงอยู่ใน advanceMeterTime (อิง Date.now)
@@ -14215,14 +14453,16 @@
             } 
         };
         const GPS_WATCH_OPTS = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
-        watchId = navigator.geolocation.watchPosition(onGpsFix, null, GPS_WATCH_OPTS);
+        // 🧭 (18 ก.ย. 69) เดิม error callback เป็น null ⇒ GPS ปฏิเสธ/จับสัญญาณไม่ได้ = เงียบสนิท
+        //    ⇒ ส่ง window.onGpsError เข้าไป เพื่อแยกว่า “ไม่ได้สิทธิ์” หรือ “ยังไม่จับสัญญาณ”
+        watchId = navigator.geolocation.watchPosition(onGpsFix, window.onGpsError, GPS_WATCH_OPTS);
         // 📡 ปลุก GPS กลับเมื่อสัญญาณขาดยาว (Android พัก watchPosition ตอนล็อกจอ/สลับแอปนาน)
         //    เดิมไม่มีใครปลุกเลย ⇒ ไม่มี fix = ระยะทางหยุดนับเงียบ ๆ ทั้งที่มิเตอร์ยังวิ่ง (เคสจริง 7.29 กม. จาก 12.0)
         //    ต้อง clearWatch ตัวเก่าก่อนทุกครั้ง ไม่งั้นจะได้ watch ซ้อนกัน = นับระยะซ้ำ
         const GPS_WATCHDOG_SEC = 60;
         window.restartGpsWatch = () => {
             try { if (watchId) navigator.geolocation.clearWatch(watchId); } catch(e) {}
-            try { watchId = navigator.geolocation.watchPosition(onGpsFix, null, GPS_WATCH_OPTS); gpsWatchRestarts++; } catch(e) {}
+            try { watchId = navigator.geolocation.watchPosition(onGpsFix, window.onGpsError, GPS_WATCH_OPTS); gpsWatchRestarts++; } catch(e) {}
         };
         window.gpsWatchdog = (now) => {
             if (!window.isManualRunning || window.isMeterPaused) return false;
@@ -16771,7 +17011,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '26c37b751a';
+    const APP_WEB_VERSION = '1832f1354d';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -17228,6 +17468,11 @@
         ['2026-09-18', '🔔 วิ่งเกินลิมิต = มีเสียงติ๊ด ๆ + สั่น เตือน · เกินซ้ำได้ยินอีกครั้ง (ครั้งหลังสั้นกว่า)'],
         ['2026-09-18', '🔴 เลขความเร็ว+กรอบเปลี่ยนเป็นโทนแดงทันทีที่เกินลิมิต — มองเห็นโดยไม่ต้องอ่านตัวเลข'],
         ['2026-09-18', '🐞 แก้สแนปช็อตโปรไฟล์ที่มาถึงกลางเที่ยว — เลิกตัดเสียงเตือนที่กำลังเล่นอยู่กลางชุด'],
+        ['2026-09-18', '🧭 แถบเตือน “เริ่มนำทางไม่ได้” บอกสาเหตุจริง — เน็ต · สิทธิ์ · GPS · โควตา · เซิร์ฟเวอร์'],
+        ['2026-09-18', '🧭 แยก “คีย์แผนที่ผิด” · “เรียกถี่เกินไป” · “เซิร์ฟเวอร์ล่ม” · “ไม่มีเส้นทาง” ได้ด้วย'],
+        ['2026-09-18', '🆘 ปุ่มแก้ตรงจุดในแถบเตือน — เปิดสิทธิ์ · ตั้งค่าแอป · ดูโควตา'],
+        ['2026-09-18', '💡 เน็ตหลุด → ระบบลองใหม่ให้เองเมื่อเน็ตกลับ · ไม่ได้สิทธิ์ → ปุ่มขอสิทธิ์ทันที'],
+        ['2026-09-18', '⏱️ คำขอเส้นทางมีเพดาน 15 วินาที (เน็ตค้างไม่รอไม่จบ) · แถบเปลี่ยนสีตามสาเหตุ'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -23056,7 +23301,11 @@
             var hasLine = (coords && coords.length > 1) || (sLat && sLon && dLat && dLon);
             // 🚕 (18 ก.ย. 69) ธงให้ “เริ่มนำทางสำเร็จจริงหรือไม่” — startTripFromPreview ใช้ตัดสินว่าจะขึ้นแถบเตือนไหม
             window.__navArmed = false;
-            if (!hasLine) { hideNow(); return; }
+            if (!hasLine) {
+                // 🧭 (18 ก.ย. 69) ประทับสาเหตุ: ไม่มีเส้นทาง/พิกัดส่งมา (แถบเตือนจะบอก “หาเส้นทางไม่เจอ” ไม่ใช่โทษเน็ต)
+                try { window.navFailSet('noRoute', 'no route coords'); } catch (e) {}
+                hideNow(); return;
+            }
             // 🗺️ เริ่มนำทางจาก “ค้นหาเส้นทาง” → **เริ่มจาก “ยุบ” เสมอ ให้ผู้ใช้กดเปิดเอง** (📌 18 ก.ย. 69 · ผู้ใช้สั่งย้ำ)
             //    ผู้ใช้สั่งชัด: “มินิแมพที่โชว์เข้ามาหลังสรุปเส้นทางแล้วเริ่มนำทาง ให้ยุบไว้ก่อน ยังไม่ต้องแสดง รอผู้ใช้กดเอง
             //                    ถ้าเป็นคนที่มีสิทธิ์ ปุ่มนี้ยังต้องแสดงด้วย · คนไม่มีสิทธิ์ = ปุ่มถูกซ่อนเหมือนเดิม”
