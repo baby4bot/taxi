@@ -8646,6 +8646,8 @@
             if (id === 'pinPad') { window.pinPadClose(); return id; }
             if (id === 'sideMenuOverlay') { window.toggleSideMenu(false); return id; }
             if (id === 'qrZoomOverlay') { const q = document.getElementById(id); if (q) q.style.display = 'none'; return id; }
+            // 🛡 จด “ผู้ใช้กดปิดจอมิเตอร์ใหญ่เอง” → กันตัวเปิดอัตโนมัติ (ดู startTripFromPreview) ดึงกลับมา
+            if (id === 'trackerZoomOverlay') { window.__tzZoomUserClosedAt = Date.now(); }
             const el = document.getElementById(id);
             if (!el) return '';
             const btn = el.querySelector('.btn-close-floating') || el.querySelector('.btn-cc-cancel');
@@ -12669,17 +12671,38 @@
     window.startTripFromPreview = () => {
         const p = window.__pendingRouteStart || {};
         window.toggleModal('routePreviewModal', false);
-        window.startMeterAndTracking();
-        if (p.sLat && p.sLon && p.dLat && p.dLon && destLoc) {
-            window.startNavigationMap(p.sLat, p.sLon, p.dLat, p.dLon, p.name || $('destInput').value, currentTrueRemainKm || p.km || 0, p.coords);
-        }
+        // 🛡 ทำทีละขั้นแบบ “ขั้นหนึ่งพัง ห้ามลากขั้นถัดไปพังด้วย” (ผู้ใช้เจอ 18 ก.ย. 69)
+        //    🐞 อาการจริง: กด “เริ่มมิเตอร์” จากหน้าสรุปแล้วไปค้างที่หน้าจอกลาง (รูปที่ 2) และมินิแมพไม่ขึ้น
+        //       จนกว่าจะรีเฟรช/ออกเข้าแอปใหม่ ⇒ จุดเปราะมี 2 อย่าง
+        //       (1) `startMeterAndTracking()` โยน error กลางทาง (สะพาน native / ขอสิทธิ์ / เขียน DB) ⇒ บรรทัดถัดไปไม่ทำงานเลย
+        //       (2) `startNavigationMap` เดิมถูกกันด้วย `&& destLoc` — ถ้าคำขอเส้นทางล้ม/มาช้า destLoc = null
+        //           ⇒ ไม่เริ่มนำทาง (navIntent ไม่ถูกตั้ง) ⇒ ตอนสิทธิ์โหลดเสร็จก็ไม่มีอะไรคืนมินิแมพให้
+        //    ✅ ตอนนี้ใช้พิกัดจาก “เส้นทางที่เพิ่งคำนวณ” (`__pendingRouteStart`) เป็นหลัก — ไม่พึ่ง destLoc อีก
+        try { window.startMeterAndTracking(); } catch (e) { try { console.warn('[startTrip] startMeterAndTracking ล้มเหลว:', e); } catch (e2) {} }
+        try {
+            if (p.sLat && p.sLon && p.dLat && p.dLon) {
+                window.startNavigationMap(p.sLat, p.sLon, p.dLat, p.dLon, p.name || ($('destInput') ? $('destInput').value : ''), currentTrueRemainKm || p.km || 0, p.coords);
+            }
+        } catch (e) { try { console.warn('[startTrip] startNavigationMap ล้มเหลว:', e); } catch (e2) {} }
         // 🛣️ เริ่มเที่ยวแล้ว — รีเฟรชป้ายค่าทางด่วนบนหน้าหลักทันที (แบนเนอร์ส้ม + ปุ่ม "ทางด่วน X฿" ในช่องราคา)
         // ให้เห็นยอดรวมทางด่วนของเส้นทางที่เลือกต่อเนื่องระหว่างวิ่ง (มิเตอร์ยังโชว์เฉพาะค่าโดยสารจริง)
         if (window.updateTollDisplay) window.updateTollDisplay();
         if (window.syncFareTollBtn) window.syncFareTollBtn();
         if (window.updateFareTollBtnText) window.updateFareTollBtnText();
         // 🚕 เที่ยวมีจุดหมาย (กดเริ่มมิเตอร์จากหน้าสรุป) → ข้ามหน้าจอกลาง (รูปที่ 2) เปิดจอมิเตอร์ใหญ่ (zoom) ทันที เหมือนเที่ยวแบบไม่มีจุดหมาย
-        if (window.openTripZoom) window.openTripZoom();
+        //    🛡 เผื่อจังหวะพลาด (การ์ดก่อนหน้าปิดช้า/ประวัติย้อนกลับแทรก/เรนเดอร์ใหม่) — ตรวจซ้ำ 2 จังหวะว่า “จอใหญ่เปิดอยู่จริง”
+        //    ⛔ ถ้าผู้ใช้กดปิดเอง (back/แตะฉากหลัง) หยุดทันที — ห้ามดึงกลับมา (ดู __tzZoomUserClosedAt ใน __closeLayer)
+        window.__tzZoomStartAt = Date.now();
+        const openZoom = () => { try { if (window.openTripZoom) window.openTripZoom(); } catch (e) {} };
+        openZoom();
+        [140, 420].forEach((ms) => setTimeout(() => {
+            try {
+                if (!window.isManualRunning) { return; }
+                if ((window.__tzZoomUserClosedAt || 0) > window.__tzZoomStartAt) { return; }   // ผู้ใช้กดปิดเอง = ห้ามดึงกลับ
+                const ov = document.getElementById('trackerZoomOverlay');
+                if (ov && getComputedStyle(ov).display === 'none') { openZoom(); }
+            } catch (e) {}
+        }, ms));
     };
     // ปิดหน้าสรุป (ยังไม่เริ่ม) = ยกเลิกการค้นหานี้ → กลับสถานะเริ่มต้นเหมือนเปิดแอปใหม่ (ช่องค้นหาว่าง / กม.=0 / ราคา+ทางด่วนรีเซ็ต)
     window.closeRoutePreview = () => {
@@ -16524,7 +16547,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = 'ca64b5c470';
+    const APP_WEB_VERSION = '6f8c3bf244';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -16965,6 +16988,8 @@
         ['2026-09-18', '🛣️ ผ่านด่านแล้วขึ้นสรุปสั้น ๆ ครั้งเดียว “ผ่านด่านอโศก · +65฿” พร้อมปุ่มแก้ราคา 12 วิ'],
         ['2026-09-18', '🗣 ด่านที่ยังไม่รู้ราคายังแจ้งเหมือนเดิม — บอกยอดตามตารางให้เห็นก่อนขึ้นด่าน'],
         ['2026-09-18', '🧪 โหมดทดสอบไม่เขียนตารางค่าทางด่วนขึ้นเซิร์ฟเวอร์อีก — ข้อมูลทดสอบไม่หลุด'],
+        ['2026-09-18', '🛡 เริ่มเที่ยวแล้วจอใหญ่ไม่ค้าง — ตรวจซ้ำว่าเปิดอยู่ และไม่ดึงกลับถ้ากดปิดเอง'],
+        ['2026-09-18', '🧭 มินิแมพใช้พิกัดจากเส้นทางที่เพิ่งคำนวณโดยตรง — คำขอเส้นทางล้มก็ยังเริ่มนำทางได้'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
