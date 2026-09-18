@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — เมนูรวม “ข้อความ / หน้าตาแอป” (2 แท็บ)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 940px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 940px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: เมนู “ข้อความ / หน้าตาแอป” — 2 แท็บในหน้าต่างเดียว</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ตรวจของจริง 4 ชั้น:
+        <br>① <b>เมนูเหลืออันเดียว</b> — “แก้ไขข้อความ” กับ “ลำดับหน้าโปรไฟล์” รวมเป็นเมนูเดียว (ไม่มีเมนูซ้ำ)
+        <br>② <b>เนื้อหาย้ายจริง</b> — ลิสต์ข้อความ + ลิสต์ลำดับ อยู่ในแผงของหน้าต่างใหม่ · ภาชนะเดิมว่างและไม่ถูกเปิดอีก
+        <br>③ <b>แท็บตามสิทธิ์</b> — แอดมินเห็น 2 แท็บ · มีสิทธิ์เดียว = แท็บเดียว (ไม่มีแถบแท็บ) · ไม่มีสิทธิ์ = เปิดไม่ได้
+        <br>④ <b>ของเดิมต้องไม่พัง</b> — dirty-state (ปุ่มเทา/เขียว) · ปุ่มพรีวิวข้อความ · หน้าต่างใหม่ต้องไม่ถูกนับเป็น “ข้อความที่แก้ได้” เอง
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/applook-tabs-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (11 สถานการณ์)</button>
+    <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตออกทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) {
+                    cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return;
+                }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test: ไม่ใช้ GPS' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.openAppLookModal === 'function' && typeof cw.appLookMount === 'function' && typeof cw.renderTextEditList === 'function') {
+                installStubs();
+                await wait(200);
+                try { cw.isManualRunning = false; } catch (e) {}
+                await closeAllModals();
+                await waitForNoLoader(12000);
+                await wait(200);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    // ============================ เครื่องมือทดสอบ ============================
+    function asAdmin() {
+        const cw = w();
+        cw.isAdminNow = () => true;
+        cw.canEditAppTexts = () => true;
+        cw.canManageProfileLayout = () => true;
+        return cw;
+    }
+    function asRole(opts) {
+        const cw = w();
+        cw.isAdminNow = () => false;
+        cw.canEditAppTexts = () => !!opts.text;
+        cw.canManageProfileLayout = () => !!opts.order;
+        return cw;
+    }
+    const isOpen = (id) => { const e = w().document.getElementById(id); return !!e && w().getComputedStyle(e).display !== 'none'; };
+    const btnDisabled = (id) => { const b = w().document.getElementById(id); return b ? !!b.disabled : null; };
+    const btnBg = (id) => { const b = w().document.getElementById(id); return b ? String(b.style.background || '') : ''; };
+
+    async function openHub(tab) {
+        const cw = w();
+        cw.openAppLookModal(tab);
+        await wait(220);
+    }
+
+    // ============================ รัน 1 สถานการณ์ ============================
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            await closeAllModals();
+            await wait(120);
+            const out = await Promise.race([fn(), wait(30000).then(() => { throw new Error('สถานการณ์ timeout 30 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ล้มเหลว</span> ' + name + '\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span>';
+            failures.push({ name: name, error: e && e.message ? e.message : String(e) });
+            failCount++;
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ล้มเหลว ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        const n = (w() && w().__net) ? w().__net : { blockedFetch: 0, blockedXhr: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: บล็อกคำขอออกนอกเครื่อง ' + (n.blockedFetch + n.blockedXhr) + ' ครั้ง (fetch ' + n.blockedFetch + ' · xhr ' + n.blockedXhr + ')';
+    }
+
+    // ============================ ชุดทดสอบ ============================
+    async function runAll() {
+        resultsEl.innerHTML = ''; passCount = 0; failCount = 0; failures.length = 0;
+        await loadApp();
+        const cw = w();
+
+        await runScenario('S1 · เมนูเหลืออันเดียว — “แก้ไขข้อความ” + “ลำดับหน้าโปรไฟล์” ไม่แยกกันแล้ว', async () => {
+            const doc = cw.document;
+            assert(!doc.getElementById('hubProfileOrderItem'), 'ยังมีเมนูเก่า #hubProfileOrderItem ค้างอยู่ (ต้องรวมเป็นเมนูเดียว)');
+            const row = doc.getElementById('hubTextItem');
+            assert(row, 'ไม่พบเมนูรวม #hubTextItem');
+            assert(String(row.getAttribute('onclick') || '').indexOf('openAppLookModal') >= 0, 'เมนูรวมต้องเปิดหน้าต่าง 2 แท็บ (openAppLookModal)');
+            const title = (row.querySelector('.hub-item-title') || {}).textContent || '';
+            const desc = (row.querySelector('.hub-item-desc') || {}).textContent || '';
+            assert(title.indexOf('ข้อความ') >= 0 && title.indexOf('หน้าตาแอป') >= 0, 'ชื่อเมนูไม่สื่อ: ' + title);
+            assert(title.length <= 34, 'ชื่อเมนูยาวเกินบรรทัดเดียว (' + title.length + ' ตัวอักษร)');
+            assert(desc.indexOf('แท็บ') >= 0, 'คำอธิบายต้องบอกว่ามี 2 แท็บ: ' + desc);
+            return 'เมนูเดียว: “' + title.trim() + '” · ไม่มีเมนูซ้ำ · คำอธิบายบอก 2 แท็บ ✅';
+        });
+
+        await runScenario('S2 · หน้าต่างมี 2 แท็บจริง + เปิดมาที่แท็บ “แก้ไขข้อความ”', async () => {
+            asAdmin();
+            await openHub();
+            assert(isOpen('appLookModal'), 'หน้าต่าง 2 แท็บไม่เปิด');
+            const btns = cw.document.querySelectorAll('#appLookTabs .seg-tab');
+            assert(btns.length === 2, 'ต้องมี 2 แท็บ แต่พบ ' + btns.length);
+            assert(cw.document.getElementById('appLookTabBtnText').classList.contains('on'), 'แท็บเริ่มต้นต้องเป็น “แก้ไขข้อความ”');
+            assert(cw.document.getElementById('appLookTabBtnOrder').classList.contains('on') === false, 'แท็บที่ 2 ไม่ควรถูกเลือกตอนเปิด');
+            assert(cw.getComputedStyle(cw.document.getElementById('appLookPanelText')).display !== 'none', 'แผงแท็บ 1 ต้องแสดง');
+            assert(cw.getComputedStyle(cw.document.getElementById('appLookPanelOrder')).display === 'none', 'แผงแท็บ 2 ต้องซ่อน');
+            return cw.__appLookTab === 'text' ? 'มี 2 แท็บ · เริ่มที่แท็บข้อความ · แผงสลับถูกต้อง ✅' : 'ค่าเริ่มต้นผิด: ' + cw.__appLookTab;
+        });
+
+        await runScenario('S3 · เนื้อหาย้ายจริง (ลิสต์ข้อความ + ลิสต์ลำดับ + ปุ่มบันทึกของแต่ละแท็บ)', async () => {
+            asAdmin();
+            await openHub();
+            const doc = cw.document;
+            const inText = (id) => !!(doc.getElementById(id) && doc.getElementById(id).closest('#appLookPanelText'));
+            const inOrder = (id) => !!(doc.getElementById(id) && doc.getElementById(id).closest('#appLookPanelOrder'));
+            assert(inText('textEditList'), 'ลิสต์ข้อความ (#textEditList) ยังไม่ย้ายเข้าแท็บ 1');
+            assert(inText('saveTextEditBtn'), 'ปุ่มบันทึกข้อความยังไม่ย้ายเข้าแท็บ 1 (ต้องเลื่อนไปกับเนื้อหา)');
+            assert(inOrder('pfOrderList'), 'ลิสต์ลำดับ (#pfOrderList) ยังไม่ย้ายเข้าแท็บ 2');
+            assert(inOrder('pfOrderSaveBtn') && inOrder('pfOrderResetBtn'), 'ปุ่มบันทึก/คืนค่าลำดับยังไม่ย้ายเข้าแท็บ 2');
+            // ภาชนะเดิมต้องว่าง + ไม่ถูกเปิด
+            const old1 = doc.getElementById('textEditModal'), old2 = doc.getElementById('profileOrderModal');
+            assert(old1 && cw.getComputedStyle(old1).display === 'none', 'ภาชนะเดิม #textEditModal ต้องถูกซ่อน');
+            assert(old2 && cw.getComputedStyle(old2).display === 'none', 'ภาชนะเดิม #profileOrderModal ต้องถูกซ่อน');
+            assert(!old1.querySelector('#textEditList') && !old2.querySelector('#pfOrderList'), 'ภาชนะเดิมต้องไม่เหลือเนื้อหา (ย้ายจริง)');
+            cw.toggleModal('appLookModal', false);
+            await wait(120);
+            assert(!isOpen('textEditModal') && !isOpen('profileOrderModal'), 'ห้ามมีทางไหนเปิดภาชนะเดิมเอง');
+            return 'ย้ายครบ: ข้อความ → แท็บ 1 · ลำดับ → แท็บ 2 · ภาชนะเดิมว่าง+ซ่อน ✅';
+        });
+
+        await runScenario('S4 · สลับแท็บ — ชื่อหน้าต่าง/ปุ่มเฉพาะแท็บ เปลี่ยนตาม', async () => {
+            asAdmin();
+            await openHub();
+            const doc = cw.document;
+            const titleOf = () => String(doc.getElementById('appLookTitle').textContent || '');
+            const rb = doc.getElementById('appLookResetTextBtn');
+            assert(titleOf().indexOf('ข้อความ') >= 0, 'หัวเรื่องแท็บ 1 ไม่ตรง: ' + titleOf());
+            assert(cw.getComputedStyle(rb).display !== 'none', 'ปุ่มรีเซ็ตข้อความต้องโชว์บนแท็บข้อความ');
+            cw.appLookTab('order');
+            await wait(150);
+            assert(doc.getElementById('appLookTabBtnOrder').classList.contains('on'), 'สลับไปแท็บ 2 แล้วปุ่มแท็บไม่ active');
+            assert(cw.getComputedStyle(doc.getElementById('appLookPanelOrder')).display !== 'none', 'แท็บ 2 ต้องแสดงแผงลำดับ');
+            assert(cw.getComputedStyle(doc.getElementById('appLookPanelText')).display === 'none', 'แท็บ 1 ต้องถูกซ่อน');
+            assert(titleOf().indexOf('ลำดับ') >= 0, 'หัวเรื่องแท็บ 2 ไม่ตรง: ' + titleOf());
+            assert(cw.getComputedStyle(rb).display === 'none', 'ปุ่มรีเซ็ตข้อความต้องซ่อนบนแท็บลำดับ (คนละเรื่องกัน)');
+            cw.appLookTab('text');
+            await wait(120);
+            assert(titleOf().indexOf('ข้อความ') >= 0, 'สลับกลับแท็บ 1 แล้วหัวเรื่องไม่กลับ');
+            return 'หัวเรื่อง/แผง/ปุ่มรีเซ็ต สลับตามแท็บครบทั้งสองทาง ✅';
+        });
+
+        await runScenario('S5 · แท็บตามสิทธิ์ — แอดมิน 2 แท็บ · มีสิทธิ์เดียว = แท็บเดียว (ไม่มีแถบแท็บ) · ไม่มีสิทธิ์ = เปิดไม่ได้', async () => {
+            asAdmin();
+            await openHub();
+            assert(cw.getComputedStyle(cw.document.getElementById('appLookTabs')).display !== 'none', 'แอดมินต้องเห็นแถบ 2 แท็บ');
+            cw.toggleModal('appLookModal', false);
+            asRole({ text: false, order: true });     // ผู้จัดการที่มีสิทธิ์จัดลำดับเท่านั้น
+            await wait(120);
+            await openHub();
+            assert(isOpen('appLookModal'), 'มีสิทธิ์จัดลำดับอย่างเดียว แต่เปิดหน้าต่างไม่ได้');
+            assert(cw.__appLookTab === 'order', 'มีสิทธิ์จัดลำดับ แต่เปิดมาไม่ใช่แท็บลำดับ: ' + cw.__appLookTab);
+            assert(cw.getComputedStyle(cw.document.getElementById('appLookTabs')).display === 'none', 'เหลือแท็บเดียว ไม่ควรมีแถบแท็บ');
+            assert(cw.getComputedStyle(cw.document.getElementById('appLookTabBtnText')).display === 'none', 'ต้องซ่อนปุ่มแท็บที่ไม่มีสิทธิ์');
+            cw.toggleModal('appLookModal', false);
+            asRole({ text: false, order: false });
+            await wait(120);
+            await openHub();
+            assert(!isOpen('appLookModal'), 'ไม่มีสิทธิ์เลย แต่หน้าต่างยังเปิด');
+            return 'แอดมิน = 2 แท็บ · มีสิทธิ์เดียว = แท็บเดียว + ไม่มีแถบแท็บ · ไม่มีสิทธิ์ = ไม่เปิด ✅';
+        });
+
+        await runScenario('S6 · openProfileOrderModal() เดิม เปิดมาที่แท็บ “ลำดับหน้าโปรไฟล์” (ของเดิมยังเรียกใช้ได้)', async () => {
+            asRole({ text: true, order: true });
+            cw.openProfileOrderModal();
+            await wait(250);
+            assert(isOpen('appLookModal'), 'เรียก openProfileOrderModal() แล้วหน้าต่างไม่เปิด');
+            assert(cw.__appLookTab === 'order', 'ต้องเปิดที่แท็บลำดับ แต่ได้ ' + cw.__appLookTab);
+            const rows = cw.document.querySelectorAll('#pfOrderList .pf-row[data-pf-key]');
+            assert(rows.length >= 5, 'ลิสต์ลำดับต้องมีแถวให้ลาก แต่พบ ' + rows.length);
+            return 'openProfileOrderModal() → หน้าต่าง 2 แท็บ แท็บลำดับ · แถวให้ลาก ' + rows.length + ' แถว ✅';
+        });
+
+        await runScenario('S7 · dirty-state ของเดิมยังทำงาน — ยังไม่แตะ = กดไม่ได้ · แก้แล้ว = บันทึกเขียว/คืนค่าได้ · คืนค่าเริ่มต้น = เทากลับ', async () => {
+            asRole({ text: true, order: true });
+            cw.pfDraft = null; cw.pfHiddenDraft = null;
+            cw.openProfileOrderModal();
+            await wait(320);
+            assert(btnDisabled('pfOrderSaveBtn') === true, 'ยังไม่แก้ลำดับ แต่ปุ่มบันทึกกดได้ (ต้องเทา)');
+            // จำลอง “ลากสลับจริง” — ย้ายคีย์สุดท้ายขึ้นบนสุด (เหมือนที่ผู้ใช้ลากบนจอ)
+            const keys = Array.from(cw.document.querySelectorAll('#pfOrderList .pf-row[data-pf-key]')).map(r => r.getAttribute('data-pf-key'));
+            assert(keys.length >= 5, 'ลิสต์ลำดับแถวน้อยเกินไป: ' + keys.length);
+            cw.pfDraft = [keys[keys.length - 1]].concat(keys.slice(0, keys.length - 1));
+            cw.dirtyFormCheck('pf');
+            await wait(160);
+            assert(btnDisabled('pfOrderSaveBtn') === false, 'ย้ายลำดับแล้วปุ่มบันทึกต้องกดได้');
+            assert(btnBg('pfOrderSaveBtn').indexOf('neon-green') >= 0, 'ปุ่มบันทึกต้องเป็นสีเขียว: ' + btnBg('pfOrderSaveBtn'));
+            assert(btnDisabled('pfOrderResetBtn') === false, 'มีของให้คืนค่าแล้ว ปุ่มคืนค่าต้องกดได้');
+            cw.pfOrderReset();
+            await wait(220);
+            assert(btnDisabled('pfOrderSaveBtn') === true, 'กด “คืนค่าเริ่มต้น” แล้วกลับไปเท่าค่าที่บันทึกไว้ → ปุ่มบันทึกต้องเทากลับ');
+            return 'ยังไม่แตะ = กดไม่ได้ · ย้ายแล้ว = บันทึกเขียว + คืนค่าได้ · คืนค่าเริ่มต้น = เทากลับ (แถว ' + keys.length + ' แถว) ✅';
+        });
+
+        await runScenario('S11 · กดแท็บเอง (ไม่ผ่านตัวเปิด) → แผงนั้นต้องมีข้อมูลโชว์ทันที · ร่างที่ยังไม่บันทึกต้องไม่หาย', async () => {
+            asAdmin();
+            cw.toggleModal('appLookModal', false);
+            await wait(150);
+            cw.openProfileOrderModal();
+            await wait(300);
+            assert(cw.document.querySelectorAll('#pfOrderList .pf-row[data-pf-key]').length >= 5, 'เปิดแท็บลำดับแล้วไม่มีแถวให้ลาก (แผงว่าง)');
+            // จำลองแผงที่ยังไม่ถูกวาด + ร่างที่ยังไม่บันทึก (ย้ายคีย์สุดท้ายขึ้นบนสุด)
+            const keys = Array.from(cw.document.querySelectorAll('#pfOrderList .pf-row[data-pf-key]')).map(r => r.getAttribute('data-pf-key'));
+            cw.pfDraft = [keys[keys.length - 1]].concat(keys.slice(0, keys.length - 1));
+            cw.document.getElementById('pfOrderList').innerHTML = '';
+            cw.appLookTab('text');
+            await wait(200);
+            cw.appLookTab('order');
+            await wait(300);
+            assert(cw.document.querySelectorAll('#pfOrderList .pf-row[data-pf-key]').length >= 5, 'กดแท็บ “ลำดับหน้าโปรไฟล์” เองแล้วเจอแผงว่าง (ผู้ใช้จะนึกว่าเมนูพัง)');
+            assert(cw.pfDraft.join(',') === [keys[keys.length - 1]].concat(keys.slice(0, keys.length - 1)).join(','), 'สลับแท็บไปกลับแล้วร่างที่ยังไม่บันทึกหาย');
+            // ทางกลับกัน: แท็บข้อความว่าง → สลับกลับมาต้องมีลิสต์จริง
+            cw.document.getElementById('textEditList').innerHTML = '';
+            cw.appLookTab('order');
+            await wait(150);
+            cw.appLookTab('text');
+            await wait(500);
+            const rows = cw.document.querySelectorAll('#textEditList input[data-def]').length;
+            assert(rows > 50, 'กดแท็บ “แก้ไขข้อความ” เองแล้วลิสต์ข้อความว่าง (พบ ' + rows + ' ช่อง)');
+            return 'แผงว่าง → กดแท็บเองก็วาดให้เองครบทั้ง 2 แท็บ · ร่างที่ยังไม่บันทึกอยู่ครบ · ลิสต์ข้อความ ' + rows + ' ช่อง ✅';
+        });
+
+        await runScenario('S8 · หน้าต่างใหม่ต้องไม่ถูกนับเป็น “ข้อความที่แก้ได้” เอง (textOvrSkip)', async () => {
+            asAdmin();
+            await openHub();
+            const doc = cw.document;
+            const inner = doc.getElementById('appLookTitle');
+            assert(inner && inner.closest('#appLookModal'), 'ไม่พบหัวเรื่องในหน้าต่างใหม่');
+            assert(cw.textOvrSkip(inner) === true, 'ข้อความในหน้าต่างใหม่ต้องถูกข้าม (ไม่งั้นป้ายของหน้าต่างนี้จะกลายเป็นข้อความที่แก้ได้เอง)');
+            assert(cw.textOvrSkip(doc.getElementById('appLookTabBtnText')) === true, 'ปุ่มแท็บต้องถูกข้ามด้วย');
+            cw.textOvrInit();
+            const list = String(doc.getElementById('textEditList').innerHTML || '');
+            // ภาชนะเดิมที่เหลือหัวเรื่องค้าง ต้องไม่โผล่ในลิสต์ด้วย (จะกดพรีวิวแล้วหาไม่เจอ — เป็น UI ตาย)
+            assert(list.indexOf('ลำดับและซ่อนบล็อกโปรไฟล์') < 0, 'พบข้อความจากภาชนะเดิม (หัวเรื่องของ #profileOrderModal) โผล่ในลิสต์แก้ข้อความ — harvest ผิด');
+            const stale = Array.from(cw.__txtEls.keys()).filter(d => (cw.__txtEls.get(d) || []).some(e => e.closest && (e.closest('#profileOrderModal') || e.closest('#appLookModal'))));
+            assert(stale.length === 0, 'ยังเหลือข้อความที่ถูก harvest จากหน้าต่างเอง: ' + stale.slice(0, 3).join(' | '));
+            return 'ป้ายในหน้าต่างใหม่ + หัวเรื่องที่เหลือในภาชนะเดิม ถูกข้ามทั้งชุด · ไม่โผล่ในลิสต์แก้ข้อความ ✅';
+        });
+
+        await runScenario('S9 · ปุ่มพรีวิว (ตา) ของข้อความหน้าหลัก — ขณะเปิดหน้าต่างใหม่ = ปิดให้ก่อน แล้วโชว์ปุ่ม “กลับไปแก้ข้อความ”', async () => {
+            asAdmin();
+            cw.openTextEditModal();
+            await wait(1300);   // รอ harvest ข้อความจริงครบ (ลิสต์ ~152 รายการ)
+            const els = cw.__txtEls || new Map();
+            let def = '';
+            els.forEach((list, d) => {
+                if (!def && list.some(e => e.closest && !e.closest('.modal-overlay') && !e.closest('#sideMenu') && e.getClientRects && e.getClientRects().length)) def = d;
+            });
+            assert(def, 'ชุดทดสอบหาข้อความบนหน้าหลักไม่เจอ (เลือกเป้าหมายไม่ได้)');
+            assert(cw.appLookIsOpen(), 'ต้องเปิดหน้าต่างใหม่ค้างไว้ก่อนกดพรีวิว');
+            cw.textPreviewShow(def);
+            await wait(600);
+            assert(!cw.appLookIsOpen(), 'พรีวิวข้อความบนหน้าหลักแล้วหน้าต่างต้องถูกปิด (ไม่งั้นมองไม่เห็นจอจริง)');
+            const chip = cw.document.getElementById('txtPrevBackChip');
+            assert(chip && cw.getComputedStyle(chip).display !== 'none', 'ต้องมีปุ่มลอย “กลับไปแก้ข้อความ” ให้กดกลับ');
+            chip.click();
+            await wait(700);
+            assert(cw.appLookIsOpen() && cw.__appLookTab === 'text', 'กดปุ่มกลับแล้วต้องได้หน้าต่างเดิมที่แท็บข้อความ');
+            assert(cw.document.querySelectorAll('#appLookPanelText #textEditList').length === 1, 'แท็บข้อความต้องมีลิสต์เดียว (เนื้อหาไม่ถูกย้ายซ้ำ)');
+            assert(cw.document.querySelectorAll('#textEditList input[data-def]').length > 50, 'กลับมาแล้วลิสต์ข้อความต้องยังครบ');
+            return 'พรีวิว “' + def + '” → ปิดหน้าต่าง + ปุ่มกลับโชว์ → กดกลับได้แท็บข้อความพร้อมลิสต์เดิม ✅';
+        });
+
+        await runScenario('S10 · สายไฟในโค้ดจริง (กันถอดกลับ) — เมนู/การย้าย/การกัน harvest/การเปิดตามสิทธิ์', async () => {
+            const res = await fetch('../index.html?cb=' + Date.now());
+            const txt = await res.text();
+            assert(txt.indexOf("el.closest('#appLookModal') || el.closest('#textEditModal') || el.closest('#profileOrderModal')") >= 0, 'ไม่พบการกัน harvest หน้าต่างแก้ข้อความ/จัดลำดับเองใน textOvrSkip');
+            assert(txt.indexOf("moveInto('textEditModal', 'appLookPanelText')") >= 0, 'ไม่พบการย้ายเนื้อหาแท็บ 1');
+            assert(txt.indexOf("moveInto('profileOrderModal', 'appLookPanelOrder')") >= 0, 'ไม่พบการย้ายเนื้อหาแท็บ 2');
+            assert(txt.indexOf("window.openAppLookModal = (tab) =>") >= 0, 'ไม่พบตัวเปิดหน้าต่าง 2 แท็บ');
+            assert(txt.indexOf("if (canT && document.getElementById('textEditModal')) window.toggleModal('textEditModal', true);") >= 0, 'ไม่มีทางถอยกลับเมื่อภาชนะใหม่หาย');
+            assert(txt.indexOf("boxId: 'appLookModal'") >= 0, 'dirty-state ของลำดับต้องผูกกับภาชนะใหม่ (#appLookModal)');
+            const loose = txt.split("toggleModal('profileOrderModal', true)").length - 1;
+            assert(loose === 2, 'ต้องมีทางถอยกลับ 2 จุด (ภาชนะใหม่หาย / เปิดจาก openProfileOrderModal) แต่พบ ' + loose);
+            // ทุกจุดที่เปิดภาชนะเดิม ต้องอยู่ใน “ทางถอยกลับ” (บรรทัดนั้น หรือบรรทัดก่อนหน้า มีเงื่อนไขกำกับ)
+            const lines = txt.split('\n');
+            lines.forEach((line, i) => {
+                if (line.indexOf("toggleModal('profileOrderModal', true)") < 0) return;
+                const ctx = line + ' ' + (i > 0 ? lines[i - 1] : '');
+                const guarded = ctx.indexOf("document.getElementById('profileOrderModal')") >= 0 || ctx.indexOf('window.openAppLookModal') >= 0;
+                assert(guarded, 'เจอการเปิด #profileOrderModal ตรง ๆ (ไม่ผ่านทางถอยกลับ): ' + line.trim());
+            });
+                return 'ครบ: กัน harvest · ย้าย 2 แท็บ · ตัวเปิด · ทางถอยกลับ 2 จุด (มีเงื่อนไขกำกับ) · dirty-state = #appLookModal ✅';
+        });
+
+        renderSummary();
+        const bad = failures.length;
+        summaryEl.innerHTML += bad ? ' — <span style="color:var(--red)">ดูรายการที่ล้มเหลวด้านบน</span>' : ' — 🎉 ทั้งชุดผ่าน';
+        try { console.log('[applook-test] DONE', { passCount: passCount, failCount: failCount, failures: failures }); } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', () => { runAll().catch(e => { summaryEl.textContent = 'ชุดทดสอบล้ม: ' + (e && e.message ? e.message : e); }); });
+    document.getElementById('dbgBtn').addEventListener('click', () => {
+        const cw = w();
+        const info = {
+            tab: cw.__appLookTab,
+            open: isOpen('appLookModal'),
+            textTab: cw.document.getElementById('appLookTabBtnText') ? cw.getComputedStyle(cw.document.getElementById('appLookTabBtnText')).display : null,
+            orderTab: cw.document.getElementById('appLookTabBtnOrder') ? cw.getComputedStyle(cw.document.getElementById('appLookTabBtnOrder')).display : null,
+            canText: cw.appLookCanText ? cw.appLookCanText() : null,
+            canOrder: cw.appLookCanOrder ? cw.appLookCanOrder() : null,
+            mounted: cw.document.getElementById('appLookModal') ? cw.document.getElementById('appLookModal').getAttribute('data-mounted') : null,
+            saveBtnDisabled: btnDisabled('pfOrderSaveBtn')
+        };
+        alert(JSON.stringify(info, null, 2));
+    });
+
+    window.addEventListener('load', () => { runAll().catch(e => { summaryEl.textContent = 'ชุดทดสอบล้ม: ' + (e && e.message ? e.message : e); }); });
+})();
+</script>
+</body>
+</html>
