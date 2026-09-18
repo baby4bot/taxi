@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — ลิมิตความเร็วสลับตามโซนเอง (ในเมือง 80 · ทางด่วน 120)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; white-space: pre-wrap; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: ลิมิตความเร็วสลับตามโซนอัตโนมัติ</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsnowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> ·
+        ตั้งเส้นทาง/ช่วงทางด่วนเองด้วย <code>navMiniSetRoute</code> + <code>navMiniSetTolls</code> แล้วเลื่อนรถด้วย
+        <code>navMiniUpdate</code> (เหมือน GPS จริงส่งพิกัดเข้ามา) · ป้อนความเร็วเข้า <code>__spdTick(ความเร็ว)</code>
+        <br><b>กติกาที่ผู้ใช้สั่ง 19 ก.ย. 69:</b> “ให้ลิมิตความเร็วสลับเองตามโซน เช่น <b>80 ในเมือง / 120 ตอนอยู่บนทางด่วน</b>
+        พร้อมโชว์ว่ากำลังใช้ลิมิตของโซนไหน”
+        <br>⇒ ต้องพิสูจน์: ① เข้า/ออกทางด่วนแล้วลิมิตเปลี่ยนเอง ② บอกโซนให้เห็นทั้งจอใหญ่และการ์ดหน้าหลัก
+        ③ สลับโซนแล้วเริ่มนับรอบเตือนใหม่ ④ ปิดสวิตช์ = ใช้ลิมิตเดียวทั้งเที่ยว ⑤ <b>ไม่กินโควตา TomTom</b>
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/speed-zone-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (10 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[speed-zone-test]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ต + นับติ๊ด ============================
+    let stubsInstalled = false;
+    let blocked = 0;
+    let beats = [];
+    let realPlaySound = null;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedTomtom: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0;
+            if (!isLocal) {
+                cw.__net.blockedFetch++; cw.__net.lastUrl = u; blocked++;
+                if (u.indexOf('tomtom.com') >= 0) { cw.__net.blockedTomtom++; }
+                return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u));
+            }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) { cw.__net.blockedXhr = (cw.__net.blockedXhr || 0) + 1; blocked++; x.__blocked = true; return; }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        try {
+            realPlaySound = cw.playSound;
+            cw.playSound = function (type) { if (type === 'speed') beats.push(Date.now()); };
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.__spdZoneDecide === 'function' && typeof cw.__spdTick === 'function'
+                && typeof cw.navMiniTollZone === 'function' && typeof cw.navMiniSetTolls === 'function'
+                && typeof cw.bumpSpeedLimit === 'function') {
+                installStubs();
+                await wait(200);
+                await closeAllModals();
+                await wait(300);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    // ============================ เครื่องมือทดสอบ ============================
+    // เส้นทางตรงเหนือ-ใต้ ~4.4 กม. (จุดห่างกัน ~100 ม.) — พอให้อ่านระยะบนเส้นทางได้ละเอียดระดับ 100 ม.
+    const ROUTE = (() => { const a = []; for (let i = 0; i <= 44; i++) { a.push([13.70 + i * 0.0009, 100.50]); } return a; })();
+
+    const el = (id) => w().document.getElementById(id);
+    const txt = (id) => { const e = el(id); return e ? String(e.innerText || '').replace(/\s+/g, ' ').trim() : '(ไม่มี)'; };
+
+    function armRoute() {
+        const cw = w();
+        cw.canUseMiniMap = () => true;
+        cw.navMiniSetRoute(ROUTE, 'ทดสอบโซน');
+        cw.startNavigationMap(ROUTE[0][0], ROUTE[0][1], ROUTE[4][0], ROUTE[4][1], 'ทดสอบโซน', 0, ROUTE);
+        cw.isManualRunning = true;
+        cw.isMeterPaused = false;
+        try { cw.__tollGateReset(); } catch (e) {}
+    }
+    // วาง “ช่วงทางด่วน” ครอบรถที่จุด idx → fromKm/endKm (กม.บนเส้นทาง)
+    function setTollSpan(fromKm, endKm) {
+        w().navMiniSetTolls({ hasTolls: true, booths: [{ startKm: fromKm, endKm: endKm, gateIn: 'บางนา', from: 'บางนา', to: 'ดินแดง', price: 65, system: 'expressway' }] });
+    }
+    function moveTo(idx, kmh) { w().navMiniUpdate(ROUTE[idx][0], ROUTE[idx][1], kmh || 40); }
+    function along() { return w().navMiniAlongKm(); }
+    function resetDefaults(cw) {
+        cw.userSpeedLimitKmh = 80; cw.userSpeedTollKmh = 120;
+        cw.userSpeedWarn = true; cw.userSpeedZoneAuto = true;
+        const za = el('editSpeedZoneAuto'); if (za) za.checked = true;
+        const sw = el('editSpeedWarn'); if (sw) sw.checked = true;
+        try { cw.navMiniSetTolls(null); } catch (e) {}
+        try { cw.navMiniHide(); } catch (e) {}
+        try { cw.__spdZoneLast = null; cw.__spdResetEpisode(); } catch (e) {}
+        beats = [];
+    }
+
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(30000).then(() => { throw new Error('สถานการณ์ timeout 30 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ไม่ผ่าน</span> ' + name + '\n<span class="detail">' + ((e && e.message) ? e.message : e) + '</span>';
+            failCount++;
+            failures.push(name + ' → ' + ((e && e.message) ? e.message : e));
+        }
+    }
+
+    // ============================ ชุดสถานการณ์ ============================
+    async function runAll() {
+        const cw = w();
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+
+        await runScenario('S1 · กติกาล้วน “ตัดสินโซน” จากช่วงทางด่วนของเส้นทาง (ก่อนขึ้น/บนทางด่วน/เลยทางออก)', async () => {
+            const booths = [{ startKm: 2, endKm: 8 }, { startKm: 20, endKm: 26 }];
+            const cases = [
+                [0.5, 'city', 'ก่อนถึงด่านขึ้น'], [1.9, 'city', 'ก่อนด่านเล็กน้อย'],
+                [2.0, 'toll', 'ขึ้นด่านพอดี'], [5, 'toll', 'กลางทางด่วน'], [8, 'toll', 'ถึงทางออกพอดี'],
+                [8.2, 'city', 'เลยทางออกไปแล้ว'], [15, 'city', 'ช่วงถนนระหว่างสองช่วง'],
+                [21, 'toll', 'ช่วงที่สองของทางด่วน'], [30, 'city', 'เลยทุกช่วง']
+            ];
+            const bad = cases.filter(([km, exp]) => cw.__spdZoneDecide(km, booths) !== exp)
+                .map(([km, exp]) => km + ' กม. → ' + cw.__spdZoneDecide(km, booths) + ' (ควร ' + exp + ')');
+            assert(bad.length === 0, bad.join(' · '));
+            const edge = [['ไม่มีข้อมูลด่าน', cw.__spdZoneDecide(5, []), 'city'], ['ระยะใช้ไม่ได้', cw.__spdZoneDecide('x', booths), 'city'], ['ด่านข้อมูลขาด', cw.__spdZoneDecide(5, [{ startKm: 1 }]), 'city']];
+            const badEdge = edge.filter(([n, got, exp]) => got !== exp).map(([n, got, exp]) => n + ' → ' + got + ' (ควร ' + exp + ')');
+            assert(badEdge.length === 0, badEdge.join(' · '));
+            return cases.map(([km, exp, note]) => km + ' กม. = ' + exp + ' (' + note + ')').join(' · ');
+        });
+
+        await runScenario('S2 · กติกาล้วน “เลือกลิมิต”: เปิดสลับตามโซน → 80/120 · ปิด → ใช้ในเมืองค่าเดียว · เพดาน 20–200', async () => {
+            const t = [
+                ['ในเมือง (สลับเปิด)', cw.__spdLimitFor('city', true, 80, 120), 80],
+                ['ทางด่วน (สลับเปิด)', cw.__spdLimitFor('toll', true, 80, 120), 120],
+                ['ทางด่วน (สลับปิด)', cw.__spdLimitFor('toll', false, 80, 120), 80],
+                ['ตั้งเอง 90/130', cw.__spdLimitFor('toll', true, 90, 130), 130],
+                ['ค่าต่ำกว่าเพดาน (5)', cw.__spdLimitFor('toll', true, 5, 5), 20],
+                ['ค่าเกินเพดาน (999)', cw.__spdLimitFor('city', true, 999, 999), 200]
+            ];
+            const bad = t.filter(([n, got, exp]) => got !== exp).map(([n, got, exp]) => n + ' → ' + got + ' (ควร ' + exp + ')');
+            assert(bad.length === 0, bad.join(' · '));
+            return t.map(([n, got]) => n + ' = ' + got).join(' · ');
+        });
+
+        await runScenario('S3 · ค่าเริ่มต้น: ในเมือง 80 · ทางด่วน 120 · สลับอัตโนมัติเปิด (และไม่มีเส้นทาง = ในเมือง)', async () => {
+            resetDefaults(cw);
+            await wait(30);
+            const d = { city: cw.userSpeedLimitKmh, toll: cw.userSpeedTollKmh, auto: cw.userSpeedZoneAuto };
+            assert(d.city === 80 && d.toll === 120 && d.auto === true, 'ค่าเริ่มต้นต้องเป็น 80/120/เปิด แต่ได้ ' + JSON.stringify(d));
+            assert(cw.__spdZoneNow() === 'city' && cw.__spdLimitNow() === 80, 'ยังไม่มีเส้นทาง/ด่าน → ต้องเป็นโซนในเมือง ลิมิต 80 (ได้ ' + cw.__spdZoneNow() + '/' + cw.__spdLimitNow() + ')');
+            cw.__renderSpeedLimitBox();
+            await wait(20);
+            const zoneTxt = txt('speedZoneNow');
+            assert(zoneTxt.indexOf('ในเมือง') >= 0 && zoneTxt.indexOf('80') >= 0, 'การ์ดตั้งค่าต้องบอกโซน+ลิมิตที่ใช้อยู่ แต่ได้ “' + zoneTxt + '”');
+            return 'ค่าเริ่มต้น ' + JSON.stringify(d) + ' · บนการ์ด: “' + zoneTxt + '”';
+        });
+
+        await runScenario('S4 · ขับเข้า/ออกทางด่วน → ลิมิตเปลี่ยนเอง 80 → 120 → 80 (มินิแมพปิดอยู่)', async () => {
+            resetDefaults(cw);
+            armRoute();
+            moveTo(4);              // รถอยู่ที่ ~0.4 กม.
+            const a0 = along();
+            setTollSpan(a0 + 0.3, a0 + 1.6);   // ช่วงทางด่วน = ต่อจากนี้ไป 1.3 กม.
+            const seen = [];
+            seen.push(['ก่อนขึ้นด่าน', cw.__spdZoneNow(), cw.__spdLimitNow()]);
+            moveTo(8);              // เข้าไปในกึ่งกลางช่วงทางด่วน
+            seen.push(['บนทางด่วน', cw.__spdZoneNow(), cw.__spdLimitNow()]);
+            moveTo(24);             // วิ่งเลยทางออกมาแล้ว
+            seen.push(['หลังทางออก', cw.__spdZoneNow(), cw.__spdLimitNow()]);
+            assert(seen[0][1] === 'city' && seen[0][2] === 80, 'ก่อนขึ้นด่านควรเป็นเมือง/80 แต่ได้ ' + seen[0].join('/'));
+            assert(seen[1][1] === 'toll' && seen[1][2] === 120, 'บนทางด่วนควรเป็นทางด่วน/120 แต่ได้ ' + seen[1].join('/'));
+            assert(seen[2][1] === 'city' && seen[2][2] === 80, 'ออกจากทางด่วนแล้วควรกลับเป็นเมือง/80 แต่ได้ ' + seen[2].join('/'));
+            assert(!cw.navMiniIsVisible(), 'ทดสอบนี้ต้องทำมินิแมพปิดอยู่ (พิสูจน์ว่าไม่ต้องเปิดแผนที่)');
+            return seen.map(s => s[0] + ' = ' + s[1] + '/' + s[2] + ' กม./ชม.').join(' · ');
+        });
+
+        await runScenario('S5 · โชว์ “โซนที่ใช้อยู่” ทั้งจอใหญ่และการ์ดหน้าหลัก + ไฮไลต์ช่องโซนที่ใช้', async () => {
+            resetDefaults(cw);
+            armRoute();
+            moveTo(4);
+            const a0 = along();
+            setTollSpan(a0 + 0.3, a0 + 1.6);
+            moveTo(8);              // อยู่บนทางด่วน
+            cw.__spdTick(60);
+            await wait(30);
+            const chip = el('tzSpeedZoneChip');
+            const small = txt('smallSpeedLimit');
+            const chipStyle = cw.getComputedStyle(chip).display;
+            assert(chipStyle !== 'none', 'ชิปโซนบนจอใหญ่ต้องโชว์ (ได้ display:' + chipStyle + ')');
+            assert(String(chip.innerText).indexOf('ทางด่วน') >= 0, 'ชิปต้องบอก “โซนทางด่วน” แต่ได้ “' + chip.innerText + '”');
+            assert(small.indexOf('120') >= 0 && small.indexOf('ทางด่วน') >= 0, 'การ์ดหน้าหลักต้องขึ้น “ลิมิต 120 · ทางด่วน” แต่ได้ “' + small + '”');
+            const onRows = ['speedLimitCityBox', 'speedLimitTollBox'].filter(id => el(id).classList.contains('on'));
+            assert(onRows.length === 1 && onRows[0] === 'speedLimitTollBox', 'ช่องโซนที่ใช้ต้องไฮไลต์ “บนทางด่วน” เท่านั้น แต่ได้ ' + JSON.stringify(onRows));
+            cw.__renderSpeedLimitBox();
+            await wait(20);
+            const zoneTxt = txt('speedZoneNow');
+            assert(zoneTxt.indexOf('ทางด่วน') >= 0 && zoneTxt.indexOf('120') >= 0, 'การ์ดตั้งค่าต้องบอกว่ากำลังใช้ลิมิตของทางด่วน แต่ได้ “' + zoneTxt + '”');
+            return 'ชิป = “' + chip.innerText + '” · การ์ดหน้าหลัก = “' + small + '” · ตั้งค่า = “' + zoneTxt + '”';
+        });
+
+        await runScenario('S6 · ลิมิตที่ใช้ตัดสิน “เตือนเกิน” จริง: เกิน 80 บนถนน = ติ๊ด · 81 บนทางด่วน = เงียบ', async () => {
+            resetDefaults(cw);
+            armRoute();
+            moveTo(4);
+            const a0 = along();
+            setTollSpan(a0 + 0.3, a0 + 1.6);
+            // ① อยู่บนถนน (ลิมิต 80) → 85 ต้องติ๊ด
+            cw.__spdZoneLast = null; cw.__spdResetEpisode(); beats = [];
+            cw.__spdTick(85);
+            await wait(2300);
+            const cityBeeps = beats.length;
+            // ② เข้าทางด่วน (ลิมิต 120) → 85 ต้องเงียบ
+            moveTo(8);
+            beats = []; cw.__spdTick(85);
+            await wait(2300);
+            const tollBeeps = beats.length;
+            // ③ บนทางด่วน เร่ง 125 → ต้องติ๊ด (เกินลิมิต 120)
+            beats = []; cw.__spdTick(125);
+            await wait(2300);
+            const tollOverBeeps = beats.length;
+            assert(cityBeeps === 5, 'บนถนน 85 กม./ชม. (ลิมิต 80) ควรติ๊ด 5 ครั้ง แต่ได้ ' + cityBeeps);
+            assert(tollBeeps === 0, 'บนทางด่วน 85 กม./ชม. (ลิมิต 120) ต้องไม่ติ๊ด แต่ได้ ' + tollBeeps + ' ครั้ง');
+            assert(tollOverBeeps > 0, 'บนทางด่วน 125 กม./ชม. (เกิน 120) ต้องติ๊ด แต่ได้ 0');
+            return 'ถนน 85 = ' + cityBeeps + ' ติ๊ด · ทางด่วน 85 = ' + tollBeeps + ' ติ๊ด · ทางด่วน 125 = ' + tollOverBeeps + ' ติ๊ด';
+        });
+
+        await runScenario('S7 · สลับโซนกลางเที่ยว = เริ่มนับรอบเตือนใหม่ (แต่ไม่กลับไปติ๊ด 5 ซ้ำ)', async () => {
+            resetDefaults(cw);
+            armRoute();
+            moveTo(4);
+            const a0 = along();
+            setTollSpan(a0 + 0.3, a0 + 1.6);
+            cw.__spdZoneLast = null; cw.__spdResetEpisode(); beats = [];
+            cw.__spdTick(85);            // รอบแรกของเที่ยว (บนถนน ลิมิต 80)
+            await wait(2300);
+            const first = beats.length;
+            moveTo(8);                   // เข้าทางด่วน → ลิมิตใหม่ 120 → รอบใหม่
+            beats = [];
+            cw.__spdTick(85);            // ยังไม่เกินลิมิตใหม่ = ต้องไม่ติ๊ด
+            await wait(2300);
+            const noneAfterSwitch = beats.length;
+            beats = [];
+            cw.__spdTick(125);           // เกินลิมิตใหม่ (120)
+            await wait(2300);
+            const second = beats.length;
+            const log = (cw.__spdZoneLog || []).slice(-3).map(l => l.zone + '/' + l.limit).join(' , ');
+            assert(first === 5, 'รอบแรกควรติ๊ด 5 ครั้ง แต่ได้ ' + first);
+            assert(noneAfterSwitch === 0, 'สลับไปโซนที่ลิมิตสูงกว่า ไม่ควรติ๊ด แต่ได้ ' + noneAfterSwitch);
+            assert(second === 3, 'เกินในรอบที่ 2 ควรติ๊ด 3 ครั้ง (ไม่ใช่ 5 ซ้ำ) แต่ได้ ' + second);
+            assert(log.indexOf('toll/120') >= 0, 'ต้องบันทึกว่าเข้าโซนทางด่วนที่ลิมิต 120 (ได้ ' + log + ')');
+            return 'รอบแรก (ถนน, ลิมิต 80) = ' + first + ' ติ๊ด · หลังสลับเขาทางด่วน = ' + noneAfterSwitch + ' · เกิน 120 = ' + second + ' ติ๊ด · ประวัติโซน: ' + log;
+        });
+
+        await runScenario('S8 · ปิดสวิตช์ “สลับตามโซน” → อยู่บนทางด่วนก็ใช้ลิมิตในเมือง + ซ่อนชิปโซน', async () => {
+            resetDefaults(cw);
+            armRoute();
+            moveTo(4);
+            const a0 = along();
+            setTollSpan(a0 + 0.3, a0 + 1.6);
+            moveTo(8);                     // อยู่บนทางด่วน
+            el('editSpeedZoneAuto').checked = false;
+            cw.__spdSyncUi();              // = กดสวิตช์จริงบนจอ
+            cw.__spdTick(60);
+            await wait(30);
+            const zone = cw.__spdZoneNow(), lim = cw.__spdLimitNow();
+            const chipStyle = cw.getComputedStyle(el('tzSpeedZoneChip')).display;
+            assert(zone === 'city' && lim === 80, 'ปิดสวิตช์แล้วต้องใช้ลิมิตในเมือง 80 แต่ได้ ' + zone + '/' + lim);
+            assert(chipStyle === 'none', 'ปิดสวิตช์แล้วไม่ต้องโชว์ชิปโซน (ได้ display:' + chipStyle + ')');
+            cw.__renderSpeedLimitBox();
+            await wait(20);
+            const zoneTxt = txt('speedZoneNow');
+            assert(zoneTxt.indexOf('ปิด') >= 0, 'การ์ดตั้งค่าต้องบอกว่าสลับตามโซนปิดอยู่ แต่ได้ “' + zoneTxt + '”');
+            return 'บนทางด่วน แต่โซนที่ใช้ = ' + zone + ' · ลิมิต ' + lim + ' · การ์ด: “' + zoneTxt + '”';
+        });
+
+        await runScenario('S9 · ปุ่ม − / + แยก 2 ช่อง (แตะช่องทางด่วนไม่กระทบช่องในเมือง) + เซฟได้ค่าครบ', async () => {
+            resetDefaults(cw);
+            await wait(20);
+            const before = { city: el('speedLimitVal').innerText, toll: el('speedLimitTollVal').innerText };
+            cw.bumpSpeedLimit(1, false, 'toll');
+            cw.bumpSpeedLimit(1, false, 'toll');
+            cw.bumpSpeedLimit(-1);
+            await wait(20);
+            const after = { city: el('speedLimitVal').innerText, toll: el('speedLimitTollVal').innerText, vars: [cw.userSpeedLimitKmh, cw.userSpeedTollKmh] };
+            assert(before.city === '80' && before.toll === '120', 'ค่าตั้งต้นบนจอควรเป็น 80/120 แต่ได้ ' + JSON.stringify(before));
+            assert(after.city === '79' && after.toll === '122', 'แตะช่องทางด่วน 2 ครั้ง (+2=122) · ช่องในเมือง −1 (=79) แต่ได้ ' + JSON.stringify(after));
+            const fields = cw.__spdPayloadFields();
+            assert(fields.speedLimitKmh === 79 && fields.speedLimitTollKmh === 122 && fields.speedZoneAuto === true && fields.speedWarn === true,
+                'ฟิลด์ที่จะเซฟต้องครบ (speedLimitKmh/speedLimitTollKmh/speedZoneAuto/speedWarn) แต่ได้ ' + JSON.stringify(fields));
+            return 'บนจอ ' + after.city + '/' + after.toll + ' · ตัวแปร ' + after.vars.join('/') + ' · ฟิลด์เซฟ ' + JSON.stringify(fields);
+        });
+
+        await runScenario('S10 · สายไฟในโค้ดจริง + ไม่กินโควตา TomTom (ตัวเลขโซนคิดในเครื่อง 100%)', async () => {
+            const q0 = (() => { try { return cw.tomtomUsageToday().route; } catch (e) { return -1; } })();
+            const net0 = cw.__net.blockedTomtom || 0;
+            resetDefaults(cw);
+            armRoute();
+            moveTo(3);                      // ให้มีตำแหน่งรถก่อน (along() ต้องไม่เป็น null)
+            const a0 = along();
+            setTollSpan(a0 + 0.2, a0 + 1.4);
+            for (let i = 6; i <= 22; i++) { moveTo(i, 45); cw.__spdTick(50 + i); await wait(15); }
+            const q1 = (() => { try { return cw.tomtomUsageToday().route; } catch (e) { return -1; } })();
+            const net1 = cw.__net.blockedTomtom || 0;
+            assert(q1 === q0 && net1 === net0, 'การสลับโซนต้องไม่ยิงคำขอใหม่ (โควตา ' + q0 + '→' + q1 + ' · คำขอ TomTom +' + (net1 - net0) + ')');
+            const src = await fetch('../index.html').then(r => r.text());
+            const need = [
+                ['กติกาตัดสินโซน', /window\.__spdZoneDecide = \(km, booths\)/],
+                ['กติกาเลือกลิมิต', /window\.__spdLimitFor = \(zone, auto, city, toll\)/],
+                ['ลิมิตที่ใช้จริง', /window\.__spdLimitNow = \(\)/],
+                ['อ่านโซนจากมินิแมพ', /window\.navMiniTollZone = function \(\)/],
+                ['ใช้ลิมิตของโซนตอนเตือน', /const limitNow = window\.__spdLimitNow\(\);/],
+                ['สลับโซนแล้วเริ่มรอบใหม่', /window\.__spdZoneLast !== zoneNow/],
+                ['ชิปโซนบนจอใหญ่', /id="tzSpeedZoneChip"/],
+                ['ช่องลิมิต 2 โซนในหน้าตั้งค่า', /id="speedLimitTollVal"/],
+                ['สวิตช์สลับตามโซน', /id="editSpeedZoneAuto"/],
+                ['เซฟฟิลด์ครบ', /window\.__spdPayloadFields = \(\)/]
+            ];
+            const miss = need.filter(([n, re]) => !re.test(src)).map(([n]) => n);
+            assert(miss.length === 0, 'โค้ดจริงขาด: ' + miss.join(' · '));
+            return 'โควตา route ' + q0 + ' → ' + q1 + ' · คำขอ TomTom เพิ่ม ' + (net1 - net0) + ' · สายไฟ 10 จุดครบ';
+        });
+
+        // คืนสภาพเดิม
+        resetDefaults(cw);
+        try { cw.isManualRunning = false; } catch (e) {}
+        try { cw.navMiniSetTolls(null); } catch (e) {}
+        try { if (realPlaySound) cw.playSound = realPlaySound; } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const btnRun = document.getElementById('runBtn');
+        btnRun.disabled = true; btnRun.textContent = '⏳ กำลังรัน...';
+        try {
+            if (!stubsInstalled) await loadApp();
+            await runAll();
+            offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งหมดในชุดทดสอบ (บล็อกคำขอออกนอกเครื่อง ' + blocked + ' ครั้ง)';
+        } catch (e) {
+            summaryEl.innerHTML = '<span style="color:var(--red)">ตั้งชุดทดสอบไม่สำเร็จ: ' + (e && e.message ? e.message : e) + '</span>';
+        } finally {
+            btnRun.disabled = false; btnRun.textContent = '🔄 รันการทดสอบใหม่ (10 สถานการณ์)';
+        }
+    });
+
+    const paintSummary = () => {
+        summaryEl.innerHTML = (failCount === 0
+            ? '<span style="color:var(--green)">✅ ผ่านทั้งหมด ' + passCount + ' / ' + (passCount + failCount) + ' สถานการณ์</span>'
+            : '<span style="color:var(--red)">❌ ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + '</span>\n' + failures.join('\n'));
+    };
+    setInterval(paintSummary, 500);
+
+    (async () => {
+        try { await loadApp(); await runAll(); offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งหมดในชุดทดสอบ (บล็อกคำขอออกนอกเครื่อง ' + blocked + ' ครั้ง)'; }
+        catch (e) { log('auto-load failed', e); }
+    })();
+})();
+</script>
+</body>
+</html>

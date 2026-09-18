@@ -650,6 +650,14 @@
         .spd-step-btn { width: 62px; height: 62px; border-radius: 50%; border: 1px solid rgba(56,189,248,0.45); background: rgba(56,189,248,0.14); color: #7dd3fc; font-size: 30px; font-weight: 700; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         .spd-step-btn:active { background: rgba(56,189,248,0.3); transform: scale(0.96); }
         .spd-limit-val { font-size: 56px; font-weight: 800; line-height: 1; color: #e0f2fe; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+        /* 🚀 (19 ก.ย. 69) ลิมิต 2 โซน (ในเมือง / ทางด่วน) — ปุ่มเล็กลงให้การ์ดตั้งค่าไม่สูงเกิน */
+        .spd-step-btn.is-sm { width: 48px; height: 48px; font-size: 24px; }
+        .spd-limit-val.is-sm { font-size: 42px; letter-spacing: -1px; }
+        .spd-zone-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.03); transition: border-color .2s ease, background .2s ease; }
+        .spd-zone-row.on { border-color: rgba(56,189,248,0.55); background: rgba(56,189,248,0.10); }
+        .spd-zone-row .spd-zone-name { flex: 1; font-size: 13.5px; font-weight: 700; color: #e6e9f0; min-width: 0; }
+        .spd-zone-row .spd-zone-name small { display: block; font-size: 11px; font-weight: 400; color: var(--text-dim); margin-top: 2px; }
+        .tz-speed-zone-chip { display: none; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #fcd34d; background: rgba(252,211,77,0.12); border: 1px solid rgba(252,211,77,0.35); border-radius: 999px; padding: 2px 8px; white-space: nowrap; margin: 0 0 4px auto; width: fit-content; }
         /* รถ taxi บนเส้น progress — ให้ลอยชัดเจน ไม่ถูกตัด/ทับ */
         .tracker-zoom-box #tzCarIcon { top: -24px; z-index: 5; }
         .tracker-zoom-box #tzCarIcon img { width: 52px; height: auto; }
@@ -3259,16 +3267,32 @@
      🔑 (18 ก.ย. 69) การ์ด PIN ถูก “ย้ายโหนดจริง” ไปแท็บ “PIN ยืนยันสำคัญ” ในหน้าต่าง “ตั้งค่าทั่วไป” (เมนูตั้งค่าการใช้งาน) ตอนบูตแอป — HTML ต้นทางยังอยู่ตรงนี้เพื่อให้ id เดิมใช้ได้ (ตัวย้าย = window.__mountPinPanel) --><label style="text-align: left;">เบิกเวลาจอด/รถติดหลังแอปถูกปิดได้สูงสุด</label><select id="editKillCap" style="width:100%; margin-bottom:6px; background:rgba(255,255,255,0.08); color:white; border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:12px; font-size:15px; text-align:left;"><option value="0" selected>ไม่จำกัด (ค่าเริ่มต้น)</option><option value="5">5 นาที</option><option value="10">10 นาที</option><option value="15">15 นาที</option><option value="20">20 นาที</option><option value="30">30 นาที</option><option value="60">60 นาที</option></select><div style="font-size:11px; color:var(--text-dim); text-align:left; margin-bottom:var(--space-field);">ถ้าแอปถูกปิด/คิลแล้วรถจอดนิ่งตลอดช่วงนั้น ระบบจะเบิกเวลาจอดให้สูงสุดเท่านี้ (0 = เบิกเต็มตามจริง) เพื่อกันค่าโดยสารบวมถ้าลืมจบเที่ยวข้ามคืน</div><label id="profileManualFsRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เปิดเต็มจอตอนนี้ (เต็มหน้าจอ)<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">กดสวิตช์เปิด = ซ่อนแถบเบราว์เซอร์บน-ล่างให้เหมือนแอป (ใช้ได้บน Android Chrome/Firefox/Edge — iOS Safari จำเป็นต้องติดตั้ง PWA)</span></span><label class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="editManualFs" onchange="window.toggleAppFullscreenFromProfile(this)" style="display:none;"><span class="app-slider"></span></label></label><label id="profileKeepAwakeRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">ห้ามจอดับระหว่างจับเที่ยว<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">ใช้ <b>Wake Lock</b> ให้จอค้างระหว่างเที่ยว — จอติด = GPS เก็บต่อเนื่อง ⇒ <b>เวลารถติดตรงมิเตอร์</b> (ปิดได้ถ้ากังวลเรื่องแบต แต่ช่วงที่จอดับจะได้เป็นค่าประมาณ — ดู “ค่าชดเชย” ในหน้าประวัติเที่ยว)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editKeepAwake" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">สั่นเมื่อมี toast ทอง<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เช่น กลับจากเบื้องหลัง / ใกล้ถึงปลายทาง / เตือนโควตา (ปิดถ้าไม่อยากให้สั่นตอนขับ)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editVibrateGold" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เสียงติ๊งเมื่อมีข้อความแจ้งเตือน<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เล่นเสียงสั้น ๆ ทุกครั้งที่ toast เด้ง (เช่น เริ่มต่อ / เตือนทางด่วน) — ปิดถ้าไม่อยากให้เสียงรบกวนตอนขับ</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editToastSound" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เสียงนำทางพูด (ภาษาไทย)<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">พูดบอกก่อนถึงจุดเลี้ยว เช่น “อีก 300 เมตร เลี้ยวซ้าย” แล้วพูดชื่อท่าเมื่อใกล้ถึง — ช่วยเมื่อไม่ได้มองจอ (ทำงานคู่กับเสียงติ๊งและสั่น ปิดได้ถ้าไม่ต้องการ)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editNavVoice" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เริ่มต่อเที่ยวค้างอัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เปิดแอปแล้วเจอเที่ยวที่ยังไม่สิ้นสุด → เริ่มมิเตอร์ต่อให้ทันทีพร้อมเปิดจอมิเตอร์ใหญ่ (ไม่ต้องกด "เริ่มต่อ")</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editAutoResume" checked><span class="app-slider"></span></span></label><label id="profileAutoFsRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เปิดแอปแล้วขอเต็มจออัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">แตะครั้งแรกหลังเปิดแอปจะซ่อนแถบเบราว์เซอร์ให้อัตโนมัติ (ใช้ได้บน Android Chrome/Firefox/Edge — iOS Safari ไม่มีฟีเจอร์นี้ ต้องติดตั้งแอป)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editAutoFs" checked><span class="app-slider"></span></span></label><!-- 🚀 (18 ก.ย. 69) ลิมิตความเร็ว + เตือนเมื่อเกิน — ขอจากผู้ใช้: ตั้งค่าในเมนูตั้งค่าการใช้งาน → ตั้งค่าทั่วไป · กด −/+ ทีละ 1 ไม่ต้องพิมพ์ · ตัวเลขใหญ่ -->
             <label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เตือนเมื่อความเร็วเกินลิมิต<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เกินค่าที่ตั้งไว้ = มีเสียงติ๊ด ๆ + สั่น เตือน <b>5 ครั้ง</b> แล้วหยุด · ถ้าลดความเร็วลงมาจะไม่เตือนซ้ำ · พอเร่งเกินอีกจะเตือนอีกครั้ง <b>3 ครั้ง</b> (ใช้ตอนจับเวลามิเตอร์ทั้งแบบใส่ระยะทางและไม่ใส่)</span></span><span class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="editSpeedWarn" onchange="window.__spdSyncUi&&window.__spdSyncUi()" checked><span class="app-slider"></span></span></label>
             <div id="speedLimitBox" style="text-align:left; margin-bottom:var(--space-field); background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.28); border-radius:14px; padding:12px 14px;">
-                <div style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; color:#7dd3fc; margin-bottom:10px;"><span class="material-symbols-outlined" style="font-size:18px;">speed</span> ลิมิตความเร็ว</div>
-                <div style="display:flex; align-items:center; justify-content:center; gap:16px;">
-                    <button type="button" class="spd-step-btn" onclick="window.bumpSpeedLimit(-1)" aria-label="ลดลิมิตลง 1 กม./ชม.">−</button>
-                    <div style="text-align:center; min-width:110px;">
-                        <div id="speedLimitVal" class="spd-limit-val">80</div>
-                        <div style="font-size:11.5px; color:var(--text-dim); margin-top:2px;">กม./ชม.</div>
+                <div style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; color:#7dd3fc; margin-bottom:10px;"><span class="material-symbols-outlined" style="font-size:18px;">speed</span> ลิมิตความเร็ว <span style="font-size:11px; color:var(--text-dim); font-weight:400;">(2 โซน — 19 ก.ย. 69)</span></div>
+                <div id="speedZoneNow" style="font-size:12px; font-weight:700; color:#7dd3fc; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.30); border-radius:12px; padding:8px 10px; margin-bottom:10px; line-height:1.5;">โซนที่ใช้อยู่: ในเมือง · ลิมิต 80 กม./ชม.</div>
+                <div id="speedLimitCityBox" class="spd-zone-row on" style="margin-bottom:9px;">
+                    <div class="spd-zone-name">🏙️ ในเมือง / ถนนปกติ<small>ใช้เมื่อไม่ได้อยู่บนทางด่วน</small></div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button type="button" class="spd-step-btn is-sm" onclick="window.bumpSpeedLimit(-1)" aria-label="ลดลิมิตในเมืองลง 1 กม./ชม.">−</button>
+                        <div style="text-align:center; min-width:86px;">
+                            <div id="speedLimitVal" class="spd-limit-val is-sm">80</div>
+                            <div style="font-size:10.5px; color:var(--text-dim); margin-top:3px;">กม./ชม.</div>
+                        </div>
+                        <button type="button" class="spd-step-btn is-sm" onclick="window.bumpSpeedLimit(1)" aria-label="เพิ่มลิมิตในเมืองขึ้น 1 กม./ชม.">+</button>
                     </div>
-                    <button type="button" class="spd-step-btn" onclick="window.bumpSpeedLimit(1)" aria-label="เพิ่มลิมิตขึ้น 1 กม./ชม.">+</button>
                 </div>
-                <div style="font-size:11px; color:var(--text-dim); text-align:center; margin-top:9px; line-height:1.5;">กด − / + ปรับทีละ 1 · ใช้ได้ 20–200 กม./ชม. · ตัวเลขความเร็วบนจอมิเตอร์จะเปลี่ยนเป็นสีแดงเมื่อเกินลิมิต</div>
+                <div id="speedLimitTollBox" class="spd-zone-row" style="margin-bottom:10px;">
+                    <div class="spd-zone-name">🛣️ บนทางด่วน<small>ใช้เมื่อรถอยู่บนช่วงทางด่วนของเส้นทาง</small></div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button type="button" class="spd-step-btn is-sm" onclick="window.bumpSpeedLimit(-1, false, 'toll')" aria-label="ลดลิมิตบนทางด่วนลง 1 กม./ชม.">−</button>
+                        <div style="text-align:center; min-width:86px;">
+                            <div id="speedLimitTollVal" class="spd-limit-val is-sm">120</div>
+                            <div style="font-size:10.5px; color:var(--text-dim); margin-top:3px;">กม./ชม.</div>
+                        </div>
+                        <button type="button" class="spd-step-btn is-sm" onclick="window.bumpSpeedLimit(1, false, 'toll')" aria-label="เพิ่มลิมิตบนทางด่วนขึ้น 1 กม./ชม.">+</button>
+                    </div>
+                </div>
+                <label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px; cursor:pointer;"><span style="flex:1; font-size:14px;">สลับลิมิตตามโซนอัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">รถเข้าช่วงทางด่วน = ใช้ลิมิตทางด่วนทันที · ออกมาแล้วกลับไปใช้ลิมิตในเมืองเอง (ปิด = ใช้ลิมิตในเมืองค่าเดียวตลอด)</span></span><span class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="editSpeedZoneAuto" onchange="window.__spdSyncUi&&window.__spdSyncUi()" checked><span class="app-slider"></span></span></label>
+                <div style="font-size:11px; color:var(--text-dim); text-align:left; margin-top:8px; line-height:1.55;">กด − / + ปรับทีละ 1 · ใช้ได้ 20–200 กม./ชม. · ตัวเลขความเร็วบนจอมิเตอร์จะเปลี่ยนเป็นสีแดงเมื่อเกินลิมิตของโซนนั้น · สลับโซนแล้วเริ่มนับรอบเตือนใหม่ให้</div>
             </div>
             <div id="settingsLockHint" style="display:none; font-size:12px; color:var(--neon-yellow); background:rgba(241,196,15,0.10); border:1px solid rgba(241,196,15,0.35); border-radius:10px; padding:8px 12px; margin-bottom:var(--space-field); text-align:left;">🔒 <b>สั่น toast ทอง</b> และ <b>เต็มจออัตโนมัติ</b> ตั้งค่าโดยผู้ดูแลระบบ — เปลี่ยนแปลงได้เฉพาะแอดมิน</div><button onclick="window.saveProfileInfo()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: white;" id="saveProfileBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกข้อมูล</button><!-- 🔁 (18 ก.ย. 69) ปุ่ม “รีเซ็ตการตั้งค่า” ย้ายไปหน้าต่าง “ตั้งค่าทั่วไป” (เมนูตั้งค่าการใช้งาน) แล้ว — ไม่ให้ซ้ำกัน 2 ที่ --></div></div></div>
 
@@ -3882,7 +3906,7 @@
         <div class="tz-speed-card" id="tzSpeedCard">
             <span class="material-symbols-outlined tz-speed-icon">speed</span>
             <div class="tz-speed-main"><span id="tzSpeedNum">0</span><span class="tz-speed-unit">กม./ชม.</span></div>
-            <div class="tz-speed-side"><span class="tz-speed-limit-chip" id="tzSpeedLimitChip"><span class="material-symbols-outlined" style="font-size:14px;">speed</span> ลิมิต <b id="tzSpeedLimitVal">80</b></span></div>
+            <div class="tz-speed-side"><span class="tz-speed-zone-chip" id="tzSpeedZoneChip">🏙️ โซนในเมือง</span><span class="tz-speed-limit-chip" id="tzSpeedLimitChip"><span class="material-symbols-outlined" style="font-size:14px;">speed</span> ลิมิต <b id="tzSpeedLimitVal">80</b></span></div>
         </div>
         <div class="tz-stats-row">
             <div class="tz-stat-col"><div id="tzDrivenKm" class="tz-stat-num" style="color: var(--neon-green);">0.00</div><div class="tz-stat-label">วิ่งแล้ว (กม.)</div></div>
@@ -17324,7 +17348,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '6730b25ece';
+    const APP_WEB_VERSION = 'c43a348f99';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -17804,6 +17828,10 @@
         ['2026-09-19', '🎚️ ตั้งระยะเตือนด้วยปุ่ม − / + ทีละ 10 เมตร (30–2000) ไม่ต้องพิมพ์เอง'],
         ['2026-09-19', '🚨 ป้าย “กำลังจะถึงด่านเก็บเงิน” บนสุดกลางจอ 10 วินาที + เสียงพูด'],
         ['2026-09-19', '📢 ป้ายขึ้นแม้ไม่ได้เปิดมินิแมพ · สวิตช์ “เตือนทุกด่าน” ปิด = โหมดเงียบ'],
+        ['2026-09-19', '🚀 ลิมิตความเร็วสลับเองตามโซน — 80 ในเมือง / 120 บนทางด่วน'],
+        ['2026-09-19', '🏷️ โชว์ชัดว่ากำลังใช้ลิมิตของโซนไหน (จอใหญ่ · การ์ดหน้าจอ · หน้าตั้งค่า)'],
+        ['2026-09-19', '🛣️ สลับเมื่อรถเข้า/ออกช่วงทางด่วนจริง — คิดในเครื่อง ไม่กินโควตาแผนที่'],
+        ['2026-09-19', '⚙️ ตั้งลิมิตแยก 2 ช่อง (− / + ทีละ 1) · เปลี่ยนโซน = เริ่มนับรอบเตือนใหม่'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -18244,6 +18272,12 @@
             // 🚀 (18 ก.ย. 69) ลิมิตความเร็ว + เตือนเมื่อเกิน (ค่าเริ่มต้น เปิด · 80 กม./ชม.) — จำกัดช่วง 20–200 กันค่าผิดจากที่อื่น
             const __lim = parseInt(data.speedLimitKmh, 10);
             window.userSpeedLimitKmh = (!isNaN(__lim)) ? Math.min(200, Math.max(20, __lim)) : 80;
+            // 🛣️ (19 ก.ย. 69) ลิมิตโซนทางด่วน + สวิตช์สลับตามโซน (ค่าเริ่มต้น 120 / เปิด)
+            const __toll = parseInt(data.speedLimitTollKmh, 10);
+            window.userSpeedTollKmh = (!isNaN(__toll)) ? Math.min(200, Math.max(20, __toll)) : window.SPD_TOLL_DEFAULT;
+            window.userSpeedZoneAuto = data.speedZoneAuto !== false;
+            const swAuto0 = document.getElementById('editSpeedZoneAuto');
+            if (swAuto0) swAuto0.checked = window.userSpeedZoneAuto;
             window.userSpeedWarn = data.speedWarn !== false;
             const swSel0 = document.getElementById('editSpeedWarn');
             if (swSel0) swSel0.checked = window.userSpeedWarn;
@@ -20404,9 +20438,47 @@
     //  ค่าเริ่มต้น: เปิดเตือน · ลิมิต 80 กม./ชม. · เก็บต่อบัญชีใน Firestore (speedWarn / speedLimitKmh)
     window.SPD_LIMIT_MIN = 20;
     window.SPD_LIMIT_MAX = 200;
+    window.SPD_TOLL_DEFAULT = 120;   // 🚀 (19 ก.ย. 69) ลิมิตโซนทางด่วน — ค่าเริ่มต้น 120 (ผู้ใช้สั่ง “80 ในเมือง / 120 บนทางด่วน”)
     window.SPD_CLEAR_GAP = 5;   // ต้องลดลงต่ำกว่าลิมิต 5 กม./ชม. จึงนับว่า “จบรอบ” (กันติ๊ดรัวตอนความเร็วแกว่งริมลิมิต)
     if (typeof window.userSpeedLimitKmh !== 'number' || isNaN(window.userSpeedLimitKmh)) window.userSpeedLimitKmh = 80;
+    // 🛣️ ลิมิตโซนทางด่วน + สวิตช์ “สลับตามโซน” (ค่าเริ่มต้น เปิด — ไม่มีข้อมูลทางด่วน = ใช้ลิมิตในเมืองเหมือนเดิม)
+    if (typeof window.userSpeedTollKmh !== 'number' || isNaN(window.userSpeedTollKmh)) window.userSpeedTollKmh = window.SPD_TOLL_DEFAULT;
+    if (typeof window.userSpeedZoneAuto === 'undefined') window.userSpeedZoneAuto = true;
     if (typeof window.userSpeedWarn === 'undefined') window.userSpeedWarn = true;
+    // 🧭 กติกาล้วน (ทดสอบออฟไลน์ได้ใน tests/speed-zone-offline.html) — ตัดสินโซนจาก “กิโลบนเส้นทาง” + ช่วงทางด่วนของเที่ยวนี้
+    //    ช่วงทางด่วนของแต่ละด่าน = [startKm, endKm] (มาจากข้อมูลเส้นทางจริง ไม่กินโควตาเพิ่ม)
+    window.SPD_ZONE_TOL_KM = 0.05;   // เผื่อ 50 ม. ก่อน/หลังด่าน — กันสลับไป-กลับตอน GPS แกว่งริมหัวด่าน
+    window.__spdZoneDecide = (km, booths) => {
+        const list = Array.isArray(booths) ? booths : [];
+        const k = Number(km);
+        if (!isFinite(k)) return 'city';
+        for (let i = 0; i < list.length; i++) {
+            const b = list[i];
+            if (!b || typeof b.startKm !== 'number' || typeof b.endKm !== 'number') continue;
+            if (k >= (b.startKm - window.SPD_ZONE_TOL_KM) && k <= (b.endKm + window.SPD_ZONE_TOL_KM)) return 'toll';
+        }
+        return 'city';
+    };
+    // ลิมิตที่ “ใช้จริงตอนนี้” — ฟังก์ชันล้วน: (โซน, สลับอัตโนมัติ, ลิมิตในเมือง, ลิมิตทางด่วน) → ตัวเลข
+    window.__spdLimitFor = (zone, auto, city, toll) => {
+        const c = Math.min(window.SPD_LIMIT_MAX, Math.max(window.SPD_LIMIT_MIN, parseInt(city, 10) || 80));
+        const t = Math.min(window.SPD_LIMIT_MAX, Math.max(window.SPD_LIMIT_MIN, parseInt(toll, 10) || window.SPD_TOLL_DEFAULT));
+        if (auto === false) return c;
+        return (String(zone) === 'toll') ? t : c;
+    };
+    window.__spdZoneLabel = (zone) => (String(zone) === 'toll') ? 'ทางด่วน' : 'ในเมือง';
+    // โซนของรถตอนนี้ — อ่านจากโมดูลมินิแมพ (ทำงานนอกมินิแมพอยู่แล้ว ⇒ ได้ผลแม้ปิดแผนที่/ไม่มีสิทธิ์)
+    window.__spdZoneRaw = () => {
+        try {
+            if (typeof window.navMiniTollZone === 'function') {
+                const z = window.navMiniTollZone();
+                if (z && z.zone) return String(z.zone);
+            }
+        } catch (e) {}
+        return 'city';
+    };
+    window.__spdZoneNow = () => (window.userSpeedZoneAuto === false ? 'city' : window.__spdZoneRaw());
+    window.__spdLimitNow = () => window.__spdLimitFor(window.__spdZoneNow(), window.userSpeedZoneAuto, window.userSpeedLimitKmh, window.userSpeedTollKmh);
     // 🔢 จำนวนติ๊ดต่อรอบ — รอบแรกของเที่ยว 5 ครั้ง · รอบถัดไป 3 ครั้ง (ตามที่ผู้ใช้สั่ง)
     window.__spdBeepPlan = (episode) => (Number(episode) <= 1 ? 5 : 3);
     window.__spdTimers = [];
@@ -20427,32 +20499,62 @@
     };
     window.__renderSpeedLimitBox = () => {
         const v = Math.min(window.SPD_LIMIT_MAX, Math.max(window.SPD_LIMIT_MIN, parseInt(window.userSpeedLimitKmh, 10) || 80));
+        const t = Math.min(window.SPD_LIMIT_MAX, Math.max(window.SPD_LIMIT_MIN, parseInt(window.userSpeedTollKmh, 10) || window.SPD_TOLL_DEFAULT));
         const box = document.getElementById('speedLimitVal'); if (box) box.innerText = String(v);
-        const chip = document.getElementById('tzSpeedLimitVal'); if (chip) chip.innerText = String(v);
+        const boxT = document.getElementById('speedLimitTollVal'); if (boxT) boxT.innerText = String(t);
         const row = document.getElementById('speedLimitBox'); if (row) row.style.opacity = (window.userSpeedWarn === false) ? '0.5' : '1';
+        const swAuto = document.getElementById('editSpeedZoneAuto');
+        if (swAuto) swAuto.checked = (window.userSpeedZoneAuto !== false);
+        // 🏷️ บอกว่าตอนนี้ใช้ลิมิตของโซนไหน (ผู้ใช้สั่งให้เห็นชัด)
+        const zone = window.__spdZoneNow();
+        const lim = window.__spdLimitNow();
+        const auto = (window.userSpeedZoneAuto !== false);
+        const nowEl = document.getElementById('speedZoneNow');
+        if (nowEl) {
+            const txt = auto
+                ? ('📍 โซนที่ใช้อยู่: ' + window.__spdZoneLabel(zone) + ' · ลิมิตที่ใช้ ' + lim + ' กม./ชม.')
+                : ('📍 สลับตามโซนปิดอยู่ — ใช้ลิมิตในเมือง ' + lim + ' กม./ชม. ตลอด');
+            if (nowEl.__spdTxt !== txt) { nowEl.__spdTxt = txt; nowEl.innerText = txt; }
+            nowEl.style.color = (auto && zone === 'toll') ? '#fcd34d' : '#7dd3fc';
+            nowEl.style.borderColor = (auto && zone === 'toll') ? 'rgba(252,211,77,0.45)' : 'rgba(56,189,248,0.30)';
+            nowEl.style.background = (auto && zone === 'toll') ? 'rgba(252,211,77,0.12)' : 'rgba(56,189,248,0.12)';
+        }
+        const cRow = document.getElementById('speedLimitCityBox');
+        if (cRow) cRow.classList.toggle('on', !auto || zone !== 'toll');
+        const tRow = document.getElementById('speedLimitTollBox');
+        if (tRow) tRow.classList.toggle('on', auto && zone === 'toll');
         return v;
     };
     // 🚦 สวิตช์ “เตือนความเร็วเกิน” — ค่าเริ่มต้นเปิด (เปิด/ปิดได้ทันที · ไม่ต้องกดบันทึกก่อนใช้)
     window.__spdSyncUi = () => {
         const sw = document.getElementById('editSpeedWarn');
         if (sw) window.userSpeedWarn = !!sw.checked;
+        const zw = document.getElementById('editSpeedZoneAuto');
+        if (zw) window.userSpeedZoneAuto = !!zw.checked;
+        window.__spdZoneLast = null;      // สลับโหมด = ให้ตัดสินโซนใหม่ตรง ๆ
         window.__spdResetEpisode();
         window.__renderSpeedLimitBox();
+        try { if (typeof window.dirtyFormTouch === 'function') window.dirtyFormTouch('general'); } catch (e) {}
         return window.userSpeedWarn;
     };
     // ➕➖ ตั้งลิมิตทีละ 1 (ผู้ใช้: “มีปุ่มบวก ลบ ไม่ต้องพิมพ์เป็นตัวเลข”) — เร็วได้ · โหมดทดเร็ว ๆ จะข้ามทีละ 5
-    window.bumpSpeedLimit = (delta, fast) => {
+    //   zone = 'city' (ค่าเริ่มต้น) หรือ 'toll' — คนละค่ากัน จำแยกตามโซน
+    window.bumpSpeedLimit = (delta, fast, zone) => {
         // อ่านค่าจากสวิตช์ก่อน — เผื่อผู้ใช้เพิ่งปิด/เปิดสวิตช์แล้วยังไม่ได้กด “บันทึกข้อมูล”
         const swNow = document.getElementById('editSpeedWarn');
         if (swNow) window.userSpeedWarn = !!swNow.checked;
+        const zwNow = document.getElementById('editSpeedZoneAuto');
+        if (zwNow) window.userSpeedZoneAuto = !!zwNow.checked;
         const step = ((delta || 0) < 0 ? -1 : 1) * (fast ? 5 : 1);
-        const cur = parseInt(window.userSpeedLimitKmh, 10) || 80;
-        window.userSpeedLimitKmh = Math.min(window.SPD_LIMIT_MAX, Math.max(window.SPD_LIMIT_MIN, cur + step));
+        const toll = (String(zone) === 'toll');
+        const cur = toll ? (parseInt(window.userSpeedTollKmh, 10) || window.SPD_TOLL_DEFAULT) : (parseInt(window.userSpeedLimitKmh, 10) || 80);
+        const next = Math.min(window.SPD_LIMIT_MAX, Math.max(window.SPD_LIMIT_MIN, cur + step));
+        if (toll) window.userSpeedTollKmh = next; else window.userSpeedLimitKmh = next;
         window.__spdOver = false;   // ค่าใหม่ = เริ่มนับรอบใหม่ (ไม่ให้ค้างว่ารอบนี้เตือนแล้ว)
         window.__renderSpeedLimitBox();
         try { window.playSound(step > 0 ? 'plus' : 'minus'); } catch (e) {}
         try { if (typeof window.dirtyFormTouch === 'function') window.dirtyFormTouch('general'); } catch (e) {}
-        return window.userSpeedLimitKmh;
+        return next;
     };
     // 🖥️ ตัววาดความเร็ว + ตัวเตือนเกินลิมิต — เรียกทุก tick จาก updateLiveMeterDisplay()
     //    ⚠️ แยกเป็น “อ่านค่า → วาด → ตัดสินเตือน” ล้วน ๆ เพื่อให้ทดสอบออฟไลน์ได้โดยไม่ต้องมี DOM จริง
@@ -20477,8 +20579,19 @@
         const running = !!window.isManualRunning;
         // spdOverride = ใช้เฉพาะการทดสอบ (หน้าจริงเรียกโดยไม่ส่งค่า → อ่านจาก GPS)
         const spdIn = (typeof spdOverride === 'number' && !isNaN(spdOverride)) ? spdOverride : window.__spdReadSpeed();
+        // 🛣️ (19 ก.ย. 69) ใช้ “ลิมิตของโซนที่รถอยู่” — 80 ในเมือง / 120 บนทางด่วน (สลับเองจากช่วงทางด่วนของเส้นทาง)
+        const zoneNow = window.__spdZoneNow();
+        const limitNow = window.__spdLimitNow();
+        let roundFresh = false, zoneChanged = false;
+        if (window.__spdZoneLast !== zoneNow) {
+            zoneChanged = true;
+            // เปลี่ยนโซน = ลิมิตเปลี่ยน → เริ่มรอบเตือนใหม่ (ไม่งั้นจะเงียบทั้งที่ลิมิตใหม่ต่ำกว่า)
+            //   ตัวนับรอบ (5 ครั้งแรกของเที่ยว → 3) ยังนับต่อ — ไม่ให้ได้ยิน 5 ครั้งซ้ำ
+            if (window.__spdZoneLast !== null && window.__spdZoneLast !== undefined) { window.__spdOver = false; roundFresh = true; }
+            window.__spdZoneLast = zoneNow;
+        }
         const res = window.__spdJudge(spdIn,
-            window.userSpeedLimitKmh, warnOn, running, !!window.isMeterPaused, !!window.__spdOver);
+            limitNow, warnOn, running, !!window.isMeterPaused, !!window.__spdOver);
         window.__spdOver = res.overState;
         // ⚡ เขียน DOM เท่าที่ค่าเปลี่ยน — ตัวนี้ถูกเรียกจนละ 1 วิ จึงไม่ควรเขียนซ้ำทุกครั้ง (กันจอกระตุก)
         const setTxt = (el, v) => { if (el && el.__spdLast !== v) { el.__spdLast = v; el.innerText = v; } };
@@ -20495,7 +20608,27 @@
             setTxt(smallEl, String(res.spd));
             if (smallEl.__spdColor !== smallColor) { smallEl.__spdColor = smallColor; smallEl.style.color = smallColor; }
         }
-        setTxt(document.getElementById('smallSpeedLimit'), (res.limit > 0 && warnOn) ? ('ลิมิต ' + res.limit + ' กม./ชม.') : '');
+        // 🏷️ บอกให้เห็นด้วยว่า “ลิมิตนี้มาจากโซนไหน” (ค่าเริ่มต้นมีลิมิตเสมอ — ไม่ต้องพึ่ง warnOn)
+        const zoneName = window.__spdZoneLabel(zoneNow);
+        const zoneTxt = (res.limit > 0) ? ('ลิมิต ' + res.limit + ' · ' + zoneName) : '';
+        setTxt(document.getElementById('smallSpeedLimit'), warnOn ? zoneTxt : ((res.limit > 0) ? ('ลิมิต ' + res.limit + ' (ปิดเตือน)') : ''));
+        const zChip = document.getElementById('tzSpeedZoneChip');
+        if (zChip) {
+            const zShow = (window.userSpeedZoneAuto !== false) ? 'inline-flex' : 'none';
+            if (zChip.__spdShow !== zShow) { zChip.__spdShow = zShow; zChip.style.display = zShow; }
+            if (window.userSpeedZoneAuto !== false) {
+                const zTxt = (zoneNow === 'toll') ? '🛣️ โซนทางด่วน' : '🏙️ โซนในเมือง';
+                if (zChip.__spdTxt !== zTxt) { zChip.__spdTxt = zTxt; zChip.innerText = zTxt; }
+            }
+        }
+        if (zoneChanged) {
+            // โซนเปลี่ยน = อัปเดตการ์ดตั้งค่าให้ตรงด้วย (ไฮไลต์ช่องโซนที่ใช้ + บรรทัด “โซนที่ใช้อยู่”)
+            //   เรียกเฉพาะตอนเปลี่ยน — ไม่ใช่ทุกวินาที (กันการ์ดกระตุก/เปลืองแรง)
+            try { window.__renderSpeedLimitBox(); } catch (e) {}
+        }
+        if (roundFresh) {
+            try { window.__spdZoneLog = window.__spdZoneLog || []; window.__spdZoneLog.push({ at: Date.now(), zone: zoneNow, limit: res.limit }); if (window.__spdZoneLog.length > 8) window.__spdZoneLog.shift(); } catch (e) {}
+        }
         if (res.fire) {
             window.__spdEpiCount = (window.__spdEpiCount || 0) + 1;
             window.__spdBeep(window.__spdBeepPlan(window.__spdEpiCount));
@@ -20603,11 +20736,14 @@
             if (nvEl) { payload.navVoice = nvEl.checked; window.userNavVoice = nvEl.checked; }
             const arEl = document.getElementById('editAutoResume');
             if (arEl) { payload.autoResume = arEl.checked; window.userAutoResume = arEl.checked; }
-            // 🚀 (18 ก.ย. 69) ลิมิตความเร็ว + เตือนเมื่อเกิน — บันทึกต่อบัญชี (ใช้ทุกเครื่องที่ล็อกอินบัญชีนี้)
-            const spdWarnEl = document.getElementById('editSpeedWarn');
-            if (spdWarnEl) { payload.speedWarn = spdWarnEl.checked; window.userSpeedWarn = spdWarnEl.checked; }
-            payload.speedLimitKmh = (typeof window.__renderSpeedLimitBox === 'function') ? window.__renderSpeedLimitBox() : window.userSpeedLimitKmh;
-            window.userSpeedLimitKmh = payload.speedLimitKmh;
+            // 🚀 (18 ก.ย. 69 · ขยาย 19 ก.ย. 69) ลิมิตความเร็ว 2 โซน + เตือนเมื่อเกิน — บันทึกต่อบัญชี
+            //   🧪 ตัวประกอบฟิลด์เป็นฟังก์ชันล้วน ⇒ ทดสอบออฟไลน์ได้โดยไม่ต้องมี Firestore (tests/speed-zone-offline.html)
+            const spdFields = window.__spdPayloadFields();
+            Object.keys(spdFields).forEach(k => { payload[k] = spdFields[k]; });
+            window.userSpeedLimitKmh = spdFields.speedLimitKmh;
+            window.userSpeedTollKmh = spdFields.speedLimitTollKmh;
+            window.userSpeedWarn = spdFields.speedWarn;
+            window.userSpeedZoneAuto = spdFields.speedZoneAuto;
             try { window.__spdResetEpisode(); } catch (e) {}
             const kaEl = document.getElementById('editKeepAwake');
             if (kaEl) {
@@ -23468,6 +23604,24 @@
 
     // ---------- API ----------
     // 🛣️ ให้ข้อมูลค่าทางด่วนของเส้นทาง (เรียกจากฝั่งแอปเมื่อเส้นทาง/ทางด่วนเปลี่ยน)
+    // ─── 🛣️ (19 ก.ย. 69) “ตอนนี้รถอยู่โซนไหน” — ใช้สลับลิมิตความเร็ว (ในเมือง 80 / ทางด่วน 120)
+    //   ทำงานนอกมินิแมพเหมือน navMiniTollWatch · ⛔ ไม่เช็ค permOk/visible/pref.hidden
+    window.navMiniTollZone = function () {
+        if (!nTolls || !nTolls.booths || !nTolls.booths.length) { return { zone: 'city', booth: null }; }
+        var km = carAlongKm();
+        if (km === null) { return { zone: 'city', booth: null }; }
+        var zone = (typeof window.__spdZoneDecide === 'function')
+            ? window.__spdZoneDecide(km, nTolls.booths)
+            : (function () { for (var i = 0; i < nTolls.booths.length; i++) { var b = nTolls.booths[i]; if (b && typeof b.startKm === 'number' && typeof b.endKm === 'number' && km >= b.startKm - 0.05 && km <= b.endKm + 0.05) return 'toll'; } return 'city'; })();
+        var hit = null;
+        if (zone === 'toll') {
+            for (var j = 0; j < nTolls.booths.length; j++) {
+                var x = nTolls.booths[j];
+                if (x && typeof x.startKm === 'number' && typeof x.endKm === 'number' && km >= x.startKm - 0.05 && km <= x.endKm + 0.05) { hit = x; break; }
+            }
+        }
+        return { zone: zone, booth: hit, km: km };
+    };
     window.navMiniSetTolls = function (t) {
         nTolls = (t && t.hasTolls && t.booths && t.booths.length) ? t : null;
         try { if (window.__tollGateReset) window.__tollGateReset(); } catch (e) {}   // 🛣️ เส้นทางใหม่ = เริ่มนับด่านใหม่
@@ -23651,6 +23805,21 @@
         pref.hidden = true;
         savePref();
         hideNow();
+    };
+    // 🧪 (19 ก.ย. 69) ประกอบฟิลด์ “ลิมิตความเร็ว” ที่จะเขียนลงบัญชี — ฟังก์ชันล้วน ไม่ยิง Firestore
+    //   ใช้ตัวเดียวทั้งตอนกด “บันทึกข้อมูล” ⇒ เทสต์ยืนยันได้ว่าเซฟอะไรจริง ๆ
+    window.__spdPayloadFields = () => {
+        const warnEl = document.getElementById('editSpeedWarn');
+        if (warnEl) window.userSpeedWarn = !!warnEl.checked;
+        const autoEl = document.getElementById('editSpeedZoneAuto');
+        if (autoEl) window.userSpeedZoneAuto = !!autoEl.checked;
+        const city = (typeof window.__renderSpeedLimitBox === 'function') ? window.__renderSpeedLimitBox() : window.userSpeedLimitKmh;
+        return {
+            speedWarn: window.userSpeedWarn !== false,
+            speedLimitKmh: city,
+            speedZoneAuto: window.userSpeedZoneAuto !== false,
+            speedLimitTollKmh: Math.min(window.SPD_LIMIT_MAX, Math.max(window.SPD_LIMIT_MIN, parseInt(window.userSpeedTollKmh, 10) || window.SPD_TOLL_DEFAULT))
+        };
     };
     // ตัวช่วยตรวจ: ระยะตามเส้นทางที่วิ่งไปแล้ว (กม.) — ให้ตัวหลักคิด “เหลือ” แบบต่อเนื่องได้โดยไม่ต้องเรียก API
     window.navMiniAlongKm = function () { return carAlongKm(); };
@@ -24286,7 +24455,7 @@
     } });
     window.dirtyFormBind('profile', { boxId: 'profileModal', saveId: 'saveProfileBtn', snapshot: () => { const v = (id) => { const el = pick(id); if (!el) return ''; return el.type === 'checkbox' ? !!el.checked : String(el.value == null ? '' : el.value); }; return { n: v('editDisplayName'), c: v('editCompanyName'), p: v('editPlateNo'), t: v('editPhone'), tt: v('editTaxiType') }; } });
     // ⚙️ (18 ก.ย. 69) หน้าต่าง “ตั้งค่าทั่วไป” — ปุ่มบันทึก/รีเซ็ตเทาจนกว่าจะมีการเปลี่ยนแปลง (แนวเดียวกับทุกหน้าตั้งค่า)
-    window.dirtyFormBind('general', { boxId: 'generalSettingsModal', saveId: 'genSaveBtn', resetId: 'genResetBtn', snapshot: () => { const v = (id) => { const el = pick(id); if (!el) return ''; return el.type === 'checkbox' ? !!el.checked : String(el.value == null ? '' : el.value); }; return { k: v('editKillCap'), mf: v('editManualFs'), ka: v('editKeepAwake'), vg: v('editVibrateGold'), ts: v('editToastSound'), nv: v('editNavVoice'), ar: v('editAutoResume'), af: v('editAutoFs') }; } });
+    window.dirtyFormBind('general', { boxId: 'generalSettingsModal', saveId: 'genSaveBtn', resetId: 'genResetBtn', snapshot: () => { const v = (id) => { const el = pick(id); if (!el) return ''; return el.type === 'checkbox' ? !!el.checked : String(el.value == null ? '' : el.value); }; return { k: v('editKillCap'), mf: v('editManualFs'), ka: v('editKeepAwake'), vg: v('editVibrateGold'), ts: v('editToastSound'), nv: v('editNavVoice'), ar: v('editAutoResume'), af: v('editAutoFs'), sw: v('editSpeedWarn'), za: v('editSpeedZoneAuto'), sc: v('speedLimitVal'), st: v('speedLimitTollVal') }; } });
     /* ===================== 🧷 ติดตะขอ (hook) แบบ “รอจนมีจริง” =====================
        ⚠️ กับดักที่เจอจริง 17 ก.ย. 69: ฟังก์ชันของแอป (openNavMiniPrefsModal / navCrawlSave / navCrawlSyncUi ฯลฯ)
           ถูกประกาศเป็น `window.X = async () => {...}` ในบล็อกที่ทำงาน “หลัง” สคริปต์นี้ ⇒ ตอนรันครั้งแรกยังไม่มี
