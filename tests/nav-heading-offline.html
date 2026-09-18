@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — ลูกศรชี้ขึ้น · แมพหมุนตามรถ · จุดวิ่งตาม · หน่วยระยะในเสียง</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 960px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 960px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧭 ชุดทดสอบออฟไลน์: ลูกศรชี้ขึ้นเสมอ · แมพหมุนตามรถ · จุดวิ่งตามไปด้วย · หน่วยระยะในเสียง</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ป้อนพิกัดเองผ่าน <code>navMiniUpdate()</code>
+        <br>① ผู้ใช้สั่ง: <i>“2,000 เมตร ให้เรียกเป็น 2 กิโล · 2,300 เมตร เป็น 2.3 กิโล”</i> → ตรวจตารางแปลงหน่วย (<code>voiceDistThai</code>)
+        <br>② ผู้ใช้สั่ง: <i>“รถกับแมพวิ่งตามกัน · จุดวิ่งตามไปด้วย · ลูกศรต้องชี้ขึ้นบนเสมอ แมพเลี้ยวขวาก็หมุนตาม”</i>
+        → ตรวจ <b>“จุดที่อยู่ข้างหน้าบนเส้นทาง” ต้องอยู่ด้านบนจอเสมอทั้ง 4 ทิศ</b> (<code>navMiniScreenOf</code> ใช้สูตรเดียวกับ render เป๊ะ)
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/nav-heading-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (6 สถานการณ์)</button>
+    <button id="dbgBtn" class="alt">🔎 ดูสถานะแผนที่สด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const CACHE_KEYS = ['taxi_active_trip_v1', 'taxi_toll_pairs_v1', 'taxi_toll_rates_v1'];
+    // จุดอ้างอิงกลางกรุงเทพฯ — สร้างเส้นทางทดสอบเองทั้ง 4 ทิศ
+    const BASE = { lat: 13.7563, lng: 100.5018 };
+    const M_PER_DEG_LAT = 110574;
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[nav-heading-test]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตออกทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) {
+                    cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return;
+                }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test: ไม่ใช้ GPS' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.navMiniUpdate === 'function' && typeof cw.navMiniScreenOf === 'function' && typeof cw.voiceDistThai === 'function') {
+                installStubs();
+                await wait(200);
+                try { cw.isManualRunning = false; } catch (e) {}
+                try { CACHE_KEYS.forEach(k => cw.localStorage.removeItem(k)); } catch (e) {}
+                await closeAllModals();
+                const tl = Date.now();
+                while (Date.now() - tl < 12000) {
+                    const loader = cw.document.getElementById('appLoader');
+                    if (!loader || cw.getComputedStyle(loader).display === 'none') break;
+                    await wait(150);
+                }
+                await wait(200);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วินาที');
+    }
+
+    // ============================ เครื่องมือทดสอบ ============================
+    // สร้างเส้นทางตรง “ตามเข็มทิศ” เพื่อบังคับทิศรถได้แม่นยำ (ไม่ต้องพึ่ง GPS จริง)
+    function destFrom(bearingDeg, meters) {
+        const r = bearingDeg * Math.PI / 180;
+        return {
+            lat: BASE.lat + (Math.cos(r) * meters) / M_PER_DEG_LAT,
+            lng: BASE.lng + (Math.sin(r) * meters) / (M_PER_DEG_LAT * Math.cos(BASE.lat * Math.PI / 180))
+        };
+    }
+    function stepFrom(p, bearingDeg, meters) {
+        const r = bearingDeg * Math.PI / 180;
+        return {
+            lat: p.lat + (Math.cos(r) * meters) / M_PER_DEG_LAT,
+            lng: p.lng + (Math.sin(r) * meters) / (M_PER_DEG_LAT * Math.cos(p.lat * Math.PI / 180))
+        };
+    }
+    // เปิดแผนที่ด้วยเส้นทางตรงตามทิศที่กำหนด (พร้อมสิทธิ์มินิแมพ)
+    async function armStraight(bearingDeg, lenM) {
+        const cw = w();
+        const realCan = cw.canUseMiniMap;
+        cw.canUseMiniMap = () => true;
+        const end = destFrom(bearingDeg, lenM);
+        const coords = [];
+        for (let i = 0; i <= 20; i++) { const p = destFrom(bearingDeg, (lenM * i) / 20); coords.push([p.lat, p.lng]); }
+        cw.startNavigationMap(BASE.lat, BASE.lng, end.lat, end.lng, 'ทดสอบทิศ', lenM / 1000, coords);
+        cw.navMiniReopen();                 // แผนที่เริ่มจากยุบเสมอ → ต้องกดเปิดเองก่อนวาด
+        await wait(260);
+        return { end, coords, realCan };
+    }
+
+    // ============================ รัน 1 สถานการณ์ ============================
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(60000).then(() => { throw new Error('สถานการณ์ timeout 60 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ล้มเหลว</span> ' + name + '\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span>';
+            failures.push({ name: name, error: e && e.message ? e.message : String(e) });
+            failCount++;
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ล้มเหลว ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        const n = (w() && w().__net) ? w().__net : { blockedFetch: 0, blockedXhr: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: คำขอออกนอกเครื่องที่ถูกบล็อกทั้งหมด ' + (n.blockedFetch + n.blockedXhr) +
+            ' ครั้ง (fetch ' + n.blockedFetch + ' · XHR ' + n.blockedXhr + ') — ชุดทดสอบนี้ไม่ต้องใช้อินเทอร์เน็ต';
+    }
+
+    // ============================ สถานการณ์ทั้งหมด ============================
+    async function runAll() {
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+        renderSummary();
+
+        await runScenario('S1 · 🔊 หน่วยระยะ: ≥1 กม. ต้องพูดเป็น “กิโล” · ต่ำกว่านั้นเป็น “เมตร”', async () => {
+            const f = w().voiceDistThai;
+            const table = [
+                [2000, '2 กิโล'], [2300, '2.3 กิโล'], [2340, '2.3 กิโล'], [2350, '2.4 กิโล'],
+                [1000, '1 กิโล'], [980, '1 กิโล'], [12500, '13 กิโล'], [30000, '30 กิโล'],
+                [800, '800 เมตร'], [500, '500 เมตร'], [55, '60 เมตร'], [12, '10 เมตร'], [0, '10 เมตร']
+            ];
+            const bad = [];
+            table.forEach(([m, want]) => { const got = f(m); if (got !== want) bad.push(m + ' ม. → ได้ “' + got + '” ควรเป็น “' + want + '”'); });
+            assert(bad.length === 0, 'แปลงหน่วยผิด ' + bad.length + ' เคส:\n' + bad.join('\n'));
+            assert(f(2000).indexOf('เมตร') === -1, 'ระยะ 2,000 ม. ยังพูดว่า “เมตร” อยู่');
+            return '13 เคสผ่านครบ · 2000→“' + f(2000) + '” · 2300→“' + f(2300) + '” · 800→“' + f(800) + '”';
+        });
+
+        await runScenario('S2 · 🔊 เสียงนำทางบอกระยะจุดเลี้ยวใช้หน่วยเดียวกัน (ไม่มีคำว่า “กิโลเมตร”)', async () => {
+            const cw = w();
+            const a = await armStraight(0, 3000);
+            try {
+                cw.navMiniUpdate(BASE.lat, BASE.lng, 40);
+                await wait(400);
+                // เดินหน้าจนเข้าใกล้จุดเลี้ยวสุดท้ายมาก → ตัวเตือนจะพูดระยะไกล (≥1 กม. ช่วงแรก)
+                const spokeFar = (cw.navVoiceDebug().log || []).map(x => x.text).filter(t => t && t.indexOf('อีก ') === 0);
+                // ตรวจข้อความจาก “แหล่งเดียว”: ต้องได้คำว่า “กิโล” ถ้าระยะ ≥ 1 กม.
+                const txt = cw.voiceDistThai(2100) + ' | ' + cw.voiceDistThai(2100);
+                assert(txt.indexOf('2.1 กิโล') === 0, 'ข้อความระยะจากสูตรกลางไม่ถูกต้อง: ' + txt);
+                assert(spokeFar.every(t => t.indexOf('กิโลเมตร') === -1), 'ยังมีคำว่า “กิโลเมตร” ในข้อความเสียง: ' + spokeFar.join(' · '));
+                return 'สูตรกลางให้ “' + cw.voiceDistThai(2100) + '” · ข้อความเสียงที่พูดไป ' + spokeFar.length + ' ครั้ง ไม่มีคำว่า “กิโลเมตร”';
+            } finally { cw.canUseMiniMap = a.realCan; }
+        });
+
+        await runScenario('S3 · 🚗 ตอนตามรถ ลูกศร/จุด ต้องอยู่ที่จุดยึดกลาง-ล่างของจอ (ไม่ลอยไปข้าง ๆ)', async () => {
+            const cw = w();
+            const a = await armStraight(0, 3000);
+            try {
+                cw.navMiniUpdate(BASE.lat, BASE.lng, 0);
+                await wait(300);
+                const p1 = cw.navMiniCarScreen();
+                assert(!!p1, 'อ่านตำแหน่งบนจอของลูกศรไม่ได้');
+                assert(Math.abs(p1.x - p1.anchor.x) < 1.5, 'ลูกศรไม่อยู่กลางแนวนอน (x=' + p1.x + ' · จุดยึด x=' + p1.anchor.x + ')');
+                assert(Math.abs(p1.y - p1.anchor.y) < 12, 'ลูกศรไม่อยู่จุดยึดแนวตั้ง (y=' + p1.y + ' · จุดยึด y=' + p1.anchor.y + ')');
+                assert(p1.anchor.y > p1.H * 0.5, 'จุดยึดควรอยู่ต่ำกว่ากึ่งกลางจอ (เห็นถนนข้างหน้า) — ได้ y=' + p1.anchor.y + '/' + p1.H);
+                return 'ลูกศรที่ (' + p1.x + ',' + p1.y + ') · จุดยึด (' + p1.anchor.x + ',' + p1.anchor.y + ') · จอ ' + p1.W + '×' + p1.H;
+            } finally { cw.canUseMiniMap = a.realCan; }
+        });
+
+        await runScenario('S4 · 🧭 ลูกศรชี้ขึ้นเสมอ: จุดที่อยู่ “ข้างหน้าบนเส้นทาง” ต้องอยู่ด้านบนจอทั้ง 4 ทิศ (N/E/S/W)', async () => {
+            const cw = w();
+            const dirs = [{ b: 0, n: 'เหนือ' }, { b: 90, n: 'ตะวันออก (เลี้ยวขวา)' }, { b: 180, n: 'ใต้' }, { b: 270, n: 'ตะวันตก (เลี้ยวซ้าย)' }];
+            const rows = [];
+            const realCan = cw.canUseMiniMap;
+            cw.canUseMiniMap = () => true;
+            try {
+                for (const d of dirs) {
+                    // เส้นทางตรงตามทิศนั้น ยาว 3 กม. — เริ่มที่ BASE แล้ว “ขยับไปตามทิศ” ให้ทิศรถตรงทิศเส้นทาง
+                    const start = stepFrom(BASE, d.b, 500);               // ห่างจากจุดเริ่ม 500 ม. (ให้ทิศมีระยะพอ)
+                    const coords = [];
+                    for (let i = 0; i <= 20; i++) { coords.push([stepFrom(BASE, d.b, 500 + (2000 * i) / 20).lat, stepFrom(BASE, d.b, 500 + (2000 * i) / 20).lng]); }
+                    const end = stepFrom(BASE, d.b, 2600);
+                    cw.startNavigationMap(start.lat, start.lng, end.lat, end.lng, 'ทิศ' + d.n, 2.1, coords);
+                    cw.navMiniReopen();
+                    await wait(200);
+                    cw.navMiniUpdate(start.lat, start.lng, 45);            // ตั้งตำแหน่งเริ่ม
+                    await wait(200);
+                    const ahead = stepFrom(start, d.b, 300);               // จุด “ข้างหน้า” 300 ม.
+                    cw.navMiniUpdate(ahead.lat, ahead.lng, 45);            // ขับไปข้างหน้า → ทิศรถ = ทิศเส้นทาง
+                    await wait(450);
+                    const s = cw.navMiniScreenOf(ahead.lat, ahead.lng);
+                    const dbg = cw.navMiniDebug();
+                    assert(!!s, 'อ่านตำแหน่งบนจอไม่ได้ (ทิศ' + d.n + ')');
+                    const upPx = s.anchor.y - s.y;                          // บวก = อยู่ “ด้านบน” จุดยึด
+                    assert(upPx > 30, 'ทิศ' + d.n + ': จุดข้างหน้าอยู่ไม่เหนือจุดยึด (ห่างขึ้นบน ' + Math.round(upPx) + 'px) — แมพไม่หมุนตามรถ');
+                    assert(Math.abs(s.x - s.anchor.x) < s.W * 0.35, 'ทิศ' + d.n + ': จุดข้างหน้าเบี้ยวออกข้างมาก (dx=' + Math.round(s.x - s.anchor.x) + 'px)');
+                    rows.push(d.n + ': ขึ้นบน ' + Math.round(upPx) + 'px (bearing=' + dbg.bearing + '°)');
+                    cw.navMiniHide(true);
+                    await wait(120);
+                }
+                return rows.join(' · ');
+            } finally { cw.canUseMiniMap = realCan; }
+        });
+
+        await runScenario('S5 · 🎈 จุดวิ่งขึ้นก่อนจนชนเพดาน แล้วกล้องไล่ทันด้วยความเร็วคงที่ (ไม่เร่งเป็นเอกซ์โพเนนเชียล)', async () => {
+            const cw = w();
+            const a = await armStraight(0, 4000);
+            try {
+                let cur = { lat: BASE.lat, lng: BASE.lng };
+                cw.navMiniUpdate(cur.lat, cur.lng, 40);
+                await wait(300);
+                // ① ขับไปข้างหน้าทีละ 30 ม. จน “จุด” ชนเพดานเลื่อน (crawlCatch = true)
+                for (let i = 0; i < 60 && !cw.navMiniDebug().crawlCatch; i++) {
+                    cur = stepFrom(cur, 0, 30);
+                    cw.navMiniUpdate(cur.lat, cur.lng, 40);
+                    await wait(160);
+                }
+                const d1 = cw.navMiniDebug();
+                const s1 = cw.navMiniCarScreen();
+                assert(d1.crawlM > 1, 'จุดไม่เลื่อนขึ้นจากจุดยึด (crawlM=' + d1.crawlM + ') — จุดไม่วิ่งตามรถ');
+                assert(s1.y < s1.anchor.y - 1, 'จุดไม่ขยับขึ้นบนจอ (y=' + s1.y + ' · จุดยึด=' + s1.anchor.y + ')');
+                assert(d1.crawlCatch === true, 'จุดไม่เคยชนเพดานเลื่อน (crawlM=' + d1.crawlM + ' · เพดาน=' + d1.crawlMaxM + ')');
+                // ② หยุดป้อนพิกัด → กล้องไล่ทัน: เก็บอัตราการลดของ crawlM ว่าคงที่หรือไม่
+                const samples = [];
+                for (let i = 0; i < 7; i++) { samples.push(cw.navMiniDebug().crawlM); await wait(300); }
+                const deltas = [];
+                for (let i = 1; i < samples.length; i++) { deltas.push(samples[i - 1] - samples[i]); }
+                const moving = deltas.filter(d => d > 0.5);
+                assert(moving.length >= 2, 'กล้องไม่ไล่ทันเลยหลังจุดชนเพดาน (crawlM=' + samples.join(' → ') + ')');
+                const mx = Math.max.apply(null, moving), mn = Math.min.apply(null, moving);
+                assert(mx - mn <= Math.max(3, mx * 0.6), 'ความเร็วไล่ทันไม่คงที่ (เอกซ์โพเนนเชียล?) — ลดครั้งละ ' + moving.map(d => Math.round(d)).join(', ') + ' ม./300ms');
+                // ③ ไล่จนสุด → จุดกลับมาที่จุดยึด
+                for (let i = 0; i < 40 && cw.navMiniDebug().crawlM > 1; i++) { await wait(150); }
+                const d2 = cw.navMiniDebug();
+                const s2 = cw.navMiniCarScreen();
+                assert(d2.crawlM <= 1, 'กล้องไล่ไม่ทัน (crawlM=' + d2.crawlM + ')');
+                assert(Math.abs(s2.y - s2.anchor.y) < 12, 'จุดไม่กลับมาที่จุดยึดหลังกล้องไล่ทัน (y=' + s2.y + ' · จุดยึด=' + s2.anchor.y + ')');
+                return 'จุดขึ้นบน ' + Math.round(s1.anchor.y - s1.y) + 'px (crawlM=' + d1.crawlM + '/' + d1.crawlMaxM + ' = เพดาน) → ไล่ทันแบบคงที่ ' +
+                    moving.map(d => Math.round(d)).join(',') + ' ม./300ms → กลับจุดยึด y=' + s2.y + ' (crawlM=' + d2.crawlM + ')';
+            } finally { cw.canUseMiniMap = a.realCan; }
+        });
+
+        await runScenario('S6 · 🔵 แผนที่ต้องเริ่มจาก “ยุบ” ทุกเที่ยว — และไม่มีสิทธิ์ = ไม่มีปุ่มเปิด', async () => {
+            const cw = w();
+            const realCan = cw.canUseMiniMap;
+            try {
+                cw.canUseMiniMap = () => true;
+                cw.startNavigationMap(BASE.lat, BASE.lng, destFrom(0, 3000).lat, destFrom(0, 3000).lng, 'ทดสอบ', 3, [[BASE.lat, BASE.lng], [destFrom(0, 3000).lat, destFrom(0, 3000).lng]]);
+                await wait(250);
+                const hiddenWithPerm = (function () { const e = cw.document.getElementById('navMini'); return !(e && e.classList.contains('show')); })();
+                assert(hiddenWithPerm, 'มีสิทธิ์แต่แผนที่เด้งโชว์เอง (ต้องเริ่มจากยุบ)');
+                const btn = cw.document.getElementById('btnLiveMapZoom');
+                assert(btn && !btn.classList.contains('is-hidden'), 'มีสิทธิ์แต่ปุ่มเปิดแผนที่ถูกซ่อน');
+                assert(btn.classList.contains('map-ready'), 'ปุ่มเปิดต้องติดสีฟ้า (map-ready)');
+                cw.canUseMiniMap = () => false;
+                cw.startNavigationMap(BASE.lat, BASE.lng, destFrom(0, 3000).lat, destFrom(0, 3000).lng, 'ทดสอบ', 3, [[BASE.lat, BASE.lng], [destFrom(0, 3000).lat, destFrom(0, 3000).lng]]);
+                await wait(250);
+                assert(btn.classList.contains('is-hidden'), 'ไม่มีสิทธิ์แต่ปุ่มเปิดยังโชว์');
+                return 'มีสิทธิ์: ยุบ + ปุ่มสีฟ้า · ไม่มีสิทธิ์: ปุ่มซ่อน';
+            } finally { cw.canUseMiniMap = realCan; cw.navMiniHide(true); }
+        });
+
+        try { CACHE_KEYS.forEach(k => w().localStorage.removeItem(k)); } catch (e) {}
+        renderSummary();
+        log('สรุป: ผ่าน', passCount, 'ล้มเหลว', failCount, failures);
+    }
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('runBtn');
+        btn.disabled = true; btn.textContent = '⏳ กำลังรัน…';
+        try {
+            if (!stubsInstalled || !w() || !w().navMiniScreenOf) {
+                frame.src = 'about:blank';
+                await wait(60);
+                await loadApp();
+            }
+            await runAll();
+        } catch (e) {
+            resultsEl.innerHTML += '<li class="fail"><span class="st">❌ รันชุดไม่สำเร็จ</span>\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span></li>';
+            failCount++; renderSummary();
+        }
+        btn.disabled = false; btn.textContent = '🔄 รันการทดสอบใหม่ (6 สถานการณ์)';
+    });
+
+    document.getElementById('dbgBtn').addEventListener('click', async () => {
+        try {
+            const cw = w();
+            const d = cw.navMiniDebug();
+            resultsEl.innerHTML += '<li><span class="st">🔎 สถานะแผนที่สด</span>\n<span class="detail">' + JSON.stringify(d, null, 1) + '</span></li>';
+        } catch (e) {
+            resultsEl.innerHTML += '<li class="fail"><span class="st">🔎 อ่านสถานะไม่ได้</span>\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span></li>';
+        }
+    });
+
+    (async () => { try { document.getElementById('runBtn').click(); } catch (e) {} })();
+})();
+</script>
+</body>
+</html>

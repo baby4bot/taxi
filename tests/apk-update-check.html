@@ -78,8 +78,13 @@
       canInstallPackages: () => (o.canInstall !== false),
       openInstallPermissionSettings: () => calls.push('openInstallPermissionSettings'),
       downloadAndInstallApk: (u) => { calls.push('downloadAndInstallApk:' + u); },
-      platform: () => 'android-webview'
+      platform: () => 'android-webview',
+      // 🧱 ยี่ห้อเครื่อง (APK 1.5.0 ขึ้นไป) — ใช้ตัดสินว่าโชว์หมายเหตุ “ตัวบล็อกอัตโนมัติ (Auto Blocker)” ของ Samsung หรือไม่
+      deviceBrand: () => String(o.brand == null ? '' : o.brand),
+      openAutoBlockerSettings: () => calls.push('openAutoBlockerSettings')
     };
+    // APK รุ่นเก่า (1.4.0) — มีสะพาน แต่ยังไม่มีเมธอดบอกยี่ห้อ/เปิดหน้าตั้งค่า Auto Blocker
+    if (o.noBrand) { delete cw.TaxiNative.deviceBrand; delete cw.TaxiNative.openAutoBlockerSettings; }
     // APK รุ่นเก่า: มีสะพาน TaxiNative แต่ยังไม่มีเมธอดบอกเลขรุ่น (ของจริง = แอปที่ติดตั้งก่อนมีระบบอัปเดต)
     if (o.noCode) { delete cw.TaxiNative.appVersionCode; delete cw.TaxiNative.appVersionName; }
     // APK รุ่นเก่าที่ยังมีแต่ appVersion() แบบ “1.3.0 (4)” ⇒ ระบบต้องแกะเลขรุ่นออกมาใช้ได้
@@ -236,6 +241,65 @@
       assert(typeof cw.__versionCheckDecide === 'function', 'ไม่พบ __versionCheckDecide');
       assert(typeof cw.TaxiNative === 'object', 'สะพานทดสอบถูกติดตั้งอยู่');
       return '✓ __webUpdateCheck + __versionCheckDecide ยังทำงาน';
+    });
+
+    // 13) เครื่อง Samsung → หมายเหตุ “ปิดตัวบล็อกอัตโนมัติก่อนติดตั้ง” + ปุ่มพาไปปิด
+    await scenario('13. เครื่อง Samsung → มีหมายเหตุ Auto Blocker + ปุ่มเปิดการตั้งค่า', async () => {
+      installFakeBridge(cw, { code: fileCode - 1, name: 'รุ่นเก่า', brand: 'samsung' });
+      const res = await cw.__apkUpdateCheck('test-samsung');
+      assert(res === 'newer', 'why = ' + res);
+      const bar = cw.document.getElementById('apkUpdateBar');
+      assert(bar, 'ไม่พบป้ายเตือน');
+      const note = bar.querySelector('.apk-upd-note');
+      assert(note, 'ไม่มีหมายเหตุ Samsung (กดติดตั้งแล้วจะเงียบเพราะ Auto Blocker)');
+      assert(/ตัวบล็อกอัตโนมัติ/.test(note.textContent), 'ข้อความหมายเหตุไม่ถูก: ' + note.textContent);
+      const btn = note.querySelector('.apk-upd-btn.tiny');
+      assert(btn && /Auto Blocker/.test(btn.textContent), 'ไม่มีปุ่มเปิดการตั้งค่า Auto Blocker');
+      return note.textContent.replace(/\s+/g, ' ').slice(0, 110);
+    });
+
+    // 14) เครื่องยี่ห้ออื่น → ห้ามมีหมายเหตุ (ไม่กวนผู้ใช้ที่ไม่เกี่ยวข้อง)
+    await scenario('14. เครื่องยี่ห้ออื่น (Xiaomi) → ไม่มีหมายเหตุ Auto Blocker', async () => {
+      installFakeBridge(cw, { code: fileCode - 1, name: 'รุ่นเก่า', brand: 'Xiaomi' });
+      await cw.__apkUpdateCheck('test-xiaomi');
+      const bar = cw.document.getElementById('apkUpdateBar');
+      assert(bar, 'ไม่พบป้ายเตือน');
+      assert(!bar.querySelector('.apk-upd-note'), 'กลับมีหมายเหตุทั้งที่เครื่องไม่ใช่ Samsung');
+      return 'ไม่มีหมายเหตุ (ถูกต้อง)';
+    });
+
+    // 15) APK รุ่นเก่าที่ยังไม่มียี่ห้อเครื่อง → ต้องเตือนแบบเผื่อไว้ (เคสจริง: เครื่อง Samsung ที่ติดตั้ง 1.4.0 อยู่)
+    await scenario('15. APK เก่าไม่มียี่ห้อเครื่อง → เตือนแบบ “ถ้าเครื่องนี้เป็น Samsung” (ไม่มีปุ่ม)', async () => {
+      installFakeBridge(cw, { code: fileCode - 1, name: 'รุ่นเก่า', noBrand: true });
+      await cw.__apkUpdateCheck('test-nobrand');
+      const bar = cw.document.getElementById('apkUpdateBar');
+      const note = bar ? bar.querySelector('.apk-upd-note') : null;
+      assert(note, 'ไม่มีหมายเหตุเผื่อไว้ — APK เก่าบนเครื่อง Samsung จะติดตั้งไม่ขึ้นแล้วหาสาเหตุไม่ได้');
+      assert(/ถ้าเครื่องนี้เป็น Samsung/.test(note.textContent), 'ข้อความไม่ถูก: ' + note.textContent);
+      assert(!note.querySelector('.apk-upd-btn'), 'APK เก่าไม่มีสะพานเปิดการตั้งค่า จึงไม่ควรมีปุ่ม');
+      return note.textContent.replace(/\s+/g, ' ').slice(0, 100);
+    });
+
+    // 16) กดปุ่ม Auto Blocker → เรียกสะพานของ Android
+    await scenario('16. กดปุ่ม “เปิดการตั้งค่า Auto Blocker” → เรียก TaxiNative.openAutoBlockerSettings()', async () => {
+      installFakeBridge(cw, { code: fileCode - 1, name: 'รุ่นเก่า', brand: 'samsung' });
+      await cw.__apkUpdateCheck('test-samsung-open');
+      const calls = cw.__apkBridgeCalls || [];
+      calls.length = 0;
+      const out = cw.apkOpenAutoBlocker();
+      assert(out === 'native', 'ผลลัพธ์ = ' + out);
+      assert(calls.indexOf('openAutoBlockerSettings') >= 0, 'ไม่เรียกสะพาน: ' + JSON.stringify(calls));
+      return 'เรียกสะพาน 1 ครั้ง';
+    });
+
+    // 17) ฟังก์ชันบริสุทธิ์: แบรนด์จากสะพานชนะ UA เสมอ
+    await scenario('17. ตรวจยี่ห้อเครื่อง: แบรนด์จากสะพานแม่นกว่า UA เสมอ', async () => {
+      assert(cw.__apkIsSamsung('samsung', '') === true, 'samsung ต้อง true');
+      assert(cw.__apkIsSamsung('SAMSUNG ELECTRONICS', '') === true, 'ตัวพิมพ์ใหญ่ต้อง true');
+      assert(cw.__apkIsSamsung('', 'Mozilla/5.0 SamsungBrowser/23.0') === true, 'Samsung Internet ต้อง true');
+      assert(cw.__apkIsSamsung('xiaomi', 'SamsungBrowser/23.0') === false, 'มีแบรนด์จริงที่ไม่ใช่ Samsung → ต้องไม่ใช่');
+      assert(cw.__apkIsSamsung('', 'Mozilla/5.0 (Linux; Android 14) Chrome/120') === false, 'ไม่รู้อะไรเลย → ต้องไม่ใช่');
+      return '5/5 กรณีถูกต้อง';
     });
 
     document.title = (failCount ? '❌ ' : '✅ ') + 'APK update check ' + passCount + '/' + (passCount + failCount);

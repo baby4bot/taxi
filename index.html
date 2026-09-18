@@ -628,6 +628,22 @@
         .tz-point-end { position: absolute; right: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--accent-red); background: transparent; }
         /* --tz-num-h = ความสูงกล่องตัวเลข (ใช้ร่วมกันทุกคอลัมน์) → ป้าย "วิ่งแล้ว/รถติด/เหลือ" อยู่บรรทัดเดียวกันเสมอ */
         .tz-stats-row { --tz-num-h: 48px; display: flex; justify-content: space-between; align-items: stretch; margin-bottom: var(--space-zoom); gap: 10px; padding: 0 10px 0 6px; }
+        /* 🚀 (18 ก.ย. 69) การ์ดความเร็วบนจอมิเตอร์ใหญ่ — ตัวเลขใหญ่ อ่านชัดตอนขับ · เปลี่ยนเป็นโทนแดง+เต้นเมื่อเกินลิมิต */
+        .tz-speed-card { display: flex; align-items: center; gap: 10px; margin: 0 6px var(--space-zoom); padding: 10px 14px; border-radius: 16px; background: linear-gradient(135deg, rgba(56,189,248,0.16), rgba(56,189,248,0.05)); border: 1px solid rgba(56,189,248,0.35); transition: background .25s, border-color .25s; }
+        .tz-speed-card .tz-speed-icon { font-size: 26px; color: #7dd3fc; flex-shrink: 0; }
+        .tz-speed-card .tz-speed-main { display: flex; align-items: baseline; gap: 6px; flex: 1; min-width: 0; }
+        #tzSpeedNum { font-size: clamp(30px, 10vw, 46px); font-weight: 800; line-height: 1; letter-spacing: -1px; color: #e0f2fe; font-variant-numeric: tabular-nums; }
+        .tz-speed-unit { font-size: 14px; color: var(--text-dim); font-weight: 500; white-space: nowrap; }
+        .tz-speed-side { text-align: right; flex-shrink: 0; }
+        .tz-speed-limit-chip { display: none; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: #7dd3fc; background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.3); border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+        .tz-speed-card.over { background: linear-gradient(135deg, rgba(239,68,68,0.30), rgba(239,68,68,0.10)); border-color: rgba(239,68,68,0.75); animation: tz-speed-pulse 1s ease-in-out infinite; }
+        .tz-speed-card.over #tzSpeedNum { color: #fecaca; }
+        .tz-speed-card.over .tz-speed-limit-chip { color: #fecaca; background: rgba(239,68,68,0.18); border-color: rgba(239,68,68,0.5); }
+        @keyframes tz-speed-pulse { 0%, 100% { box-shadow: 0 0 0 rgba(239,68,68,0); } 50% { box-shadow: 0 0 18px rgba(239,68,68,0.55); } }
+        /* 🚀 ปุ่ม − / + ของ “ลิมิตความเร็ว” (หน้าตั้งค่าทั่วไป) — ตัวเลขกลางใหญ่ อ่านง่าย ไม่ต้องพิมพ์ */
+        .spd-step-btn { width: 62px; height: 62px; border-radius: 50%; border: 1px solid rgba(56,189,248,0.45); background: rgba(56,189,248,0.14); color: #7dd3fc; font-size: 30px; font-weight: 700; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        .spd-step-btn:active { background: rgba(56,189,248,0.3); transform: scale(0.96); }
+        .spd-limit-val { font-size: 56px; font-weight: 800; line-height: 1; color: #e0f2fe; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
         /* รถ taxi บนเส้น progress — ให้ลอยชัดเจน ไม่ถูกตัด/ทับ */
         .tracker-zoom-box #tzCarIcon { top: -24px; z-index: 5; }
         .tracker-zoom-box #tzCarIcon img { width: 52px; height: auto; }
@@ -2908,6 +2924,11 @@
                 <div style="font-size: 13px;">เวลาประเมิน: <span style="color:var(--neon-yellow);" class="highlight" id="smallEtaTime">--</span></div>
                 <div style="font-size: 13px;">ถึงประมาณ: <span class="highlight" id="smallArrivalTime" style="color:var(--neon-green);">--:--</span> น.</div>
             </div>
+            <!-- 🚀 (18 ก.ย. 69) ความเร็วบนการ์ดหน้าหลัก — ให้เห็นเร็วทันที ไม่ต้องขยายจอมิเตอร์ -->
+            <div id="ltSpeedRow" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div style="font-size: 13px;">ความเร็ว: <span class="highlight" id="smallSpeed" style="color:#7dd3fc;">0</span> กม./ชม.</div>
+                <div id="smallSpeedLimit" style="font-size: 11.5px; color: var(--text-dim);"></div>
+            </div>
         </div>
     </div>
                                                        
@@ -3215,7 +3236,21 @@
      ⚠️ ระยะห่างเท่าเพื่อนบ้าน: ตัด inline `margin-top:12px` ออก เหลือ margin-bottom 18px จาก .qr-card ⇒ ช่องไฟเท่า ๆ กัน
      ⚠️ ต้องอัปเดต PF_BLOCKS + pfOrderMigrate ด้วย ไม่งั้นตัวจัดลำดับบล็อกจะดึงการ์ดนี้กลับขึ้นไปใต้ธีมตามลำดับที่เคยบันทึกไว้ -->
 <div class="qr-card" id="googleLinkCard"><div class="qr-card-head"><span class="material-symbols-outlined" style="font-size: 18px; color: #4285F4;">account_circle</span> บัญชี Google (ทางเลือกล็อกอิน)</div><div class="qr-card-sub">ผูกบัญชีนี้กับ Google ⇒ ครั้งต่อไปกดปุ่มเดียวเข้าสู่ระบบได้เลย · <b>รหัสผ่านเดิมยังใช้ได้เหมือนเดิม</b> และบัญชีอื่นในเครื่องก็ผูกได้คนละบัญชีกัน · ใช้ได้<b>ทุกตำแหน่ง</b> (แอดมิน · ผู้จัดการ · ผู้ใช้ · ยศอื่นที่สร้างเพิ่ม)</div><div id="googleLinkStatus" class="qr-card-hint">—</div><div style="position: relative; margin-top: 10px;"><button id="googleLinkBtn" onclick="window.linkGoogleAccount()" class="manual-timer-btn" style="width: 100%; justify-content: center; background: #ffffff; color: #1f1f1f; gap: 8px; font-weight: 600;"><svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true" style="flex-shrink:0;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> <span id="googleLinkBtnLabel">ผูกบัญชี Google</span></button><button id="googleUnlinkBtn" onclick="window.unlinkGoogleAccount()" class="manual-timer-btn google-unlink-icon" style="display: none;" title="ยกเลิกการผูกบัญชี Google" aria-label="ยกเลิกการผูกบัญชี Google"><span class="material-symbols-outlined">link_off</span></button></div></div><div class="qr-card" id="pinCard"><div class="qr-card-head"><span class="material-symbols-outlined" style="font-size: 18px; color: var(--neon-yellow);">key</span> PIN ยืนยันรายการสำคัญ <span id="pinCardMandatory" style="font-size:11px; color:var(--accent-red); font-weight:700;">(บังคับทุกบัญชี)</span></div><div class="qr-card-sub">PIN 6 หลักใช้แทนรหัสผ่านตอนแก้ข้อมูลสำคัญ (แก้สมาชิก · ลบรูป · เปลี่ยนสิทธิ์) — <b>บัญชีที่สมัคร/เข้าใช้ด้วย Google ซึ่งยังไม่มีรหัสผ่าน จะแก้ข้อมูลสำคัญได้ต่อเมื่อตั้ง PIN แล้ว</b> · PIN ของแต่ละบัญชีแยกกันคนละชุด ตั้งเลขเดียวกันกับคนอื่นก็ใช้ได้ ไม่กระทบกัน</div><div id="pinStatusText" class="qr-card-hint">—</div><div style="display: flex; gap: 8px; margin-top: 10px;"><button id="pinSetupBtn" onclick="window.openPinSetup()" class="manual-timer-btn" style="flex: 1; justify-content: center; background: var(--neon-green); color: #fff;"><span class="material-symbols-outlined" style="font-size: 19px;">add</span> ตั้ง PIN</button><button id="pinClearBtn" onclick="window.clearPinFlow()" class="manual-timer-btn" style="display: none; flex: 1; justify-content: center; background: rgba(239,68,68,0.92); color: #fff;"><span class="material-symbols-outlined" style="font-size: 19px;">delete</span> ลบ PIN</button></div><div style="display: flex; gap: 8px; margin-top: 8px;"><button id="pinDevBtn" onclick="window.devUnlockToggle()" class="manual-timer-btn" style="flex: 1; justify-content: center; background: #5b6472; color: #fff;"><span class="material-symbols-outlined" style="font-size: 19px;">fingerprint</span> ปลดล็อกด้วยเครื่อง</button></div><div id="pinDevHint" style="font-size: 11px; color: var(--text-dim); line-height: 1.55; margin-top: 7px;"></div></div><!-- 🔑 (ย้ายมา 15 ก.ย. · ปรับ 17 ก.ย. 69) การ์ด PIN อยู่ถัดจากแถว “ประเภทรถประจำ” · หัวข้อ “ธีมการแสดงผล” ย้ายขึ้นไปต่อจาก “QR Code รับเงิน” (ก่อนการ์ดบัญชี Google)
-     🔑 (18 ก.ย. 69) การ์ด PIN ถูก “ย้ายโหนดจริง” ไปแท็บ “PIN ยืนยันสำคัญ” ในหน้าต่าง “ตั้งค่าทั่วไป” (เมนูตั้งค่าการใช้งาน) ตอนบูตแอป — HTML ต้นทางยังอยู่ตรงนี้เพื่อให้ id เดิมใช้ได้ (ตัวย้าย = window.__mountPinPanel) --><label style="text-align: left;">เบิกเวลาจอด/รถติดหลังแอปถูกปิดได้สูงสุด</label><select id="editKillCap" style="width:100%; margin-bottom:6px; background:rgba(255,255,255,0.08); color:white; border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:12px; font-size:15px; text-align:left;"><option value="0" selected>ไม่จำกัด (ค่าเริ่มต้น)</option><option value="5">5 นาที</option><option value="10">10 นาที</option><option value="15">15 นาที</option><option value="20">20 นาที</option><option value="30">30 นาที</option><option value="60">60 นาที</option></select><div style="font-size:11px; color:var(--text-dim); text-align:left; margin-bottom:var(--space-field);">ถ้าแอปถูกปิด/คิลแล้วรถจอดนิ่งตลอดช่วงนั้น ระบบจะเบิกเวลาจอดให้สูงสุดเท่านี้ (0 = เบิกเต็มตามจริง) เพื่อกันค่าโดยสารบวมถ้าลืมจบเที่ยวข้ามคืน</div><label id="profileManualFsRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เปิดเต็มจอตอนนี้ (เต็มหน้าจอ)<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">กดสวิตช์เปิด = ซ่อนแถบเบราว์เซอร์บน-ล่างให้เหมือนแอป (ใช้ได้บน Android Chrome/Firefox/Edge — iOS Safari จำเป็นต้องติดตั้ง PWA)</span></span><label class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="editManualFs" onchange="window.toggleAppFullscreenFromProfile(this)" style="display:none;"><span class="app-slider"></span></label></label><label id="profileKeepAwakeRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">ห้ามจอดับระหว่างจับเที่ยว<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">ใช้ <b>Wake Lock</b> ให้จอค้างระหว่างเที่ยว — จอติด = GPS เก็บต่อเนื่อง ⇒ <b>เวลารถติดตรงมิเตอร์</b> (ปิดได้ถ้ากังวลเรื่องแบต แต่ช่วงที่จอดับจะได้เป็นค่าประมาณ — ดู “ค่าชดเชย” ในหน้าประวัติเที่ยว)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editKeepAwake" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">สั่นเมื่อมี toast ทอง<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เช่น กลับจากเบื้องหลัง / ใกล้ถึงปลายทาง / เตือนโควตา (ปิดถ้าไม่อยากให้สั่นตอนขับ)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editVibrateGold" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เสียงติ๊งเมื่อมีข้อความแจ้งเตือน<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เล่นเสียงสั้น ๆ ทุกครั้งที่ toast เด้ง (เช่น เริ่มต่อ / เตือนทางด่วน) — ปิดถ้าไม่อยากให้เสียงรบกวนตอนขับ</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editToastSound" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เสียงนำทางพูด (ภาษาไทย)<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">พูดบอกก่อนถึงจุดเลี้ยว เช่น “อีก 300 เมตร เลี้ยวซ้าย” แล้วพูดชื่อท่าเมื่อใกล้ถึง — ช่วยเมื่อไม่ได้มองจอ (ทำงานคู่กับเสียงติ๊งและสั่น ปิดได้ถ้าไม่ต้องการ)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editNavVoice" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เริ่มต่อเที่ยวค้างอัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เปิดแอปแล้วเจอเที่ยวที่ยังไม่สิ้นสุด → เริ่มมิเตอร์ต่อให้ทันทีพร้อมเปิดจอมิเตอร์ใหญ่ (ไม่ต้องกด "เริ่มต่อ")</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editAutoResume" checked><span class="app-slider"></span></span></label><label id="profileAutoFsRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เปิดแอปแล้วขอเต็มจออัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">แตะครั้งแรกหลังเปิดแอปจะซ่อนแถบเบราว์เซอร์ให้อัตโนมัติ (ใช้ได้บน Android Chrome/Firefox/Edge — iOS Safari ไม่มีฟีเจอร์นี้ ต้องติดตั้งแอป)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editAutoFs" checked><span class="app-slider"></span></span></label><div id="settingsLockHint" style="display:none; font-size:12px; color:var(--neon-yellow); background:rgba(241,196,15,0.10); border:1px solid rgba(241,196,15,0.35); border-radius:10px; padding:8px 12px; margin-bottom:var(--space-field); text-align:left;">🔒 <b>สั่น toast ทอง</b> และ <b>เต็มจออัตโนมัติ</b> ตั้งค่าโดยผู้ดูแลระบบ — เปลี่ยนแปลงได้เฉพาะแอดมิน</div><button onclick="window.saveProfileInfo()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: white;" id="saveProfileBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกข้อมูล</button><!-- 🔁 (18 ก.ย. 69) ปุ่ม “รีเซ็ตการตั้งค่า” ย้ายไปหน้าต่าง “ตั้งค่าทั่วไป” (เมนูตั้งค่าการใช้งาน) แล้ว — ไม่ให้ซ้ำกัน 2 ที่ --></div></div></div>
+     🔑 (18 ก.ย. 69) การ์ด PIN ถูก “ย้ายโหนดจริง” ไปแท็บ “PIN ยืนยันสำคัญ” ในหน้าต่าง “ตั้งค่าทั่วไป” (เมนูตั้งค่าการใช้งาน) ตอนบูตแอป — HTML ต้นทางยังอยู่ตรงนี้เพื่อให้ id เดิมใช้ได้ (ตัวย้าย = window.__mountPinPanel) --><label style="text-align: left;">เบิกเวลาจอด/รถติดหลังแอปถูกปิดได้สูงสุด</label><select id="editKillCap" style="width:100%; margin-bottom:6px; background:rgba(255,255,255,0.08); color:white; border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:12px; font-size:15px; text-align:left;"><option value="0" selected>ไม่จำกัด (ค่าเริ่มต้น)</option><option value="5">5 นาที</option><option value="10">10 นาที</option><option value="15">15 นาที</option><option value="20">20 นาที</option><option value="30">30 นาที</option><option value="60">60 นาที</option></select><div style="font-size:11px; color:var(--text-dim); text-align:left; margin-bottom:var(--space-field);">ถ้าแอปถูกปิด/คิลแล้วรถจอดนิ่งตลอดช่วงนั้น ระบบจะเบิกเวลาจอดให้สูงสุดเท่านี้ (0 = เบิกเต็มตามจริง) เพื่อกันค่าโดยสารบวมถ้าลืมจบเที่ยวข้ามคืน</div><label id="profileManualFsRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เปิดเต็มจอตอนนี้ (เต็มหน้าจอ)<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">กดสวิตช์เปิด = ซ่อนแถบเบราว์เซอร์บน-ล่างให้เหมือนแอป (ใช้ได้บน Android Chrome/Firefox/Edge — iOS Safari จำเป็นต้องติดตั้ง PWA)</span></span><label class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="editManualFs" onchange="window.toggleAppFullscreenFromProfile(this)" style="display:none;"><span class="app-slider"></span></label></label><label id="profileKeepAwakeRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">ห้ามจอดับระหว่างจับเที่ยว<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">ใช้ <b>Wake Lock</b> ให้จอค้างระหว่างเที่ยว — จอติด = GPS เก็บต่อเนื่อง ⇒ <b>เวลารถติดตรงมิเตอร์</b> (ปิดได้ถ้ากังวลเรื่องแบต แต่ช่วงที่จอดับจะได้เป็นค่าประมาณ — ดู “ค่าชดเชย” ในหน้าประวัติเที่ยว)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editKeepAwake" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">สั่นเมื่อมี toast ทอง<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เช่น กลับจากเบื้องหลัง / ใกล้ถึงปลายทาง / เตือนโควตา (ปิดถ้าไม่อยากให้สั่นตอนขับ)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editVibrateGold" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เสียงติ๊งเมื่อมีข้อความแจ้งเตือน<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เล่นเสียงสั้น ๆ ทุกครั้งที่ toast เด้ง (เช่น เริ่มต่อ / เตือนทางด่วน) — ปิดถ้าไม่อยากให้เสียงรบกวนตอนขับ</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editToastSound" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เสียงนำทางพูด (ภาษาไทย)<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">พูดบอกก่อนถึงจุดเลี้ยว เช่น “อีก 300 เมตร เลี้ยวซ้าย” แล้วพูดชื่อท่าเมื่อใกล้ถึง — ช่วยเมื่อไม่ได้มองจอ (ทำงานคู่กับเสียงติ๊งและสั่น ปิดได้ถ้าไม่ต้องการ)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editNavVoice" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เริ่มต่อเที่ยวค้างอัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เปิดแอปแล้วเจอเที่ยวที่ยังไม่สิ้นสุด → เริ่มมิเตอร์ต่อให้ทันทีพร้อมเปิดจอมิเตอร์ใหญ่ (ไม่ต้องกด "เริ่มต่อ")</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editAutoResume" checked><span class="app-slider"></span></span></label><label id="profileAutoFsRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เปิดแอปแล้วขอเต็มจออัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">แตะครั้งแรกหลังเปิดแอปจะซ่อนแถบเบราว์เซอร์ให้อัตโนมัติ (ใช้ได้บน Android Chrome/Firefox/Edge — iOS Safari ไม่มีฟีเจอร์นี้ ต้องติดตั้งแอป)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editAutoFs" checked><span class="app-slider"></span></span></label><!-- 🚀 (18 ก.ย. 69) ลิมิตความเร็ว + เตือนเมื่อเกิน — ขอจากผู้ใช้: ตั้งค่าในเมนูตั้งค่าการใช้งาน → ตั้งค่าทั่วไป · กด −/+ ทีละ 1 ไม่ต้องพิมพ์ · ตัวเลขใหญ่ -->
+            <label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เตือนเมื่อความเร็วเกินลิมิต<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เกินค่าที่ตั้งไว้ = มีเสียงติ๊ด ๆ + สั่น เตือน <b>5 ครั้ง</b> แล้วหยุด · ถ้าลดความเร็วลงมาจะไม่เตือนซ้ำ · พอเร่งเกินอีกจะเตือนอีกครั้ง <b>3 ครั้ง</b> (ใช้ตอนจับเวลามิเตอร์ทั้งแบบใส่ระยะทางและไม่ใส่)</span></span><span class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="editSpeedWarn" onchange="window.__spdSyncUi&&window.__spdSyncUi()" checked><span class="app-slider"></span></span></label>
+            <div id="speedLimitBox" style="text-align:left; margin-bottom:var(--space-field); background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.28); border-radius:14px; padding:12px 14px;">
+                <div style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; color:#7dd3fc; margin-bottom:10px;"><span class="material-symbols-outlined" style="font-size:18px;">speed</span> ลิมิตความเร็ว</div>
+                <div style="display:flex; align-items:center; justify-content:center; gap:16px;">
+                    <button type="button" class="spd-step-btn" onclick="window.bumpSpeedLimit(-1)" aria-label="ลดลิมิตลง 1 กม./ชม.">−</button>
+                    <div style="text-align:center; min-width:110px;">
+                        <div id="speedLimitVal" class="spd-limit-val">80</div>
+                        <div style="font-size:11.5px; color:var(--text-dim); margin-top:2px;">กม./ชม.</div>
+                    </div>
+                    <button type="button" class="spd-step-btn" onclick="window.bumpSpeedLimit(1)" aria-label="เพิ่มลิมิตขึ้น 1 กม./ชม.">+</button>
+                </div>
+                <div style="font-size:11px; color:var(--text-dim); text-align:center; margin-top:9px; line-height:1.5;">กด − / + ปรับทีละ 1 · ใช้ได้ 20–200 กม./ชม. · ตัวเลขความเร็วบนจอมิเตอร์จะเปลี่ยนเป็นสีแดงเมื่อเกินลิมิต</div>
+            </div>
+            <div id="settingsLockHint" style="display:none; font-size:12px; color:var(--neon-yellow); background:rgba(241,196,15,0.10); border:1px solid rgba(241,196,15,0.35); border-radius:10px; padding:8px 12px; margin-bottom:var(--space-field); text-align:left;">🔒 <b>สั่น toast ทอง</b> และ <b>เต็มจออัตโนมัติ</b> ตั้งค่าโดยผู้ดูแลระบบ — เปลี่ยนแปลงได้เฉพาะแอดมิน</div><button onclick="window.saveProfileInfo()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: white;" id="saveProfileBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกข้อมูล</button><!-- 🔁 (18 ก.ย. 69) ปุ่ม “รีเซ็ตการตั้งค่า” ย้ายไปหน้าต่าง “ตั้งค่าทั่วไป” (เมนูตั้งค่าการใช้งาน) แล้ว — ไม่ให้ซ้ำกัน 2 ที่ --></div></div></div>
 
 <div id="usernameChangeModal" class="modal-overlay" style="z-index: 10080;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><div class="modal-header"><h3>เปลี่ยนชื่อผู้ใช้</h3><button class="btn-close-floating" onclick="window.toggleModal('usernameChangeModal', false)"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><div style="font-size:12.5px; color:var(--text-dim); margin-bottom:10px;">ชื่อผู้ใช้ปัจจุบัน: <b id="unCur" style="color:var(--text-main);">—</b></div><label style="text-align:left;">ชื่อผู้ใช้ใหม่</label><input type="text" id="unNew" maxlength="20" placeholder="a-z 0-9 . _ - (3-20 ตัว)" style="margin-bottom:8px; text-align:left;" autocomplete="off"><div id="unErr" style="display:none; color:var(--accent-red); font-size:12.5px; line-height:1.45; margin-bottom:8px;"></div><div style="font-size:11.5px; color:var(--text-dim); line-height:1.6; margin-bottom:12px;">เปลี่ยนแล้ว <b>รหัสผ่าน · PIN · สิทธิ์ · ประวัติเที่ยวเดิมอยู่ครบ</b> — ครั้งต่อไปล็อกอินด้วยชื่อใหม่นี้ (หรือกดปุ่ม Google ตามเดิม)<br>ระบบจะให้ยืนยันตัวตนก่อนบันทึก</div><button id="unSaveBtn" onclick="window.saveUsernameChange()" class="manual-timer-btn" style="background: var(--neon-green); width:100%; justify-content:center; color:#fff;"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึกชื่อผู้ใช้ใหม่</button></div></div></div><div id="welcomeSetupModal" class="modal-overlay" style="z-index: 10085;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="welcomeTitle">ยินดีต้อนรับ 👋</h3></div><div style="padding: 6px 18px 18px; text-align: left;"><div id="welcomeStepBar" style="font-size:12px; color:var(--text-dim); margin-bottom:10px;">ขั้นที่ 1 จาก 3 — ข้อมูลคนขับ</div><div id="welcomeIntro" style="font-size:12.5px; color:var(--text-dim); line-height:1.6; margin-bottom:12px;">บัญชีนี้เข้าด้วย <b>Google</b> — กรอกข้อมูลให้ครบก่อนเริ่มใช้งาน (ทะเบียนรถจะขึ้นบนใบเสร็จ · เบอร์โทรให้ผู้โดยสารติดต่อกลับ)</div><div id="welcomeStep1"><label style="text-align:left;">ชื่อที่แสดง</label><input type="text" id="wsName" maxlength="40" placeholder="เช่น อาร์ม" style="margin-bottom:10px; text-align:left;" autocomplete="off"><label style="text-align:left;">ทะเบียนรถ <span style="color:var(--accent-red);">*</span></label><input type="text" id="wsPlate" maxlength="15" placeholder="เช่น 1มข322" style="margin-bottom:10px; text-align:left;" autocomplete="off"><label style="text-align:left;">เบอร์โทรศัพท์ <span style="color:var(--accent-red);">*</span></label><input type="tel" id="wsPhone" maxlength="12" inputmode="numeric" placeholder="08xxxxxxxx" style="margin-bottom:10px; text-align:left;" autocomplete="off"><div id="wsErr1" style="display:none; color:var(--accent-red); font-size:12.5px; line-height:1.45; margin-bottom:8px;"></div><button class="manual-timer-btn" style="background: var(--neon-green); width:100%; justify-content:center; color:#fff;" id="wsBtn1" onclick="window.saveWelcomeProfile()"><span class="material-symbols-outlined" style="font-size:20px;">save</span> บันทึกและไปต่อ</button></div><div id="welcomeStep2" style="display:none;"><div style="font-size:12.5px; color:var(--text-dim); line-height:1.6; margin-bottom:12px;">ตั้ง <b>รหัสผ่าน</b> เพิ่มไว้ก็ได้ — จะได้ล็อกอินได้ <b>2 ทาง</b> (ปุ่ม Google หรือ username + รหัสผ่าน) · <b>ไม่บังคับ</b> ข้ามได้</div><label style="text-align:left;">รหัสผ่านใหม่</label><div class="password-wrapper" style="margin-bottom:10px;"><input type="password" id="wsPass1" placeholder="อย่างน้อย 6 ตัวอักษร" style="text-align:left;" autocomplete="new-password"><span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('wsPass1', this)">visibility_off</span></div><label style="text-align:left;">ยืนยันรหัสผ่าน</label><div class="password-wrapper" style="margin-bottom:12px;"><input type="password" id="wsPass2" placeholder="พิมพ์อีกครั้ง" style="text-align:left;" autocomplete="new-password"><span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('wsPass2', this)">visibility_off</span></div><div id="wsErr2" style="display:none; color:var(--accent-red); font-size:12.5px; line-height:1.45; margin-bottom:8px;"></div><button class="manual-timer-btn" style="background: var(--neon-green); width:100%; justify-content:center; color:#fff;" id="wsBtn2" onclick="window.saveWelcomePassword()"><span class="material-symbols-outlined" style="font-size:20px;">key</span> บันทึกรหัสผ่าน</button><button class="manual-timer-btn" style="background:#5b6472; width:100%; justify-content:center; color:#fff; margin-top:8px;" onclick="window.skipWelcomePassword()">ข้ามไปก่อน (ใช้ Google อย่างเดียว)</button></div><div id="welcomeStep3" style="display:none;"><div id="wsSummary" style="font-size:13px; line-height:1.8;"></div><button class="manual-timer-btn" style="background: var(--neon-green); width:100%; justify-content:center; color:#fff; margin-top:12px;" onclick="window.closeWelcomeSetup()"><span class="material-symbols-outlined" style="font-size:20px;">play_circle</span> เริ่มใช้งานเลย</button></div></div></div></div><div id="pinSetupModal" class="modal-overlay" style="z-index: 10065;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><div class="modal-header"><h3 id="pinSetupTitle">ตั้ง PIN</h3><button class="btn-close-floating" onclick="window.pinSetupClose()"><span class="material-symbols-outlined">close</span></button></div><div style="padding: 6px 18px 18px; text-align: left;"><div id="pinSetupIntro" style="font-size: 12.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 12px;"></div><div id="pinOwnerPassWrap"><label style="text-align: left;">รหัสผ่านบัญชีของคุณ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400;">ยืนยันว่าเป็นเจ้าของบัญชี — กันคนอื่นหยิบเครื่องที่ล็อกอินค้างไว้มาตั้ง PIN แทน</span></label><div class="password-wrapper" style="margin-bottom: 10px;"><input type="password" id="pinOwnerPass" placeholder="รหัสผ่านบัญชี" style="text-align: left;" autocomplete="current-password"><span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('pinOwnerPass', this)">visibility_off</span></div></div><div id="pinOwnerAltWrap" style="display: none;"><div id="pinOwnerAltHint" style="font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 8px;"></div><div style="display: flex; gap: 8px;"><button type="button" id="pinOwnerGoogleBtn" onclick="window.pinVerifyGoogleOwner()" class="manual-timer-btn" style="display: none; flex: 1; justify-content: center; background: #ffffff; color: #1f1f1f; gap: 8px; font-weight: 600;"><svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true" style="flex-shrink:0;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> ยืนยันด้วย Google</button><button type="button" id="pinOwnerDevBtn" onclick="window.pinVerifyDeviceOwner()" class="manual-timer-btn" style="display: none; flex: 1; justify-content: center; background: #5b6472; color: #fff;"><span class="material-symbols-outlined" style="font-size: 19px;">fingerprint</span> ปลดล็อกด้วยเครื่อง</button></div></div><label style="text-align: left;">PIN ใหม่ (6 หลัก)</label><input type="text" id="pinNew1" inputmode="none" maxlength="6" placeholder="เช่น 482190" style="width:100%; margin-bottom: 10px; text-align: center; letter-spacing: 8px; font-size: 21px; font-weight: 700;" autocomplete="off"><label style="text-align: left;">ยืนยัน PIN ใหม่</label><input type="text" id="pinNew2" inputmode="none" maxlength="6" placeholder="พิมพ์อีกครั้ง" style="width:100%; margin-bottom: 10px; text-align: center; letter-spacing: 8px; font-size: 21px; font-weight: 700;" autocomplete="off"><div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 12px;">ห้าม <b>123456</b> · <b>000000</b> · เลขเรียงติด · เลขซ้ำตัวเดียว · เลขอ่านกลับหลังได้เหมือนเดิม · <b>ผิด 5 ครั้ง = ล็อก 5 นาที</b><br>ลืม PIN ไม่เป็นไร — กลับมาที่นี่แล้วยืนยันด้วยรหัสผ่านเพื่อตั้งใหม่ได้เลย<br>เก็บเป็น <b>PBKDF2 (hash)</b> ในเอกสารของบัญชีคุณเท่านั้น ไม่เก็บตัวเลขจริงที่ไหน</div><div id="pinSetupErr" style="display: none; color: var(--accent-red); font-size: 12.5px; line-height: 1.4; margin-bottom: 10px;"></div><button id="pinSetupSaveBtn" onclick="window.saveUserPin()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: #fff;"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึก PIN</button></div></div></div><div id="changePasswordModal" class="modal-overlay" style="z-index: 10050;"><div class="modal-box standard-box" onclick="event.stopPropagation()"><button class="btn-close-floating" style="top: 15px; right: 15px; transform: none;" onclick="window.toggleModal('changePasswordModal', false)"><span class="material-symbols-outlined">close</span></button><h3 id="cpTitle" style="color: white; margin-bottom: var(--space-field);">เปลี่ยนรหัสผ่าน</h3><div style="display:flex; align-items:center; gap:12px; margin-bottom: var(--space-field);"><img id="cpProfilePic" src="" style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: none; background: rgba(0,0,0,0.3); flex-shrink:0; box-shadow: 0 0 0 1px rgba(255,255,255,0.10);"><div style="text-align:left;"><div class="cp-uname" id="cpUsernameLabel"></div><div style="color: white; font-size:15px; font-weight:600;" id="cpNameLabel"></div><div id="cpRoleLabel"></div></div></div><div class="password-wrapper" id="cpOldWrap"><input type="password" id="oldPassword" placeholder="รหัสผ่านเดิม" style="text-align: left;" autocomplete="new-password"><span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('oldPassword', this)">visibility_off</span></div><div class="password-wrapper"><input type="password" id="newPassword" placeholder="รหัสผ่านใหม่" style="text-align: left;" autocomplete="new-password"><span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('newPassword', this)">visibility_off</span></div><div class="password-wrapper" style="margin-bottom: var(--space-field);"><input type="password" id="confirmPassword" placeholder="ยืนยันรหัสผ่านใหม่" style="text-align: left;" autocomplete="new-password"><span class="material-symbols-outlined toggle-password" onclick="window.togglePasswordVisibility('confirmPassword', this)">visibility_off</span></div><button onclick="window.savePasswordChange()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; color: white;" id="savePasswordBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกรหัสผ่าน</button></div></div>
 
@@ -3822,6 +3857,12 @@
                 <div class="tz-point-end"></div>
             </div>
         </div>
+        <!-- 🚀 (18 ก.ย. 69) ความเร็วปัจจุบัน — ขอจากผู้ใช้: อยากเห็นว่าเคลื่อนที่ด้วยความเร็วเท่าไร ทั้งตอนจับเวลาแบบใส่ระยะทางและแบบไม่ใส่ -->
+        <div class="tz-speed-card" id="tzSpeedCard">
+            <span class="material-symbols-outlined tz-speed-icon">speed</span>
+            <div class="tz-speed-main"><span id="tzSpeedNum">0</span><span class="tz-speed-unit">กม./ชม.</span></div>
+            <div class="tz-speed-side"><span class="tz-speed-limit-chip" id="tzSpeedLimitChip"><span class="material-symbols-outlined" style="font-size:14px;">speed</span> ลิมิต <b id="tzSpeedLimitVal">80</b></span></div>
+        </div>
         <div class="tz-stats-row">
             <div class="tz-stat-col"><div id="tzDrivenKm" class="tz-stat-num" style="color: var(--neon-green);">0.00</div><div class="tz-stat-label">วิ่งแล้ว (กม.)</div></div>
             <div class="tz-stat-col"><div id="tzTrafficTime" class="tz-stat-num" style="color: var(--accent-orange);">0:00</div><div class="tz-stat-label" id="tzTrafficLabel">รถติด (น.:ว.)</div></div>
@@ -4240,6 +4281,14 @@
             gainNode.gain.exponentialRampToValueAtTime(0.22, now + 0.28);
             gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
             osc.start(now); osc.stop(now + 0.44);
+        } else if (type === 'speed') {
+            // 🚀 (18 ก.ย. 69) “ติ๊ด” เตือนความเร็วเกินลิมิต — สั้น คม ชัด ได้ยินตอนขับ (ยิงซ้ำเป็นชุด 5/3 ครั้ง)
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(1046, now);
+            gainNode.gain.setValueAtTime(0.001, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.26, now + 0.015);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+            osc.start(now); osc.stop(now + 0.13);
         }
     };
 
@@ -13908,6 +13957,8 @@
     window.startMeterAndTracking = (seed) => { 
         if (window.isManualRunning) return;
         
+        // 🚀 (18 ก.ย. 69) เริ่มเที่ยว = นับรอบเตือนความเร็วใหม่ (เกินครั้งแรกของเที่ยว = 5 ติ๊ด · ซ้ำ = 3 ติ๊ด)
+        try { if (window.__spdResetEpisode) window.__spdResetEpisode(); } catch (e) {}
         window.playSound('start');
         window.playSilentAudio(); 
 
@@ -13969,6 +14020,8 @@
             window.updateSurchargeUI();
         } else {
             actualDrivenKm = 0; trafficSeconds = 0; currentSpeedKmh = 0; trafficCharging = true; lastFixSpeedKmh = null; stopFixGapMs = 1000;
+            // 🚀 (18 ก.ย. 69) เที่ยวใหม่ = เริ่มนับรอบเตือนความเร็วใหม่ (เกินครั้งแรกของเที่ยวนี้ = 5 ติ๊ด)
+            try { if (window.__spdResetEpisode) window.__spdResetEpisode(); } catch (e) {}
             rollingKm = 0; rollingSec = 0; // ⚙️ เที่ยวใหม่ เริ่มวัดความเร็วล้อหมุนใหม่
             crawlKm = 0; crawlSec = 0; // 🐌 เที่ยวใหม่ เริ่มวัด "ช่วงคลาน" ใหม่
             staleAccruedSec = 0; staleBaseAt = null; staleBasePos = null; // เที่ยวใหม่ เริ่มนับยอด "ยังไม่ยืนยัน" ใหม่
@@ -15322,6 +15375,9 @@
             if($('tzProgressFill')) $('tzProgressFill').style.width = pct + '%';
             if($('tzCarIcon')) $('tzCarIcon').style.left = pct + '%';
         }
+
+        // 🚀 (18 ก.ย. 69) ความเร็วปัจจุบัน + เตือนเมื่อเกินลิมิต — วาดทุก tick (ทั้งโหมดใส่ระยะทางและไม่ใส่)
+        try { window.__spdTick(); } catch (e) {}
 
         let kmInputVal = parseFloat($('kmInput').value) || 0;
         // ใบเขียว (ค่าโดยสารเรียลไทม์) = มิเตอร์จริงทุก tick — ไม่รวมค่าทางด่วน/ค่าเพิ่ม (รวมตอนกดสิ้นสุดในหน้าสรุป)
@@ -16715,7 +16771,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '0d5c1d98a9';
+    const APP_WEB_VERSION = '26c37b751a';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -17167,6 +17223,11 @@
         ['2026-09-18', '🔊 เสียงบอกระยะ ≥1 กม. พูดเป็น “กิโล” — 2,000 ม. = “2 กิโล” · 2,300 ม. = “2.3 กิโล”'],
         ['2026-09-18', '🛣️ เสียงทางด่วนใช้หน่วยเดียวกัน — “อีก 2.3 กิโล ถึงด่าน…” ไม่ใช่ท่องเป็นเมตรยาว ๆ'],
         ['2026-09-18', '📞 กล่องยืนยัน “ถึงปลายทางแล้วหรือยัง?” ก็ใช้หน่วยกิโล/เมตรเดียวกัน'],
+        ['2026-09-18', '🚀 จอมิเตอร์มีความเร็วตัวเลขใหญ่ ๆ — ทั้งจอใหญ่และการ์ดหน้าหลัก'],
+        ['2026-09-18', '⚙️ ตั้ง “ลิมิตความเร็ว” ได้ใน ตั้งค่าการใช้งาน › ตั้งค่าทั่วไป (กด − / + ทีละ 1)'],
+        ['2026-09-18', '🔔 วิ่งเกินลิมิต = มีเสียงติ๊ด ๆ + สั่น เตือน · เกินซ้ำได้ยินอีกครั้ง (ครั้งหลังสั้นกว่า)'],
+        ['2026-09-18', '🔴 เลขความเร็ว+กรอบเปลี่ยนเป็นโทนแดงทันทีที่เกินลิมิต — มองเห็นโดยไม่ต้องอ่านตัวเลข'],
+        ['2026-09-18', '🐞 แก้สแนปช็อตโปรไฟล์ที่มาถึงกลางเที่ยว — เลิกตัดเสียงเตือนที่กำลังเล่นอยู่กลางชุด'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -17603,6 +17664,18 @@
             window.userNavVoice = data.navVoice !== false;
             const nvSel0 = document.getElementById('editNavVoice');
             if (nvSel0) nvSel0.checked = window.userNavVoice;
+            // 🚀 (18 ก.ย. 69) ลิมิตความเร็ว + เตือนเมื่อเกิน (ค่าเริ่มต้น เปิด · 80 กม./ชม.) — จำกัดช่วง 20–200 กันค่าผิดจากที่อื่น
+            const __lim = parseInt(data.speedLimitKmh, 10);
+            window.userSpeedLimitKmh = (!isNaN(__lim)) ? Math.min(200, Math.max(20, __lim)) : 80;
+            window.userSpeedWarn = data.speedWarn !== false;
+            const swSel0 = document.getElementById('editSpeedWarn');
+            if (swSel0) swSel0.checked = window.userSpeedWarn;
+            try { window.__renderSpeedLimitBox(); } catch (e) {}
+            // ⛔ ห้ามรีเซ็ตสถานะรอบเตือนความเร็วที่นี่ (ไม่ว่าจะ __spdResetEpisode หรือ __spdClearEpisodeState)
+            //    🐞 บทเรียนจาก tests/speed-warn-offline.html: สแนปช็อตผู้ใช้มาถึงระหว่างเที่ยวได้ ⇒
+            //        • แบบ ResetEpisode = ตัดติ๊ดที่กำลังเล่นกลางชุด (ผู้ใช้ได้ยิน 3 จาก 5)
+            //        • แบบ ClearEpisodeState = ล้างตัวนับจน “เกินซ้ำ” กลับไปติ๊ด 5 อีก (เดิมควรเป็น 3)
+            //    ⇒ สถานะรอบเป็นเรื่องของ “เที่ยว” — รีเซ็ตที่ startMeterAndTracking() และตอนผู้ใช้แก้ค่าเองเท่านั้น
             // 🎚️ โหลดค่าชดเชยเวลารถติดของบัญชีนี้ (ตาม uid ที่เพิ่งล็อกอิน) — ค่าต่างคนต่างชุด
             try { if (typeof window.meterBiasLoad === 'function') window.meterBiasLoad(); } catch (e) {}
             // 💡 ห้ามจอดับระหว่างจับเที่ยว (ค่าเริ่มต้น เปิด) — จอติด = GPS เก็บต่อเนื่อง ⇒ เวลารถติดตรงมิเตอร์
@@ -19746,6 +19819,115 @@
         }
     };
 
+    // ==================== 🚀 (18 ก.ย. 69) ลิมิตความเร็ว + เตือนเมื่อความเร็วเกิน ====================
+    //  ที่มา: ผู้ใช้ขอ (18 ก.ย. 69) “อยากให้มีความเร็วตอนเคลื่อนที่ + ตั้งลิมิตเองได้ + เตือนติ๊ด ๆ”
+    //  ที่ตั้งค่า: เมนูตั้งค่าการใช้งาน → ตั้งค่าทั่วไป → “ลิมิตความเร็ว” (กด −/+ ทีละ 1 ไม่ต้องพิมพ์)
+    //  ลำดับเสียงเตือน (ตรรกะล้วน — ทดสอบออฟไลน์ได้ใน tests/speed-warn-offline.html):
+    //    ครั้งที่ 1 ที่เกินในเที่ยว → 5 ติ๊ด · เกินซ้ำรอบถัดไป (ลดความเร็วลงก่อน) → 3 ติ๊ด
+    //  ค่าเริ่มต้น: เปิดเตือน · ลิมิต 80 กม./ชม. · เก็บต่อบัญชีใน Firestore (speedWarn / speedLimitKmh)
+    window.SPD_LIMIT_MIN = 20;
+    window.SPD_LIMIT_MAX = 200;
+    window.SPD_CLEAR_GAP = 5;   // ต้องลดลงต่ำกว่าลิมิต 5 กม./ชม. จึงนับว่า “จบรอบ” (กันติ๊ดรัวตอนความเร็วแกว่งริมลิมิต)
+    if (typeof window.userSpeedLimitKmh !== 'number' || isNaN(window.userSpeedLimitKmh)) window.userSpeedLimitKmh = 80;
+    if (typeof window.userSpeedWarn === 'undefined') window.userSpeedWarn = true;
+    // 🔢 จำนวนติ๊ดต่อรอบ — รอบแรกของเที่ยว 5 ครั้ง · รอบถัดไป 3 ครั้ง (ตามที่ผู้ใช้สั่ง)
+    window.__spdBeepPlan = (episode) => (Number(episode) <= 1 ? 5 : 3);
+    window.__spdTimers = [];
+    window.__spdStopBeeps = () => { try { (window.__spdTimers || []).forEach(t => clearTimeout(t)); } catch (e) {} window.__spdTimers = []; };
+    // 🐞 (18 ก.ย. 69) แยก 2 ระดับ — บทเรียนจากชุดทดสอบ tests/speed-warn-offline.html:
+    //    ตอนแรกใช้ __spdResetEpisode() ทุกที่ที่ “โหลดค่าบัญชีใหม่” ⇒ สแนปช็อตโปรไฟล์ที่มาถึงระหว่างเที่ยว
+    //    ไปตัดติ๊ดที่กำลังเล่นอยู่กลางชุด (ได้ยินแค่ 3 ครั้งจาก 5) และล้างตัวนับรอบจนเตือนซ้ำ 5 ครั้งอีก
+    //    ⇒ โหลดค่าบัญชี = ล้าง “สถานะรอบ” อย่างเดียว · ห้ามแตะติ๊ดที่กำลังเล่น
+    window.__spdClearEpisodeState = () => { window.__spdEpiCount = 0; window.__spdOver = false; };
+    //    เริ่มเที่ยวใหม่/ผู้ใช้เปลี่ยนค่าเอง = ล้างทั้งหมด (รวมติ๊ดที่ค้างอยู่)
+    window.__spdResetEpisode = () => { window.__spdStopBeeps(); window.__spdClearEpisodeState(); };
+    window.__spdBeep = (n) => {
+        window.__spdStopBeeps();
+        const times = Math.max(1, parseInt(n, 10) || 1);
+        for (let i = 0; i < times; i++) {
+            window.__spdTimers.push(setTimeout(() => { try { window.playSound('speed'); } catch (e) {} }, i * 420));
+        }
+    };
+    window.__renderSpeedLimitBox = () => {
+        const v = Math.min(window.SPD_LIMIT_MAX, Math.max(window.SPD_LIMIT_MIN, parseInt(window.userSpeedLimitKmh, 10) || 80));
+        const box = document.getElementById('speedLimitVal'); if (box) box.innerText = String(v);
+        const chip = document.getElementById('tzSpeedLimitVal'); if (chip) chip.innerText = String(v);
+        const row = document.getElementById('speedLimitBox'); if (row) row.style.opacity = (window.userSpeedWarn === false) ? '0.5' : '1';
+        return v;
+    };
+    // 🚦 สวิตช์ “เตือนความเร็วเกิน” — ค่าเริ่มต้นเปิด (เปิด/ปิดได้ทันที · ไม่ต้องกดบันทึกก่อนใช้)
+    window.__spdSyncUi = () => {
+        const sw = document.getElementById('editSpeedWarn');
+        if (sw) window.userSpeedWarn = !!sw.checked;
+        window.__spdResetEpisode();
+        window.__renderSpeedLimitBox();
+        return window.userSpeedWarn;
+    };
+    // ➕➖ ตั้งลิมิตทีละ 1 (ผู้ใช้: “มีปุ่มบวก ลบ ไม่ต้องพิมพ์เป็นตัวเลข”) — เร็วได้ · โหมดทดเร็ว ๆ จะข้ามทีละ 5
+    window.bumpSpeedLimit = (delta, fast) => {
+        // อ่านค่าจากสวิตช์ก่อน — เผื่อผู้ใช้เพิ่งปิด/เปิดสวิตช์แล้วยังไม่ได้กด “บันทึกข้อมูล”
+        const swNow = document.getElementById('editSpeedWarn');
+        if (swNow) window.userSpeedWarn = !!swNow.checked;
+        const step = ((delta || 0) < 0 ? -1 : 1) * (fast ? 5 : 1);
+        const cur = parseInt(window.userSpeedLimitKmh, 10) || 80;
+        window.userSpeedLimitKmh = Math.min(window.SPD_LIMIT_MAX, Math.max(window.SPD_LIMIT_MIN, cur + step));
+        window.__spdOver = false;   // ค่าใหม่ = เริ่มนับรอบใหม่ (ไม่ให้ค้างว่ารอบนี้เตือนแล้ว)
+        window.__renderSpeedLimitBox();
+        try { window.playSound(step > 0 ? 'plus' : 'minus'); } catch (e) {}
+        try { if (typeof window.dirtyFormTouch === 'function') window.dirtyFormTouch('general'); } catch (e) {}
+        return window.userSpeedLimitKmh;
+    };
+    // 🖥️ ตัววาดความเร็ว + ตัวเตือนเกินลิมิต — เรียกทุก tick จาก updateLiveMeterDisplay()
+    //    ⚠️ แยกเป็น “อ่านค่า → วาด → ตัดสินเตือน” ล้วน ๆ เพื่อให้ทดสอบออฟไลน์ได้โดยไม่ต้องมี DOM จริง
+    window.__spdJudge = (spdRaw, limit, warnOn, running, paused, overState) => {
+        const lim = Math.max(0, parseInt(limit, 10) || 0);
+        const spd = Math.max(0, Math.round(Number(spdRaw) || 0));
+        const over = lim > 0 && spd > lim;
+        const armed = !!warnOn && !!running && !paused && lim > 0;
+        const clearAt = Math.max(1, lim - window.SPD_CLEAR_GAP);
+        let nextOver = !!overState;
+        let fire = false;
+        if (!armed) { nextOver = false; }
+        else if (!overState && spd > lim) { nextOver = true; fire = true; }
+        else if (overState && spd <= clearAt) { nextOver = false; }
+        return { spd: spd, limit: lim, over: over, fire: fire, overState: nextOver, clearAt: clearAt };
+    };
+    // อ่านความเร็วล่าสุดจาก GPS (0 ถ้ายังไม่มี fix) — แยกออกมาเพื่อให้ทดสอบได้โดยไม่ต้องมี GPS
+    window.__spdReadSpeed = () => (typeof currentSpeedKmh === 'number' && !isNaN(currentSpeedKmh)) ? Math.max(0, currentSpeedKmh) : 0;
+    window.__spdTick = (spdOverride) => {
+        const sw = document.getElementById('editSpeedWarn');
+        const warnOn = sw ? !!sw.checked : (window.userSpeedWarn !== false);
+        const running = !!window.isManualRunning;
+        // spdOverride = ใช้เฉพาะการทดสอบ (หน้าจริงเรียกโดยไม่ส่งค่า → อ่านจาก GPS)
+        const spdIn = (typeof spdOverride === 'number' && !isNaN(spdOverride)) ? spdOverride : window.__spdReadSpeed();
+        const res = window.__spdJudge(spdIn,
+            window.userSpeedLimitKmh, warnOn, running, !!window.isMeterPaused, !!window.__spdOver);
+        window.__spdOver = res.overState;
+        // ⚡ เขียน DOM เท่าที่ค่าเปลี่ยน — ตัวนี้ถูกเรียกจนละ 1 วิ จึงไม่ควรเขียนซ้ำทุกครั้ง (กันจอกระตุก)
+        const setTxt = (el, v) => { if (el && el.__spdLast !== v) { el.__spdLast = v; el.innerText = v; } };
+        setTxt(document.getElementById('tzSpeedNum'), String(res.spd));
+        const card = document.getElementById('tzSpeedCard');
+        if (card && card.__spdOver !== res.over) { card.__spdOver = res.over; card.classList.toggle('over', res.over); }
+        const chipShow = res.limit > 0 ? 'inline-flex' : 'none';
+        const chip = document.getElementById('tzSpeedLimitChip');
+        if (chip && chip.__spdShow !== chipShow) { chip.__spdShow = chipShow; chip.style.display = chipShow; }
+        setTxt(document.getElementById('tzSpeedLimitVal'), String(res.limit || 80));
+        const smallColor = res.over ? '#fca5a5' : '#7dd3fc';
+        const smallEl = document.getElementById('smallSpeed');
+        if (smallEl) {
+            setTxt(smallEl, String(res.spd));
+            if (smallEl.__spdColor !== smallColor) { smallEl.__spdColor = smallColor; smallEl.style.color = smallColor; }
+        }
+        setTxt(document.getElementById('smallSpeedLimit'), (res.limit > 0 && warnOn) ? ('ลิมิต ' + res.limit + ' กม./ชม.') : '');
+        if (res.fire) {
+            window.__spdEpiCount = (window.__spdEpiCount || 0) + 1;
+            window.__spdBeep(window.__spdBeepPlan(window.__spdEpiCount));
+            if (navigator.vibrate && window.userVibrateGold !== false) { try { navigator.vibrate([70, 50, 70]); } catch (e) {} }
+            try { if (window.showToast) window.showToast('🚀 ความเร็วเกิน ' + res.limit + ' กม./ชม. (ตอนนี้ ' + res.spd + ')', false, null, true); } catch (e) {}
+        }
+        return res;
+    };
+
     // ==================== ⚙️ (18 ก.ย. 69) หน้าต่าง “ตั้งค่าทั่วไป” (เมนูตั้งค่าการใช้งาน) ====================
     //  ที่มา: ผู้ใช้สั่งย้ายสวิตช์ “พฤติกรรมแอป” ออกจากหน้า “ตั้งค่าโปรไฟล์” (ซึ่งควรมีเรื่องบัญชี/รูป/ธีม/PIN) → มาอยู่ในเมนู “ตั้งค่าการใช้งาน”
     //        เป็นหัวข้อบนสุดชื่อ “ตั้งค่าทั่วไป” — ทุกตำแหน่ง (User/Manager/Admin/VIP) เข้าได้ แต่ค่าที่ระบบบังคับยังล็อกตามสิทธิ์
@@ -19780,6 +19962,10 @@
         if (afSel) afSel.checked = window.userAutoFs !== false;          // 📺 เต็มจออัตโนมัติ
         const mf = document.getElementById('editManualFs');
         if (mf) mf.checked = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        // 🚀 (18 ก.ย. 69) ลิมิตความเร็ว + สวิตช์เตือนเมื่อเกิน (ค่าเริ่มต้น เปิด · 80 กม./ชม.)
+        const swSel = document.getElementById('editSpeedWarn');
+        if (swSel) swSel.checked = window.userSpeedWarn !== false;
+        try { window.__renderSpeedLimitBox(); } catch (e) {}
         // 🔒 ค่าที่ระบบบังคับ (สั่น toast ทอง · เต็มจออัตโนมัติ) — แก้ได้ตามสิทธิ์ canEditManagedSettings เท่านั้น
         const canEditManagedSettings = window.canEditManagedSettings ? window.canEditManagedSettings() : (currentUserRole === 'Admin');
         [vibSel, afSel].forEach(el => { if (el) { el.disabled = !canEditManagedSettings; } });
@@ -19840,6 +20026,12 @@
             if (nvEl) { payload.navVoice = nvEl.checked; window.userNavVoice = nvEl.checked; }
             const arEl = document.getElementById('editAutoResume');
             if (arEl) { payload.autoResume = arEl.checked; window.userAutoResume = arEl.checked; }
+            // 🚀 (18 ก.ย. 69) ลิมิตความเร็ว + เตือนเมื่อเกิน — บันทึกต่อบัญชี (ใช้ทุกเครื่องที่ล็อกอินบัญชีนี้)
+            const spdWarnEl = document.getElementById('editSpeedWarn');
+            if (spdWarnEl) { payload.speedWarn = spdWarnEl.checked; window.userSpeedWarn = spdWarnEl.checked; }
+            payload.speedLimitKmh = (typeof window.__renderSpeedLimitBox === 'function') ? window.__renderSpeedLimitBox() : window.userSpeedLimitKmh;
+            window.userSpeedLimitKmh = payload.speedLimitKmh;
+            try { window.__spdResetEpisode(); } catch (e) {}
             const kaEl = document.getElementById('editKeepAwake');
             if (kaEl) {
                 payload.keepAwake = kaEl.checked; window.userKeepAwake = kaEl.checked;

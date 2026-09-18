@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — ความเร็วบนมิเตอร์ + เตือนเมื่อเกินลิมิต (5 ติ๊ด / 3 ติ๊ด)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: ความเร็วบนจอมิเตอร์ + ลิมิตความเร็ว + เตือนเมื่อเกิน</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ป้อนความเร็วเข้าไปตรง ๆ ผ่าน <code>__spdTick(ความเร็ว)</code>
+        (หน้าจริงเรียกโดยไม่ส่งค่า → อ่านจาก GPS) แล้ว <b>นับจำนวนเสียง “ติ๊ด” ที่ยิงจริง</b> ด้วยการสตับ <code>playSound</code>
+        <br>กติกาที่ผู้ใช้สั่ง 18 ก.ย. 69: เกินลิมิตครั้งแรกของเที่ยว → <b>ติ๊ด 5 ครั้ง</b> แล้วหยุด · ลดความเร็วลงมาแล้วเร่งเกินอีก → <b>ติ๊ด 3 ครั้ง</b>
+        · ต้องเห็นความเร็วทั้งจอมิเตอร์ใหญ่และการ์ดหน้าหลัก · ตั้งลิมิตด้วยปุ่ม −/+ ทีละ 1 ไม่ต้องพิมพ์
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/speed-warn-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (12 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const CACHE_KEYS = ['taxi_active_trip_v1', 'taxi_toll_pairs_v1', 'taxi_toll_rates_v1'];
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[speed-warn-test]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ต + เก็บเสียงติ๊ด ============================
+    let stubsInstalled = false;
+    let beats = [];          // เวลาที่ยิงเสียงติ๊ดแต่ละครั้ง (มิลลิวินาที นับจาก beatsT0)
+    let beatsT0 = Date.now();
+    let cancelLog = [];      // 🔎 ประวัติการยกเลิกติ๊ด (ใช้ตอนติ๊ดไม่ครบ — บอกได้ว่าใครยกเลิก)
+    let realPlaySound = null;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) {
+                    cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return;
+                }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test: ไม่ใช้ GPS' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        // 🔊 ดักเสียง: เก็บเฉพาะการยิงเสียงเตือนความเร็ว ('speed') — ไม่ให้เสียงจริงออกตอนทดสอบ
+        try {
+            realPlaySound = cw.playSound;
+            cw.playSound = function (type) { if (type === 'speed') beats.push(Date.now() - beatsT0); };
+            // 🔎 ตัวช่วยวินิจฉัย: ใครเป็นคนยกเลิกติ๊ดที่ยังค้างอยู่ (ควรมีแต่ตัวชุดทดสอบเอง/ตัวเริ่มชุดใหม่เท่านั้น)
+            const originalStop = cw.__spdStopBeeps, originalBeep = cw.__spdBeep;
+            cw.__spdStopBeeps = function () {
+                const pending = (cw.__spdTimers || []).length;
+                if (pending > 0) {
+                    let who = 'ไม่ทราบที่มา';
+                    try { who = (new Error().stack || '').split('\n').slice(1, 4).map(s => s.trim().replace(/https?:\/\/[^ )]+\//g, '')).join(' << '); } catch (e) {}
+                    cancelLog.push('ยกเลิกติ๊ดค้าง ' + pending + ' ครั้ง ← ' + who);
+                }
+                return originalStop();
+            };
+            cw.__spdBeep = function (n) { cancelLog.push('เริ่มติ๊ดชุดใหม่ ' + n + ' ครั้ง'); return originalBeep(n); };
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.__spdTick === 'function' && typeof cw.bumpSpeedLimit === 'function' && typeof cw.playSound === 'function') {
+                installStubs();
+                await wait(200);
+                try { cw.isManualRunning = false; } catch (e) {}
+                try { CACHE_KEYS.forEach(k => cw.localStorage.removeItem(k)); } catch (e) {}
+                await closeAllModals();
+                await waitForNoLoader(12000);
+                await wait(200);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    // ============================ เครื่องมือทดสอบ ============================
+    // เริ่มสถานะเที่ยวใหม่ + เคลียร์ตัวนับติ๊ด (ไม่แตะค่าที่ผู้ใช้ตั้งไว้ในบัญชี)
+    function armRunning() {
+        const cw = w();
+        cw.__spdResetEpisode();
+        cw.isManualRunning = true;
+        cw.isMeterPaused = false;
+        beats = []; beatsT0 = Date.now(); cancelLog = [];
+    }
+    function stopRunning() { try { w().isManualRunning = false; } catch (e) {} }
+    const cancelText = () => cancelLog.length ? ' · ประวัติยกเลิก: ' + cancelLog.join(' | ') : '';
+    // รอให้ติ๊ดชุดหนึ่งเล่นจบ (ติ๊ดห่างกัน 420 มิลลิวินาที → 5 ครั้ง = ~1.7 วิ · 3 ครั้ง = ~0.9 วิ)
+    // เผื่อเวลาให้กว้าง (3.4 วิ) เพราะเบราว์เซอร์อาจหน่วง setTimeout เมื่อแท็บไม่ถูกโฟกัส
+    async function waitBeeps(ms) { await wait(ms || 3400); return beats.length; }
+    const beatList = () => '[' + beats.join(', ') + '] ms';
+    const card = () => w().document.getElementById('tzSpeedCard');
+    const num = () => w().document.getElementById('tzSpeedNum');
+    const small = () => w().document.getElementById('smallSpeed');
+    const limitVal = () => w().document.getElementById('speedLimitVal');
+    const chip = () => w().document.getElementById('tzSpeedLimitChip');
+
+    // ============================ รัน 1 สถานการณ์ ============================
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(40000).then(() => { throw new Error('สถานการณ์ timeout 40 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ล้มเหลว</span> ' + name + '\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span>';
+            failures.push({ name: name, error: e && e.message ? e.message : String(e) });
+            failCount++;
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ล้มเหลว ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        const n = (w() && w().__net) ? w().__net : { blockedFetch: 0, blockedXhr: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: คำขอออกนอกเครื่องที่ถูกบล็อกทั้งหมด ' + (n.blockedFetch + n.blockedXhr) +
+            ' ครั้ง (fetch ' + n.blockedFetch + ' · XHR ' + n.blockedXhr + ') — ชุดทดสอบนี้ไม่ต้องใช้อินเทอร์เน็ต';
+    }
+
+    // ============================ สถานการณ์ทั้งหมด ============================
+    async function runAll() {
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+        renderSummary();
+        const cw = w();
+        const LIM = 80;
+        // 🔒 เก็บค่าเดิมของบัญชีไว้ แล้วคืนกลับเมื่อทดสอบจบ (ชุดนี้ต้องไม่ทิ้งค่าแปลกไว้ให้ผู้ใช้)
+        const savedLimit = cw.userSpeedLimitKmh, savedWarn = cw.userSpeedWarn;
+
+        await runScenario('S1 · การ์ดความเร็วอยู่บนจอมิเตอร์ใหญ่จริง และเริ่มที่ 0 (ยังไม่วิ่ง)', async () => {
+            cw.userSpeedLimitKmh = LIM; cw.userSpeedWarn = true;
+            cw.isManualRunning = false;
+            cw.__spdTick();  // ไม่ส่งค่า = อ่านจาก GPS (สตับไว้ = 0)
+            const c = card();
+            assert(!!c, 'ไม่พบการ์ดความเร็ว #tzSpeedCard บนจอมิเตอร์ใหญ่');
+            assert(!!num(), 'ไม่พบตัวเลขความเร็ว #tzSpeedNum');
+            assert(num().innerText === '0', 'ความเร็วเริ่มต้นควรเป็น 0 แต่ได้ ' + num().innerText);
+            assert(!c.classList.contains('over'), 'ยังไม่วิ่ง ไม่ควรขึ้นโทนแดง');
+            const cs = w().getComputedStyle(num());
+            return 'ตัวเลขเริ่ม = 0 · ขนาดตัวอักษร = ' + cs.fontSize + ' · สี = ' + cs.color + ' (โทนฟ้า ปกติ)';
+        });
+
+        await runScenario('S2 · ตัวเลขความเร็วขยับตามค่าที่ป้อน + ขึ้นการ์ดหน้าหลักด้วย', async () => {
+            armRunning();
+            cw.__spdTick(30);
+            const a = num().innerText, sa = small().innerText;
+            cw.__spdTick(47);
+            const b = num().innerText, sb = small().innerText;
+            stopRunning();
+            assert(a === '30' && b === '47', 'ตัวเลขบนจอมิเตอร์ใหญ่ไม่ตรง: ได้ ' + a + ' → ' + b);
+            assert(sa === '30' && sb === '47', 'ตัวเลขบนการ์ดหน้าหลักไม่ตรง: ได้ ' + sa + ' → ' + sb);
+            return 'จอมิเตอร์ใหญ่: 30 → 47 กม./ชม. · การ์ดหน้าหลัก: 30 → 47 กม./ชม. (ตรงกัน)';
+        });
+
+        await runScenario('S3 · เกินลิมิตครั้งแรกของเที่ยว → ติ๊ด 5 ครั้ง + การ์ดเป็นโทนแดง', async () => {
+            armRunning();
+            cw.__spdTick(LIM + 5);
+            const overNow = card().classList.contains('over');
+            const chipTxt = chip().innerText;
+            const n = await waitBeeps();
+            stopRunning();
+            assert(n === 5, 'ควรได้ติ๊ด 5 ครั้ง แต่ได้ ' + n + ' ครั้ง · จังหวะจริง = ' + beatList() + cancelText());
+            assert(overNow === true, 'การ์ดความเร็วควรเปลี่ยนเป็นโทนแดงเมื่อเกินลิมิต');
+            assert(chipTxt.indexOf(String(LIM)) >= 0, 'ชิปลิมิตบนจอมิเตอร์ควรบอกค่าลิมิต (' + LIM + ') แต่ได้ "' + chipTxt + '"');
+            return 'ติ๊ด ' + n + ' ครั้ง จังหวะ ' + beatList() + ' (เกิน 85 จากลิมิต 80) · การ์ดแดง = ' + overNow + ' · ชิป = "' + chipTxt + '"';
+        });
+
+        await runScenario('S4 · ยังเกินอยู่ (ไม่ลดความเร็ว) → ต้องไม่ติ๊ดซ้ำ', async () => {
+            armRunning();
+            cw.__spdTick(LIM + 9);
+            await wait(200);
+            cw.__spdTick(LIM + 11);   // ยังเกินอยู่ → ไม่ควรนับเป็นรอบใหม่
+            cw.__spdTick(LIM + 12);
+            const n = await waitBeeps();
+            stopRunning();
+            assert(n === 5, 'ระหว่างที่ยังเกินอยู่ควรติ๊ดแค่รอบเดียว (5 ครั้ง) แต่ได้ ' + n + ' ครั้ง · จังหวะจริง = ' + beatList());
+            return 'ติ๊ด ' + n + ' ครั้งเท่านั้นตลอดช่วงที่ยังเกิน (89 → 91 → 92) — ไม่กวนซ้ำ ✓';
+        });
+
+        await runScenario('S5 · ลดความเร็วลงพ้นโซนแล้วเร่งเกินอีก → ติ๊ดแค่ 3 ครั้ง (ไม่ใช่ 5)', async () => {
+            armRunning();
+            cw.__spdTick(LIM + 6);              // รอบที่ 1
+            await waitBeeps();
+            const firstRound = beats.length;
+            const firstBeats = beatList();
+            cw.__spdTick(LIM - 10);             // ลดลงต่ำกว่าลิมิต 10 → จบรอบ
+            await wait(120);
+            const midOver = card().classList.contains('over');
+            beats = []; beatsT0 = Date.now();
+            cw.__spdTick(LIM + 8);              // รอบที่ 2
+            const n = await waitBeeps(2400);
+            stopRunning();
+            assert(firstRound === 5, 'รอบแรกควรติ๊ด 5 ครั้ง แต่ได้ ' + firstRound + ' · จังหวะ = ' + firstBeats + cancelText());
+            assert(n === 3, 'รอบที่ 2 ควรติ๊ด 3 ครั้ง แต่ได้ ' + n + ' ครั้ง · จังหวะ = ' + beatList());
+            assert(midOver === false, 'ตอนลดความเร็วลงแล้ว การ์ดควรกลับเป็นสีฟ้าปกติ');
+            return 'รอบแรก 5 ครั้ง → ลดเป็น 70 แล้วการ์ดฟ้า (' + midOver + ') → เร่ง 88 อีกครั้งได้ ' + n + ' ครั้ง ✓';
+        });
+
+        await runScenario('S6 · เกินลิมิตค้างไว้ 5 ครั้งแล้วเงียบ — ต้องไม่มีติ๊ดที่ 6', async () => {
+            armRunning();
+            cw.__spdTick(LIM + 7);
+            await wait(3800);                   // เลยจังหวะติ๊ดที่ 5 ไปแล้ว
+            const after = beats.length;
+            await wait(1400);                   // รออีก 1.4 วิ
+            const later = beats.length;
+            stopRunning();
+            assert(after === 5, 'ควรติ๊ดครบ 5 ครั้งก่อน ได้ ' + after + ' · จังหวะ = ' + beatList());
+            assert(later === 5, 'หลังจากติ๊ดครบแล้วต้องเงียบ แต่เพิ่มเป็น ' + later + ' ครั้ง');
+            return 'ติ๊ด 5 ครั้งแล้วหยุดเงียบ (ที่ 2.4 วิ = ' + after + ' · ที่ 3.8 วิ = ' + later + ')';
+        });
+
+        await runScenario('S7 · ปิดสวิตช์ “เตือนเมื่อความเร็วเกิน” → ไม่ติ๊ดเลย (แต่ยังเห็นความเร็ว)', async () => {
+            armRunning();
+            cw.userSpeedWarn = false;                 // สวิตช์ปิด
+            const sw = cw.document.getElementById('editSpeedWarn');
+            if (sw) sw.checked = false;
+            cw.__spdTick(LIM + 25);
+            const numNow = num().innerText;
+            const n = await waitBeeps(1600);
+            stopRunning();
+            assert(n === 0, 'ปิดสวิตช์แล้วต้องไม่มีติ๊ด แต่ได้ ' + n + ' ครั้ง');
+            assert(numNow === String(LIM + 25), 'ยังต้องแสดงความเร็วอยู่ (ได้ ' + numNow + ')');
+            if (sw) sw.checked = true;
+            cw.userSpeedWarn = savedWarn;
+            return 'ปิดสวิตช์ → ติ๊ด 0 ครั้ง · ตัวเลขความเร็วยังแสดง = ' + numNow + ' กม./ชม.';
+        });
+
+        await runScenario('S8 · ปุ่ม − / + ปรับทีละ 1 + เพดาน 20–200 (กันกดรัวจนหลุด)', async () => {
+            const from = cw.userSpeedLimitKmh;
+            cw.bumpSpeedLimit(1);
+            const plus1 = cw.userSpeedLimitKmh;
+            cw.bumpSpeedLimit(-1);
+            const minus1 = cw.userSpeedLimitKmh;
+            for (let i = 0; i < 300; i++) cw.bumpSpeedLimit(-1);
+            const low = cw.userSpeedLimitKmh;
+            for (let i = 0; i < 400; i++) cw.bumpSpeedLimit(1);
+            const high = cw.userSpeedLimitKmh;
+            const shown = limitVal().innerText;
+            cw.userSpeedLimitKmh = from; cw.__renderSpeedLimitBox();
+            assert(plus1 === from + 1, 'กด + ควรเพิ่มทีละ 1 (ได้ ' + plus1 + ')');
+            assert(minus1 === from, 'กด − ควรลดกลับเท่าเดิม (ได้ ' + minus1 + ')');
+            assert(low === 20, 'กด − รัว ๆ ต้องไม่ต่ำกว่า 20 แต่ได้ ' + low);
+            assert(high === 200, 'กด + รัว ๆ ต้องไม่เกิน 200 แต่ได้ ' + high);
+            assert(shown === '200', 'ตัวเลขใหญ่บนหน้าตั้งค่าควรตรงกับค่า (ได้ ' + shown + ')');
+            return 'จาก ' + from + ' → +1 = ' + plus1 + ' → −1 = ' + minus1 + ' · กด − รัว 300 ครั้ง = ' + low + ' · กด + รัว 400 ครั้ง = ' + high + ' · ตัวเลขบนหน้าจอ = ' + shown;
+        });
+
+        await runScenario('S9 · พักมิเตอร์ (หยุดชั่วคราว) → ไม่ติ๊ด แม้ความเร็วเกิน', async () => {
+            armRunning();
+            cw.isMeterPaused = true;
+            cw.__spdTick(LIM + 30);
+            const n = await waitBeeps(1600);
+            cw.isMeterPaused = false;
+            stopRunning();
+            assert(n === 0, 'ตอนพักมิเตอร์ไม่ควรติ๊ด แต่ได้ ' + n + ' ครั้ง');
+            return 'พักมิเตอร์ + วิ่ง 110 กม./ชม. → ติ๊ด 0 ครั้ง (ยังแสดงความเร็ว) ✓';
+        });
+
+        await runScenario('S10 · เริ่มเที่ยวใหม่ → กลับไปนับ “5 ติ๊ด” อีกครั้ง (ไม่ใช่ 3)', async () => {
+            armRunning();
+            cw.__spdTick(LIM + 6); await waitBeeps();
+            cw.__spdTick(LIM - 10); await wait(120);
+            cw.__spdTick(LIM + 6); await waitBeeps(2400);   // รอบ 2 = 3 ติ๊ด
+            const before = beats.length;
+            cw.__spdResetEpisode();                          // = สิ่งที่ startMeterAndTracking ทำตอนเริ่มเที่ยว
+            beats = []; beatsT0 = Date.now();
+            cw.__spdTick(LIM + 6);
+            const n = await waitBeeps();
+            stopRunning();
+            assert(n === 5, 'เที่ยวใหม่ควรเริ่มที่ 5 ติ๊ด แต่ได้ ' + n + ' ครั้ง · จังหวะ = ' + beatList());
+            return 'เที่ยวเดิมรอบ 2 ได้ 3 ติ๊ด (' + before + ' รวม) → เริ่มเที่ยวใหม่ได้ ' + n + ' ครั้ง ✓';
+        });
+
+        await runScenario('S11 · เริ่มติ๊ดชุดใหม่ตอนชุดเก่ายังไม่จบ → ต้องยกเลิกชุดเก่า (ไม่ทับกัน 8 ครั้ง)', async () => {
+            armRunning();
+            cw.__spdTick(LIM + 6);                 // ติ๊ดชุด 5 เริ่มยิง
+            await wait(250);
+            cw.__spdTick(LIM - 10);                // จบรอบเร็ว ๆ
+            await wait(80);
+            beats = []; beatsT0 = Date.now();
+            cw.__spdTick(LIM + 6);                 // รอบ 2 (ชุด 3) — ต้องยกเลิกเศษของชุดเก่า
+            const n = await waitBeeps(2400);
+            stopRunning();
+            assert(n === 3, 'ชุดใหม่ควรมีแค่ 3 ครั้ง (เศษชุดเก่าต้องถูกยกเลิก) แต่ได้ ' + n + ' ครั้ง · จังหวะ = ' + beatList());
+            return 'ชุดใหม่ยิง ' + n + ' ครั้งเท่านั้น — ไม่มีติ๊ดค้างจากชุดเก่ามารวม ✓';
+        });
+
+        await runScenario('S12 · “ไม่เลือกขึ้นทางด่วน” ไม่เกี่ยว — ตรวจว่าไม่มีติ๊ดตอนความเร็วต่ำกว่าลิมิตเลย', async () => {
+            armRunning();
+            for (const v of [0, 12, 39, 60, LIM]) cw.__spdTick(v);
+            const n = await waitBeeps(1400);
+            const overNow = card().classList.contains('over');
+            stopRunning();
+            assert(n === 0, 'ความเร็วไม่เกินลิมิตต้องไม่ติ๊ด แต่ได้ ' + n + ' ครั้ง');
+            assert(overNow === false, 'ความเร็วเท่าลิมิตพอดี (80) ยังไม่ถือว่าเกิน — การ์ดไม่ควรแดง');
+            return 'ไล่ความเร็ว 0 → 12 → 39 → 60 → 80 (เท่าลิมิต) → ติ๊ด 0 ครั้ง · การ์ดไม่แดง ✓';
+        });
+
+        // คืนค่าเดิมของบัญชี
+        try { cw.userSpeedLimitKmh = savedLimit; cw.userSpeedWarn = savedWarn; cw.__renderSpeedLimitBox(); cw.__spdResetEpisode(); if (realPlaySound) cw.playSound = realPlaySound; } catch (e) {}
+        stopRunning();
+    }
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('runBtn');
+        btn.disabled = true; btn.textContent = '⏳ กำลังรัน...';
+        try {
+            if (!stubsInstalled) await loadApp();
+            await runAll();
+        } catch (e) {
+            summaryEl.innerHTML = '<span style="color:var(--red)">ตั้งชุดทดสอบไม่สำเร็จ: ' + (e && e.message ? e.message : e) + '</span>';
+        } finally {
+            btn.disabled = false; btn.textContent = '🔄 รันการทดสอบใหม่ (12 สถานการณ์)';
+        }
+    });
+
+    // โหลดแอปให้เลย แล้วค่อยรันอัตโนมัติ (เปิดหน้าแล้วเห็นผลได้ทันที)
+    (async () => {
+        try { await loadApp(); await runAll(); } catch (e) { log('auto-load failed', e); }
+    })();
+})();
+</script>
+</body>
+</html>

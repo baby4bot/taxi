@@ -37,7 +37,7 @@
         <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
         <code>http://127.0.0.1:58911/tests/start-flow-offline.html</code>
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (7 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (13 สถานการณ์)</button>
     <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
     <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
     <div id="summary"></div>
@@ -256,20 +256,27 @@
             return 'ชั้นก่อน back = ' + before + ' → หลัง back = 0 · overlay=ปิด · มิเตอร์ยังเดิน';
         });
 
-        await runScenario('S4 · มีสิทธิ์มินิแมพ → เข้าจอใหญ่แล้วเห็นมินิแมพทันที (ไม่ต้องรีเฟรช)', async () => {
+        await runScenario('S4 · มีสิทธิ์มินิแมพ → เริ่มนำทางแล้ว “ยุบไว้ก่อน” เห็นแค่ปุ่มให้กดเปิดเอง', async () => {
             const cw = w();
             const realCan = cw.canUseMiniMap;
             cw.canUseMiniMap = () => true;
+            cw.navWarnBarHide();
             try {
                 cw.startNavigationMap(START.lat, START.lon, DEST.lat, DEST.lon, DEST.name, 48.32, [[START.lat, START.lon], [DEST.lat, DEST.lon]]);
+                await wait(300);
+                assert(!mapShown(), 'มินิแมพเด้งโชว์เองหลังเริ่มนำทาง (ผู้ใช้สั่งให้ยุบไว้ก่อน)');
+                const st = btnState();
+                assert(st && st.hidden === false, 'มีสิทธิ์แต่ปุ่มเปิดแผนที่กลับไม่โชว์');
+                assert(st.blue === true, 'ปุ่มต้องติดสีฟ้า (map-ready) ให้รู้ว่ากดได้');
+                assert(cw.navMiniCanReopen() === true, 'มีสิทธิ์และมีเส้นทางรออยู่ → canReopen ต้องเป็น true');
+                cw.navMiniReopen();                 // = ผู้ใช้เอานิ้วกดปุ่มเอง
                 await wait(250);
-                assert(mapShown(), 'มีสิทธิ์แต่แผนที่นำทางไม่แสดง');
+                assert(mapShown(), 'กดปุ่มเปิดเองแล้วแผนที่ต้องขึ้น');
                 const e = cw.document.getElementById('navMini');
                 const r = e.getBoundingClientRect();
                 const hit = cw.document.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top + 12));
                 assert(!!(hit && (hit === e || e.contains(hit))), 'แผนที่แสดงแต่ถูกหน้าอื่นบัง (เห็นไม่ได้จริง)');
-                const z = cw.getComputedStyle(e).zIndex;
-                return 'mapShown=true · ปุ่มที่แตะได้ตรงกลางหัวแผนที่ = ' + (hit.id || hit.tagName) + ' · z-index=' + z;
+                return 'เริ่มนำทาง: ยุบ (mapShown=false) + ปุ่มสีฟ้า → กดเอง: แผนที่ขึ้น · z-index=' + cw.getComputedStyle(e).zIndex;
             } finally { cw.canUseMiniMap = realCan; }
         });
 
@@ -288,19 +295,26 @@
             } finally { cw.canUseMiniMap = realCan; }
         });
 
-        await runScenario('S6 · “สิทธิ์เพิ่งมาถึง” กลางเที่ยว → ระบบคืนแผนที่ให้เองโดยไม่ต้องรีเฟรช', async () => {
+        await runScenario('S6 · “สิทธิ์เพิ่งมาถึง” กลางเที่ยว → ปุ่มเปิดคืนขึ้นทันที (ไม่ต้องรีเฟรช) แต่แผนที่ยังคงยุบ', async () => {
             const cw = w();
             const realCan = cw.canUseMiniMap;
             cw.canUseMiniMap = () => false;
+            cw.navWarnBarHide();
             try {
                 cw.startNavigationMap(START.lat, START.lon, DEST.lat, DEST.lon, DEST.name, 48.32, [[START.lat, START.lon], [DEST.lat, DEST.lon]]);
                 await wait(220);
                 assert(!mapShown(), 'ช่วงไม่มีสิทธิ์ แผนที่ต้องไม่แสดง');
+                assert(btnState().hidden === true, 'ช่วงไม่มีสิทธิ์ ปุ่มเปิดคืนต้องซ่อน');
                 cw.canUseMiniMap = () => true;
                 cw.navMiniApplyPerm();          // = โปรไฟล์/roles โหลดเสร็จแล้วเรียกใช้สิทธิ์
                 await wait(250);
-                assert(mapShown(), 'ได้สิทธิ์แล้วแต่แผนที่ไม่กลับมา (ผู้ใช้ต้องรีเฟรชเอง)');
-                return 'ก่อน: ซ่อน → หลังได้สิทธิ์ (navMiniApplyPerm): แสดงทันที';
+                assert(btnState().hidden === false, 'ได้สิทธิ์แล้วแต่ปุ่มเปิดคืนไม่ขึ้น (ผู้ใช้ต้องรีเฟรชเอง)');
+                assert(btnState().blue === true, 'ปุ่มเปิดคืนที่เพิ่งขึ้นต้องเป็นสีฟ้า');
+                assert(!mapShown(), 'ได้สิทธิ์แล้วระบบเปิดแผนที่เอง (ผู้ใช้สั่งให้รอกดเอง)');
+                cw.navMiniReopen();
+                await wait(250);
+                assert(mapShown(), 'กดปุ่มเองแล้วยังเปิดไม่ได้');
+                return 'ซ่อนปุ่ม → ได้สิทธิ์: ปุ่มสีฟ้าขึ้น · แผนที่ยังยุบ → กดเอง: ขึ้น';
             } finally { cw.canUseMiniMap = realCan; }
         });
 
@@ -310,6 +324,9 @@
             cw.canUseMiniMap = () => true;
             try {
                 cw.startNavigationMap(START.lat, START.lon, DEST.lat, DEST.lon, DEST.name, 48.32, [[START.lat, START.lon], [DEST.lat, DEST.lon]]);
+                await wait(220);
+                assert(!mapShown(), 'เริ่มนำทางควรเป็น “ยุบ” ก่อน');
+                cw.navMiniReopen();              // ผู้ใช้กดปุ่มเปิดเองก่อน
                 await wait(220);
                 assert(mapShown(), 'ต้องแสดงก่อนทดสอบ');
                 cw.navMiniHideByUser();          // = กดปุ่ม ✕ บนแผนที่
@@ -326,6 +343,127 @@
                 assert(mapShown(), 'แตะปุ่มเปิดคืนแล้วแผนที่ต้องกลับมา');
                 return '✕ → ปุ่มเปิดคืนสีฟ้า · apply ซ้ำ = ไม่เด้งเอง · แตะปุ่ม = กลับมาได้';
             } finally { cw.canUseMiniMap = realCan; }
+        });
+
+        // 🚕 (18 ก.ย. 69) แถบเตือน “มิเตอร์เดินแล้ว แต่เริ่มนำทางไม่ได้” — กัน “ล้มแบบเงียบ” กลับมา
+        await runScenario('S8 · เริ่มนำทางล้มแบบเงียบ (เริ่มแล้วไม่อาร์มเส้นทาง) → ต้องขึ้นแถบเตือน ไม่เงียบ', async () => {
+            const cw = w();
+            const real = cw.startNavigationMap;
+            cw.navWarnBarHide();
+            cw.startNavigationMap = function () { /* 🐞 จำลองตัวจริงที่ bail ออกเงียบ ๆ โดยไม่ตั้ง __navArmed */ };
+            try {
+                armRoute();
+                await wait(220);
+                cw.startTripFromPreview();
+                await wait(1400);
+                assert(cw.__navWarnVisible(), 'เริ่มนำทางไม่ได้แต่ไม่มีอะไรขึ้นเลย (ผู้ใช้ไม่รู้ตัว)');
+                const txt = cw.document.getElementById('navWarnBar').textContent.replace(/\s+/g, ' ');
+                assert(txt.indexOf('เริ่มนำทางไม่ได้') >= 0, 'ข้อความแถบไม่ตรง: ' + txt);
+                assert(txt.indexOf('ลองใหม่') >= 0, 'ต้องมีปุ่ม “ลองใหม่”');
+                assert(!!cw.isManualRunning, 'มิเตอร์ต้องยังเดินอยู่ (ไม่ใช่ยกเลิกเที่ยว)');
+                const wm = w();
+                const rect = cw.document.getElementById('navWarnBar').getBoundingClientRect();
+                const bg = cw.document.elementFromPoint(rect.left + 5, rect.bottom + 30);
+                assert(!bg || bg.closest('#navWarnBar') === null, 'แถบเตือนไปบล็อกการแตะส่วนอื่นของจอ');
+                assert(rect.width > 200, 'แถบต้องกว้างเต็มจอ (ได้ ' + Math.round(rect.width) + 'px)');
+                return 'แถบขึ้นใน 1.4 วิ · ข้อความ + ปุ่มลองใหม่ · ไม่มี backdrop · มิเตอร์ยังเดิน · สูง ' + Math.round(rect.height) + 'px';
+            } finally { cw.startNavigationMap = real; cw.navWarnBarHide(); }
+        });
+
+        await runScenario('S9 · เริ่มนำทางสำเร็จ → ต้องไม่มีแถบเตือนขึ้นกวน', async () => {
+            const cw = w();
+            cw.navWarnBarHide();
+            armRoute();
+            await wait(220);
+            cw.startTripFromPreview();
+            await wait(1400);
+            assert(cw.__navArmed === true, '__navArmed ควรเป็น true เมื่อเส้นทางพร้อม');
+            assert(!cw.__navWarnVisible(), 'นำทางสำเร็จแล้วแต่แถบเตือนยังขึ้น (กวนคนขับผิดที่)');
+            return '__navArmed=true · แถบเตือน = ไม่ขึ้น';
+        });
+
+        await runScenario('S10 · ล้มแล้วกด “ลองใหม่” จนสำเร็จ → แถบต้องหายไปเอง', async () => {
+            const cw = w();
+            const real = cw.startNavigationMap;
+            const realCan = cw.canUseMiniMap;
+            cw.canUseMiniMap = () => true;                // จำลองแอดมินที่มีสิทธิ์มินิแมพ
+            cw.navWarnBarHide();
+            cw.startNavigationMap = function () { };
+            try {
+                armRoute();
+                await wait(220);
+                cw.startTripFromPreview();
+                await wait(1400);
+                assert(cw.__navWarnVisible(), 'ต้องมีแถบก่อนทดสอบปุ่มลองใหม่');
+                cw.startNavigationMap = real;                 // เน็ตกลับมา = ตัวจริงทำงานได้
+                cw.document.querySelector('#navWarnBar .nwb-btn').click();
+                await wait(500);
+                assert(cw.__navArmed === true, 'กดลองใหม่แล้วเส้นทางควรอาร์มจริง');
+                assert(!cw.__navWarnVisible(), 'กดลองใหม่แล้วสำเร็จ แต่แถบยังค้างอยู่');
+                // ⚠️ มินิแมพต้อง “ยุบไว้ก่อน” เสมอหลังเริ่มนำทาง → ที่ต้องได้คือ “ปุ่มสีฟ้า” ไม่ใช่ “แผนที่โชว์”
+                const st = btnState();
+                assert(st && st.hidden === false && st.blue === true, 'ลองใหม่สำเร็จแล้วแต่มินิแมพไม่ขึ้น (ต้องขึ้น)');
+                return 'แถบขึ้น → กดลองใหม่ → แถบหาย + __navArmed=true + ปุ่มสีฟ้าโชว์ (แผนที่รอกด)';
+            } finally { cw.startNavigationMap = real; cw.canUseMiniMap = realCan; cw.navWarnBarHide(); }
+        });
+
+        await runScenario('S10b · กด “ลองใหม่” แล้วยังล้มอีก → แถบต้องกลับมาเตือน (ไม่หายเงียบ)', async () => {
+            const cw = w();
+            const real = cw.startNavigationMap;
+            cw.navWarnBarHide();
+            cw.startNavigationMap = function () { };          // ยังล้มเหมือนเดิม
+            try {
+                armRoute();
+                await wait(220);
+                cw.startTripFromPreview();
+                await wait(1400);
+                assert(cw.__navWarnVisible(), 'ต้องมีแถบก่อนทดสอบ');
+                cw.document.querySelector('#navWarnBar .nwb-btn').click();
+                await wait(1300);
+                assert(cw.__navWarnVisible(), 'กดลองใหม่แล้วยังล้ม แต่แถบไม่กลับมา = ผู้ใช้คิดว่าสำเร็จ');
+                return 'ลองใหม่ → ยังล้ม → แถบกลับมาพร้อมปุ่มลองใหม่ (ไม่หายเงียบ)';
+            } finally { cw.startNavigationMap = real; cw.navWarnBarHide(); }
+        });
+
+        await runScenario('S11 · กด ✕ ปิดแถบเตือนเอง → หาย และไม่เด้งกลับเอง (จนจบเที่ยว)', async () => {
+            const cw = w();
+            const real = cw.startNavigationMap;
+            cw.startNavigationMap = function () { };
+            armRoute();
+            await wait(220);
+            cw.startTripFromPreview();
+            await wait(1400);
+            assert(cw.__navWarnVisible(), 'ต้องมีแถบก่อนทดสอบกดปิด');
+            cw.document.querySelector('#navWarnBar .nwb-x').click();
+            await wait(1600);
+            assert(!cw.__navWarnVisible(), 'กด ✕ แล้วแถบต้องหาย');
+            cw.navMiniApplyPerm();
+            await wait(300);
+            assert(!cw.__navWarnVisible(), 'สิทธิ์โหลดใหม่แล้วแถบเด้งกลับเอง (ขัดเจตนาผู้ใช้ที่กดปิด)');
+            cw.startNavigationMap = real;
+            return '✕ → หาย · apply สิทธิ์ซ้ำ = ไม่เด้งเอง';
+        });
+
+        await runScenario('S12 · เส้นทางจริง: กด “เริ่มมิเตอร์” จากหน้าสรุป (มีสิทธิ์) → มินิแมพยุบ · ปุ่มสีฟ้าโชว์ให้กดเอง', async () => {
+            const cw = w();
+            const realCan = cw.canUseMiniMap;
+            cw.canUseMiniMap = () => true;
+            cw.navWarnBarHide();
+            try {
+                armRoute();
+                await wait(220);
+                cw.startTripFromPreview();
+                await wait(900);
+                assert(overlayShown(), 'ต้องอยู่จอมิเตอร์ใหญ่ก่อน');
+                assert(!mapShown(), 'เริ่มเที่ยวแล้วมินิแมพเด้งโชว์เอง (ผู้ใช้สั่งให้ยุบไว้ก่อน รอกดเอง)');
+                const st = btnState();
+                assert(st && st.hidden === false, 'มีสิทธิ์แต่ปุ่มเปิดแผนที่ไม่โชว์ให้กด');
+                assert(st.blue === true, 'ปุ่มต้องติดสีฟ้า (map-ready) ไม่ใช่สีเทา');
+                cw.navMiniReopen();
+                await wait(300);
+                assert(mapShown(), 'กดปุ่มเองแล้วแผนที่ต้องขึ้น');
+                return 'เริ่มเที่ยว = ยุบ + ปุ่มสีฟ้า · กดเอง = แผนที่ขึ้น';
+            } finally { cw.canUseMiniMap = realCan; cw.navWarnBarHide(); }
         });
 
         await resetTrip();
@@ -348,7 +486,7 @@
             resultsEl.innerHTML += '<li class="fail"><span class="st">❌ รันชุดไม่สำเร็จ</span>\n<span class="detail">' + (e && e.message ? e.message : String(e)) + '</span></li>';
             failCount++; renderSummary();
         }
-        btn.disabled = false; btn.textContent = '🔄 รันการทดสอบใหม่ (7 สถานการณ์)';
+        btn.disabled = false; btn.textContent = '🔄 รันการทดสอบใหม่ (13 สถานการณ์)';
     });
 
     document.getElementById('dbgBtn').addEventListener('click', async () => {
@@ -359,6 +497,8 @@
                 isManualRunning: !!cw.isManualRunning,
                 mapShown: mapShown(),
                 btn: btnState(),
+                navArmed: cw.__navArmed,
+                navWarn: (() => { try { return cw.__navWarnVisible(); } catch (e) { return 'ERR'; } })(),
                 canReopen: (() => { try { return cw.navMiniCanReopen(); } catch (e) { return 'ERR'; } })(),
                 canUseMiniMap: (() => { try { return cw.canUseMiniMap(); } catch (e) { return 'ERR'; } })(),
                 layers: cw.__visibleLayers ? cw.__visibleLayers().map(l => l.id) : [],
