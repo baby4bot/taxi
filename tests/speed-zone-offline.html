@@ -394,7 +394,10 @@
                 ['กติกาเลือกลิมิต', /window\.__spdLimitFor = \(zone, auto, city, toll\)/],
                 ['ลิมิตที่ใช้จริง', /window\.__spdLimitNow = \(\)/],
                 ['อ่านโซนจากมินิแมพ', /window\.navMiniTollZone = function \(\)/],
-                ['ใช้ลิมิตของโซนตอนเตือน', /const limitNow = window\.__spdLimitNow\(\);/],
+                // ⚠️ (19 ก.ย. 69) เตือนด้วยลิมิตของโซน “ก็ต่อเมื่อยศนี้มีสิทธิ์” — ไม่มีสิทธิ์ต้องส่งลิมิต 0 (ไม่ติ๊ด/ไม่ขึ้นแดง)
+                ['ใช้ลิมิตของโซนตอนเตือน', /const limitNow = _spdPermOk \? window\.__spdLimitNow\(\) : 0;/],
+                ['มีด่านสิทธิ์แจ้งเตือนความเร็ว', /window\.canUseSpeedAlert = \(\) =>/],
+                ['ด่านสิทธิ์คุมการติ๊ด', /const warnOn = _spdPermOk && \(sw \? !!sw\.checked/],
                 ['สลับโซนแล้วเริ่มรอบใหม่', /window\.__spdZoneLast !== zoneNow/],
                 ['ชิปโซนบนจอใหญ่', /id="tzSpeedZoneChip"/],
                 ['ช่องลิมิต 2 โซนในหน้าตั้งค่า', /id="speedLimitTollVal"/],
@@ -403,7 +406,7 @@
             ];
             const miss = need.filter(([n, re]) => !re.test(src)).map(([n]) => n);
             assert(miss.length === 0, 'โค้ดจริงขาด: ' + miss.join(' · '));
-            return 'โควตา route ' + q0 + ' → ' + q1 + ' · คำขอ TomTom เพิ่ม ' + (net1 - net0) + ' · สายไฟ 10 จุดครบ';
+            return 'โควตา route ' + q0 + ' → ' + q1 + ' · คำขอ TomTom เพิ่ม ' + (net1 - net0) + ' · สายไฟ ' + need.length + ' จุดครบ';
         });
 
         // คืนสภาพเดิม

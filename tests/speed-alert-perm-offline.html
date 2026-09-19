@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — สิทธิ์ “แจ้งเตือนความเร็วเกินกำหนด” (ค่าเริ่มต้นเปิดทุกยศ · แอดมินติ๊กออกได้)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 760px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: สิทธิ์ “แจ้งเตือนความเร็วเกินกำหนด”</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · สตับเสียงติ๊ดเพื่อนับจำนวนครั้ง ·
+        ยิง <code>__spdTick(ความเร็ว)</code> เข้าแอปจริงเหมือน GPS ส่งค่าเข้ามา
+        <br>ผู้ใช้สั่ง (19 ก.ย. 69): <i>“เมนูแจ้งเตือนความเร็วที่กำหนด ใช้ได้กับทุก user แต่ให้กำหนดสิทธิ์ได้ด้วย ว่ายศไหนใช้ได้/ใช้ไม่ได้”</i>
+        <br>ตรวจ 8 ชั้น: ① ค่าเริ่มต้นเปิดทุกยศ (รวม VIP/ยศใหม่) ② แอดมินติ๊กออกได้เฉพาะยศนั้น ③ ปิดสิทธิ์ = ไม่ติ๊ด/ไม่ขึ้นแดง/ชิปลิมิตหาย
+        ④ เปิดสิทธิ์กลับ = ติ๊ด 5 แล้ว 3 ครั้ง (ของเดิมไม่พัง) ⑤ มอบรายคนทับสิทธิ์ยศได้ ⑥ เมนูในหน้าตั้งค่าทั่วไปซ่อน + ขึ้น 🔒
+        ⑦ หน้าตั้งค่าสิทธิ์มีแถวใหม่ และกดบันทึกส่งคีย์ไปด้วย ⑧ สิทธิ์เดิม (มินิแมพ) ไม่ถูกกระทบ
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/speed-alert-perm-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (8 สถานการณ์)</button>
+    <button id="dbgBtn" class="alt">🔎 ดูสถานะสิทธิ์สด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 760)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[speed-alert-perm]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ต + นับเสียงติ๊ด ============================
+    let stubsInstalled = false;
+    let beats = [];                 // เวลาที่ยิงเสียง ‘speed’
+    let beatsT0 = Date.now();
+    let realPlaySound = null;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, tomtom: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (/tomtom/i.test(u)) cw.__net.tomtom++;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/tomtom/i.test(String(u))) cw.__net.tomtom++;
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) { cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return; }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () { if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; } return send.apply(null, arguments); };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test: ไม่ใช้ GPS' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        // 🔊 นับเสียงติ๊ดความเร็ว (เก็บของจริงไว้คืนได้)
+        try {
+            realPlaySound = cw.playSound;
+            cw.playSound = function (type) { if (type === 'speed') beats.push(Date.now() - beatsT0); };
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    // ============================ โหลดแอป ============================
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 60000) {
+            const cw = w();
+            if (cw && typeof cw.__spdTick === 'function' && typeof cw.canUseSpeedAlert === 'function'
+                && typeof cw.__renderSpeedLimitBox === 'function' && typeof cw.renderPermList === 'function'
+                && typeof cw.playSound === 'function') {
+                installStubs();
+                await wait(200);
+                await closeAllModals();
+                await waitForNoLoader(20000);
+                await wait(200);
+                return;
+            }
+            await wait(100);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 60 วิ');
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                if (cw.getComputedStyle(m).display !== 'none') { try { m.style.display = 'none'; } catch (e) {} }
+            });
+        } catch (e) {}
+        await wait(120);
+    }
+
+    // ============================ เครื่องมือ ============================
+    const el = (id) => w().document.getElementById(id);
+    const st = (id) => { const e = el(id); return e ? w().getComputedStyle(e).display : '(ไม่มี)'; };
+
+    // ตั้งสิทธิ์ “ตามที่แอดมินบันทึกไว้” ให้ยศหนึ่ง (เลียนแบบ settings/roles)
+    //  ⚠️ แอปจริงเป็นเจ้าของ globalPermissions เอง (มี listener เขียนทับเป็นระยะ) ⇒ เทสต์ต้องตั้ง “ก่อนอ่านทุกรอบ”
+    function setStoredPerm(role, key, val) {
+        const cw = w();
+        if (!cw.globalPermissions) cw.globalPermissions = {};
+        cw.globalPermissions[role] = Object.assign({}, cw.globalPermissions[role] || {});
+        cw.globalPermissions[role][key] = val;
+    }
+    async function denyUserSpeed() {
+        setStoredPerm('User', 'canUseSpeedAlert', false);
+        await wait(20);
+        return w().effectiveRolePerms('User').canUseSpeedAlert === false;
+    }
+    async function asRole(role) { w().__testRole = role; await wait(30); }
+    const allowedAs = async (role) => { await asRole(role); return w().canUseSpeedAlert(); };
+
+    function startMeter() {
+        const cw = w();
+        cw.isManualRunning = true;
+        cw.isMeterPaused = false;
+        cw.__spdOver = false;
+        cw.__spdEpiCount = 0;
+        beats = []; beatsT0 = Date.now();
+    }
+    function stopMeter() { try { w().isManualRunning = false; } catch (e) {} }
+    const beepCount = () => beats.length;
+
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(60000).then(() => { throw new Error('สถานการณ์ timeout 60 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ไม่ผ่าน</span> ' + name + '\n<span class="detail">' + ((e && e.message) ? e.message : e) + '</span>';
+            failCount++;
+            failures.push(name + ' → ' + ((e && e.message) ? e.message : e));
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ไม่ผ่าน ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        const n = (w() && w().__net) ? w().__net : { blockedFetch: 0, blockedXhr: 0, tomtom: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: คำขอออกนอกเครื่องที่ถูกบล็อก ' + (n.blockedFetch + n.blockedXhr) +
+            ' ครั้ง · คำขอ TomTom ' + n.tomtom + ' ครั้ง — ชุดนี้ไม่ใช้อินเทอร์เน็ต';
+    }
+
+    // ============================ ชุดสถานการณ์ (แผนที่ใช้จริง) ============================
+    const ROLE_LIMIT = { city: 80, toll: 120 };
+
+    async function runAll() {
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+        renderSummary();
+        const cw = w();
+        cw.globalPermissions = {};        // ล้างสิทธิ์ที่บันทึกไว้ = สภาพ “ยังไม่เคยติ๊กอะไร”
+        cw.__myExtraPerms = {};
+        stopMeter();
+
+        // S1 — ค่าเริ่มต้น: ทุกยศใช้ได้ แม้ยังไม่เคยบันทึกสิทธิ์
+        await runScenario('S1 · ค่าเริ่มต้น = เปิดให้ทุกยศ (User · VIP · ผู้จัดการ · แอดมิน · ยศที่สร้างใหม่)', async () => {
+            const roles = ['User', 'VIP', 'Manager', 'Admin', 'CustomShiftLead'];
+            const out = [];
+            for (const r of roles) {
+                const ok = await allowedAs(r);
+                assert(ok === true, 'ยศ ' + r + ' ใช้ไม่ได้ทั้งที่ค่าเริ่มต้นต้องเปิดทุกยศ');
+                out.push(r + '=' + (ok ? 'เปิด' : 'ปิด'));
+            }
+            return out.join(' · ') + ' — โดยยังไม่มีการติ๊กสิทธิ์เลย';
+        });
+
+        // S2 — แอดมินติ๊กออกให้ยศเดียว → ยศอื่นยังใช้ได้
+        await runScenario('S2 · แอดมินติ๊กออกได้เฉพาะยศนั้น (User ถูกปิด · ยศอื่นยังเปิด)', async () => {
+            setStoredPerm('User', 'canUseSpeedAlert', false);
+            const user = await allowedAs('User');
+            const vip = await allowedAs('VIP');
+            const mgr = await allowedAs('Manager');
+            const adm = await allowedAs('Admin');
+            assert(user === false, 'User ยังใช้ได้ทั้งที่ถูกติ๊กออก');
+            assert(vip && mgr && adm, 'ยศอื่นถูกปิดไปด้วย (ต้องปิดเฉพาะยศที่ติ๊กออก)');
+            return 'User=ปิด · VIP=เปิด · ผู้จัดการ=เปิด · แอดมิน=เปิด';
+        });
+
+        // S3 — ไม่มีสิทธิ์ = ไม่ติ๊ด/ไม่ขึ้นแดง/ชิปลิมิตหาย (แต่ยังเห็นความเร็ว)
+        await runScenario('S3 · ไม่มีสิทธิ์ = ไม่มีเสียงติ๊ด · ไม่ขึ้นการ์ดแดง · ชิปลิมิตหาย (ยังเห็นความเร็ว)', async () => {
+            await asRole('User');
+            startMeter();
+            w().__spdTick(ROLE_LIMIT.city + 15);       // เกินลิมิตในเมืองชัดเจน
+            await wait(3600);                          // รอพอให้ยิงครบชุด (ถ้ามี)
+            const before = beepCount();
+            assert(before === 0, 'มีเสียงติ๊ด ' + before + ' ครั้งทั้งที่ยศนี้ไม่มีสิทธิ์');
+            const card = el('tzSpeedCard');
+            assert(card && !card.classList.contains('over'), 'การ์ดความเร็วยังขึ้นสถานะ “เกินลิมิต”');
+            assert(st('tzSpeedLimitChip') === 'none', 'ชิปลิมิตยังโชว์อยู่');
+            const spdTxt = String((el('tzSpeedNum') || {}).innerText || '');
+            assert(/^\d+$/.test(spdTxt.trim()), 'ตัวเลขความเร็วไม่ขึ้น (ควรเห็นความเร็วได้แม้ไม่มีสิทธิ์เตือน): “' + spdTxt + '”');
+            stopMeter();
+            return 'ติ๊ด 0 ครั้ง · การ์ดไม่ขึ้นแดง · ชิปลิมิต = ซ่อน · ความเร็วที่โชว์ = ' + spdTxt.trim() + ' กม./ชม.';
+        });
+
+        // S4 — เปิดสิทธิ์กลับ = ติ๊ด 5 ครั้งรอบแรก แล้ว 3 ครั้งรอบสอง (ของเดิมไม่พัง)
+        await runScenario('S4 · เปิดสิทธิ์กลับ = ติ๊ด 5 ครั้งรอบแรก · ลดความเร็วแล้วเกินอีก = 3 ครั้ง (ของเดิมไม่พัง)', async () => {
+            await asRole('Manager');                   // ยศนี้ยังไม่ได้ติ๊กออก
+            startMeter();
+            w().__spdTick(ROLE_LIMIT.city + 10);       // รอบที่ 1
+            await wait(3400);
+            const first = beepCount();
+            assert(first === 5, 'รอบแรกควรติ๊ด 5 ครั้ง (ได้ ' + first + ')');
+            w().__spdTick(ROLE_LIMIT.city - 20);       // ลดความเร็วต่ำกว่าลิมิต → จบรอบ
+            await wait(150);
+            beats = []; beatsT0 = Date.now();
+            w().__spdTick(ROLE_LIMIT.city + 12);       // รอบที่ 2
+            await wait(2200);
+            const second = beepCount();
+            assert(second === 3, 'รอบที่ 2 ควรติ๊ด 3 ครั้ง (ได้ ' + second + ')');
+            assert(el('tzSpeedCard').classList.contains('over'), 'การ์ดความเร็วไม่ได้ขึ้นสถานะเกินลิมิต');
+            stopMeter();
+            return 'รอบ 1 = ' + first + ' ครั้ง · รอบ 2 = ' + second + ' ครั้ง · การ์ดขึ้นแดงตามเดิม';
+        });
+
+        // S5 — แอดมินมอบให้รายคน ทับสิทธิ์ยศที่ปิดได้
+        await runScenario('S5 · มอบให้รายคน (extraPerms) ทับสิทธิ์ยศที่ปิดไว้ได้', async () => {
+            await asRole('User');
+            const stored = await denyUserSpeed();
+            assert(stored, 'ตั้งสิทธิ์ยศ User = ปิด ไม่ติด');
+            assert(w().canUseSpeedAlert() === false, 'ยังไม่มอบ แต่ User ใช้ได้แล้ว (ควรปิดตามยศ)');
+            w().__myExtraPerms = { canUseSpeedAlert: true };
+            await wait(30);
+            assert(w().canUseSpeedAlert() === true, 'มอบรายคนแล้วยังใช้ไม่ได้');
+            startMeter();
+            w().__spdTick(ROLE_LIMIT.city + 14);
+            await wait(3400);
+            const n = beepCount();
+            stopMeter();
+            w().__myExtraPerms = {};
+            assert(n === 5, 'มอบรายคนแล้วแต่ยังไม่ติ๊ด (ได้ ' + n + ' ครั้ง)');
+            return 'ยศ User ปิดไว้ แต่เปิดให้บัญชีนี้รายคน → ติ๊ด ' + n + ' ครั้งตามปกติ';
+        });
+
+        // S6 — เมนูในหน้าตั้งค่าทั่วไป: ซ่อนสวิตช์ + กล่องลิมิต + ขึ้นข้อความ 🔒 เมื่อไม่มีสิทธิ์
+        await runScenario('S6 · เมนู “ลิมิตความเร็ว” ในหน้าตั้งค่าทั่วไปซ่อน + ขึ้น 🔒 เมื่อไม่มีสิทธิ์', async () => {
+            const cw = w();
+            await asRole('User');
+            await denyUserSpeed();                    // แอปอาจเขียนทับ globalPermissions ระหว่างรัน — ตั้งก่อนวาดทุกครั้ง
+            cw.__renderSpeedLimitBox();
+            await wait(60);
+            assert(st('speedWarnRow') === 'none', 'สวิตช์ “เตือนเมื่อความเร็วเกินลิมิต” ยังโชว์อยู่ (ควรซ่อน)');
+            assert(st('speedLimitBox') === 'none', 'กล่องลิมิตความเร็วยังโชว์อยู่ (ควรซ่อน)');
+            assert(st('speedPermHint') === 'block', 'ไม่ขึ้นข้อความ 🔒 บอกว่าโดนปิดสิทธิ์');
+            await asRole('VIP');
+            cw.__renderSpeedLimitBox();
+            await wait(60);
+            assert(st('speedWarnRow') !== 'none', 'ยศที่มีสิทธิ์กลับมาแล้วสวิตช์ไม่โชว์');
+            assert(st('speedLimitBox') !== 'none', 'ยศที่มีสิทธิ์กลับมาแล้วกล่องลิมิตไม่โชว์');
+            assert(st('speedPermHint') === 'none', 'ข้อความ 🔒 ยังค้างอยู่ทั้งที่ยศนี้มีสิทธิ์');
+            return 'User → ซ่อนสวิตช์+กล่อง (เห็น 🔒) · VIP → กลับมาแสดงครบ';
+        });
+
+        // S7 — หน้าตั้งค่าสิทธิ์มีแถวใหม่ + กดบันทึกจะส่งคีย์นี้ไปด้วย
+        await runScenario('S7 · หน้าตั้งค่าสิทธิ์มีแถวใหม่ (ติ๊กตามค่าจริง) และกดบันทึกส่งคีย์ canUseSpeedAlert', async () => {
+            const cw = w();
+            const inConfig = cw.currentPermConfig.some(p => p.id === 'perm_canUseSpeedAlert');
+            assert(inConfig, 'ไม่มีแถวสิทธิ์นี้ใน currentPermConfig (หน้าตั้งค่าสิทธิ์จะไม่แสดง)');
+            const sel = el('settingRoleSelect');
+            assert(sel, 'ไม่พบตัวเลือกระยะตำแหน่ง (settingRoleSelect)');
+            await denyUserSpeed();
+            sel.value = 'User';
+            cw.renderPermList();
+            await wait(80);
+            const itemHtml = String((el('perm_canUseSpeedAlert') || {}).closest ? el('perm_canUseSpeedAlert').closest('.perm-item').innerHTML : '');
+            assert(/ติ๊กออก/.test(itemHtml), 'แถวนี้ไม่มีคำอธิบาย (PERM_DESCS ไม่ถูกผูก): ' + itemHtml.slice(0, 120));
+            const box = el('perm_canUseSpeedAlert');
+            assert(box, 'แถวสิทธิ์นี้ไม่ถูกวาดในหน้าตั้งค่าสิทธิ์');
+            assert(box.checked === false, 'User ถูกติ๊กออกไว้แล้ว แต่ช่องติ๊กยังขึ้นถูกติ๊ก');
+            sel.value = 'VIP';
+            cw.renderPermList();
+            await wait(80);
+            assert(el('perm_canUseSpeedAlert').checked === true, 'VIP ยังไม่เคยติ๊กอะไร แต่ช่องติ๊กไม่ถูกติ๊ก (ค่าเริ่มต้นต้องเปิด)');
+            // เลียนแบบสิ่งที่ปุ่ม “บันทึกสิทธิ์” เก็บ (ไม่ยิง Firestore จริง — ตัดเน็ตอยู่)
+            const payload = {};
+            cw.currentPermConfig.forEach(p => { const e = el(p.id); if (e) payload[p.id.replace('perm_', '')] = e.checked; });
+            assert('canUseSpeedAlert' in payload, 'ตอนบันทึกจะไม่ส่งคีย์ canUseSpeedAlert ไป → ค่าที่ติ๊กจะหาย');
+            return 'แถวอยู่ในหน้า · User = ไม่ติ๊ก (ตามที่ปิด) · VIP = ติ๊ก (ค่าเริ่มต้นเปิด) · ตอนบันทึกส่งคีย์ ' + payload.canUseSpeedAlert;
+        });
+
+        // S8 — สิทธิ์เดิมไม่ถูกกระทบ (มินิแมพยังปิดทุกยศตามเดิม)
+        await runScenario('S8 · สิทธิ์เดิมไม่ถูกกระทบ (มินิแมพยังปิดทุกยศ · เปิดเองยังปิด)', async () => {
+            const cw = w();
+            await denyUserSpeed();
+            const rows = ['User', 'VIP', 'Manager', 'Admin'].map(r => {
+                const p = cw.effectiveRolePerms(r) || {};
+                return r + ':mini=' + (p.canUseMiniMap ? 'เปิด' : 'ปิด') + '/auto=' + (p.miniMapAutoOpen ? 'เปิด' : 'ปิด');
+            });
+            for (const r of ['User', 'VIP', 'Manager', 'Admin']) {
+                const p = cw.effectiveRolePerms(r) || {};
+                assert(p.canUseMiniMap !== true, 'สิทธิ์มินิแมพของ ' + r + ' ถูกเปิดเองโดยไม่ตั้งใจ');
+                assert(p.miniMapAutoOpen !== true, 'สิทธิ์เปิดมินิแมพอัตโนมัติของ ' + r + ' ถูกเปิดเองโดยไม่ตั้งใจ');
+            }
+            assert(cw.effectiveRolePerms('User').canUseSpeedAlert === false, 'ค่าที่บันทึกไว้ของ User หายไป');
+            assert(cw.effectiveRolePerms('VIP').canUseSpeedAlert !== false, 'VIP ไม่ได้รับค่าเริ่มต้นเปิด');
+            return rows.join(' · ') + ' · canUseSpeedAlert: User=ปิด(ตามที่ติ๊ก) VIP=เปิด(ค่าเริ่มต้น)';
+        });
+
+        // คืนสภาพ: ล้างสิทธิ์ทดสอบ + คืนเสียงจริง
+        try { cw.globalPermissions = {}; cw.__myExtraPerms = {}; cw.__testRole = undefined; } catch (e) {}
+        log('สรุป: ผ่าน ' + passCount + ' / ' + (passCount + failCount), failures);
+    }
+
+    // ============================ ปุ่ม/เริ่มต้น ============================
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        document.getElementById('runBtn').disabled = true;
+        try { await loadApp(); await runAll(); }
+        catch (e) { summaryEl.innerHTML = '<span style="color:var(--red)">โหลดแอปไม่สำเร็จ: ' + ((e && e.message) ? e.message : e) + '</span>'; }
+        document.getElementById('runBtn').disabled = false;
+    });
+
+    document.getElementById('dbgBtn').addEventListener('click', async () => {
+        try {
+            const cw = w();
+            const perRole = [];
+            for (const r of ['User', 'VIP', 'Manager', 'Admin']) { cw.__testRole = r; await wait(20); perRole.push(r + '=' + cw.canUseSpeedAlert()); }
+            cw.__testRole = undefined;
+            alert('สิทธิ์ “แจ้งเตือนความเร็วเกินกำหนด”\n' + perRole.join(' · ') +
+                  '\n\nค่าที่บันทึกไว้ (globalPermissions): ' + JSON.stringify(cw.globalPermissions || {}) +
+                  '\nสวิตช์เมนู: ' + st('speedWarnRow') + ' · กล่องลิมิต: ' + st('speedLimitBox') + ' · 🔒: ' + st('speedPermHint') +
+                  '\nเสียงติ๊ดที่นับได้รอบนี้: ' + beepCount());
+        } catch (e) { alert('ดูสถานะไม่ได้: ' + e); }
+    });
+
+    window.addEventListener('load', () => { document.getElementById('runBtn').click(); });
+})();
+</script>
+</body>
+</html>

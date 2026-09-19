@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — สิทธิ์ “เริ่มมิเตอร์จากหน้าสรุปเส้นทาง” (ค่าเริ่มต้นเปิดตั้งแต่ VIP ขึ้นไป · ปิดสำหรับผู้ใช้ทั่วไป)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 760px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: สิทธิ์ “เริ่มมิเตอร์จากหน้าสรุปเส้นทาง”</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · กดปุ่มจริง <code>startTripFromPreview()</code>
+        (ปุ่ม “เริ่มมิเตอร์” ในหน้าสรุปเส้นทาง) และ <code>toggleManualTimer()</code> (ปุ่มจับเวลามิเตอร์ปกติ) แล้วอ่านสถานะจริงจากแอป
+        <br>ผู้ใช้สั่ง (19 ก.ย. 69): <i>“เพิ่มสิทธิ์เรื่องเริ่มจับเวลามิเตอร์ — ค่าเริ่มต้นให้ทุกยศยกเว้น user · user กดแล้วขึ้นข้อความว่าสิทธิ์มิเตอร์ใช้ได้ตั้งแต่ VIP ขึ้นไป ·
+        แต่ปุ่มจับเวลามิเตอร์ปกติให้เขาใช้ได้เพราะไม่มีอะไร”</i>
+        <br>ตรวจ 8 ชั้น: ① ค่าเริ่มต้น User=ปิด · VIP/ผู้จัดการ/แอดมิน=เปิด ② User กดปุ่ม → มิเตอร์ไม่เริ่ม · หน้าสรุปไม่ปิด · มีข้อความแจ้ง
+        ③ VIP/VIP ทดสอบกดจริง → มิเตอร์เริ่ม ④ ปุ่มจับเวลามิเตอร์ปกติยังใช้ได้กับ User ที่ไม่มีสิทธิ์ (ของเดิมไม่พัง)
+        ⑤ แอดมินติ๊กเปิดให้ User → กดได้จริง ⑥ มอบรายคน (extraPerms) ทับสิทธิ์ยศได้ ⑦ หน้าตั้งค่าสิทธิ์มีแถวใหม่ + บันทึกส่งคีย์ไปจริง ⑧ สิทธิ์เดิม (มินิมัล/ความเร็ว) ไม่ถูกกระทบ
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/meter-perm-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (8 สถานการณ์)</button>
+    <button id="dbgBtn" class="alt">🔎 ดูสถานะสิทธิ์สด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 760)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[meter-perm]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ต + ห้ามเขียน DB ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, tomtom: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (/tomtom/i.test(u)) cw.__net.tomtom++;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/tomtom/i.test(String(u))) cw.__net.tomtom++;
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) { cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return; }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () { if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; } return send.apply(null, arguments); };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test: ไม่ใช้ GPS' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        // 🔊/📳 ปิดผลข้างเคียงของเสียงและการสั่น (ไม่ให้ค้าง)
+        try { cw.playSound = function () {}; } catch (e) {}
+        try { cw.navigator.vibrate = function () { return false; }; } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    // ============================ โหลดแอป ============================
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 60000) {
+            const cw = w();
+            if (cw && typeof cw.canStartMeterRoute === 'function' && typeof cw.startTripFromPreview === 'function'
+                && typeof cw.toggleManualTimer === 'function' && typeof cw.renderPermList === 'function'
+                && typeof cw.showToast === 'function') {
+                installStubs();
+                await wait(200);
+                await closeAllModals();
+                await waitForNoLoader(20000);
+                await wait(200);
+                return;
+            }
+            await wait(100);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 60 วิ');
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                if (cw.getComputedStyle(m).display !== 'none') { try { m.style.display = 'none'; } catch (e) {} }
+            });
+        } catch (e) {}
+        await wait(120);
+    }
+
+    // ============================ เครื่องมือ ============================
+    const el = (id) => w().document.getElementById(id);
+    const st = (id) => { const e = el(id); return e ? w().getComputedStyle(e).display : '(ไม่มี)'; };
+
+    function setStoredPerm(role, key, val) {
+        const cw = w();
+        if (!cw.globalPermissions) cw.globalPermissions = {};
+        cw.globalPermissions[role] = Object.assign({}, cw.globalPermissions[role] || {});
+        cw.globalPermissions[role][key] = val;
+    }
+    async function asRole(role) { w().__testRole = role; await wait(30); }
+    const allowedAs = async (role) => { await asRole(role); return w().canStartMeterRoute(); };
+
+    // เตรียมเที่ยวปลายทาง + เปิดหน้าสรุปเส้นทางเหมือนผู้ใช้จริง (กดปุ่มที่หน้าสรุป)
+    function openRoutePreview() {
+        const cw = w();
+        cw.__pendingRouteStart = {
+            name: 'ท่าอากาศยานสุวรรณภูมิ',
+            km: 48.34, sec: 2700,
+            sLat: 13.75, sLon: 100.5, dLat: 13.69, dLon: 100.75,
+            coords: [[13.75, 100.5], [13.72, 100.62], [13.69, 100.75]]
+        };
+        cw.toggleModal('routePreviewModal', true);
+    }
+    async function pressStartMeter() {
+        const cw = w();
+        const btn = (cw.document.querySelector('#routePreviewModal .btn-cc-ok')) || null;
+        const btnText = btn ? btn.innerText.trim() : '(ไม่พบปุ่ม)';
+        cw.startTripFromPreview();     // ตัวเดียวกับที่ onclick ของปุ่มเรียก
+        await wait(700);
+        return btnText;
+    }
+    async function resetTrip() {
+        const cw = w();
+        try { cw.isManualRunning = false; cw.isMeterPaused = false; } catch (e) {}
+        try { if (typeof cw.resetAll === 'function') cw.resetAll(); } catch (e) {}
+        try { cw.toggleModal('routePreviewModal', false); cw.toggleModal('trackerZoomOverlay', false); } catch (e) {}
+        await wait(120);
+    }
+    const toastText = () => { const t = el('toastMsg'); return t ? String(t.innerText || '') : ''; };
+
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(60000).then(() => { throw new Error('สถานการณ์ timeout 60 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ไม่ผ่าน</span> ' + name + '\n<span class="detail">' + ((e && e.message) ? e.message : e) + '</span>';
+            failCount++;
+            failures.push(name + ' → ' + ((e && e.message) ? e.message : e));
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ไม่ผ่าน ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        const n = (w() && w().__net) ? w().__net : { blockedFetch: 0, blockedXhr: 0, tomtom: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: คำขอออกนอกเครื่องที่ถูกบล็อก ' + (n.blockedFetch + n.blockedXhr) +
+            ' ครั้ง · คำขอ TomTom ' + n.tomtom + ' ครั้ง — ชุดนี้ไม่ใช้อินเทอร์เน็ต';
+    }
+
+    // ============================ ชุดสถานการณ์ ============================
+    async function runAll() {
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+        renderSummary();
+        const cw = w();
+        cw.globalPermissions = {};        // สภาพ “ยังไม่เคยติ๊กอะไร”
+        cw.__myExtraPerms = {};
+        await resetTrip();
+
+        // S1 — ค่าเริ่มต้นรายยศ
+        await runScenario('S1 · ค่าเริ่มต้น: User=ปิด · VIP / ผู้จัดการ / แอดมิน=เปิด (ยังไม่ติ๊กอะไรเลย)', async () => {
+            const out = [];
+            for (const r of ['User', 'VIP', 'Manager', 'Admin']) {
+                const ok = await allowedAs(r);
+                out.push(r + '=' + (ok ? 'เปิด' : 'ปิด'));
+            }
+            assert(await allowedAs('User') === false, 'ค่าเริ่มต้นของ User ต้องปิด (ผู้ใช้สั่ง)');
+            assert(await allowedAs('VIP') === true, 'ค่าเริ่มต้นของ VIP ต้องเปิด');
+            assert(await allowedAs('Manager') === true, 'ค่าเริ่มต้นของผู้จัดการต้องเปิด');
+            assert(await allowedAs('Admin') === true, 'ค่าเริ่มต้นของแอดมินต้องเปิด');
+            const custom = await allowedAs('CustomShiftLead');
+            return out.join(' · ') + ' · ยศใหม่ที่ยังไม่มีค่า = ' + (custom ? 'เปิด' : 'ปิด (ตามกลุ่ม User)');
+        });
+
+        // S2 — User ไม่มีสิทธิ์ กดปุ่มเริ่มมิเตอร์ → ไม่เริ่ม · หน้าสรุปไม่ปิด · มีข้อความแจ้ง
+        await runScenario('S2 · User กด “เริ่มมิเตอร์” → มิเตอร์ไม่เริ่ม · หน้าสรุปไม่ปิด · ขึ้นข้อความแจ้งสิทธิ์', async () => {
+            await asRole('User');
+            await resetTrip();
+            openRoutePreview();
+            const before = st('routePreviewModal');
+            const btnText = await pressStartMeter();
+            const running = !!w().isManualRunning;
+            const after = st('routePreviewModal');
+            const t = toastText();
+            assert(running === false, 'มิเตอร์เริ่มไปแล้วทั้งที่ยศนี้ไม่มีสิทธิ์');
+            assert(after !== 'none', 'หน้าสรุปเส้นทางถูกปิดไปด้วย (ผู้ใช้ควรยังดูเส้นทาง/ราคาต่อได้)');
+            assert(/สิทธิ์เริ่มมิเตอร์/.test(t), 'ไม่ขึ้นข้อความแจ้งสิทธิ์ (ข้อความที่เห็น: “' + t + '”)');
+            assert(/VIP/.test(t), 'ข้อความไม่ได้บอกว่าใช้ได้ตั้งแต่ VIP ขึ้นไป (ข้อความ: “' + t + '”)');
+            const msg = w().__meterPermDeniedMsg();
+            return 'ปุ่มที่กด = “' + btnText + '” · มิเตอร์เดิน = ไม่ · หน้าสรุปก่อน=' + before + ' หลัง=' + after +
+                   '\nข้อความแจ้งจริงบนจอ: ' + t + '\n(ตัวต้นทาง: ' + msg + ')';
+        });
+
+        // S3 — VIP กดปุ่มเดียวกัน → เริ่มได้จริง (ของเดิมไม่พัง)
+        await runScenario('S3 · VIP กดปุ่มเดียวกัน → มิเตอร์เริ่มจริง + เปิดจอมิเตอร์ใหญ่', async () => {
+            await asRole('VIP');
+            await resetTrip();
+            openRoutePreview();
+            await pressStartMeter();
+            await wait(400);
+            const running = !!w().isManualRunning;
+            const zoom = st('trackerZoomOverlay');
+            assert(running === true, 'VIP กดแล้วมิเตอร์ไม่เริ่ม (ควรเริ่มได้ตามค่าเริ่มต้น)');
+            assert(zoom !== 'none', 'จอมิเตอร์ใหญ่ไม่เปิด (ควรเข้าจอใหญ่ทันทีหลังเริ่ม)');
+            return 'มิเตอร์เดิน = เริ่มแล้ว · จอมิเตอร์ใหญ่ = ' + zoom + ' · เส้นทางที่จดไว้ = ' + ((w().__pendingRouteStart || {}).name || '-');
+        });
+
+        // S4 — ปุ่มจับเวลามิเตอร์ปกติยังใช้ได้กับ User ที่ไม่มีสิทธิ์
+        await runScenario('S4 · ปุ่มจับเวลามิเตอร์ปกติ (หน้าแรก) ยังใช้ได้กับ User ที่ไม่มีสิทธิ์', async () => {
+            await asRole('User');
+            await resetTrip();
+            const before = !!w().isManualRunning;
+            await w().toggleManualTimer();
+            await wait(600);
+            const running = !!w().isManualRunning;
+            assert(running === true, 'ปุ่มจับเวลามิเตอร์ปกติถูกกั้นด้วยสิทธิ์ใหม่ (ผู้ใช้สั่งว่าต้องใช้ได้เพราะไม่มีอะไร)');
+            await resetTrip();
+            return 'ก่อนกด = ' + (before ? 'เดินอยู่' : 'ยังไม่เริ่ม') + ' · หลังกด = เริ่มแล้ว · ไม่ขึ้นข้อความแจ้งสิทธิ์: “' + toastText() + '”';
+        });
+
+        // S5 — แอดมินติ๊กเปิดให้ User → กดได้จริง
+        await runScenario('S5 · แอดมินติ๊กเปิดสิทธิ์ให้ User → User กดเริ่มมิเตอร์ได้จริง', async () => {
+            setStoredPerm('User', 'canStartMeterRoute', true);
+            await wait(30);
+            const ok = await allowedAs('User');
+            assert(ok === true, 'ติ๊กเปิดแล้วยังถือว่าไม่มีสิทธิ์');
+            await resetTrip();
+            openRoutePreview();
+            await pressStartMeter();
+            await wait(400);
+            assert(w().isManualRunning === true, 'ติ๊กเปิดแล้วกดปุ่มยังไม่เริ่มมิเตอร์');
+            await resetTrip();
+            setStoredPerm('User', 'canStartMeterRoute', false);
+            await wait(30);
+            const back = await allowedAs('User');
+            assert(back === false, 'ติ๊กกลับออกแล้วยังเปิดอยู่');
+            return 'ติ๊กเปิด → กดได้จริง · ติ๊กกลับออก → กลับเป็นปิด · ยศอื่นไม่ถูกกระทบ (VIP=' +
+                   ((await allowedAs('VIP')) ? 'เปิด' : 'ปิด') + ')';
+        });
+
+        // S6 — มอบรายคนทับสิทธิ์ยศ
+        await runScenario('S6 · มอบรายคน (extraPerms) ทับสิทธิ์ยศที่ปิดไว้ได้', async () => {
+            await asRole('User');
+            w().__myExtraPerms = { canStartMeterRoute: true };
+            await wait(30);
+            assert(w().canStartMeterRoute() === true, 'มอบรายคนแล้วยังถือว่าไม่มีสิทธิ์');
+            await resetTrip();
+            openRoutePreview();
+            await pressStartMeter();
+            await wait(400);
+            assert(w().isManualRunning === true, 'มอบรายคนแล้วกดปุ่มยังไม่เริ่มมิเตอร์');
+            await resetTrip();
+            w().__myExtraPerms = {};
+            await wait(30);
+            return 'ยศ User ปิดไว้ แต่เปิดให้บัญชีนี้รายคน → กดเริ่มมิเตอร์ได้จริง · เอากลับ → ปิดตามยศ';
+        });
+
+        // S7 — หน้าตั้งค่าสิทธิ์: มีแถวใหม่ · ติ๊กตรงกับค่าจริง · กดบันทึกส่งคีย์ไปด้วย
+        await runScenario('S7 · หน้าตั้งค่าสิทธิ์มีแถวใหม่ + ติ๊กตามค่าจริง + กดบันทึกส่งคีย์ canStartMeterRoute', async () => {
+            const cw = w();
+            cw.toggleModal('roleSettingsModal', true);
+            if (typeof cw.roleHubTab === 'function') cw.roleHubTab('perms');
+            const sel = el('settingRoleSelect');
+            assert(!!sel, 'ไม่พบตัวเลือกตำแหน่งในหน้าตั้งค่าสิทธิ์');
+            // ⚠️ แอปอาจเขียน globalPermissions ทับระหว่างรัน — ตั้งค่าที่ “บันทึกไว้” ให้ยศนั้นก่อนอ่านทุกครั้ง
+            // ⚠️ หน้าตั้งค่าสิทธิ์ของแอปจริงโหลดรายชื่อยศจาก Firestore — เทสต์ตัดเน็ตอยู่ จึงเติมตัวเลือกให้ครบก่อน (เทียบเท่ากับยศที่มีจริง)
+            const ensureOption = (role) => {
+                if (!Array.from(sel.options).some(o => o.value === role)) {
+                    const o = cw.document.createElement('option'); o.value = role; o.textContent = role; sel.appendChild(o);
+                }
+            };
+            const readRow = (role, stored) => {
+                ensureOption(role);
+                if (stored === undefined) { const g = cw.globalPermissions; if (g && g[role]) delete g[role].canStartMeterRoute; }
+                else setStoredPerm(role, 'canStartMeterRoute', stored);
+                sel.value = role;
+                cw.renderPermList();
+                const cb = el('perm_canStartMeterRoute');
+                return { role: role, selVal: sel.value, exists: !!cb, checked: cb ? !!cb.checked : null, expected: cw.effectiveRolePerms(sel.value).canStartMeterRoute === true };
+            };
+            const userRow = readRow('User', false);        // แอดมินติ๊กออกให้ User
+            const vipRow = readRow('VIP', true);           // เปิดให้ VIP
+            const mgrRow = readRow('Manager', undefined);  // ยังไม่เคยติ๊ก = ค่าเริ่มต้น (เปิด)
+            const dump = (r) => r.role + '(เลือก=' + r.selVal + '): ติ๊ก=' + r.checked + '/ค่าจริง=' + r.expected;
+            assert(userRow.exists, 'ไม่พบแถวสิทธิ์ perm_canStartMeterRoute ในหน้าตั้งค่าสิทธิ์');
+            assert(userRow.selVal === 'User', 'ตัวเลือกตำแหน่งไม่ยอมเปลี่ยนเป็น User → ' + dump(userRow));
+            assert(userRow.checked === false, 'แอดมินติ๊กออกให้ User ไว้แล้ว แต่ช่องติ๊กยังขึ้นถูกติ๊ก → ' + dump(userRow));
+            assert(vipRow.checked === true, 'VIP เปิดสิทธิ์ไว้ แต่ช่องติ๊กไม่ติ๊ก → ' + dump(vipRow));
+            assert(mgrRow.checked === true, 'ผู้จัดการยังไม่เคยติ๊ก แต่ช่องติ๊กไม่ติ๊ก (ค่าเริ่มต้นต้องเปิด) → ' + dump(mgrRow));
+            assert(userRow.checked === userRow.expected && vipRow.checked === vipRow.expected && mgrRow.checked === mgrRow.expected, 'ช่องติ๊กในหน้าสิทธิ์ไม่ตรงกับค่าที่ระบบใช้จริง (ติ๊กไม่ตรง → แอดมินตั้งแล้วไม่มีผล)');
+            // เส้นทางบันทึกจริงวนจาก currentPermConfig (คีย์ใหม่ต้องถูก iterate ครบ) และอ่านค่ากลับจาก stored ได้
+            const ids = Array.from(cw.currentPermConfig).map(p => p.id);
+            assert(ids.indexOf('perm_canStartMeterRoute') >= 0, 'คีย์ใหม่ไม่อยู่ใน currentPermConfig ⇒ ตอนกด “บันทึกสิทธิ์” จะไม่ถูกส่งไปด้วย');
+            const hasSaveBtn = !!el('saveRolePermBtn');
+            assert(hasSaveBtn, 'ไม่พบปุ่ม “บันทึกสิทธิ์” ในหน้าตั้งค่าสิทธิ์');
+            sel.value = 'User'; cw.renderPermList();
+            const descTxt = String(((el('perm_canStartMeterRoute') || {}).closest ? el('perm_canStartMeterRoute').closest('.perm-item').innerText : '') || '');
+            assert(/เริ่มมิเตอร์/.test(descTxt), 'แถวสิทธิ์ไม่มีคำอธิบาย “เริ่มมิเตอร์” ประกอบ: ' + descTxt.slice(0, 120));
+            assert(/VIP/.test(descTxt), 'คำอธิบายไม่ได้บอกค่าเริ่มต้นว่าเปิดตั้งแต่ VIP');
+            // เลียนแบบสิ่งที่ปุ่ม “บันทึกสิทธิ์” เก็บ (ไม่ยิง Firestore จริง — ตัดเน็ตอยู่)
+            el('perm_canStartMeterRoute').checked = true;
+            const payload = {};
+            cw.currentPermConfig.forEach(p => { const e = el(p.id); if (e) payload[p.id.replace('perm_', '')] = e.checked; });
+            assert('canStartMeterRoute' in payload && payload.canStartMeterRoute === true, 'ตอนบันทึกจะไม่ส่งคีย์ canStartMeterRoute ไป ⇒ ค่าที่ติ๊กจะหาย');
+            cw.toggleModal('roleSettingsModal', false);
+            return 'แถวในหน้าตั้งค่าสิทธิ์ = มี (รายการที่ ' + (ids.indexOf('perm_canStartMeterRoute') + 1) + '/' + ids.length + ') · User=' + (userRow.checked ? 'ติ๊ก' : 'ไม่ติ๊ก') +
+                   ' · VIP=' + (vipRow.checked ? 'ติ๊ก' : 'ไม่ติ๊ก') + ' · ผู้จัดการ=' + (mgrRow.checked ? 'ติ๊ก' : 'ไม่ติ๊ก') +
+                   ' · ปุ่ม “บันทึกสิทธิ์” = มี · ตอนบันทึกส่งคีย์ canStartMeterRoute = ' + payload.canStartMeterRoute;
+        });
+
+        // S8 — สิทธิ์เดิมไม่ถูกกระทบ
+        await runScenario('S8 · สิทธิ์เดิมไม่ถูกกระทบ (แจ้งเตือนความเร็ว=เปิดทุกยศ · มินิแมพ=ปิดทุกยศ)', async () => {
+            const cw = w();
+            cw.globalPermissions = {};
+            await wait(30);
+            const speed = [];
+            for (const r of ['User', 'VIP', 'Manager', 'Admin']) { await asRole(r); speed.push(r + '=' + (cw.canUseSpeedAlert() ? 'เปิด' : 'ปิด')); }
+            const mini = [];
+            for (const r of ['User', 'VIP', 'Manager', 'Admin']) {
+                const p = cw.effectiveRolePerms(r) || {};
+                mini.push(r + ':mini=' + (p.canUseMiniMap ? 'เปิด' : 'ปิด') + '/auto=' + (p.miniMapAutoOpen ? 'เปิด' : 'ปิด'));
+                assert(p.canUseMiniMap !== true, 'สิทธิ์มินิแมพของ ' + r + ' ถูกเปิดเองโดยไม่ตั้งใจ');
+            }
+            assert(/User=เปิด/.test(speed.join(' · ')), 'สิทธิ์แจ้งเตือนความเร็วของ User หายไป (ต้องเปิดทุกยศ)');
+            assert(cw.effectiveRolePerms('VIP').canUseSpeedAlert !== false, 'VIP ไม่ได้รับค่าเริ่มต้นเปิดของสิทธิ์ความเร็ว');
+            return 'แจ้งเตือนความเร็ว: ' + speed.join(' · ') + '\nมินิแมพ/เปิดเอง: ' + mini.join(' · ');
+        });
+
+        try { cw.globalPermissions = {}; cw.__myExtraPerms = {}; cw.__testRole = undefined; } catch (e) {}
+        log('สรุป: ผ่าน ' + passCount + ' / ' + (passCount + failCount), failures);
+    }
+
+    // ============================ ปุ่ม/เริ่มต้น ============================
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        document.getElementById('runBtn').disabled = true;
+        try { await loadApp(); await runAll(); }
+        catch (e) { summaryEl.innerHTML = '<span style="color:var(--red)">โหลดแอปไม่สำเร็จ: ' + ((e && e.message) ? e.message : e) + '</span>'; }
+        document.getElementById('runBtn').disabled = false;
+    });
+
+    document.getElementById('dbgBtn').addEventListener('click', async () => {
+        try {
+            const cw = w();
+            const perRole = [];
+            for (const r of ['User', 'VIP', 'Manager', 'Admin']) { cw.__testRole = r; await wait(20); perRole.push(r + '=' + cw.canStartMeterRoute()); }
+            cw.__testRole = undefined;
+            alert('สิทธิ์ “เริ่มมิเตอร์จากหน้าสรุปเส้นทาง”\n' + perRole.join(' · ') +
+                  '\n\nค่าที่บันทึกไว้ (globalPermissions): ' + JSON.stringify(cw.globalPermissions || {}) +
+                  '\nมิเตอร์เดินอยู่: ' + (cw.isManualRunning ? 'ใช่' : 'ไม่') +
+                  '\nปุ่มในหน้าสรุป: ' + ((cw.document.querySelector('#routePreviewModal .btn-cc-ok') || {}).innerText || '(ไม่พบ)') +
+                  '\nข้อความแจ้ง: ' + (cw.__meterPermDeniedMsg ? cw.__meterPermDeniedMsg() : '(ไม่มี)'));
+        } catch (e) { alert('ดูสถานะไม่ได้: ' + e); }
+    });
+
+    window.addEventListener('load', () => { document.getElementById('runBtn').click(); });
+})();
+</script>
+</body>
+</html>
