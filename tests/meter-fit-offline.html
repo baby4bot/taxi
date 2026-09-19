@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — จอมิเตอร์ใหญ่พอดีจอโทรศัพท์ (ย้ายแถว “เริ่ม/วินาที” ลงมา + ป้ายสถิติเท่ากัน)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 760px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: “จอมิเตอร์ใหญ่” ต้องพอดีจอโทรศัพท์ + ป้ายสถิติต้องเท่ากัน</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe ขนาดเท่าโทรศัพท์ · <b>ตัดเน็ตทั้งหมด</b> ·
+        ใช้เส้นทางจำลอง (<code>fetchRouteFromTomTom</code> สตับ) แล้วเริ่มเที่ยวด้วยเส้นทางจริงของแอป
+        <br>ผู้ใช้สั่ง (19 ก.ย. 69): <i>“ย้ายเวลาเริ่ม 11.54 กับวินาทีลงมาอยู่ข้างล่าง ตรงที่เป็นวิ่งแล้ว/รถติด/เหลือ กม. ·
+        ป้ายภาษาไทยให้เว้นระยะเท่ากัน · ให้กระเถิบลงมาใกล้ช่องค่าโดยสารอีกนิด · บีบให้เล็กกว่านี้ เพราะป้ายเกินหน้าจอ”</i>
+        <br>ตรวจ 9 ชั้น: ① แถวเริ่ม/วินาที ย้ายลงมาอยู่ติดแถวสถิติจริง (ไม่ใช่แค่ซ่อน)
+        ② 3 ช่องกว้างเท่ากัน → ป้ายเว้นระยะเท่ากัน/อยู่ระดับเดียวกัน ③ ป้ายพอดีจอ ไม่ต้องเลื่อน ④ เวลารถติดแบบมี ชม. ไม่ล้นช่อง
+        ⑤ รถ taxi บนเส้น progress ไม่ถูกทับ ⑥ ของสำคัญยังเห็นครบ ⑦ ช่องสถิติชิดช่องค่าโดยสาร ⑧ มิเตอร์ยังเดิน/ตัวเลขยังขยับ
+        ⑨ จอเตี้ย/จอสูงก็ยังพอดี
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/meter-fit-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (9 สถานการณ์)</button>
+    <button id="dbgBtn" class="alt">🔎 วัดขนาดสด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 760 — เท่าโทรศัพท์จริงที่มีแถบเบราว์เซอร์)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const CACHE_KEYS = ['taxi_active_trip_v1', 'taxi_chg_note_days_v1'];
+    const PHONE = { w: 412, h: 760 };
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[meter-fit-test]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    const START = { lat: 13.7000, lon: 100.5000 };
+    const DEST = { name: 'ทดสอบปลายทาง', lat: 13.7580, lon: 100.5650 };
+
+    // ============================ สตับ: ตัดเน็ตออกทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;      // 🚫 ห้ามเขียนเที่ยวลง Firestore จริง
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, tomtom: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (/tomtom/i.test(u)) cw.__net.tomtom++;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/tomtom/i.test(String(u))) cw.__net.tomtom++;
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) {
+                    cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return;
+                }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test: ไม่ใช้ GPS' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    // ============================ โหลดแอป (จอเท่าโทรศัพท์) ============================
+    async function loadApp() {
+        frame.style.width = PHONE.w + 'px';
+        frame.style.height = PHONE.h + 'px';
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 60000) {
+            const cw = w();
+            if (cw && typeof cw.updateLiveMeterDisplay === 'function' && typeof cw.startTripFromPreview === 'function'
+                && typeof cw.calcThaiMeterDist === 'function') {
+                installStubs();
+                await wait(200);
+                try { CACHE_KEYS.forEach(k => cw.localStorage.removeItem(k)); } catch (e) {}
+                await closeAllModals();
+                await waitForNoLoader(20000);
+                await wait(200);
+                return;
+            }
+            await wait(100);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 60 วิ');
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                if (cw.getComputedStyle(m).display !== 'none') { try { m.style.display = 'none'; } catch (e) {} }
+            });
+        } catch (e) {}
+        await wait(120);
+    }
+
+    // ============================ เครื่องมืออ่านค่าจากจอจริง ============================
+    const el = (id) => w().document.getElementById(id);
+    const txt = (id) => { const e = el(id); return e ? String(e.innerText || '').replace(/\s+/g, ' ').trim() : '(ไม่มี)'; };
+    const boxEl = () => w().document.querySelector('#trackerZoomOverlay .tracker-zoom-box');
+    const R = (e) => { const r = e.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, w: r.width, h: r.height, cx: r.left + r.width / 2 }; };
+    const nm = (v) => Math.round(v * 10) / 10;
+
+    async function armRoute(km) {
+        const cw = w();
+        cw.__testUserPos = { lat: START.lat, lon: START.lon };
+        try { cw.__routeKmCache = {}; } catch (e) {}
+        cw.fetchRouteFromTomTom = async () => ({
+            km: km, sec: Math.round(km * 72),
+            coords: [[START.lat, START.lon], [(START.lat + DEST.lat) / 2, (START.lon + DEST.lon) / 2], [DEST.lat + (km / 10000), DEST.lon + (km / 10000)]],
+            tolls: null, planTrafficSec: 0, planJamKm: 0, planTrafficVia: '', planJamSec: 0, planExtraSec: 0
+        });
+        cw.selectLocation(DEST.name + ' (' + km + ' กม.)', DEST.lat + (km / 10000), DEST.lon + (km / 10000));
+        await wait(650);
+    }
+
+    // เริ่มเที่ยวจริงจากหน้าสรุป (จอมิเตอร์ใหญ่เปิดเอง) แล้วเปิดจอใหญ่ค้างไว้ให้วัด
+    async function startTripOpenZoom(km) {
+        const cw = w();
+        await armRoute(km);
+        cw.startTripFromPreview();
+        await wait(900);
+        cw.updateLiveMeterDisplay();
+        try { cw.toggleModal('trackerZoomOverlay', true); } catch (e) {}
+        await wait(350);
+        assert(el('trackerZoomOverlay') && w().getComputedStyle(el('trackerZoomOverlay')).display !== 'none', 'จอมิเตอร์ใหญ่ไม่เปิดขึ้นมาให้วัด');
+    }
+
+    async function resetTrip() {
+        const cw = w();
+        cw.__testNoDbWrites = true;
+        try { if (cw.isManualRunning) { await cw.finishTripWithSummary(); await wait(500); } } catch (e) {}
+        try { cw.navMiniHide(); } catch (e) {}
+        await closeAllModals();
+        await wait(150);
+    }
+
+    // ============================ วัด “ความพอดีจอ” ============================
+    function fit() {
+        const b = boxEl();
+        const cw = w();
+        const box = R(b);
+        return {
+            clientH: b.clientHeight, scrollH: b.scrollHeight,
+            boxTop: nm(box.top), boxBottom: nm(box.bottom),
+            viewH: cw.innerHeight, viewW: cw.innerWidth,
+            overflows: b.scrollHeight > b.clientHeight + 1,
+            freeBottom: nm(cw.innerHeight - box.bottom)
+        };
+    }
+
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(60000).then(() => { throw new Error('สถานการณ์ timeout 60 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ไม่ผ่าน</span> ' + name + '\n<span class="detail">' + ((e && e.message) ? e.message : e) + '</span>';
+            failCount++;
+            failures.push(name + ' → ' + ((e && e.message) ? e.message : e));
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ไม่ผ่าน ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        const n = (w() && w().__net) ? w().__net : { blockedFetch: 0, blockedXhr: 0, tomtom: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: คำขอออกนอกเครื่องที่ถูกบล็อก ' + (n.blockedFetch + n.blockedXhr) +
+            ' ครั้ง (fetch ' + n.blockedFetch + ' · XHR ' + n.blockedXhr + ') · คำขอ TomTom ' + n.tomtom + ' ครั้ง — ชุดนี้ไม่ต้องใช้อินเทอร์เน็ต';
+    }
+
+    // ============================ ชุดสถานการณ์ ============================
+    async function runAll() {
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+        renderSummary();
+        try { w().__net.tomtom = 0; } catch (e) {}
+
+        // S1 — แถว “เริ่ม/วินาที” ต้องย้ายลงมาจริง: อยู่ใต้เส้น progress + ใต้การ์ดความเร็ว และติดกับแถวสถิติ
+        await runScenario('S1 · แถว “เริ่ม/วินาที” ย้ายลงมาติดแถวสถิติ (ใต้เส้น progress + ใต้การ์ดความเร็ว)', async () => {
+            await resetTrip();
+            await startTripOpenZoom(20.5);
+            const cw = w();
+            const startRow = cw.document.querySelector('#trackerZoomOverlay .tz-header.is-below');
+            const prog = el('tzProgressContainer');
+            const speed = el('tzSpeedCard');
+            const stats = cw.document.querySelector('#trackerZoomOverlay .tz-stats-row');
+            assert(startRow, 'ไม่พบแถว “เริ่ม/วินาที” ที่มีคลาส is-below ในจอใหญ่');
+            const s = R(startRow), p = R(prog), sp = R(speed), st = R(stats);
+            assert(s.top >= p.bottom - 1, 'แถวเริ่ม/วินาที ยังอยู่เหนือเส้น progress (ไม่ได้ย้ายลงมา)');
+            assert(s.top >= sp.bottom - 1, 'แถวเริ่ม/วินาที ยังอยู่เหนือการ์ดความเร็ว');
+            assert(st.top - s.bottom <= 8, 'แถวเริ่ม/วินาที ไม่ได้ติดกับแถวสถิติ (ห่าง ' + nm(st.top - s.bottom) + 'px)');
+            assert(el('tzStartTime') && el('tzElapsedTime'), 'ตัวนับเวลาเริ่ม/วินาที หายไปจากจอ');
+            return 'เริ่ม/วินาที อยู่ใต้เส้น progress ' + nm(s.top - p.bottom) + 'px · ใต้การ์ดความเร็ว ' + nm(s.top - sp.bottom) +
+                   'px · ห่างแถวสถิติ ' + nm(st.top - s.bottom) + 'px (นาฬิกา: ' + txt('tzStartTime') + ' · ' + txt('tzElapsedTime') + ')';
+        });
+
+        // S2 — 3 ช่องสถิติกว้างเท่ากัน → ตัวเลขและป้ายภาษาไทยเว้นระยะเท่ากัน อยู่ระดับเดียวกัน
+        await runScenario('S2 · 3 ช่องสถิติ (วิ่งแล้ว/รถติด/เหลือ) กว้างเท่ากัน → ป้ายเว้นระยะเท่ากัน อยู่ระดับเดียวกัน', async () => {
+            const cw = w();
+            const cols = Array.from(cw.document.querySelectorAll('#trackerZoomOverlay .tz-stats-row .tz-stat-col'));
+            const labels = Array.from(cw.document.querySelectorAll('#trackerZoomOverlay .tz-stats-row .tz-stat-label'));
+            assert(cols.length === 3, 'ช่องสถิติต้องมี 3 ช่อง (พบ ' + cols.length + ')');
+            assert(labels.length === 3, 'ป้ายสถิติต้องมี 3 ป้าย (พบ ' + labels.length + ')');
+            const cw3 = cols.map(R), lw = labels.map(R);
+            const wMin = Math.min.apply(null, cw3.map(x => x.w)), wMax = Math.max.apply(null, cw3.map(x => x.w));
+            assert(wMax - wMin <= 1.5, 'ช่องสถิติกว้างไม่เท่ากัน (' + nm(wMin) + ' vs ' + nm(wMax) + 'px)');
+            const gap1 = nm(cw3[1].cx - cw3[0].cx), gap2 = nm(cw3[2].cx - cw3[1].cx);
+            assert(Math.abs(gap1 - gap2) <= 2, 'ระยะระหว่างช่องไม่เท่ากัน (' + gap1 + 'px vs ' + gap2 + 'px)');
+            const lgap1 = nm(lw[1].cx - lw[0].cx), lgap2 = nm(lw[2].cx - lw[1].cx);
+            assert(Math.abs(lgap1 - lgap2) <= 2, 'ป้ายภาษาไทยเว้นระยะไม่เท่ากัน (' + lgap1 + 'px vs ' + lgap2 + 'px)');
+            const tTop = lw.map(x => nm(x.top)), tH = lw.map(x => nm(x.h));
+            assert(Math.max.apply(null, tTop) - Math.min.apply(null, tTop) <= 1, 'ป้ายไม่ได้อยู่ระดับเดียวกัน (top: ' + tTop.join(' / ') + ')');
+            assert(Math.max.apply(null, tH) - Math.min.apply(null, tH) <= 1, 'ป้ายสูงไม่เท่ากัน (h: ' + tH.join(' / ') + ')');
+            return 'กว้างช่อง ' + nm(cw3[0].w) + 'px เท่ากันทั้ง 3 · ระยะกลางช่อง ' + gap1 + ' / ' + gap2 + 'px · ระยะกลางป้าย ' + lgap1 + ' / ' + lgap2 +
+                   'px · ระดับป้าย top ' + tTop.join(' / ') + ' · ตัวเลข: ' + txt('tzDrivenKm') + ' · ' + txt('tzTrafficTime') + ' · ' + txt('tzRemainKm');
+        });
+
+        // S3 — จอมิเตอร์ใหญ่ต้องพอดีจอ 412×760 (ไม่ต้องเลื่อน) และปุ่มล่างสุดไม่ถูกตัด
+        await runScenario('S3 · จอมิเตอร์ใหญ่พอดีจอ 412×760 — ไม่ต้องเลื่อน และปุ่ม “สิ้นสุดเดินทาง” ไม่ถูกตัด', async () => {
+            const cw = w();
+            const f = fit();
+            assert(!f.overflows, 'ป้ายยังสูงเกินจอ: เนื้อหา ' + f.scrollH + 'px > ที่เห็นได้ ' + f.clientH + 'px (ต้องเลื่อน)');
+            assert(f.boxTop >= 0 && f.freeBottom >= 0, 'กล่องป้ายล้นขอบจอ (บน ' + f.boxTop + 'px · เหลือท้ายจอ ' + f.freeBottom + 'px)');
+            const stop = w().document.querySelector('#trackerZoomOverlay .tracker-zoom-box #modalStopBtn');
+            assert(stop, 'ไม่พบปุ่ม “สิ้นสุดเดินทาง” ในจอใหญ่');
+            const sr = R(stop);
+            assert(sr.bottom <= f.boxBottom + 1, 'ปุ่ม “สิ้นสุดเดินทาง” ถูกตัดท้าย (ปุ่มล่าง ' + nm(sr.bottom) + 'px · กล่องล่าง ' + f.boxBottom + 'px)');
+            return 'จอ ' + f.viewH + 'px · ป้ายสูง ' + f.clientH + 'px (เนื้อหา ' + f.scrollH + 'px) · เหลือท้ายจอ ' + f.freeBottom + 'px · ปุ่มล่างสุดเห็นครบ';
+        });
+
+        // S4 — เวลารถติดแบบมี ชม. (1:15:30) ต้องไม่ล้นช่อง (เดิมช่องกลางกว้างกว่าเพื่อน)
+        await runScenario('S4 · เวลารถติดแบบมี ชม. (1:15:30) ไม่ล้นช่อง + ป้ายหน่วย (ชม.:น.:ว.) ไม่ล้น', async () => {
+            const cw = w();
+            const t = el('tzTrafficTime'), lbl = el('tzTrafficLabel'), col = t.closest('.tz-stat-col');
+            const before = { num: txt('tzTrafficTime'), lbl: String(lbl.innerText || '').trim() };
+            t.innerText = '1:15:30'; t.classList.add('is-hms');
+            lbl.innerText = 'รถติด (ชม.:น.:ว.)';
+            await wait(60);
+            const colW = col.clientWidth;
+            assert(t.scrollWidth <= t.clientWidth + 1, 'ตัวเลข 1:15:30 ล้นช่อง (เนื้อหา ' + t.scrollWidth + 'px > ช่อง ' + t.clientWidth + 'px)');
+            assert(lbl.scrollWidth <= colW + 1, 'ป้าย “รถติด (ชม.:น.:ว.)” ล้นช่อง (เนื้อหา ' + lbl.scrollWidth + 'px > ช่อง ' + colW + 'px)');
+            assert(t.classList.contains('is-hms'), 'ไม่ได้ใส่คลาส is-hms ตอนตัวเลขมี ชม. → ฟอนต์ไม่ย่อ');
+            const f = fit();
+            assert(!f.overflows, 'พอตัวเลขยาวขึ้นแล้วป้ายเกินจออีก (เนื้อหา ' + f.scrollH + ' > ' + f.clientH + ')');
+            t.innerText = before.num; t.classList.remove('is-hms'); lbl.innerText = before.lbl;
+            await wait(60);
+            return 'ช่องกว้าง ' + colW + 'px · 1:15:30 ใช้ ' + t.scrollWidth + 'px (ย่อฟอนต์แล้ว) · ป้ายหน่วยใช้ ' + lbl.scrollWidth + 'px · ป้ายยังพอดีจอ';
+        });
+
+        // S5 — รถ taxi บนเส้น progress ต้องไม่ถูกกล่องด้านบนทับ (ที่ว่างยังพอเหมือนเดิม)
+        await runScenario('S5 · รถ taxi บนเส้น progress ไม่ถูกกล่องด้านบนทับ (ยังมีที่ว่างพอ)', async () => {
+            const cw = w();
+            const car = el('tzCarIcon'), dest = el('tzDestNameBox');
+            assert(car && dest, 'ไม่พบรถ taxi หรือกล่องปลายทาง');
+            const c = R(car), d = R(dest);
+            assert(c.top >= d.bottom - 1, 'รถ taxi ถูกกล่องปลายทางทับ (รถบน ' + nm(c.top) + 'px · กล่องล่าง ' + nm(d.bottom) + 'px)');
+            return 'ที่ว่างเหนือรถ ' + nm(c.top - d.bottom) + 'px · รถสูง ' + nm(c.h) + 'px (ยังไม่ถูกตัด)';
+        });
+
+        // S6 — ของสำคัญยังเห็นครบในจอใหญ่
+        await runScenario('S6 · ของสำคัญยังเห็นครบ (ราคา/เหลือ กม./เวลาโดยประมาณ/คาดว่าจะถึง/ปุ่มสิ้นสุด)', async () => {
+            const cw = w();
+            const need = ['tzMeterPrice', 'tzDrivenKm', 'tzTrafficTime', 'tzRemainKm', 'tzEtaTime', 'tzArrivalTime', 'modalStopBtn', 'tzStartTime', 'tzElapsedTime'];
+            const box = R(boxEl());
+            const missing = [], outside = [];
+            need.forEach((id) => {
+                const e = el(id);
+                if (!e) { missing.push(id); return; }
+                const r = R(e);
+                if (r.h <= 0 || r.w <= 0) { missing.push(id + '(ไม่แสดง)'); return; }
+                if (r.top < box.top - 1 || r.bottom > box.bottom + 1) outside.push(id);
+            });
+            assert(missing.length === 0, 'ของหายไป: ' + missing.join(', '));
+            assert(outside.length === 0, 'ของถูกดันตกขอบป้าย: ' + outside.join(', '));
+            return 'ครบ ' + need.length + ' จุด อยู่ในกล่องป้ายทั้งหมด · ราคา ' + txt('tzMeterPrice') + '฿ · เหลือ ' + txt('tzRemainKm') + ' กม.';
+        });
+
+        // S7 — ช่องสถิติต้อง “กระเถิบลงมาใกล้ช่องค่าโดยสาร” (ช่องว่างเล็ก)
+        await runScenario('S7 · ช่องสถิติชิดช่องค่าโดยสาร (ช่องว่างไม่เกิน 10px)', async () => {
+            const cw = w();
+            const stats = cw.document.querySelector('#trackerZoomOverlay .tz-stats-row');
+            const fare = cw.document.querySelector('#trackerZoomOverlay .tz-fare-card');
+            const gap = nm(R(fare).top - R(stats).bottom);
+            assert(gap <= 10, 'ช่องว่างระหว่างช่องสถิติกับช่องค่าโดยสารกว้างเกิน ' + gap + 'px (ควรชิดกว่าเดิม)');
+            return 'ช่องว่าง = ' + gap + 'px (เดิม 20px) · ช่องสถิติล่าง ' + nm(R(stats).bottom) + 'px → ช่องค่าโดยสารบน ' + nm(R(fare).top) + 'px';
+        });
+
+        // S8 — มิเตอร์ยังเดินจริง: กด tick แล้วตัวเลขต้องขยับ (กันโค้ดที่ย้าย/ย่อพังการวาด)
+        await runScenario('S8 · มิเตอร์ยังเดิน + ตัวเลขบนจอใหญ่ยังขยับหลัง tick (ของเดิมไม่พัง)', async () => {
+            const cw = w();
+            const t0 = txt('tzElapsedTime');
+            const cw0 = w();
+            cw0.__testPosKmAdvance = true;
+            try { cw.__testForceElapsed = true; } catch (e) {}
+            cw.updateLiveMeterDisplay();
+            await wait(120);
+            assert(cw.isManualRunning === true, 'มิเตอร์หยุดเดินหลังย้าย/ย่อป้าย');
+            const price = txt('tzMeterPrice');
+            assert(/^[\d,]+$/.test(price), 'ราคาบนจอใหญ่ไม่ใช่ตัวเลข: “' + price + '”');
+            const km = txt('tzDrivenKm');
+            assert(/^\d+(\.\d+)?$/.test(km), 'ระยะที่วิ่งแล้วไม่ใช่ตัวเลข: “' + km + '”');
+            assert(txt('tzStartTime') !== '--:--', 'เวลาเริ่มหายไป: “' + txt('tzStartTime') + '”');
+            assert(txt('tzEtaTime').length > 0, 'เวลาโดยประมาณหายไป');
+            return 'มิเตอร์เดินอยู่ · ราคา ' + price + '฿ · วิ่งแล้ว ' + km + ' กม. · เริ่ม ' + txt('tzStartTime') +
+                   ' น. · วินาที “' + t0 + '” → “' + txt('tzElapsedTime') + '”';
+        });
+
+        // S9 — จอเตี้ย (660) และจอสูง (900) ก็ยังต้องพอดี/ไม่เพี้ยน
+        await runScenario('S9 · จอเตี้ย 412×660 กับจอสูง 412×900 ก็ยังพอดีจอ (ไม่มีทับ/ไม่มีตัด)', async () => {
+            const cw = w();
+            const out = [];
+            for (const h of [660, 900, PHONE.h]) {
+                frame.style.height = h + 'px';
+                await wait(260);
+                const f = fit();
+                assert(!f.overflows, 'จอ ' + h + 'px: ป้ายสูงเกิน (เนื้อหา ' + f.scrollH + ' > ' + f.clientH + ')');
+                assert(f.freeBottom >= -1, 'จอ ' + h + 'px: ป้ายล้นท้ายจอ ' + f.freeBottom + 'px');
+                const stop = w().document.querySelector('#trackerZoomOverlay .tracker-zoom-box #modalStopBtn');
+                assert(R(stop).bottom <= R(boxEl()).bottom + 1, 'จอ ' + h + 'px: ปุ่มสิ้นสุดถูกตัด');
+                out.push(h + 'px → ใช้ ' + f.clientH + 'px (เหลือ ' + f.freeBottom + 'px)');
+            }
+            const cols = Array.from(cw.document.querySelectorAll('#trackerZoomOverlay .tz-stats-row .tz-stat-col')).map(c => R(c).w);
+            assert(Math.max.apply(null, cols) - Math.min.apply(null, cols) <= 1.5, 'กลับมาจอ 412×760 แล้วช่องสถิติไม่เท่ากันอีก: ' + cols.map(nm).join(' / '));
+            return out.join(' · ') + ' · กลับมา ' + PHONE.h + 'px แล้วช่องสถิติเท่ากัน (' + cols.map(nm).join(' / ') + 'px)';
+        });
+
+        log('สรุป: ผ่าน ' + passCount + ' / ' + (passCount + failCount), failures);
+    }
+
+    // ============================ ปุ่ม/เริ่มต้น ============================
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        document.getElementById('runBtn').disabled = true;
+        try { await loadApp(); await runAll(); }
+        catch (e) { summaryEl.innerHTML = '<span style="color:var(--red)">โหลดแอปไม่สำเร็จ: ' + ((e && e.message) ? e.message : e) + '</span>'; }
+        document.getElementById('runBtn').disabled = false;
+    });
+
+    document.getElementById('dbgBtn').addEventListener('click', () => {
+        try {
+            const cw = w();
+            const b = boxEl();
+            if (!b) { alert('ยังไม่เปิดจอมิเตอร์ใหญ่'); return; }
+            const f = fit();
+            const cols = Array.from(cw.document.querySelectorAll('#trackerZoomOverlay .tz-stats-row .tz-stat-col')).map(c => nm(R(c).w));
+            alert('กล่องป้าย: เห็นได้ ' + f.clientH + 'px / เนื้อหา ' + f.scrollH + 'px (ล้น: ' + f.overflows + ')' +
+                  '\nจอ: ' + f.viewW + '×' + f.viewH + ' · เหลือท้ายจอ ' + f.freeBottom + 'px' +
+                  '\nช่องสถิติกว้าง: ' + cols.join(' / ') + 'px' +
+                  '\nเริ่ม ' + txt('tzStartTime') + ' น. · วินาที ' + txt('tzElapsedTime') +
+                  '\nราคา ' + txt('tzMeterPrice') + '฿ · วิ่งแล้ว ' + txt('tzDrivenKm') + ' กม. · เหลือ ' + txt('tzRemainKm') + ' กม.');
+        } catch (e) { alert('ดูสถานะไม่ได้: ' + e); }
+    });
+
+    window.addEventListener('load', () => { document.getElementById('runBtn').click(); });
+})();
+</script>
+</body>
+</html>

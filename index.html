@@ -624,18 +624,21 @@
         .tracker-zoom-box::-webkit-scrollbar { display: none; }
 
         .tz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-zoom); padding: 0 10px; }
+        /* 🕒 (19 ก.ย. 69) แถว “เริ่ม/วินาที” ที่ถูกย้ายลงมาติดแถวสถิติ — เตี้ยกว่าเดิม เพื่อให้จอมิเตอร์ใหญ่พอดีจอโทรศัพท์ */
+        .tz-header.is-below { margin: 0 6px 4px 6px; padding: 0 6px; }
+        .tz-header.is-below .tz-start-time, .tz-header.is-below .tz-elapsed-time { font-size: 15px; font-weight: 500; }
         .tz-start-time { color: white; font-weight: 600; font-size: 18px; }
         .tz-elapsed-time { color: var(--neon-yellow); font-weight: 600; font-size: 18px; }
-        .tz-progress-container { position: relative; margin: 34px 15px var(--space-zoom) 15px; /* margin-top 34px ให้มีที่ว่างรถ taxi ลอยเหนือเส้น ไม่ทับ header */ }
+        .tz-progress-container { position: relative; margin: 34px 15px 6px 15px; /* margin-top 34px = ที่ว่างรถ taxi ลอยเหนือเส้น (เท่าเดิม) · 6px ล่างให้ป้ายเตี้ยลง */ }
         .tz-progress-line { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; position: relative; }
         .tz-progress-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-yellow)); border-radius: 3px; transition: width 1s ease-out; box-shadow: 0 0 10px var(--glow-yellow); }
         .tz-point-start { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; background: transparent; display: flex; justify-content: center; align-items: center; }
         .tz-point-start::before { content: ''; width: 8px; height: 8px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -16px; left: -14px; box-shadow: 16px 16px 0 var(--neon-yellow); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotate(45deg); }
         .tz-point-end { position: absolute; right: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--accent-red); background: transparent; }
         /* --tz-num-h = ความสูงกล่องตัวเลข (ใช้ร่วมกันทุกคอลัมน์) → ป้าย "วิ่งแล้ว/รถติด/เหลือ" อยู่บรรทัดเดียวกันเสมอ */
-        .tz-stats-row { --tz-num-h: 48px; display: flex; justify-content: space-between; align-items: stretch; margin-bottom: var(--space-zoom); gap: 10px; padding: 0 10px 0 6px; }
+        .tz-stats-row { --tz-num-h: 48px; display: flex; justify-content: space-between; align-items: stretch; margin-bottom: 6px; gap: 10px; padding: 0 10px 0 6px; }
         /* 🚀 (18 ก.ย. 69) การ์ดความเร็วบนจอมิเตอร์ใหญ่ — ตัวเลขใหญ่ อ่านชัดตอนขับ · เปลี่ยนเป็นโทนแดง+เต้นเมื่อเกินลิมิต */
-        .tz-speed-card { display: flex; align-items: center; gap: 10px; margin: 0 6px var(--space-zoom); padding: 10px 14px; border-radius: 16px; background: linear-gradient(135deg, rgba(56,189,248,0.16), rgba(56,189,248,0.05)); border: 1px solid rgba(56,189,248,0.35); transition: background .25s, border-color .25s; }
+        .tz-speed-card { display: flex; align-items: center; gap: 10px; margin: 0 6px 6px; padding: 8px 14px; border-radius: 16px; background: linear-gradient(135deg, rgba(56,189,248,0.16), rgba(56,189,248,0.05)); border: 1px solid rgba(56,189,248,0.35); transition: background .25s, border-color .25s; }
         .tz-speed-card .tz-speed-icon { font-size: 26px; color: #7dd3fc; flex-shrink: 0; }
         .tz-speed-card .tz-speed-main { display: flex; align-items: baseline; gap: 6px; flex: 1; min-width: 0; }
         #tzSpeedNum { font-size: clamp(30px, 10vw, 46px); font-weight: 800; line-height: 1; letter-spacing: -1px; color: #e0f2fe; font-variant-numeric: tabular-nums; }
@@ -686,8 +689,10 @@
             overflow: hidden;
         }
         /* 🕒 ช่อง "รถติด" แสดงเวลาครบ 3 ช่องแบบนาฬิกา (0:19:22 = ชม.:น.:ว.) — ขยายช่องกลาง + ย่อตัวเลขลงให้พอดี */
-        .tz-stats-row .tz-stat-col:nth-child(2) { flex: 1.3; }
+        /* (19 ก.ย. 69) ให้ 3 ช่องกว้างเท่ากัน → ป้าย “วิ่งแล้ว/รถติด/เหลือ” เว้นระยะเท่ากันจริง (เดิมช่องกลาง 1.3 ทำให้ระยะไม่เท่า) */
+        .tz-stats-row .tz-stat-col:nth-child(2) { flex: 1; }
         #tzTrafficTime.tz-stat-num { font-size: 40px; }
+        #tzTrafficTime.tz-stat-num.is-hms { font-size: 32px; } /* มี ชม. (1:15:30) → ย่อไม่ให้ลนช่อง */
         .tz-stat-num { 
             font-size: 48px; 
             font-weight: 700; 
@@ -714,11 +719,11 @@
             justify-content: center;
         }
         /* 📏 การ์ดค่าโดยสารจอมิเตอร์ขยาย — บังคับความสูงให้เท่ากับการ์ดประเมินราคาหน้าแรก (232 content + 14*2 padding = 260px ด้านนอก) แล้วจัดเนื้อหากลางการ์ด */
-        .tz-fare-card { position: relative; box-sizing: border-box; min-height: 260px; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 25px; padding: 35px 15px; text-align: center; box-shadow: 0 12px 28px rgba(46, 204, 113, 0.36); margin-bottom: var(--space-zoom); }
+        .tz-fare-card { position: relative; box-sizing: border-box; min-height: 215px; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 25px; padding: 22px 15px; text-align: center; box-shadow: 0 12px 28px rgba(46, 204, 113, 0.36); margin-bottom: 8px; }
         .tz-fare-title { color: rgba(255,255,255,0.95); font-size: 20px; font-weight: 500; margin-bottom: 5px; }
         .tz-fare-price-box { display: flex; justify-content: center; align-items: baseline; gap: 10px; }
-        #tzMeterPrice { font-size: 140px; font-weight: 800; color: white; line-height: 0.88; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .tz-fare-currency { font-size: 60px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        #tzMeterPrice { font-size: 118px; font-weight: 800; color: white; line-height: 0.88; letter-spacing: -3px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .tz-fare-currency { font-size: 50px; font-weight: 700; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .tz-toll-btn {
             position: absolute; top: 10px; left: 10px; z-index: 60;
             display: flex; align-items: center; justify-content: center; gap: 3px;
@@ -765,7 +770,7 @@
             font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.92);
             text-shadow: 0 1px 3px rgba(0,0,0,0.25);
         }
-        .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: var(--space-zoom); }
+        .tz-info-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 14px 0; display: flex; justify-content: space-evenly; align-items: center; margin-bottom: 8px; }
         .tz-info-col { flex: 1; text-align: center; min-width: 0; }
         .tz-info-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.08); }
         .tz-info-label { font-size: 18px; color: var(--text-dim); margin-bottom: 5px; }
@@ -1711,20 +1716,23 @@
 
         /* ---------- จอแคบจริง (<=400px) — ย่อขนาดให้ข้อมูลทุกอย่างแสดงครบ ไม่ตัด ---------------- */
         @media (max-width: 420px) {
-            .tracker-zoom-box { padding: 16px 10px; border-radius: 24px; }
+            .tracker-zoom-box { padding: 12px 10px; border-radius: 24px; }
             .tz-header { padding: 0 4px; margin-bottom: 10px; }
+            .tz-header.is-below { margin: 0 4px 3px 4px; }
+            .tz-header.is-below .tz-start-time, .tz-header.is-below .tz-elapsed-time { font-size: 14px; }
             .tz-start-time, .tz-elapsed-time { font-size: 16px; }
-            .tz-progress-container { margin: 30px 6px 10px 6px; /* เหลือที่ว่างรถ taxi บนจอเล็กด้วย */ }
-            .tz-stats-row { margin-bottom: 10px; gap: 6px; }
+            .tz-progress-container { margin: 30px 6px 6px 6px; /* 30px = ที่ว่างรถ taxi ลอยเหนือเส้น (เท่าเดิม) · 6px ล่างให้ป้ายเตี้ยลง */ }
+            .tz-stats-row { margin-bottom: 6px; gap: 6px; }
             .tz-stat-num { font-size: 40px; }
             .tz-stats-row { --tz-num-h: 40px; }
             #tzTrafficTime.tz-stat-num { font-size: 28px; /* สูงเท่ากับเพื่อนร่วมแถว (--tz-num-h) → ตัวเลข/label อยู่บรรทัดเดียวกัน */ }
+            #tzTrafficTime.tz-stat-num.is-hms { font-size: 23px; }
             .tz-stat-label { font-size: 15px; height: 1.4em; }
-            .tz-fare-card { padding: 22px 10px; border-radius: 18px; margin-bottom: 10px; }
+            .tz-fare-card { min-height: 170px; padding: 16px 10px; border-radius: 18px; margin-bottom: 8px; }
             .tz-fare-title { font-size: 17px; }
-            #tzMeterPrice { font-size: 100px; }
-            .tz-fare-currency { font-size: 42px; }
-            .tz-info-box { padding: 16px 0; border-radius: 14px; margin-bottom: 10px; }
+            #tzMeterPrice { font-size: 86px; }
+            .tz-fare-currency { font-size: 38px; }
+            .tz-info-box { padding: 12px 0; border-radius: 14px; margin-bottom: 8px; }
             .tz-info-val { font-size: 28px; }
             .tz-info-label { font-size: 15px; }
             .tz-info-divider { height: 46px; }
@@ -1745,17 +1753,19 @@
 
         /* ---------- จอสูงน้อย (<=700px) — ลดขนาดอีกนิด เพื่อไม่ต้องเลื่อนเยอะ ---------- */
         @media (max-height: 700px) {
-            .tracker-zoom-box { padding: 16px 12px; border-radius: 24px; }
+            .tracker-zoom-box { padding: 10px 12px; border-radius: 24px; }
             .tz-header { margin-bottom: 10px; }
-            .tz-progress-container { margin: 30px 8px 10px 8px; /* เหลือที่ว่างรถ taxi บนจอเตี้ยด้วย */ }
-            .tz-stats-row { margin-bottom: 10px; gap: 6px; }
-            .tz-stat-num { font-size: 42px; }
-            .tz-stats-row { --tz-num-h: 42px; }
-            #tzTrafficTime.tz-stat-num { font-size: 30px; /* สูงเท่ากับเพื่อนร่วมแถว (--tz-num-h) → ตัวเลข/label อยู่บรรทัดเดียวกัน */ }
-            .tz-fare-card { padding: 22px 12px; border-radius: 18px; margin-bottom: 10px; }
-            #tzMeterPrice { font-size: 106px; }
-            .tz-fare-currency { font-size: 44px; }
-            .tz-info-box { padding: 16px 0; margin-bottom: 10px; }
+            .tz-header.is-below { margin: 0 4px 3px 4px; }
+            .tz-progress-container { margin: 30px 8px 6px 8px; /* 30px = ที่ว่างรถ taxi ลอยเหนือเส้น (เท่าเดิม) · 6px ล่างให้ป้ายเตี้ยลง */ }
+            .tz-stats-row { margin-bottom: 6px; gap: 6px; }
+            .tz-stat-num { font-size: 38px; }
+            .tz-stats-row { --tz-num-h: 38px; }
+            #tzTrafficTime.tz-stat-num { font-size: 27px; /* สูงเท่ากับเพื่อนร่วมแถว (--tz-num-h) → ตัวเลข/label อยู่บรรทัดเดียวกัน */ }
+            #tzTrafficTime.tz-stat-num.is-hms { font-size: 22px; }
+            .tz-fare-card { min-height: 146px; padding: 14px 12px; border-radius: 18px; margin-bottom: 8px; }
+            #tzMeterPrice { font-size: 84px; }
+            .tz-fare-currency { font-size: 36px; }
+            .tz-info-box { padding: 10px 0; margin-bottom: 8px; }
             .tz-info-val { font-size: 28px; }
             .tz-pause-btn { top: 8px; right: 8px; width: 36px; height: 36px; box-shadow: none !important; }
             .tz-pause-btn .material-symbols-outlined { font-size: 19px; }
@@ -3915,10 +3925,6 @@
             <div id="navTollBoothsZoom"></div>
         </div>
 
-        <div class="tz-header">
-            <div class="tz-start-time">เริ่ม: <span id="tzStartTime">--:--</span> น.</div>
-            <div id="tzElapsedTime" class="tz-elapsed-time">0 ว.</div>
-        </div>
         <div class="tz-progress-container" id="tzProgressContainer">
             <div class="tz-progress-line">
                 <div class="tz-point-start"></div><div id="tzProgressFill" class="tz-progress-fill"></div>
@@ -3931,6 +3937,11 @@
             <span class="material-symbols-outlined tz-speed-icon">speed</span>
             <div class="tz-speed-main"><span id="tzSpeedNum">0</span><span class="tz-speed-unit">กม./ชม.</span></div>
             <div class="tz-speed-side"><span class="tz-speed-zone-chip" id="tzSpeedZoneChip">🏙️ โซนในเมือง</span><span class="tz-speed-limit-chip" id="tzSpeedLimitChip"><span class="material-symbols-outlined" style="font-size:14px;">speed</span> ลิมิต <b id="tzSpeedLimitVal">80</b></span></div>
+        </div>
+        <!-- 🕒 (19 ก.ย. 69) ย้ายแถว “เริ่ม/วินาที” ลงมาติดแถวสถิติ (วิ่งแล้ว/รถติด/เหลือ) — จอมิเตอร์ใหญ่เตี้ยลง พอดีจอโทรศัพท์ -->
+        <div class="tz-header is-below">
+            <div class="tz-start-time">เริ่ม: <span id="tzStartTime">--:--</span> น.</div>
+            <div id="tzElapsedTime" class="tz-elapsed-time">0 ว.</div>
         </div>
         <div class="tz-stats-row">
             <div class="tz-stat-col"><div id="tzDrivenKm" class="tz-stat-num" style="color: var(--neon-green);">0.00</div><div class="tz-stat-label">วิ่งแล้ว (กม.)</div></div>
@@ -6465,11 +6476,33 @@
     };
 
     // 📈 วาดป้าย "ประเมิน: X ฿" (ใช้ทั้งจอมิเตอร์เดินจริงและโหมดกรอกระยะเอง)
-    //    🚫 เดิมมีบรรทัดที่มาของยอดใต้ป้าย แต่ซ้ำซ้อนกับยอดอื่นที่โชว์อยู่แล้ว → ตัดออก
-    //    ที่มาของยอดยังดูได้จาก tooltip ของป้าย (ตั้งที่ call site)
+    //    🚫 เดิมมีบรรทัดที่มาของยอดใต้ป้าย แต่ซ้ำซ้อนกับยอดอื่นที่โชว์อยู่แล้ว → ตัดออก (เหลือใน tooltip) (ใช้ทั้งจอมิเตอร์เดินจริงและโหมดกรอกระยะเอง)
+    //    🆕 (19 ก.ย. 69) การ์ดหน้าแรก (การ์ดทอง) — ตอนมิเตอร์เดินอยู่ ให้ป้ายใต้ราคาโชว์ “ยอดประเมินรวมเป็นเงิน”
+    //       ผู้ใช้สั่ง: “การ์ดหน้าแรกให้โชว์ยอดประเมินเป็นตัวเลข ฿ (แทน ‘ประเมินระยะทาง 14.09 กม.’)”
+    //       · ยอดเดียวกับป้ายบนจอมิเตอร์ใหญ่เป๊ะ (แหล่งคำนวณเดียวกัน = window.estimateFareAmt)
+    //       · ระยะทางยังดูได้จาก tooltip (ชี้/กดค้างที่ป้าย) — ไม่หายไปไหน
+    //       · โหมดวางแผน (ยังไม่เดินมิเตอร์) ยังโชว์ “ประเมินระยะทาง X กม.” เหมือนเดิม (updateFareEstimation เขียนทับทีหลัง)
+    window.estimateTooltipText = () => {
+        const p = window.estimateFareParts;
+        if (!p) return '';
+        const n = (v) => (Number(v) || 0).toLocaleString('th-TH');
+        return 'ยอดที่ต้องจ่ายทั้งหมด (ประมาณ)\n'
+            + '• มิเตอร์ที่คิดแล้ว ' + n(p.meterNow) + ' ฿\n'
+            + '• อีก ' + (Number(p.remainKm) || 0).toFixed(1) + ' กม. ประมาณ ' + n(p.remainFare) + ' ฿\n'
+            + (p.toll > 0 ? '• ค่าทางด่วน' + (p.tollEstimated ? ' (ประมาณจากเส้นทาง)' : ' (ตั้งไว้แล้ว)') + ' ' + n(p.toll) + ' ฿\n' : '')
+            + '= ' + n(p.total) + ' ฿';
+    };
     window.renderEstimateBadge = () => {
+        const txt = (window.estimateFareAmt > 0 ? 'ประเมิน: ' + window.estimateFareAmt.toLocaleString('th-TH') + ' ฿' : 'ประเมิน: -- ฿');
+        const tip = window.estimateTooltipText();
         const el = $('tzEstFare');
-        if (el) el.innerText = (window.estimateFareAmt > 0 ? 'ประเมิน: ' + window.estimateFareAmt.toLocaleString('th-TH') + ' ฿' : 'ประเมิน: -- ฿');
+        if (el) { el.innerText = txt; if (tip) el.title = tip; }
+        // 🆕 การ์ดหน้าแรก: โชว์ยอดเงินใต้ราคา (เฉพาะตอนมิเตอร์เดิน — ตอนวางแผนตัวเลขเงินอยู่บนตัวเลขใหญ่แล้ว)
+        const info = $('infoText');
+        if (info && window.isManualRunning && window.estimateFareAmt > 0) {
+            info.innerText = txt;
+            if (tip) info.title = tip;
+        }
     };
 
     // แสดงยอดรวมทางด่วนจริงบนปุ่ม "+ ค่าทางด่วน" ในช่องประเมินราคา (เช่น "ทางด่วน 155฿") เมื่อเส้นทางมีทางด่วน
@@ -9322,7 +9355,9 @@
                 if($('tzInfoBox')) $('tzInfoBox').style.display = 'none';
             } else {
                 if($('tzProgressContainer')) $('tzProgressContainer').style.display = 'block';
-                if($('tzRemainKmCol')) $('tzRemainKmCol').style.display = 'block';
+                // 🐞 (19 ก.ย. 69) เดิมตั้ง 'block' → ช่อง “เหลือ (กม.)” เสีย flex gap 6px + การจัดกลางช่อง
+                //    ทำให้ตัวเลข/ป้ายของช่องนี้ไม่ตรงระดับกับอีก 2 ช่อง (ผู้ใช้ทักว่า “ระยะไม่เท่ากัน”)
+                if($('tzRemainKmCol')) $('tzRemainKmCol').style.display = 'flex';
                 if($('tzInfoBox')) $('tzInfoBox').style.display = 'flex';
             }
         }
@@ -15447,7 +15482,10 @@
 
         $('farePrice').innerHTML = displayFare.toLocaleString('th-TH') + '<span style="font-size: 32px; font-weight:400;"> ฿</span>'; 
         let extraText = extraSurcharge > 0 ? ` (+พิเศษ ${extraSurcharge}฿)` : "";
-        $('infoText').innerText = "ประเมินระยะทาง " + (km.toFixed(2)) + " กม." + extraText; 
+        // 🆕 (19 ก.ย. 69) ระหว่างมิเตอร์เดิน ป้ายนี้เป็นของตัว tick จริง (โชว์ “ประเมิน: X ฿”) — ห้ามเขียนทับด้วยระยะทาง
+        //    🐞 จุดที่เขียนทับได้จริง: ผู้ใช้สลับ “ขึ้น/เลี่ยงทางด่วน” กลางเที่ยว → คำนวณเส้นทางใหม่ → เรียกฟังก์ชันนี้
+        //       ⇒ ป้ายเงินจะเด้งกลับเป็น “ประเมินระยะทาง 14.09 กม.” กลางเที่ยว (ไม่ตรงกับจอมิเตอร์ใหญ่)
+        if (!window.isManualRunning) { $('infoText').innerText = "ประเมินระยะทาง " + (km.toFixed(2)) + " กม." + extraText; }
     };
     
     window.syncFareTollBtn = () => {
@@ -16508,7 +16546,9 @@
             $('tzMeterPrice').innerText = displayFare;
             $('tzDrivenKm').innerText = targetKm.toFixed(2);
             $('tzRemainKm').innerText = currentTrueRemainKm.toFixed(2);
-            $('tzTrafficTime').innerText = clockFromSec(trafficSeconds); // 3:28 (น.:ว.) · เกิน 1 ชม. → 1:15:30 (ชม.:น.:ว.)
+            const _tzClock = clockFromSec(trafficSeconds); // 3:28 (น.:ว.) · เกิน 1 ชม. → 1:15:30 (ชม.:น.:ว.)
+            $('tzTrafficTime').innerText = _tzClock;
+            $('tzTrafficTime').classList.toggle('is-hms', _tzClock.length >= 6); // ⏱️ มี ชม. → ย่อฟอนต์ ไม่ให้ล้นช่อง (บัดนี้ 3 ช่องกว้างเท่ากันแล้ว)
             // ป้ายหน่วยของช่องรถติด ขยับตามค่าจริง (ยังไม่ถึงชั่วโมง ไม่ต้องโชว์ ชม.)
             const _tzTLbl = $('tzTrafficLabel'); if (_tzTLbl) _tzTLbl.innerText = 'รถติด ' + hmsUnitLabel(trafficSeconds);
             if ($('tzEstFare')) $('tzEstFare').innerText = (window.estimateFareAmt > 0 ? 'ประเมิน: ' + window.estimateFareAmt.toLocaleString('th-TH') + ' ฿' : 'ประเมิน: -- ฿');
@@ -16555,14 +16595,7 @@
             const _estToll = _estTollInfo.toll || 0;
             window.estimateFareAmt = displayFare + _estRemainFare + _estToll;
             window.estimateFareParts = { meterNow: displayFare, remainKm: _estRemainKm, remainFare: _estRemainFare, toll: _estToll, tollEstimated: _estTollInfo.estimated, total: window.estimateFareAmt };
-            const _estEl = $('tzEstFare');
-            if (_estEl) {
-                _estEl.title = 'ยอดที่ต้องจ่ายทั้งหมด (ประมาณ)\n'
-                    + '• มิเตอร์ที่คิดแล้ว ' + displayFare.toLocaleString('th-TH') + ' ฿\n'
-                    + '• อีก ' + _estRemainKm.toFixed(1) + ' กม. ประมาณ ' + _estRemainFare.toLocaleString('th-TH') + ' ฿\n'
-                    + (_estToll > 0 ? '• ค่าทางด่วน' + (_estTollInfo.estimated ? ' (ประมาณจากเส้นทาง)' : ' (ตั้งไว้แล้ว)') + ' ' + _estToll.toLocaleString('th-TH') + ' ฿\n' : '')
-                    + '= ' + window.estimateFareAmt.toLocaleString('th-TH') + ' ฿';
-            }
+            // 🖊️ ป้ายเงิน (จอใหญ่ + การ์ดหน้าแรก) + tooltip สร้างที่ renderEstimateBadge ที่เดียว (แหล่งเดียว ไม่มีเลขเพี้ยนไม่ตรงกัน)
             if (typeof window.renderEstimateBadge === 'function') { window.renderEstimateBadge(); }
         }
 
@@ -17946,7 +17979,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '77f264d8f0';
+    const APP_WEB_VERSION = 'ff0b52dc55';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -18461,6 +18494,14 @@
         ['2026-09-19', '🔁 เข้าทางด่วนช่วงถัดไปเปิดให้เองอีกครั้ง — ไม่ต้องกดเองกลางทาง'],
         ['2026-09-19', '🙋 คนที่กดเปิดแผนที่เองหรือกด ✕ เอง ระบบจะไม่ยุบ/เปิดสลับให้'],
         ['2026-09-19', '⚙️ แอดมินปิดการยุบเองได้ในหน้าสิทธิ์ (ปิด = แผนที่ค้างเปิดจนจบเที่ยว)'],
+        ['2026-09-19', '💰 การ์ดหน้าแรกโชว์ “ประเมิน: X ฿” ตอนมิเตอร์เดิน — รู้ยอดทั้งเที่ยว'],
+        ['2026-09-19', '🎯 ยอดบนการ์ดหน้าแรกเท่าป้ายจอใหญ่เป๊ะ (มิเตอร์ + ที่เหลือ + ทางด่วน)'],
+        ['2026-09-19', '👆 ชี้/กดค้างที่ป้าย เห็นระยะที่เหลือและที่มาของยอด (ระยะทางไม่ได้หายไปไหน)'],
+        ['2026-09-19', '🐞 แก้ป้ายกลางเที่ยวเด้งกลับเป็นระยะทาง หลังคำนวณเส้นทางใหม่/สลับทางด่วน'],
+        ['2026-09-19', '🕒 จอมิเตอร์ใหญ่: ย้ายแถว “เริ่ม/วินาที” ลงมาอยู่ติดแถวสถิติ'],
+        ['2026-09-19', '📐 ป้าย “วิ่งแล้ว/รถติด/เหลือ” เว้นระยะเท่ากันแล้ว (3 ช่องกว้างเท่ากัน)'],
+        ['2026-09-19', '⬇️ ช่องสถิติกระเถิบชิดช่องค่าโดยสาร — จอใหญ่เตี้ยลง พอดีจอโทรศัพท์'],
+        ['2026-09-19', '🐞 แก้ช่อง “เหลือ (กม.)” ถูกตั้งเป็น block ทำตัวเลข/ป้ายไม่ตรงระดับเพื่อน'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {

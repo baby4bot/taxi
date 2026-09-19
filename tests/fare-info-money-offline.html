@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — การ์ดหน้าแรกโชว์ “ประเมิน: X ฿” แทนระยะทาง</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: ป้ายใต้ราคาบน “การ์ดหน้าแรก” — ต้องเป็นเงิน ไม่ใช่ระยะทาง</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ป้อนเส้นทางจำลองผ่าน
+        <code>fetchRouteFromTomTom</code> (สตับ) แล้วเริ่มเที่ยวด้วยเส้นทางจริงของแอป
+        <br>ผู้ใช้สั่ง (19 ก.ย. 69): <i>“การ์ดหน้าแรกให้โชว์ยอดประเมินเป็นตัวเลข ฿ แทน ‘ประเมินระยะทาง 14.09 กม.’ เหมือนจอใหญ่”</i>
+        <br>ตรวจ 5 ชั้น: ① ป้ายบนการ์ดหน้าแรกตอนมิเตอร์เดิน = เงิน และ <b>ตรงกับป้ายบนจอมิเตอร์ใหญ่เป๊ะ</b>
+        ② ยอดตรงกับสูตรจริง (มิเตอร์ + ประมาณที่เหลือ + ค่าทางด่วน) ③ ระยะทางยังตามดูได้จาก tooltip
+        ④ พฤติกรรมเดิมไม่พัง (โหมดวางแผนยังโชว์ กม. · ไม่มีปลายทางยังโชว์ “มิเตอร์กำลังเดิน”) ⑤ ไม่ยิงคำขอออกเน็ตเพิ่มแม้แต่ครั้งเดียว
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/fare-info-money-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (9 สถานการณ์)</button>
+    <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const CACHE_KEYS = ['taxi_active_trip_v1', 'taxi_chg_note_days_v1'];
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[fare-info-test]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    const START = { lat: 13.7000, lon: 100.5000 };
+    const DEST = { name: 'ทดสอบปลายทาง', lat: 13.7580, lon: 100.5650 };
+
+    // ============================ สตับ: ตัดเน็ตออกทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;      // 🚫 ห้ามเขียนเที่ยวลง Firestore จริง
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, tomtom: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (/tomtom/i.test(u)) cw.__net.tomtom++;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/tomtom/i.test(String(u))) cw.__net.tomtom++;
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) {
+                    cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return;
+                }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test: ไม่ใช้ GPS' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    // ============================ โหลดแอป ============================
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.updateLiveMeterDisplay === 'function' && typeof cw.renderEstimateBadge === 'function'
+                && typeof cw.getRouteData === 'function' && typeof cw.startTripFromPreview === 'function'
+                && typeof cw.calcThaiMeterDist === 'function' && typeof cw.startMeterAndTracking === 'function') {
+                installStubs();
+                await wait(200);
+                try { CACHE_KEYS.forEach(k => cw.localStorage.removeItem(k)); } catch (e) {}
+                await closeAllModals();
+                await waitForNoLoader(12000);
+                await wait(200);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                if (cw.getComputedStyle(m).display !== 'none') { try { m.style.display = 'none'; } catch (e) {} }
+            });
+        } catch (e) {}
+        await wait(120);
+    }
+
+    // ============================ เครื่องมืออ่านค่าจากจอจริง ============================
+    const el = (id) => w().document.getElementById(id);
+    const txt = (id) => { const e = el(id); return e ? String(e.innerText || '').replace(/\s+/g, ' ').trim() : '(ไม่มี)'; };
+    const pillText = () => txt('infoText');           // ป้ายใต้ราคา “การ์ดหน้าแรก”
+    const zoomText = () => txt('tzEstFare');          // ป้ายบน “จอมิเตอร์ใหญ่”
+    const pillTip = () => { const e = el('infoText'); return e ? String(e.title || '') : ''; };
+    const calcPillMoney = () => { const m = String(pillText()).match(/([\d,]+)\s*฿/); return m ? Number(m[1].replace(/,/g, '')) : NaN; };
+    const calcZoomMoney = () => { const m = String(zoomText()).match(/([\d,]+)\s*฿/); return m ? Number(m[1].replace(/,/g, '')) : NaN; };
+    const meterNow = () => { const m = String(txt('tzMeterPrice')).match(/([\d,.]+)/); return m ? Number(m[1].replace(/,/g, '')) : NaN; };
+    const isMoneyPill = (t) => /^ประเมิน:\s*[\d,]+\s*฿$/.test(String(t).trim());
+
+    // ป้อนเส้นทางจำลอง (สตับเฉพาะ “ตัวดึงเส้นทาง” — ที่เหลือใช้ของจริงทั้งเส้น)
+    async function armRoute(km) {
+        const cw = w();
+        cw.__testUserPos = { lat: START.lat, lon: START.lon };
+        try { cw.__routeKmCache = {}; } catch (e) {}   // 🧹 กันแคชระยะเส้นทางเดิม (ไม่งั้นเปลี่ยน กม. แล้วได้เลขเดิมของเส้นทางเก่า)
+        cw.fetchRouteFromTomTom = async () => ({
+            km: km, sec: Math.round(km * 72),                coords: [[START.lat, START.lon], [(START.lat + DEST.lat) / 2, (START.lon + DEST.lon) / 2], [DEST.lat + (km / 10000), DEST.lon + (km / 10000)]],
+            tolls: null, planTrafficSec: 0, planJamKm: 0, planTrafficVia: '', planJamSec: 0, planExtraSec: 0
+        });
+        // ⚠️ ต้องเป็นทางเดียวกับที่ผู้ใช้ทำจริง (แตะผลค้นหา) — setLocation เป็นตัวตั้ง destLoc ทั้งในมอดูล + window
+        //    ถ้าเรียก getRouteData ตรง ๆ มอดูลจะยังไม่มีปลายทาง → ตัว tick ไม่คิดยอดประเมินให้
+        cw.selectLocation(DEST.name + ' (' + km + ' กม.)', DEST.lat + (km / 10000), DEST.lon + (km / 10000));
+        await wait(650);
+    }
+
+    // อ่านค่าทั้ง 3 ป้ายใน “เทิร์นเดียว” (กันอ่านข้าม tick แล้วเลขไม่ตรงกัน)
+    function snap() {
+        const cw = w();
+        const g = (id) => { const e = cw.document.getElementById(id); return e ? String(e.innerText || '').replace(/\s+/g, ' ').trim() : '(ไม่มี)'; };
+        const m = (t) => { const x = String(t).match(/([\d,]+)\s*฿/); return x ? Number(x[1].replace(/,/g, '')) : NaN; };
+        const s = { pre: g('tzMeterPrice'), pill: g('infoText'), zoom: g('tzEstFare'), tip: (cw.document.getElementById('infoText') || {}).title || '' };
+        s.meter = Number(String(s.pre).replace(/[^\d.]/g, '')) || 0;
+        s.pillMoney = m(s.pill);
+        s.zoomMoney = m(s.zoom);
+        return s;
+    }
+
+    // เริ่มเที่ยวด้วยเส้นทางจริงของแอป (กด “เริ่มมิเตอร์” จากหน้าสรุป) + ยิง tick จริง 1 ครั้ง
+    async function startTrip(km) {
+        const cw = w();
+        await armRoute(km);
+        cw.startTripFromPreview();
+        await wait(900);
+        cw.updateLiveMeterDisplay();
+        return snap();
+    }
+
+    // เริ่มมิเตอร์แบบไม่มีปลายทาง (ผู้ใช้กดเริ่มจากปุ่มบนการ์ดเอง)
+    async function startTripNoDest() {
+        const cw = w();
+        try { cw.startMeterAndTracking(); } catch (e) {}
+        await wait(500);
+        cw.updateLiveMeterDisplay();
+        await wait(120);
+    }
+
+    async function resetTrip() {
+        const cw = w();
+        cw.__testNoDbWrites = true;
+        try { if (cw.isManualRunning) { await cw.finishTripWithSummary(); await wait(500); } } catch (e) {}
+        try { cw.navMiniHide(); } catch (e) {}
+        await closeAllModals();
+        await wait(150);
+    }
+
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(45000).then(() => { throw new Error('สถานการณ์ timeout 45 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ไม่ผ่าน</span> ' + name + '\n<span class="detail">' + ((e && e.message) ? e.message : e) + '</span>';
+            failCount++;
+            failures.push(name + ' → ' + ((e && e.message) ? e.message : e));
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ไม่ผ่าน ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        const n = (w() && w().__net) ? w().__net : { blockedFetch: 0, blockedXhr: 0, tomtom: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: คำขอออกนอกเครื่องที่ถูกบล็อก ' + (n.blockedFetch + n.blockedXhr) +
+            ' ครั้ง (fetch ' + n.blockedFetch + ' · XHR ' + n.blockedXhr + ') · คำขอ TomTom ' + n.tomtom + ' ครั้ง — ชุดนี้ไม่ต้องใช้อินเทอร์เน็ต';
+    }
+
+    // ============================ ชุดสถานการณ์ ============================
+    async function runAll() {
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+        renderSummary();
+        try { w().__net.tomtom = 0; } catch (e) {}
+
+        // S1 — ต้องรันก่อนใคร: แอปยังไม่มีปลายทาง (สถานะสะอาด) = ผู้ใช้กดเริ่มมิเตอร์ลอย ๆ
+        await runScenario('S1 · มิเตอร์เดินแต่ “ไม่มีปลายทาง” → ยังโชว์ “มิเตอร์กำลังเดิน...” (ไม่ถูกยอดเงินทับ)', async () => {
+            await resetTrip();
+            await startTripNoDest();
+            const cw = w();
+            assert(cw.isManualRunning === true, 'มิเตอร์ไม่ได้เดิน (startMeterAndTracking ล้มเหลว)');
+            const t = pillText();
+            assert(t.indexOf('มิเตอร์กำลังเดิน') === 0, 'ป้ายควรเป็น “มิเตอร์กำลังเดิน...” แต่ได้: ' + t);
+            assert(!isMoneyPill(t), 'ป้ายกลายเป็นยอดเงินทั้งที่ไม่มีปลายทาง (ไม่มีเส้นทางให้ประเมิน)');
+            return 'ป้าย = “' + t + '” · isManualRunning=true';
+        });
+
+        await runScenario('S2 · มิเตอร์เดิน + มีปลายทาง → ป้ายใต้ราคาบนการ์ดหน้าแรกเป็น “ประเมิน: X ฿”', async () => {
+            await resetTrip();
+            await startTrip(20.5);
+            const cw = w();
+            assert(cw.isManualRunning === true, 'มิเตอร์ไม่เดินหลังกดเริ่มจากหน้าสรุป');
+            const t = pillText();
+            assert(isMoneyPill(t), 'ป้ายไม่ใช่ยอดเงิน (ยังเป็นระยะทางอยู่?) ได้: “' + t + '”');
+            assert(t.indexOf('กม.') === -1, 'ป้ายยังมี “กม.” หลงเหลือ: ' + t);
+            const money = calcPillMoney();
+            assert(money > 0, 'ยอดบนป้ายต้องมากกว่า 0 (ได้ ' + money + ')');
+            return 'ป้าย = “' + t + '” · ระยะที่เหลือ 20.5 กม. ถูกคิดเป็นเงินแล้ว';
+        });
+
+        await runScenario('S3 · ยอดบนป้ายต้องตรงกับป้ายบนจอมิเตอร์ใหญ่เป๊ะ (แหล่งคำนวณเดียว)', async () => {
+            const s = snap();
+            assert(isMoneyPill(s.zoom), 'ป้ายจอใหญ่ผิดรูป: “' + s.zoom + '”');
+            assert(s.pill === s.zoom, 'สองจอไม่ตรงกัน → การ์ดหน้าแรก “' + s.pill + '” vs จอใหญ่ “' + s.zoom + '”');
+            return 'การ์ดหน้าแรก = จอใหญ่ = “' + s.pill + '”';
+        });
+
+        await runScenario('S4 · ยอดบนป้าย = มิเตอร์ที่คิดแล้ว + ประมาณระยะที่เหลือ (สูตรจริงของแอป)', async () => {
+            const cw = w();
+            const s = snap();
+            const remainKm = 20.5;
+            const expectRemainFare = Math.floor(cw.calcThaiMeterDist(remainKm) / 2) * 2;
+            const expect = s.meter + expectRemainFare;      // ไม่มีค่าทางด่วนในเที่ยวนี้
+            assert(s.pillMoney === expect, 'ยอดไม่ตรงสูตร: จอ ' + s.pillMoney + ' ≠ คาด ' + expect + ' (มิเตอร์ ' + s.meter + ' + อีก ' + remainKm + ' กม. = ' + expectRemainFare + ')');
+            return 'จอ ' + s.pillMoney + ' ฿ = มิเตอร์ ' + s.meter + ' + ประมาณที่เหลือ ' + expectRemainFare + ' ฿ (อีก ' + remainKm + ' กม.)';
+        });
+
+        await runScenario('S5 · ระยะทางไม่หาย → อยู่ใน tooltip ของป้าย (พร้อมที่มาของยอด)', async () => {
+            const tip = pillTip();
+            assert(tip.length > 0, 'ป้ายยังไม่มี tooltip อธิบายที่มา');
+            assert(tip.indexOf('มิเตอร์ที่คิดแล้ว') >= 0, 'tooltip ไม่บอกมิเตอร์ที่คิดแล้ว: ' + tip.replace(/\n/g, ' | '));
+            assert(tip.indexOf('อีก 20.5 กม.') >= 0, 'tooltip ไม่บอกระยะที่เหลือ: ' + tip.replace(/\n/g, ' | '));
+            assert(tip.indexOf('=') >= 0, 'tooltip ไม่มียอดรวม: ' + tip.replace(/\n/g, ' | '));
+            return 'tooltip = ' + tip.replace(/\n/g, ' · ');
+        });
+
+        await runScenario('S6 · เติมค่าทางด่วน → ป้ายขึ้นทันทีเท่ากันทั้ง 2 จอ และ tooltip มีบรรทัดค่าทางด่วน', async () => {
+            const cw = w();
+            const b = snap();
+            cw.getTripTollForEstimate = () => ({ toll: 65, estimated: true });
+            cw.updateLiveMeterDisplay();
+            const a = snap();
+            assert(a.pillMoney === b.pillMoney + 65, 'ป้ายไม่ขึ้นตามค่าทางด่วน: ' + b.pillMoney + ' → ' + a.pillMoney + ' (ควร +65)');
+            assert(a.pill === a.zoom, 'สองจอไม่ตรงกันหลังเติมค่าทางด่วน: “' + a.pill + '” vs “' + a.zoom + '”');
+            assert(a.tip.indexOf('ค่าทางด่วน') >= 0 && a.tip.indexOf('65') >= 0, 'tooltip ไม่มีบรรทัดค่าทางด่วน: ' + a.tip.replace(/\n/g, ' | '));
+            cw.getTripTollForEstimate = () => ({ toll: 0, estimated: false });
+            cw.updateLiveMeterDisplay();
+            return 'ก่อน ' + b.pillMoney + ' ฿ → หลัง +ค่าทางด่วน ' + a.pillMoney + ' ฿ (ทั้ง 2 จอเท่ากัน)';
+        });
+
+        await runScenario('S7 · ยอดขยับตามระยะที่เหลือจริง + คำนวณแผนใหม่กลางเที่ยว ห้ามเขียนทับด้วยระยะทาง', async () => {
+            const cw = w();
+            const seen = [];
+            for (const km of [5, 30]) {
+                await resetTrip();
+                await startTrip(km);          // เที่ยวใหม่จริง (20.5 → 5 → 30) — ใช้เส้นทางจริงของแอป
+                const s = snap();
+                assert(isMoneyPill(s.pill), 'ป้ายไม่ใช่เงินที่เที่ยว ' + km + ' กม.: “' + s.pill + '”');
+                assert(s.pill === s.zoom, 'สองจอไม่ตรงกันที่ ' + km + ' กม.: “' + s.pill + '” vs “' + s.zoom + '”');
+                seen.push({ km: km, money: s.pillMoney, pill: s.pill });
+            }
+            assert(seen[1].money > seen[0].money, 'ยิ่งเหลือไกล ยอดประเมินควรสูงขึ้น (ได้ ' + seen[0].money + ' → ' + seen[1].money + ')');
+            // ระหว่างเที่ยว: เส้นทางถูกคำนวณใหม่ (เช่น สลับขึ้น/เลี่ยงทางด่วน) → updateFareEstimation ถูกเรียก
+            // 🐞 เคสที่เคยพัง: ป้ายเด้งกลับเป็น “ประเมินระยะทาง 14.09 กม.” กลางเที่ยว ทั้งที่มิเตอร์เดินอยู่
+            cw.updateFareEstimation(42);
+            const after = snap();
+            assert(isMoneyPill(after.pill), 'คำนวณเส้นทางใหม่กลางเที่ยวแล้วป้ายเด้งกลับเป็นระยะทาง: “' + after.pill + '”');
+            assert(after.pill === after.zoom, 'หลังคำนวณใหม่ สองจอไม่ตรงกัน: “' + after.pill + '” vs “' + after.zoom + '”');
+            return '5 กม. → ' + seen[0].pill + ' · 30 กม. → ' + seen[1].pill + ' · หลังคำนวณใหม่กลางเที่ยวป้ายยังเป็นเงิน (“' + after.pill + '”)';
+        });
+
+        await runScenario('S8 · การวาดป้ายไม่ยิงคำขอ TomTom เพิ่มแม้แต่ครั้งเดียว (โควตา 0)', async () => {
+            const cw = w();
+            const t0 = cw.__net.tomtom, b0 = cw.__net.blockedFetch + cw.__net.blockedXhr;
+            for (let i = 0; i < 5; i++) { cw.updateLiveMeterDisplay(); await wait(40); }
+            const dT = cw.__net.tomtom - t0, dB = (cw.__net.blockedFetch + cw.__net.blockedXhr) - b0;
+            assert(dT === 0, 'มีการยิงคำขอ TomTom ' + dT + ' ครั้งจากการวาดป้าย');
+            return '5 tick → คำขอ TomTom ' + dT + ' ครั้ง (โควตากระเบื้อง/ค้นหาไม่ขยับ) · คำขอระบบอื่นที่ถูกบล็อกระหว่างนั้น ' + dB + ' ครั้ง';
+        });
+
+        await runScenario('S9 · จบเที่ยว → ป้ายกลับเป็นข้อความวางแผน (ไม่ค้างยอดเงินเที่ยวเก่า)', async () => {
+            await resetTrip();
+            const t = pillText();
+            assert(t.indexOf('ประเมินระยะทาง') === 0, 'หลังจบเที่ยวป้ายควรกลับเป็น “ประเมินระยะทาง ...” แต่ได้: “' + t + '”');
+            assert(!isMoneyPill(t), 'ป้ายยังค้างยอดเงินของเที่ยวที่จบไปแล้ว');
+            return 'ป้ายหลังจบเที่ยว = “' + t + '”';
+        });
+
+        log('สรุป: ผ่าน ' + passCount + ' / ' + (passCount + failCount), failures);
+    }
+
+    // ============================ ปุ่ม/เริ่มต้น ============================
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        document.getElementById('runBtn').disabled = true;
+        try { await loadApp(); await runAll(); }
+        catch (e) { summaryEl.innerHTML = '<span style="color:var(--red)">โหลดแอปไม่สำเร็จ: ' + ((e && e.message) ? e.message : e) + '</span>'; }
+        document.getElementById('runBtn').disabled = false;
+    });
+
+    document.getElementById('dbgBtn').addEventListener('click', () => {
+        try {
+            const cw = w();
+            log({ isManualRunning: cw.isManualRunning, running: cw.isManualRunning, pill: pillText(), zoom: zoomText(),
+                  zoomMoney: cw.estimateFareAmt, parts: cw.estimateFareParts, net: cw.__net,
+                  tomtomKeySet: !!cw.TOMTOM_KEY });
+            alert('ป้ายการ์ดหน้าแรก: ' + pillText() + '\nป้ายจอใหญ่: ' + zoomText() +
+                  '\nยอดในหน่วยความจำ: ' + cw.estimateFareAmt +
+                  '\nมิเตอร์เดินอยู่: ' + cw.isManualRunning);
+        } catch (e) { alert('ดูสถานะไม่ได้: ' + e); }
+    });
+
+    window.addEventListener('load', () => { document.getElementById('runBtn').click(); });
+})();
+</script>
+</body>
+</html>
