@@ -34,14 +34,17 @@
         ใช้เส้นทางจำลอง (<code>fetchRouteFromTomTom</code> สตับ) แล้วเริ่มเที่ยวด้วยเส้นทางจริงของแอป
         <br>ผู้ใช้สั่ง (19 ก.ย. 69): <i>“ย้ายเวลาเริ่ม 11.54 กับวินาทีลงมาอยู่ข้างล่าง ตรงที่เป็นวิ่งแล้ว/รถติด/เหลือ กม. ·
         ป้ายภาษาไทยให้เว้นระยะเท่ากัน · ให้กระเถิบลงมาใกล้ช่องค่าโดยสารอีกนิด · บีบให้เล็กกว่านี้ เพราะป้ายเกินหน้าจอ”</i>
-        <br>ตรวจ 9 ชั้น: ① แถวเริ่ม/วินาที ย้ายลงมาอยู่ติดแถวสถิติจริง (ไม่ใช่แค่ซ่อน)
+        <br>ตรวจ 11 ชั้น: ① แถวเริ่ม/วินาที ย้ายลงมาอยู่ติดแถวสถิติจริง (ไม่ใช่แค่ซ่อน)
         ② 3 ช่องกว้างเท่ากัน → ป้ายเว้นระยะเท่ากัน/อยู่ระดับเดียวกัน ③ ป้ายพอดีจอ ไม่ต้องเลื่อน ④ เวลารถติดแบบมี ชม. ไม่ล้นช่อง
         ⑤ รถ taxi บนเส้น progress ไม่ถูกทับ ⑥ ของสำคัญยังเห็นครบ ⑦ ช่องสถิติชิดช่องค่าโดยสาร ⑧ มิเตอร์ยังเดิน/ตัวเลขยังขยับ
-        ⑨ จอเตี้ย/จอสูงก็ยังพอดี
+        ⑨ จอเตี้ย/จอสูงก็ยังพอดี ⑩ ระยะห่างแนวตั้งรอบใหม่ (การ์ดความเร็วห่างเส้นทางขึ้น · แถวเริ่ม/วินาทีลงมาใกล้ตัวเลข)
+        ⑪ ชิป “ลิมิต” ใหญ่ขึ้น + จัดกลางการ์ด · ชิป “โซน…” ถูกซ่อน
+        <br>รอบ 2 (19 ก.ย. 69 · ผู้ใช้ขอ): <i>“0 กม./ชม. ขยับลงมาต่ำหน่อย · บรรทัดเริ่ม 22.02 ดึงลงมาใกล้เลข 0.00 อีกนิด”</i>
+        ⇒ แยกช่องว่างเป็น 3 ตัวแปร <code>--tz-gap-speed 15px / --tz-gap-start 13px / --tz-gap-num 4px</code> (ที่เหลือยัง <code>--tz-gap 8px</code>)
         <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
         <code>http://127.0.0.1:58911/tests/meter-fit-offline.html</code>
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (9 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (11 สถานการณ์)</button>
     <button id="dbgBtn" class="alt">🔎 วัดขนาดสด ๆ</button>
     <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
     <div id="summary"></div>
@@ -393,6 +396,57 @@
             const cols = Array.from(cw.document.querySelectorAll('#trackerZoomOverlay .tz-stats-row .tz-stat-col')).map(c => R(c).w);
             assert(Math.max.apply(null, cols) - Math.min.apply(null, cols) <= 1.5, 'กลับมาจอ 412×760 แล้วช่องสถิติไม่เท่ากันอีก: ' + cols.map(nm).join(' / '));
             return out.join(' · ') + ' · กลับมา ' + PHONE.h + 'px แล้วช่องสถิติเท่ากัน (' + cols.map(nm).join(' / ') + 'px)';
+        });
+
+        // S10 — (19 ก.ย. 69 รอบ 2) ระยะห่างแนวตั้งแบบใหม่ตามที่ผู้ใช้ขอ: ให้รถ/เส้นทางห่างการ์ดความเร็วขึ้น
+        //        และดึงแถว “เริ่ม/วินาที” ลงมาให้ใกล้แถวตัวเลข (0.00/รถติด/เหลือ) มากกว่าที่ห่างจากตัวการ์ดความเร็ว
+        await runScenario('S10 · ระยะห่างแนวตั้งรอบใหม่: การ์ดความเร็วห่างจากเส้นทางขึ้น · แถว “เริ่ม/วินาที” ดึงลงมาใกล้ตัวเลข', async () => {
+            await resetTrip();
+            frame.style.height = PHONE.h + 'px';
+            await wait(200);
+            await startTripOpenZoom(20.5);
+            const cw = w();
+            const prog = el('tzProgressContainer'), speed = el('tzSpeedCard');
+            const startRow = cw.document.querySelector('#trackerZoomOverlay .tz-header.is-below');
+            const stats = cw.document.querySelector('#trackerZoomOverlay .tz-stats-row');
+            assert(startRow && prog && speed && stats, 'ไม่พบบล็อกที่ต้องวัด (progress/การ์ดความเร็ว/แถวเริ่ม/แถวสถิติ)');
+            const gSpeed = nm(R(speed).top - R(prog).bottom);        // เส้นทาง → การ์ดความเร็ว
+            const gStart = nm(R(startRow).top - R(speed).bottom);    // การ์ดความเร็ว → แถว เริ่ม/วินาที
+            const gNum = nm(R(stats).top - R(startRow).bottom);      // แถว เริ่ม/วินาที → แถวตัวเลข
+            const vars = getComputedStyle(boxEl());
+            assert(gSpeed >= 12, 'การ์ดความเร็วชิดเส้นทางเกินไป (' + gSpeed + 'px · ควร ~15px)');
+            assert(gStart >= 11, 'แถว “เริ่ม/วินาที” ยังติดการ์ดความเร็ว (' + gStart + 'px · ควร ~13px)');
+            assert(gNum <= 6, 'แถว “เริ่ม/วินาที” ยังห่างแถวตัวเลขเกินไป (' + gNum + 'px · ควร ~4px)');
+            assert(gStart > gNum, 'แถว “เริ่ม/วินาที” ยังไม่ถูกดึงลงมา (บน ' + gStart + 'px ≤ ล่าง ' + gNum + 'px)');
+            return 'เส้นทาง → การ์ดความเร็ว ' + gSpeed + 'px · การ์ดความเร็ว → เริ่ม/วินาที ' + gStart +
+                   'px · เริ่ม/วินาที → แถวตัวเลข ' + gNum + 'px (ตัวแปร: ' + vars.getPropertyValue('--tz-gap-speed').trim() + ' / ' +
+                   vars.getPropertyValue('--tz-gap-start').trim() + ' / ' + vars.getPropertyValue('--tz-gap-num').trim() + ')';
+        });
+
+        // S11 — (19 ก.ย. 69 รอบ 3 · ผู้ใช้สั่ง) ชิป “ลิมิต” ต้องใหญ่ขึ้น + จัดกลางบน-ล่าง · และ “โซนในเมือง” ต้องไม่โชว์บนการ์ดอีก
+        await runScenario('S11 · ชิป “ลิมิต” ใหญ่ขึ้น · จัดกลางการ์ดความเร็ว · ชิป “โซน…” ถูกซ่อน', async () => {
+            await resetTrip();
+            frame.style.height = PHONE.h + 'px';
+            await startTripOpenZoom(20.5);
+            const cw = w();
+            const card = el('tzSpeedCard');
+            const chip = el('tzSpeedLimitChip'), zone = el('tzSpeedZoneChip');
+            assert(card && chip && zone, 'ไม่พบการ์ดความเร็ว/ชิป (ลิมิต หรือ โซน)');
+            const cardR = R(card), chipR = R(chip), zoneR = R(zone);
+            const numR = R(el('tzSpeedNum'));
+            assert(cw.getComputedStyle(zone).display === 'none', 'ชิป “โซน…” ยังโชว์บนการ์ดความเร็ว (ได้ display:' + cw.getComputedStyle(zone).display + ')');
+            const fs = parseFloat(cw.getComputedStyle(chip).fontSize);
+            const valFs = parseFloat(cw.getComputedStyle(el('tzSpeedLimitVal')).fontSize);
+            assert(fs >= 18, 'ตัวอักษรบนชิป “ลิมิต” ยังเล็กเกินไป (' + fs + 'px · ควร >= 18px)');
+            assert(valFs >= 22, 'เลขลิมิตบนชิปยังเล็กเกินไป (' + valFs + 'px · ควร >= 22px)');
+            assert(chipR.h >= 36, 'ชิป “ลิมิต” เตี้ยเกินไป (' + nm(chipR.h) + 'px · ควร >= 36px)');
+            assert(valFs >= fs, 'เลขลิมิตต้องไม่เล็กกว่าคำว่า “ลิมิต”');
+            const chipMid = chipR.top + chipR.h / 2, cardMid = cardR.top + cardR.h / 2;
+            assert(Math.abs(chipMid - cardMid) <= 2, 'ชิป “ลิมิต” ไม่ได้อยู่กลางบน-ล่างของการ์ด (กลางชิป ' + nm(chipMid) + 'px vs กลางการ์ด ' + nm(cardMid) + 'px)');
+            assert(chipR.h <= cardR.h - 6, 'ชิปสูงเกินการ์ด (ชิป ' + nm(chipR.h) + 'px · การ์ด ' + nm(cardR.h) + 'px)');
+            return 'ชิปสูง ' + nm(chipR.h) + 'px (ตัวอักษร ' + fs + 'px · เลข ' + valFs + 'px · เลขความเร็ว ' + nm(numR.h) + 'px) · ' +
+                   'กลางชิป ' + nm(chipMid) + 'px = กลางการ์ด ' + nm(cardMid) + 'px · “โซน” display:' + cw.getComputedStyle(zone).display +
+                   ' · การ์ดสูง ' + nm(cardR.h) + 'px';
         });
 
         log('สรุป: ผ่าน ' + passCount + ' / ' + (passCount + failCount), failures);

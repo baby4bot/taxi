@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — สิทธิ์ “เห็นเมนูตั้งค่าการใช้งาน” รายยศ (5 หัวข้อ + ค่าเริ่มต้นตามที่ผู้ใช้สั่ง)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 1000px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 1000px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 760px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: สิทธิ์ “เห็นเมนูตั้งค่าการใช้งาน” รายยศ</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ตรวจจาก “แถวจริง” ในเมนูตั้งค่าการใช้งาน
+        (<code>getComputedStyle().display</code>) ไม่ใช่แค่อ่านตัวแปร
+        <br>ผู้ใช้สั่ง (19 ก.ย. 69): กำหนดได้ว่ายศไหน “เห็นหัวข้อ” 5 หัวข้อนี้หรือเปล่า —
+        <b>สิทธิ์และกรอบอวตาร</b> · <b>ไอดีต้องห้าม</b> · <b>หน้าตาและข้อความแอป</b> · <b>แผนที่และค่าทางด่วน</b> · <b>โควตาและบริการระบบ</b>
+        <br>ค่าเริ่มต้นที่สั่งไว้: <b>User</b> = ปิดทั้ง 5 · <b>VIP</b> = เปิดเฉพาะ “แผนที่และค่าทางด่วน” · <b>ผู้จัดการ</b> = เปิดเฉพาะ “แผนที่และค่าทางด่วน” · <b>แอดมิน</b> = เปิดทั้งหมด
+        <br>คีย์ที่ครอบคลุม (9): <code>canViewAvatarMenu</code> · <code>canViewReservedMenu</code> · <code>canViewAppLookMenu</code> ·
+        <code>canViewNavTollMenu</code> · <code>canViewSysOpsMenu</code> — และคู่สิทธิ์ “จัดการข้างใน” ที่ต้องไม่ถูกเข้าใจผิดว่าเปิดตามกัน:
+        <code>canManageAvatarFrames</code> · <code>canManageReservedNames</code> · <code>canEditAppTexts</code> · <code>canManageNavMap</code>
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/menu-visibility-perm-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (14 สถานการณ์)</button>
+    <button id="dbgBtn" class="alt">🔎 ดูแถวจริงสด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 760)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const el = (id) => { try { return w().document.getElementById(id); } catch (e) { return null; } };
+    const st = (id) => { const e = el(id); if (!e) return 'missing'; return w().getComputedStyle(e).display; };
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[menu-visibility-perm]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // 🗂 5 หัวข้อที่คุมการมองเห็น: คีย์สิทธิ์ ↔ id ของแถวจริงในเมนู
+    const MENUS = [
+        { which: 'avatar',   key: 'canViewAvatarMenu',   row: 'hubRoleItem',      label: 'สิทธิ์และกรอบอวตาร' },
+        { which: 'reserved', key: 'canViewReservedMenu', row: 'hubReservedItem',  label: 'ไอดีต้องห้าม' },
+        { which: 'look',     key: 'canViewAppLookMenu',  row: 'hubTextItem',      label: 'หน้าตาและข้อความแอป' },
+        { which: 'navToll',  key: 'canViewNavTollMenu',  row: 'hubNavMapItem',    label: 'แผนที่และค่าทางด่วน' },
+        { which: 'sysOps',   key: 'canViewSysOpsMenu',   row: 'hubQuotaItem',     label: 'โควตาและบริการระบบ' }
+    ];
+    const ROLES = ['User', 'VIP', 'Manager', 'Admin'];
+    const OPEN = { User: ['—'], VIP: ['navToll'], Manager: ['navToll'], Admin: ['avatar', 'reserved', 'look', 'navToll', 'sysOps'] };
+
+    // ============================ สตับ: ตัดเน็ตทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, tomtom: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (/tomtom/i.test(u)) cw.__net.tomtom++;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/tomtom/i.test(String(u))) cw.__net.tomtom++;
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) { cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return; }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () { if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; } return send.apply(null, arguments); };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test: ไม่ใช้ GPS' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    // ⏳ รอให้แอป “ว่างจริง” (สภาพตัดเน็ตทำให้ Firestore ยิงซ้ำตอนบูต → ตัวจับเวลายืด)
+    async function waitForQuietApp(ms) {
+        const lim = ms || 90000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const a = Date.now();
+            await wait(50);
+            if (Date.now() - a < 250) return true;
+        }
+        return false;
+    }
+
+    // ============================ โหลดแอป ============================
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 60000) {
+            const cw = w();
+            if (cw && typeof cw.hubMenuVisibleFor === 'function' && typeof cw.applyHubMenuVisibilityUI === 'function'
+                && typeof cw.canSeeMenu === 'function' && typeof cw.effectiveRolePerms === 'function'
+                && typeof cw.renderPermList === 'function' && cw.DEFAULT_ROLE_PERMS) {
+                installStubs();
+                await wait(200);
+                await closeAllModals();
+                await waitForNoLoader(20000);
+                await wait(200);
+                await waitForQuietApp(90000);
+                return;
+            }
+            await wait(100);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 60 วิ');
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const l = cw.document.getElementById('loadingOverlay');
+            if (!l || cw.getComputedStyle(l).display === 'none') return true;
+            await wait(120);
+        }
+        return false;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            const ids = ['loadingOverlay', 'authContainer', 'mainApp', 'positionModal'];
+            void ids;
+            cw.document.querySelectorAll('.modal-overlay').forEach(m => { try { m.style.display = 'none'; } catch (e) {} });
+        } catch (e) {}
+    }
+
+    // ============================ ตัวช่วย: ตั้งยศ/สิทธิ์แล้ววาดแถวจริง ============================
+    function setRole(role) { const cw = w(); cw.__testRole = role; cw.__myExtraPerms = {}; }
+    async function paint() { w().applyHubMenuVisibilityUI(); await wait(60); }
+    // 🎛 รอให้ “ตัวเลือกตำแหน่ง” มีตัวเลือกจริงก่อนใช้ (ในสภาพออฟไลน์ แอปสร้างตัวเลือกใหม่ได้ระหว่างนั้น — บางจังหวะตัวเลือกว่าง)
+    //   ถ้าว่างแล้วสั่ง .value = 'VIP' จะไม่ติด แล้วหน้าสิทธิ์จะวาดด้วยยศอื่น ⇒ เทสต์พังทั้งที่แอปถูก
+    async function ensureRoleOption(role) {
+        const cw = w();
+        for (let i = 0; i < 80; i++) {
+            const s = el('settingRoleSelect');
+            if (s && s.options && Array.prototype.some.call(s.options, o => o.value === role)) return s;
+            try { if (typeof cw.fillRoleSelects === 'function') cw.fillRoleSelects(); } catch (e) {}
+            await wait(150);
+        }
+        return el('settingRoleSelect');
+    }
+    async function asRole(role, stored) {
+        const cw = w();
+        cw.globalPermissions = stored || {};
+        setRole(role);
+        await paint();
+    }
+    // อ่าน “แถวจริง” ทั้ง 5 แถว → { avatar: true/false, ... }
+    function rowsNow() {
+        const out = {};
+        MENUS.forEach(m => { out[m.which] = (st(m.row) !== 'none' && st(m.row) !== 'missing'); });
+        return out;
+    }
+    const asText = (o) => MENUS.map(m => m.label + '=' + (o[m.which] ? 'เห็น' : 'ซ่อน')).join(' · ');
+
+    // ============================ ตัวรันสถานการณ์ ============================
+    async function runScenario(title, fn) {
+        const li = document.createElement('li');
+        const stEl = document.createElement('span'); stEl.className = 'st'; stEl.textContent = '⏳ ';
+        const tEl = document.createElement('span'); tEl.textContent = title;
+        const dEl = document.createElement('div'); dEl.className = 'detail';
+        li.appendChild(stEl); li.appendChild(tEl); li.appendChild(dEl);
+        resultsEl.appendChild(li);
+        try {
+            const detail = await fn();
+            passCount++;
+            li.classList.add('pass');
+            stEl.textContent = '✅ ผ่าน — ';
+            dEl.textContent = detail || '';
+        } catch (e) {
+            failCount++;
+            li.classList.add('fail');
+            stEl.textContent = '❌ ไม่ผ่าน — ';
+            dEl.textContent = String(e && e.message ? e.message : e);
+            failures.push(title + ': ' + dEl.textContent);
+        }
+        summaryEl.textContent = 'สรุป: ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + ' (จาก ' + (passCount + failCount) + ' สถานการณ์)';
+    }
+
+    // ============================ ชุดสถานการณ์ ============================
+    async function runAll() {
+        resultsEl.innerHTML = ''; passCount = 0; failCount = 0; failures.length = 0;
+        summaryEl.textContent = '';
+        offlineEl.textContent = 'สถานะเน็ต: กำลังโหลดแอป…';
+        try {
+            if (!stubsInstalled) await loadApp();
+        } catch (e) {
+            summaryEl.textContent = '❗ โหลดแอปไม่สำเร็จ: ' + e.message;
+            return;
+        }
+        const cw = w();
+        offlineEl.textContent = 'สถานะเน็ต: ตัดแล้ว (fetch/XHR ออกนอกเครื่องถูกบล็อก ' + cw.__net.blockedFetch + ' ครั้ง) · ยศที่ทดสอบผ่าน __testRole';
+
+        // S1 — ค่าเริ่มต้นรายยศครบ 5 สิทธิ์ ตรงตามที่ผู้ใช้สั่ง
+        await runScenario('S1 · ค่าเริ่มต้นรายยศของ 5 สิทธิ์ “เห็นเมนู” ตรงตามที่สั่ง (User ปิดหมด · VIP/ผู้จัดการ เห็นแผนที่ · แอดมินเปิดหมด)', async () => {
+            const out = [];
+            for (const r of ROLES) {
+                const p = cw.effectiveRolePerms(r) || {};
+                const on = MENUS.filter(m => p[m.key] === true).map(m => m.which);
+                const want = OPEN[r].filter(x => x !== '—');
+                const same = on.length === want.length && want.every(x => on.indexOf(x) >= 0);
+                out.push(r + '=[' + (on.join(',') || 'ปิดหมด') + ']');
+                assert(same, 'ค่าเริ่มต้นของ ' + r + ' ไม่ตรงที่สั่ง — ได้ [' + on.join(',') + '] ต้องได้ [' + want.join(',') + ']');
+            }
+            return out.join(' · ') + '  (คีย์: ' + MENUS.map(m => m.key).join(', ') + ')';
+        });
+
+        // S2 — ยศ User: แถวจริงทั้ง 5 ซ่อน
+        await runScenario('S2 · ยศ User → แถวจริงทั้ง 5 ถูกซ่อนในเมนูตั้งค่าการใช้งาน', async () => {
+            await asRole('User');
+            const r = rowsNow();
+            const seen = MENUS.filter(m => r[m.which]);
+            assert(seen.length === 0, 'ยังเห็นแถว: ' + seen.map(m => m.label).join(', '));
+            const shown = MENUS.map(m => m.row + '=' + st(m.row)).join(' · ');
+            assert(st('hubGeneralItem') !== 'none', 'แถว “ตั้งค่าทั่วไป” หายไปด้วย (ต้องเห็นได้ทุกยศ)');
+            return 'ซ่อนครบ 5 แถว (' + shown + ') · ตั้งค่าทั่วไปยังเห็น (' + st('hubGeneralItem') + ')';
+        });
+
+        // S3/S4 — VIP และ ผู้จัดการ: เห็นเฉพาะ “แผนที่และค่าทางด่วน”
+        for (const role of ['VIP', 'Manager']) {
+            await runScenario('S' + (role === 'VIP' ? '3' : '4') + ' · ยศ ' + role + ' → เห็นเฉพาะ “แผนที่และค่าทางด่วน” แถวเดียว', async () => {
+                await asRole(role);
+                const r = rowsNow();
+                const seen = MENUS.filter(m => r[m.which]).map(m => m.which);
+                assert(seen.length === 1 && seen[0] === 'navToll', 'ต้องเห็นแค่ navToll — ได้ [' + seen.join(',') + ']');
+                assert(st('hubRoleItem') === 'none' && st('hubReservedItem') === 'none' && st('hubTextItem') === 'none' && st('hubQuotaItem') === 'none',
+                    'มีแถวอื่นโผล่มาด้วย (ต้องซ่อน): ' + JSON.stringify(rowsNow()));
+                return asText(r);
+            });
+        }
+
+        // S5 — แอดมิน: เห็นทั้ง 5
+        await runScenario('S5 · ยศ แอดมิน → เห็นทั้ง 5 แถว (กันล็อกตัวเองด้วยการติ๊กออก)', async () => {
+            await asRole('Admin');
+            const r = rowsNow();
+            const missing = MENUS.filter(m => !r[m.which]).map(m => m.label);
+            assert(missing.length === 0, 'แอดมินไม่เห็น: ' + missing.join(', '));
+            const cw2 = w();
+            cw2.globalPermissions = { Admin: { canViewAvatarMenu: false, canViewReservedMenu: false, canViewAppLookMenu: false, canViewNavTollMenu: false, canViewSysOpsMenu: false } };
+            await paint();
+            const r2 = rowsNow();
+            const missing2 = MENUS.filter(m => !r2[m.which]).map(m => m.label);
+            assert(missing2.length === 0, 'ติ๊กออกให้แอดมินแล้วแอดมินเห็นไม่ครบ (ต้องเห็นเสมอ): ' + missing2.join(', '));
+            w().globalPermissions = {};
+            return 'เห็นครบ 5 แถวเสมอ (แม้ติ๊กออกทั้ง 5) · ' + asText(r);
+        });
+
+        // S6 — canSeeMenu() ตรงกับแถวจริงทุกยศ
+        await runScenario('S6 · canSeeMenu(หัวข้อ, ยศ) ให้ผลตรงกับ “แถวจริง” ทั้ง 5 หัวข้อ × 4 ยศ', async () => {
+            const bad = [];
+            for (const role of ROLES) {
+                await asRole(role);
+                const r = rowsNow();
+                for (const m of MENUS) {
+                    const fn = cw.canSeeMenu(m.which, role) === true;
+                    if (fn !== r[m.which]) bad.push(role + '/' + m.which + ' ฟังก์ชัน=' + fn + ' แถวจริง=' + r[m.which]);
+                }
+            }
+            assert(bad.length === 0, 'ไม่ตรงกัน: ' + bad.join(' · '));
+            return 'ตรงกันครบ 20 ช่อง (5 หัวข้อ × 4 ยศ)';
+        });
+
+        // S7 — แอดมินเปิดให้ User → แถวโผล่ทันที
+        await runScenario('S7 · แอดมินติ๊ก “เห็นเมนู หน้าตาและข้อความแอป” ให้ User → แถวโผล่ทันทีโดยไม่ต้องรีเฟรช', async () => {
+            await asRole('User');
+            assert(st('hubTextItem') === 'none', 'เริ่มต้น User ต้องไม่เห็นแถวนี้');
+            cw.globalPermissions = { User: { canViewAppLookMenu: true } };
+            await paint();
+            assert(st('hubTextItem') !== 'none', 'ติ๊กเปิดแล้วแถวยังไม่โผล่ (canViewAppLookMenu)');
+            assert(st('hubRoleItem') === 'none' && st('hubReservedItem') === 'none' && st('hubNavMapItem') === 'none' && st('hubQuotaItem') === 'none',
+                'เปิดตัวเดียวแล้วตัวอื่นโผล่ตาม (ต้องไม่โผล่)');
+            cw.globalPermissions = {};
+            return 'User: ก่อนเปิด=ซ่อน → เปิด canViewAppLookMenu=เห็น · แถวอื่นยังซ่อนครบ · canSeeMenu(look,User)=' + cw.canSeeMenu('look', 'User');
+        });
+
+        // S8 — แอดมินติ๊กออกจาก VIP (ที่เปิดไว้) → แถวหายทันที
+        await runScenario('S8 · แอดมินติ๊กออก “เห็นเมนู แผนที่และค่าทางด่วน” ของ VIP → แถวหายทันที', async () => {
+            await asRole('VIP');
+            assert(st('hubNavMapItem') !== 'none', 'VIP ต้องเห็นแถวแผนที่ตามค่าเริ่มต้น');
+            cw.globalPermissions = { VIP: { canViewNavTollMenu: false } };
+            await paint();
+            assert(st('hubNavMapItem') === 'none', 'ติ๊กออกแล้วแถวยังอยู่ (canViewNavTollMenu)');
+            cw.globalPermissions = {};
+            await paint();
+            assert(st('hubNavMapItem') !== 'none', 'ล้างค่าที่บันทึกแล้วค่าเริ่มต้นไม่กลับมา');
+            return 'VIP: ค่าเริ่มต้น=เห็น → ติ๊กออก=ซ่อน → ล้างค่า=กลับมาเห็น (ค่าเริ่มต้นยังไม่ถูกแก้)';
+        });
+
+        // S9 — “เห็นเมนู” ≠ “แก้ไขได้” : ยศที่เห็นแถวแต่ไม่มีสิทธิ์จัดการ ต้องไม่ถูกมองว่าได้สิทธิ์
+        await runScenario('S9 · “เห็นเมนู” ไม่เท่ากับ “แก้ไขได้” — ยศที่เห็นแถวแผนที่ ยังไม่ได้รับสิทธิ์แก้แผนที่/อัตราค่าทางด่วน', async () => {
+            await asRole('VIP');
+            const p = cw.effectiveRolePerms('VIP') || {};
+            assert(p.canViewNavTollMenu === true, 'VIP ต้องเปิด canViewNavTollMenu');
+            assert(p.canManageNavMap !== true, 'VIP ถูกให้สิทธิ์แก้แผนที่นำทางเองโดยไม่ตั้งใจ (canManageNavMap)');
+            assert(p.canManageTollRates !== true, 'VIP ถูกให้สิทธิ์แก้อัตราค่าทางด่วนเองโดยไม่ตั้งใจ (canManageTollRates)');
+            assert(p.canEditAppTexts !== true, 'VIP ถูกให้สิทธิ์แก้ข้อความแอปเองโดยไม่ตั้งใจ (canEditAppTexts)');
+            assert(p.canManageReservedNames !== true, 'VIP ถูกให้สิทธิ์แก้ไอดีต้องห้ามเองโดยไม่ตั้งใจ (canManageReservedNames)');
+            assert(p.canManageAvatarFrames !== true, 'VIP ถูกให้สิทธิ์จัดการกรอบอวตารเองโดยไม่ตั้งใจ (canManageAvatarFrames)');
+            assert(cw.twCanNavToll() === true, 'VIP เห็นแถวแล้วแต่เปิดหน้าต่าง “แผนที่และค่าทางด่วน” ไม่ได้ (ต้องเข้าไปตั้งได้ตามสิทธิ์ที่สั่ง)');
+            const visTabs = cw.twVisible('navToll').map(x => x.t.id).join(',');
+            assert(visTabs.indexOf('nav') >= 0 && visTabs.indexOf('toll') >= 0, 'VIP เข้าแล้วไม่เห็นแท็บครบ: ' + visTabs);
+            return 'VIP: canViewNavTollMenu=เปิด · canManageNavMap/ canManageTollRates / canEditAppTexts / canManageReservedNames / canManageAvatarFrames = ปิด · twCanNavToll=เปิด · แท็บที่เห็น=[' + visTabs + ']';
+        });
+
+        // S10 — ยศใหม่ (custom) ลอกจาก User = ปิดหมด แล้วแอดมินเปิดรายยศได้
+        await runScenario('S10 · ยศใหม่ที่สร้างเอง ลอกจาก User = ปิดหมด แล้วแอดมินติ๊กเปิดรายยศได้', async () => {
+            await asRole('พนักงานใหม่');
+            const r = rowsNow();
+            const seen = MENUS.filter(m => r[m.which]).map(m => m.label);
+            assert(seen.length === 0, 'ยศใหม่เห็นแถวทั้งที่ค่าเริ่มต้นต้องปิดหมด: ' + seen.join(', '));
+            cw.globalPermissions = { 'พนักงานใหม่': { canViewSysOpsMenu: true } };
+            await paint();
+            assert(st('hubQuotaItem') !== 'none', 'ติ๊กเปิดให้ยศใหม่แล้วแถวไม่โผล่');
+            assert(st('hubNavMapItem') === 'none', 'ยศใหม่เห็นแถวอื่นโผล่มาโดยไม่ได้เปิด');
+            cw.globalPermissions = {};
+            return 'ยศใหม่: ค่าเริ่มต้น=ซ่อนหมด → เปิด canViewSysOpsMenu=เห็นแถวโควตา (แถวอื่นยังซ่อน)';
+        });
+
+        // S11 — สิทธิ์อื่นไม่ถูกกระทบ
+        await runScenario('S11 · สิทธิ์อื่นไม่ถูกกระทบ (แถว “ตั้งค่าทั่วไป”/“ศูนย์แจ้งเตือน” · สิทธิ์มินิแมพ · สิทธิ์เริ่มมิเตอร์)', async () => {
+            const snap = {};
+            for (const r of ROLES) {
+                const p = cw.effectiveRolePerms(r) || {};
+                snap[r] = ['canUseMiniMap=' + !!p.canUseMiniMap, 'miniMapAutoOpen=' + !!p.miniMapAutoOpen, 'canStartMeterRoute=' + !!p.canStartMeterRoute, 'canUseSpeedAlert=' + !!p.canUseSpeedAlert].join('/');
+                assert(p.canUseMiniMap !== true, 'สิทธิ์มินิแมพของ ' + r + ' ถูกเปิดเอง');
+                assert(p.miniMapAutoOpen !== true, 'สิทธิ์เปิดมินิแมพอัตโนมัติของ ' + r + ' ถูกเปิดเอง');
+            }
+            await asRole('User');
+            assert(st('hubGeneralItem') !== 'none', 'User ต้องเห็น “ตั้งค่าทั่วไป”');
+            assert(st('hubNotifCenterItem') !== 'none', 'User ต้องเห็น “ศูนย์แจ้งเตือน”');
+            return Object.keys(snap).map(r => r + '[' + snap[r] + ']').join(' · ') + ' · แถวพื้นฐานยังเห็นครบ';
+        });
+
+        // S12 — หน้าตั้งค่าสิทธิ์มี 5 แถวใหม่ + ค่าติ๊กตรงกับค่าจริง
+        await runScenario('S12 · หน้าตั้งค่าสิทธิ์มี 5 แถวใหม่ และช่องติ๊กตรงกับค่าจริงของแต่ละยศ', async () => {
+            const missing = MENUS.filter(m => !cw.currentPermConfig.some(p => p.id === 'perm_' + m.key)).map(m => m.key);
+            assert(missing.length === 0, 'ไม่มีแถวใน currentPermConfig (หน้าสิทธิ์จะไม่แสดง): ' + missing.join(', '));
+            assert(el('settingRoleSelect'), 'ไม่พบตัวเลือกตำแหน่ง (settingRoleSelect)');
+            const out = [];
+            for (const role of ROLES) {
+                const selNow = await ensureRoleOption(role);
+                assert(selNow, 'ไม่พบตัวเลือกตำแหน่งตอนจะตั้งยศ ' + role);
+                cw.globalPermissions = {};
+                selNow.value = role;
+                cw.renderPermList();
+                // ⚠️ อ่านค่า “ในจังหวะเดียวกัน” ที่วาด — ห้าม await ระหว่างนี้
+                //    (ในสภาพออฟไลน์มีตัวฟัง Firestore ยิงวาดใหม่ระหว่างที่รอ ⇒ อ่านหลัง await จะเจอค่าของยศอื่น ไม่ใช่ยศที่เพิ่งตั้ง)
+                const selUsed = el('settingRoleSelect');
+                assert(selUsed && selUsed.value === role, 'ตั้งยศ ' + role + ' ไม่ติด (ตัวเลือกตอนวาดอยู่ที่ ' + (selUsed && selUsed.value) + ')');
+                const on = MENUS.filter(m => { const b = el('perm_' + m.key); return b && b.checked === true; }).map(m => m.which);
+                const eff = MENUS.filter(m => (cw.effectiveRolePerms(role) || {})[m.key] === true).map(m => m.which);
+                const want = OPEN[role].filter(x => x !== '—');
+                out.push(role + '=[' + (on.join(',') || 'ไม่ติ๊ก') + ']');
+                const sameSet = (a, b) => a.length === b.length && b.every(x => a.indexOf(x) >= 0);
+                assert(sameSet(on, eff), 'ช่องติ๊กของ ' + role + ' ไม่ตรงค่าที่แอปใช้จริง — ติ๊ก [' + on.join(',') + '] แต่แอปใช้ [' + eff.join(',') + ']');
+                assert(sameSet(eff, want), 'ค่าจริงของ ' + role + ' ไม่ตรงค่าเริ่มต้นที่สั่ง — ได้ [' + eff.join(',') + '] ต้องได้ [' + want.join(',') + ']');
+            }
+            cw.globalPermissions = {};
+            return out.join(' · ') + ' (ช่องติ๊กตรงกับค่าที่แอปใช้จริงทุกยศ · แถวอยู่ในหน้าสิทธิ์ครบ 5)';
+        });
+
+        // S13 — กดบันทึกแล้วส่งคีย์ครบ 5 ตัว + ไม่ตกหล่น
+        await runScenario('S13 · กด “บันทึกสิทธิ์” แล้วส่งคีย์ทั้ง 5 ไปเซิร์ฟเวอร์จริง (ค่าที่ติ๊กไม่หาย)', async () => {
+            const payload = {};
+            cw.currentPermConfig.forEach(p => { const e = el(p.id); if (e) payload[p.id.replace('perm_', '')] = e.checked; });
+            const miss = MENUS.filter(m => !(m.key in payload)).map(m => m.key);
+            assert(miss.length === 0, 'ตอนบันทึกจะไม่ส่งคีย์เหล่านี้ไป → ค่าที่ติ๊กหาย: ' + miss.join(', '));
+            const manages = ['canManageAvatarFrames', 'canManageReservedNames', 'canEditAppTexts', 'canManageNavMap'];
+            const miss2 = manages.filter(k => !(k in payload));
+            assert(miss2.length === 0, 'คีย์ “จัดการข้างใน” หายจาก payload: ' + miss2.join(', '));
+            return 'payload มีคีย์ครบ: ' + MENUS.map(m => m.key).join(', ') + ' + ' + manages.join(', ');
+        });
+
+        // S14 — ป้าย/คำอธิบายในหน้าสิทธิ์อ่านรู้เรื่อง (แอดมินรู้ว่าติ๊กแล้วเกิดอะไร)
+        await runScenario('S14 · แถวสิทธิ์ทั้ง 5 มีคำอธิบายว่า “เปิดแล้วเห็นอะไร” และไม่สับสนกับสิทธิ์จัดการ', async () => {
+            const sel = await ensureRoleOption('VIP');
+            cw.globalPermissions = {};
+            sel.value = 'VIP';
+            cw.renderPermList();
+            await wait(80);
+            const bad = [];
+            MENUS.forEach(m => {
+                const box = el('perm_' + m.key);
+                const item = box && box.closest ? box.closest('.perm-item') : null;
+                const txt = item ? String(item.innerText || '') : '';
+                if (!/เห็นเมนู|เห็นหัวข้อ/.test(txt)) bad.push(m.key);
+            });
+            assert(bad.length === 0, 'แถวที่ไม่มีคำอธิบายชัดว่าเป็นสิทธิ์ “เห็นเมนู”: ' + bad.join(', '));
+            return 'ครบ 5 แถวมีคำอธิบายระบุว่าเป็นสิทธิ์ “เห็นเมนู/เห็นหัวข้อ”';
+        });
+
+        // คืนสภาพ
+        try { cw.globalPermissions = {}; cw.__myExtraPerms = {}; cw.__testRole = undefined; cw.myCurrentRole = 'User'; } catch (e) {}
+        log('สรุป: ผ่าน ' + passCount + ' / ' + (passCount + failCount), failures);
+    }
+
+    document.getElementById('runBtn').addEventListener('click', () => { runAll(); });
+    document.getElementById('dbgBtn').addEventListener('click', async () => {
+        try {
+            const cw = w();
+            if (!stubsInstalled) await loadApp();
+            const dump = ROLES.map(r => {
+                cw.globalPermissions = {}; cw.__testRole = r; cw.applyHubMenuVisibilityUI();
+                const p = cw.effectiveRolePerms(r) || {};
+                return r + ': ' + MENUS.map(m => m.label + '=' + (p[m.key] === true ? 'เปิด' : 'ปิด') + '/แถว:' + st(m.row)).join(' · ');
+            }).join('\n');
+            cw.globalPermissions = {}; cw.__testRole = undefined;
+            alert('📋 สถานะแถวจริง:\n\n' + dump);
+        } catch (e) { alert('ดูสถานะไม่สำเร็จ: ' + e.message); }
+    });
+    window.addEventListener('load', () => { setTimeout(runAll, 400); });
+})();
+</script>
+</body>
+</html>

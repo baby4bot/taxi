@@ -36,10 +36,13 @@
         <br>ตรวจ 8 ชั้น: ① ค่าเริ่มต้นเปิดทุกยศ (รวม VIP/ยศใหม่) ② แอดมินติ๊กออกได้เฉพาะยศนั้น ③ ปิดสิทธิ์ = ไม่ติ๊ด/ไม่ขึ้นแดง/ชิปลิมิตหาย
         ④ เปิดสิทธิ์กลับ = ติ๊ด 5 แล้ว 3 ครั้ง (ของเดิมไม่พัง) ⑤ มอบรายคนทับสิทธิ์ยศได้ ⑥ เมนูในหน้าตั้งค่าทั่วไปซ่อน + ขึ้น 🔒
         ⑦ หน้าตั้งค่าสิทธิ์มีแถวใหม่ และกดบันทึกส่งคีย์ไปด้วย ⑧ สิทธิ์เดิม (มินิแมพ) ไม่ถูกกระทบ
+        <br>➕ เพิ่ม 8 ชั้นของ “ป๊อปเร็วบนจอมิเตอร์” (19 ก.ย. 69 — ผู้ใช้สั่ง): ⑨ แตะชิป → ป๊อปเปิดพร้อมค่าจริง/เกาะโซนที่รถอยู่ · ⑩ ปุ่ม − / + ทีละ 5 + ล็อกที่เพดาน 20–200
+        ⑪ สลับโซนในป๊อป แก้แยกกันจริง · ⑫ สวิตช์ “สลับตามโซน” ตรงกับหน้าตั้งค่า · ⑬ โซนเปลี่ยนกลางเที่ยว = ป๊อปตามให้เอง (เลือกเองแล้วไม่สลับ)
+        ⑭ กดรัว 3 ครั้ง = บันทึกครั้งเดียว + payload ตรง · ⑮ ไม่มีสิทธิ์ = ป๊อปไม่เปิด/ปิดค้างเอง · ⑯ ESC ตัวแรก + แตะนอกป๊อป/แตะชิปซ้ำ
         <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
         <code>http://127.0.0.1:58911/tests/speed-alert-perm-offline.html</code>
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (8 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (17 สถานการณ์)</button>
     <button id="dbgBtn" class="alt">🔎 ดูสถานะสิทธิ์สด ๆ</button>
     <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
     <div id="summary"></div>
@@ -104,6 +107,9 @@
             realPlaySound = cw.playSound;
             cw.playSound = function (type) { if (type === 'speed') beats.push(Date.now() - beatsT0); };
         } catch (e) {}
+        // 🔒 กันสแนปช็อตบัญชีจริงในเครื่องมาทับค่าลิมิตที่ชุดทดสอบป้อนไว้กลางสถานการณ์
+        //    (เครื่องที่ล็อกอินค้าง: ตัวดึงข้อมูลผู้ใช้สำรองส่ง doc จริงมาถึงหลังบูต ⇒ ลิมิต 80/120 ถูกเปลี่ยน)
+        pinSpeedPrefsAgainstDoc(cw);
         stubsInstalled = true;
     }
 
@@ -184,6 +190,27 @@
     }
     async function asRole(role) { w().__testRole = role; await wait(30); }
     const allowedAs = async (role) => { await asRole(role); return w().canUseSpeedAlert(); };
+
+    // 🔒 ค่าลิมิต/สวิตช์/โซนที่ชุดทดสอบตั้งไว้ ต้องไม่ถูกสแนปช็อตบัญชีจริงเขียนทับ
+    function pinSpeedPrefsAgainstDoc(cw) {
+        const real = cw.__applyUserDocUI;
+        if (typeof real !== 'function' || real.__spdPinned) return;
+        const wrapped = function (data) {
+            const keep = { city: cw.userSpeedLimitKmh, toll: cw.userSpeedTollKmh, auto: cw.userSpeedZoneAuto, warn: cw.userSpeedWarn };
+            const sw = cw.document.getElementById('editSpeedWarn');
+            const za = cw.document.getElementById('editSpeedZoneAuto');
+            const swc = sw ? sw.checked : null, zac = za ? za.checked : null;
+            const out = real.apply(this, arguments);
+            cw.userSpeedLimitKmh = keep.city; cw.userSpeedTollKmh = keep.toll;
+            cw.userSpeedZoneAuto = keep.auto; cw.userSpeedWarn = keep.warn;
+            if (sw && swc !== null) sw.checked = swc;
+            if (za && zac !== null) za.checked = zac;
+            try { cw.__renderSpeedLimitBox(); } catch (e) {}
+            return out;
+        };
+        wrapped.__spdPinned = true;
+        cw.__applyUserDocUI = wrapped;
+    }
 
     function startMeter() {
         const cw = w();
@@ -288,10 +315,16 @@
             await wait(150);
             beats = []; beatsT0 = Date.now();
             w().__spdTick(ROLE_LIMIT.city + 12);       // รอบที่ 2
+            // ⚠️ ตรวจ “การ์ดขึ้นแดง” ตอนค่าความเร็วเกินยังสด ๆ + ดักดูตลอดช่วงรอ
+            //    (รอบ GPS ในเครื่องยิงค่าความเร็ว 0 มาทับได้ทุกวินาที ⇒ เช็คตอนท้ายชุดอย่างเดียวจะแกว่ง)
+            await wait(80);
+            let sawOver = el('tzSpeedCard').classList.contains('over');
+            const tPoll = setInterval(() => { try { if (el('tzSpeedCard').classList.contains('over')) sawOver = true; } catch (e) {} }, 40);
             await wait(2200);
+            clearInterval(tPoll);
             const second = beepCount();
             assert(second === 3, 'รอบที่ 2 ควรติ๊ด 3 ครั้ง (ได้ ' + second + ')');
-            assert(el('tzSpeedCard').classList.contains('over'), 'การ์ดความเร็วไม่ได้ขึ้นสถานะเกินลิมิต');
+            assert(sawOver, 'การ์ดความเร็วไม่ได้ขึ้นสถานะเกินลิมิต (ตอนความเร็วเกินจริง)');
             stopMeter();
             return 'รอบ 1 = ' + first + ' ครั้ง · รอบ 2 = ' + second + ' ครั้ง · การ์ดขึ้นแดงตามเดิม';
         });
@@ -379,8 +412,218 @@
             return rows.join(' · ') + ' · canUseSpeedAlert: User=ปิด(ตามที่ติ๊ก) VIP=เปิด(ค่าเริ่มต้น)';
         });
 
+        // ==================== ⚡ (19 ก.ย. 69) ป๊อปเร็วบนจอมิเตอร์ใหญ่: แตะชิป “ลิมิต 80” = ปรับ ±5 / สลับโซน ====================
+        //  ผู้ใช้สั่ง: “กดชิปลิมิตแล้วมีป๊อปเล็กให้เพิ่ม/ลดลิมิตทีละ 5 และสลับโซนได้เลย”
+        //  เทสต์ผูกกับ “ปุ่ม/ค่าจริงในแอป” ไม่ใช่แค่เรียกฟังก์ชัน — กดผ่าน onclick ของปุ่มจริงบนป๊อป
+
+        // ตัวช่วย: เปิดป๊อปผ่าน “ชิปจริง” (ทางเดียวกับที่ผู้ใช้แตะ)
+        async function openQuick() {
+            const chip = el('tzSpeedLimitChip');
+            assert(chip, 'ไม่พบชิป “ลิมิต” บนจอมิเตอร์');
+            if (w().spdQuickIsOpen()) w().spdQuickClose();
+            chip.click();
+            await wait(60);
+            assert(w().spdQuickIsOpen(), 'แตะชิปแล้วป๊อปไม่เปิด');
+            // ค่าตั้งต้นของรอบนี้ (ใช้เทียบว่ากด ±5 ได้จริง)
+            w().userSpeedLimitKmh = ROLE_LIMIT.city;
+            w().userSpeedTollKmh = ROLE_LIMIT.toll;
+            w().userSpeedZoneAuto = true;
+            try { w().navMiniTollZone = null; } catch (e) {}
+            w().__spdQuick.manual = false;
+            w().spdQuickOpen();          // เปิดใหม่ให้วาดค่าที่เพิ่งตั้ง
+            await wait(40);
+        }
+        const clickBtn = (id) => { const b = el(id); assert(b, 'ไม่พบปุ่ม ' + id); b.click(); };
+        const numTxt = () => { const n = el('spdQuickNum'); return n ? String(n.innerText).trim() : ''; };
+
+        // S9 — แตะชิป → ป๊อปเปิดพร้อมค่าจริง และเกาะโซนที่รถอยู่
+        await runScenario('S9 · แตะชิป “ลิมิต” → ป๊อปเปิดพร้อมค่าจริง + เกาะโซนที่รถอยู่ (ไม่ต้องออกจากจอมิตอร์)', async () => {
+            await asRole('VIP');
+            // ⛔ (รอบ 3 · ผู้ใช้สั่ง) ชิป “โซนในเมือง” ไม่โชว์บนการ์ดความเร็วแล้ว — แม้สั่ง display เองก็ต้องถูก CSS บังคับซ่อน
+            const zc = el('tzSpeedZoneChip'); if (zc) zc.style.display = 'inline-flex';
+            assert(!zc || w().getComputedStyle(zc).display === 'none', 'ชิป “โซนในเมือง” ต้องไม่โชว์บนการ์ดความเร็วแล้ว');
+            w().__spdTick();
+            await wait(40);
+            await openQuick();
+            assert(numTxt() === String(ROLE_LIMIT.city), 'ตัวเลขในป๊อปไม่ตรงลิมิตในเมือง (ได้ “' + numTxt() + '”)');
+            assert(el('spdQuickCityVal').innerText === String(ROLE_LIMIT.city), 'ป้ายโซนในเมืองไม่ตรง');
+            assert(el('spdQuickTollVal').innerText === String(ROLE_LIMIT.toll), 'ป้ายโซนทางด่วนไม่ตรง');
+            assert(el('spdQuickZoneCity').classList.contains('on') && !el('spdQuickZoneToll').classList.contains('on'), 'โซนที่ไฮไลต์ไม่ใช่โซนที่รถอยู่ (ในเมือง)');
+            assert(/ในเมือง/.test(el('spdQuickLive').innerText), 'บรรทัด “ใช้อยู่” ไม่บอกโซนปัจจุบัน: ' + el('spdQuickLive').innerText);
+            return 'ชิป → ป๊อปเปิด · ตัวเลข ' + numTxt() + ' กม./ชม. · โซนไฮไลต์=ในเมือง · ใช้อยู่: ' + el('spdQuickLive').innerText;
+        });
+
+        // S10 — ปุ่ม − / + ปรับทีละ 5 จริง (กดผ่าน onclick ของปุ่ม) + ชนเพดานแล้วปุ่มถูกล็อก
+        await runScenario('S10 · ปุ่ม − / + ในป๊อป = ทีละ 5 จริง และล็อกปุ่มเมื่อชนเพดาน 20–200', async () => {
+            await asRole('VIP');
+            await openQuick();
+            clickBtn('spdQuickPlus');  await wait(30);
+            assert(numTxt() === '85', 'กด + ครั้งแรกต้องได้ 85 (ได้ ' + numTxt() + ')');
+            assert(w().userSpeedLimitKmh === 85, 'ค่าที่เก็บในแอปไม่ตรงกับที่โชว์ (85)');
+            clickBtn('spdQuickPlus');  await wait(30);
+            assert(numTxt() === '90', 'กด + ครั้งที่ 2 ต้องได้ 90 (ได้ ' + numTxt() + ')');
+            clickBtn('spdQuickMinus'); await wait(30);
+            assert(numTxt() === '85', 'กด − ต้องกลับมา 85 (ได้ ' + numTxt() + ')');
+            w().userSpeedLimitKmh = 200; w().spdQuickOpen(); await wait(30);
+            assert(el('spdQuickPlus').disabled === true, 'ถึงเพดาน 200 แล้วปุ่ม + ยังกดได้');
+            w().userSpeedLimitKmh = 20; w().spdQuickOpen(); await wait(30);
+            assert(el('spdQuickMinus').disabled === true, 'ถึงพื้น 20 แล้วปุ่ม − ยังกดได้');
+            assert(el('spdQuickPlus').disabled === false, 'ที่ 20 ปุ่ม + ต้องกดได้');
+            w().userSpeedLimitKmh = ROLE_LIMIT.city; w().spdQuickOpen(); await wait(30);
+            return '80→85→90→85 · เพดาน 200 ล็อก + · พื้น 20 ล็อก − · ค่าที่เก็บตรงกับที่โชว์';
+        });
+
+        // S11 — สลับโซนได้ในป๊อป + แก้แยกตามโซนจริง
+        await runScenario('S11 · สลับโซนในป๊อป (ในเมือง/ทางด่วน) — แก้ค่าของโซนนั้นแยกกันจริง', async () => {
+            await asRole('VIP');
+            await openQuick();
+            clickBtn('spdQuickZoneToll'); await wait(30);
+            assert(el('spdQuickZoneToll').classList.contains('on'), 'เลือก “ทางด่วน” แล้วปุ่มไม่ไฮไลต์');
+            assert(numTxt() === String(ROLE_LIMIT.toll), 'ตัวเลขไม่สลับไปเป็นลิมิตทางด่วน (' + numTxt() + ')');
+            clickBtn('spdQuickPlus'); await wait(30);
+            assert(w().userSpeedTollKmh === ROLE_LIMIT.toll + 5, 'แก้ลิมิตทางด่วนไม่ติด');
+            assert(w().userSpeedLimitKmh === ROLE_LIMIT.city, 'แก้ทางด่วนแล้วลิมิตในเมืองถูกรบกวน');
+            clickBtn('spdQuickZoneCity'); await wait(30);
+            assert(numTxt() === String(ROLE_LIMIT.city), 'สลับกลับ “ในเมือง” แล้วตัวเลขไม่ตรง');
+            return 'ในเมือง=' + w().userSpeedLimitKmh + ' · ทางด่วน=' + w().userSpeedTollKmh + ' (แก้แยกกันจริง · ไฮไลต์ตามโซนที่เลือก)';
+        });
+
+        // S12 — สวิตช์ “สลับตามโซนอัตโนมัติ” ในป๊อป + ฝั่งหน้าตั้งค่าต้องตรงกัน
+        await runScenario('S12 · สวิตช์ “สลับตามโซนอัตโนมัติ” ในป๊อป ตรงกับสวิตช์ในหน้าตั้งค่า + เลือกทางด่วนตอนปิดอยู่ = เปิดให้เอง', async () => {
+            await asRole('VIP');
+            await openQuick();
+            const sw = el('spdQuickAuto');
+            assert(sw && sw.checked === true, 'ค่าเริ่มต้นต้องเปิดสลับตามโซน');
+            sw.checked = false; sw.dispatchEvent(new (w().Event)('change'));
+            await wait(40);
+            assert(w().userSpeedZoneAuto === false, 'ปิดสวิตช์ในป๊อปแล้วค่าในแอปไม่เปลี่ยน');
+            assert(w().document.getElementById('editSpeedZoneAuto').checked === false, 'สวิตช์ในหน้าตั้งค่าไม่ตรงกับป๊อป (ตอนบันทึกจะย้อนค่า)');
+            clickBtn('spdQuickZoneToll'); await wait(50);
+            assert(w().userSpeedZoneAuto === true, 'เลือกทางด่วนตอนปิดสลับอยู่ = ต้องเปิดให้เอง');
+            assert(el('spdQuickAuto').checked === true, 'สวิตช์ในป๊อปไม่กลับมาเปิด');
+            return 'ป๊อป↔หน้าตั้งค่าตรงกัน · เลือก “ทางด่วน” ตอนปิดสลับ = เปิดให้เอง (พร้อมข้อความบอก) · editSpeedZoneAuto=' + w().document.getElementById('editSpeedZoneAuto').checked;
+        });
+
+        // S13 — โซนเปลี่ยนกลางเที่ยว: ป๊อปที่เปิดอยู่เกาะโซนใหม่ให้เอง แต่ถ้าเลือกโซนเองแล้วต้องไม่สลับตาม
+        await runScenario('S13 · โซนเปลี่ยนกลางเที่ยว → ป๊อปเกาะโซนใหม่ให้เอง (แต่เลือกโซนเองแล้วไม่สลับตาม)', async () => {
+            await asRole('VIP');
+            w().userSpeedZoneAuto = true;
+            w().navMiniTollZone = () => ({ zone: 'city' });
+            await openQuick();
+            assert(el('spdQuickZoneCity').classList.contains('on'), 'เริ่มที่ในเมือง แต่ไฮไลต์ไม่ใช่');
+            w().navMiniTollZone = () => ({ zone: 'toll' });
+            w().__spdTick(); await wait(40);
+            assert(el('spdQuickZoneToll').classList.contains('on'), 'รถเข้าทางด่วนแล้วป๊อปไม่เกาะโซนใหม่');
+            assert(numTxt() === String(w().userSpeedTollKmh), 'ตัวเลขไม่เปลี่ยนตามลิมิตของโซนใหม่');
+            clickBtn('spdQuickZoneCity'); await wait(30);      // เลือกเอง = ล็อก
+            w().__spdTick(); await wait(40);
+            assert(el('spdQuickZoneCity').classList.contains('on'), 'เลือกโซนเองแล้วระบบสลับให้ (ต้องไม่สลับ)');
+            w().navMiniTollZone = () => ({ zone: 'city' }); w().__spdTick();
+            return 'ในเมือง→ทางด่วน: ป๊อปตามให้เอง · หลังเลือกเอง: ล็อกตามที่เลือก';
+        });
+
+        // S14 — บันทึกอัตโนมัติแบบรวมการกดรัว + payload ที่เขียนลงบัญชี + ปิดป๊อป = เร่งบันทึก
+        await runScenario('S14 · กดรัว 3 ครั้ง = บันทึกครั้งเดียว · payload ตรงกับค่าที่เพิ่งกด · ปิดป๊อป = เร่งบันทึก', async () => {
+            await asRole('VIP');
+            await openQuick();
+            const realSave = w().__spdQuickSaveNow;
+            let saves = 0;
+            w().__spdQuickSaveNow = () => { saves++; return Promise.resolve(true); };
+            clickBtn('spdQuickPlus'); clickBtn('spdQuickPlus'); clickBtn('spdQuickPlus');
+            await wait(60);
+            assert(saves === 0, 'บันทึกทันทีทุกครั้ง (ต้องรวบการกดรัวไว้ก่อน) — saves=' + saves);
+            await wait(1600);
+            assert(saves === 1, 'กดรัว 3 ครั้งควรบันทึกครั้งเดียว (ได้ ' + saves + ')');
+            const exp = ROLE_LIMIT.city + 15;
+            assert(w().userSpeedLimitKmh === exp, 'ค่าที่เก็บหลังกดรัวไม่ตรง (ต้อง ' + exp + ')');
+            const payload = w().__spdPayloadFields();
+            assert(payload.speedLimitKmh === exp, 'payload.speedLimitKmh ไม่ตรงกับที่เพิ่งกด (' + payload.speedLimitKmh + ')');
+            assert(payload.speedLimitTollKmh === w().userSpeedTollKmh, 'payload.speedLimitTollKmh ไม่ตรง');
+            assert(typeof payload.speedZoneAuto === 'boolean' && typeof payload.speedWarn === 'boolean', 'payload ขาดฟิลด์สวิตช์');
+            w().__spdQuickSaveNow = realSave;
+            // แตะ − แล้วปิดทันที = ต้องเร่งบันทึก (ไม่ทิ้งค่าที่เพิ่งกด)
+            clickBtn('spdQuickMinus');
+            const flushed = w().spdQuickFlush();
+            await wait(40);
+            assert(flushed === true, 'ปิดป๊อปแล้วไม่มีบันทึกที่ค้างให้เร่ง (ควรมี)');
+            w().userSpeedLimitKmh = ROLE_LIMIT.city; w().spdQuickOpen();
+            return 'กด + 3 ครั้ง → บันทึก 1 ครั้ง (หลัง 1.2 วิ) · payload = speedLimitKmh/speedLimitTollKmh/speedZoneAuto/speedWarn · ปิดป๊อป = เร่งบันทึกทันที';
+        });
+
+        // S15 — ไม่มีสิทธิ์ = เปิดป๊อปไม่ได้ + ชิปซ่อน + ป๊อปที่เปิดค้างถูกปิดเอง (เช่นถูกถอดสิทธิ์กลางเที่ยว/จบเที่ยว)
+        await runScenario('S15 · ยศไม่มีสิทธิ์ → เปิดป๊อปไม่ได้ (มีข้อความเตือน) · ชิปซ่อน · ป๊อปที่เปิดค้างถูกปิดเอง', async () => {
+            await asRole('VIP');
+            await openQuick();
+            assert(w().spdQuickIsOpen(), 'เริ่มต้นป๊อปต้องเปิดอยู่');
+            await denyUserSpeed();     // บันทึกสิทธิ์ของ User = ปิด
+            await asRole('User');
+            assert(w().canUseSpeedAlert() === false, 'ตั้งใจให้ยศนี้ไม่มีสิทธิ์ แต่ canUseSpeedAlert ยังจริง');
+            w().__spdTick();
+            await wait(60);
+            assert(st('tzSpeedLimitChip') === 'none', 'ไม่มีสิทธิ์แล้วชิป “ลิมิต” ยังโชว์อยู่');
+            assert(!w().spdQuickIsOpen(), 'ไม่มีสิทธิ์แล้วป๊อปยังเปิดค้างบนจอ');
+            w().spdQuickOpen();
+            await wait(40);
+            assert(!w().spdQuickIsOpen(), 'ไม่มีสิทธิ์แต่ยังสั่งเปิดป๊อปได้ (ต้องไม่เปิด)');
+            return 'ไม่มีสิทธิ์ = ชิปซ่อน (' + st('tzSpeedLimitChip') + ') · ป๊อปไม่เปิด · ป๊อปที่ค้างอยู่ถูกปิดเมื่อสิทธิ์หาย';
+        });
+
+        // S16 — ปิดป๊อปได้ด้วย “ESC” (ตัวแรกก่อนกล่องอื่น) และ “แตะนอกป๊อป” · แตะชิปซ้ำ = สลับ
+        await runScenario('S16 · ESC ปิดป๊อปเป็นตัวแรก · แตะนอกป๊อป = ปิด · แตะชิปซ้ำ = สลับเปิด/ปิด', async () => {
+            await asRole('VIP');
+            await openQuick();
+            const escId = w().__escCloseTop();
+            await wait(40);
+            assert(escId === 'spdQuick', 'ESC ปิดตัวอื่นก่อน (ได้ “' + escId + '”)');
+            assert(!w().spdQuickIsOpen(), 'ESC แล้วป๊อปยังเปิดอยู่');
+            await openQuick();
+            const body = w().document.body;
+            body.dispatchEvent(new (w().PointerEvent || w().MouseEvent)('pointerdown', { bubbles: true }));
+            await wait(40);
+            assert(!w().spdQuickIsOpen(), 'แตะนอกป๊อปแล้วป๊อปไม่ปิด');
+            const chip = el('tzSpeedLimitChip');
+            chip.click(); await wait(40);
+            assert(w().spdQuickIsOpen(), 'แตะชิปแล้วป๊อปไม่เปิด');
+            chip.click(); await wait(40);
+            assert(!w().spdQuickIsOpen(), 'แตะชิปซ้ำแล้วไม่ปิด ( toggle ไม่ทำงาน)');
+            return 'ESC → ปิดก่อนกล่องอื่น · แตะนอกป๊อป → ปิด · แตะชิปซ้ำ → สลับเปิด/ปิด';
+        });
+
+        // S17 — (19 ก.ย. 69 รอบ 4 · ผู้ใช้แจ้ง) “เครื่องยศอื่น บล็อกลิมิตความเร็วอยู่ล่างสุด แต่เครื่องแอดมินอยู่บนสุด”
+        //        ⇒ ต้องเรียงเหมือนกันทุกยศ: [เตือนเมื่อความเร็วเกินลิมิต] → [ลิมิตความเร็ว 2 โซน] เป็น 2 บล็อกแรกของแท็บ
+        //        ⇒ และต้อง “ซ่อมตัวเอง” เมื่อเจอลำดับเก่า (เครื่องที่เมานต์ไว้ก่อนโค้ดจัดลำดับ)
+        await runScenario('S17 · ลำดับบล็อกลิมิตใน “ตั้งค่าทั่วไป” = 2 บล็อกแรก ทุกยศ + ซ่อมลำดับเก่าได้เอง', async () => {
+            const cw = w();
+            const host = cw.document.getElementById('genSettingsBody');
+            assert(host, 'ไม่พบพื้นที่ตั้งค่าทั่วไป (#genSettingsBody)');
+            const orderOf = () => Array.from(host.children).map(n => n.id || n.tagName);
+            const head = (o) => o.slice(0, 2).join(',');
+            const want = 'speedWarnRow,speedLimitBox';
+            const seen = [];
+            for (const r of ['User', 'VIP', 'Manager', 'Admin']) {
+                await asRole(r);
+                cw.openGeneralSettingsModal('general');
+                await wait(40);
+                const o = orderOf();
+                seen.push(r + '=' + head(o));
+                assert(head(o) === want, 'ยศ ' + r + ': 2 บล็อกแรกไม่ใช่ “เตือน/ลิมิต” (ได้ ' + head(o) + ')');
+            }
+            // จำลองเครื่องเก่า: ย้าย 2 บล็อกไปท้ายสุด (แบบบิลด์เว็บเดิม) → เปิดหน้าต่างใหม่ต้องกลับมาบนสุดเอง
+            const warn = cw.document.getElementById('speedWarnRow'), box = cw.document.getElementById('speedLimitBox');
+            host.appendChild(warn); host.appendChild(box);
+            const legacy = head(orderOf());
+            assert(legacy !== want, 'จำลองลำดับเก่าไม่สำเร็จ (ยังอยู่บนสุดอยู่แล้ว)');
+            cw.openGeneralSettingsModal('general');
+            await wait(40);
+            const healed = head(orderOf());
+            assert(healed === want, 'ลำดับเก่าไม่ถูกซ่อม (ได้ ' + healed + ')');
+            // ลำดับต้องไม่สลับกันเอง: “เตือน” ก่อน “ลิมิต” เสมอ
+            assert(orderOf()[0] === 'speedWarnRow' && orderOf()[1] === 'speedLimitBox', '2 บล็อกสลับกันเอง');
+            return seen.join(' · ') + ' · ลำดับเก่า (' + legacy + ') → ซ่อมเป็น ' + healed + ' เอง';
+        });
+
         // คืนสภาพ: ล้างสิทธิ์ทดสอบ + คืนเสียงจริง
-        try { cw.globalPermissions = {}; cw.__myExtraPerms = {}; cw.__testRole = undefined; } catch (e) {}
+        try { cw.globalPermissions = {}; cw.__myExtraPerms = {}; cw.__testRole = undefined; if (cw.spdQuickIsOpen && cw.spdQuickIsOpen()) cw.spdQuickClose(); } catch (e) {}
         log('สรุป: ผ่าน ' + passCount + ' / ' + (passCount + failCount), failures);
     }
 

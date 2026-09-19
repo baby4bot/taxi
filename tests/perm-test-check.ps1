@@ -88,6 +88,7 @@ function New-PermModel([string]$text) {
     defs   = @{}          # role -> @{ key -> bool }
     sig    = @{}          # key -> md5 of every normalized line mentioning it
     struct = ''           # md5 of the DEFAULT_ROLE_PERMS plumbing lines
+    shared = ''           # md5 of lines that name MANY permissions at once (reported as one pseudo-key)
     raw    = $text
   }
 
@@ -135,9 +136,10 @@ function New-PermModel([string]$text) {
     foreach ($k in @($model.defs[$role].Keys)) { $model.keys[$k] = $true }
   }
 
-  # 4) line signature per known key + plumbing signature
+  # 4) line signature per known key + plumbing signature + “shared line” signature
   $bucket = @{}
   $structLines = New-Object System.Collections.ArrayList
+  $sharedLines = New-Object System.Collections.ArrayList
   foreach ($k in @($model.keys.Keys)) { $bucket[$k] = New-Object System.Collections.ArrayList }
   foreach ($line in (Get-NormalizedLines $text)) {
     # The Manager/User literals put EVERY key on one very long line, so hashing that
@@ -150,11 +152,22 @@ function New-PermModel([string]$text) {
       $tok = $t.Value
       if ($model.keys.ContainsKey($tok)) { $keysHere[$tok] = $true }
     }
+    # 4b) “บรรทัดจับคู่” = บรรทัดที่ตัดสินหลายสิทธิ์พร้อมกันในบรรทัดเดียว
+    #     เช่น แผนที่ “แถวไหนในเมนูเห็นได้” (avatar/reserved/look/navToll/sysOps) ที่จับคู่ canManageXxx กับ canViewXxx
+    #     ถ้าแฮชรายบรรทัดต่อคีย์ การแตะคู่เดียวจะรายงานว่าสิทธิ์อื่นบนบรรทัดเดียวกันถูกแก้ด้วย
+    #     (วัดจริง: เพิ่มสิทธิ์ “เห็นเมนู” 5 ตัว แล้วด่านฟ้องสิทธิ์ที่ไม่เกี่ยวข้องเพิ่มอีก 9 ตัว)
+    #     ⇒ รวมเป็นคีย์เทียมตัวเดียว 'sharedPermLines' ซึ่งมีชุดทดสอบที่ยืนยัน “การจับคู่” นั้นจริง
+    $menuViewKeys = @('canViewAvatarMenu', 'canViewReservedMenu', 'canViewAppLookMenu', 'canViewNavTollMenu', 'canViewSysOpsMenu')
+    $hasMenuView = $false
+    foreach ($mk in $menuViewKeys) { if ($keysHere.ContainsKey($mk)) { $hasMenuView = $true; break } }
+    #     หรือบรรทัดที่เอ่ยชื่อสิทธิ์หลายตัวพร้อมกัน (≥4) ซึ่งถือเป็น “บรรทัดรวม” โดยธรรมชาติ
+    if ($keysHere.Count -ge 4 -or ($hasMenuView -and $keysHere.Count -ge 2)) { [void]$sharedLines.Add($line); continue }
     foreach ($k in @($keysHere.Keys)) { [void]$bucket[$k].Add($line) }
     if ($line -match 'DEFAULT_ROLE_PERMS' -and $keysHere.Count -eq 0) { [void]$structLines.Add($line) }
   }
   foreach ($k in @($bucket.Keys)) { $model.sig[$k] = (Get-SortedHash @($bucket[$k])) }
   $model.struct = (Get-SortedHash @($structLines))
+  $model.shared = (Get-SortedHash @($sharedLines))
 
   return $model
 }
@@ -224,6 +237,7 @@ function Invoke-Gate([string]$indexPath, [string]$baselineText, [string]$baselin
     }
   }
   if ($now.struct -ne $old.struct) { $reasons['roleDefaults'] = 'DEFAULT_ROLE_PERMS plumbing changed (which role copies which role)' }
+  if ($now.shared -ne $old.shared) { $reasons['sharedPermLines'] = 'lines that decide several permissions at once changed (menu-visibility pairings / combined lines)' }
 
   $touched = @($reasons.Keys | Sort-Object)
   $res.touched = $touched
@@ -399,9 +413,12 @@ if ($SelfTest) {
   New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
   $utf8 = New-Object System.Text.UTF8Encoding($false)
   $cases = @(
-    @{ name = 'per-role default flipped (User gets meter-from-route)'; old = 'canStartMeterRoute: false }'; new = 'canStartMeterRoute: true }'; mustName = 'canStartMeterRoute' },
+    # ⚠️ ยึดข้อความที่ “อยู่เฉพาะบรรทัดของ User” (บรรทัด Manager มี canStartMeterRoute: true อยู่แล้ว)
+    @{ name = 'per-role default flipped (User gets meter-from-route)'; old = 'canStartMeterRoute: false, canViewAvatarMenu'; new = 'canStartMeterRoute: true, canViewAvatarMenu'; mustName = 'canStartMeterRoute' },
     @{ name = 'brand new permission row added'; old = "{ id: 'perm_canExportTrips'"; new = "{ id: 'perm_canFakeThing' },`r`n        { id: 'perm_canExportTrips'"; mustName = 'canFakeThing' },
-    @{ name = 'gate line of a permission edited'; old = 'canUseSpeedAlert()'; new = 'canUseSpeedAlertAlways()'; mustName = 'canUseSpeedAlert' }
+    @{ name = 'gate line of a permission edited'; old = 'canUseSpeedAlert()'; new = 'canUseSpeedAlertAlways()'; mustName = 'canUseSpeedAlert' },
+    # บรรทัด “จับคู่หลายสิทธิ์” (แผนที่แถวเมนูที่เห็นได้) — ต้องถูกจับที่คีย์เทียม sharedPermLines ไม่ใช่หายเงียบ
+    @{ name = 'menu-visibility pairing edited (navToll row loses its see-menu key)'; old = "can('canManageTollRates') || can('canViewNavTollMenu')"; new = "can('canManageTollRates')"; mustName = 'sharedPermLines' }
   )
   foreach ($c in $cases) {
     $planted = $realText.Replace($c.old, $c.new)

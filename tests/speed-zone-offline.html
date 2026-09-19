@@ -107,7 +107,64 @@
             realPlaySound = cw.playSound;
             cw.playSound = function (type) { if (type === 'speed') beats.push(Date.now()); };
         } catch (e) {}
+        // 🔎 กับดักจับ “ใครเขียนค่าลิมิต” — ใช้ตอนสถานการณ์พลาด จะเห็นทันทีว่าโค้ดไหนเขียนทับ
+        watchLimitWrites(cw);
+        // 🔒 กันสแนปช็อตบัญชีจริงในเครื่องมาทับค่าที่ชุดทดสอบป้อนเข้าไปกลางสถานการณ์
+        //    🐞 เจอจริง 19 ก.ย. 69: เครื่องที่ล็อกอินค้างไว้ → หลังบูต ~5 วิ ตัวสำรองที่ดึงข้อมูลผู้ใช้
+        //       (Firestore REST/localStorage) ส่ง doc ของบัญชีจริงมาถึง แล้ว __applyUserDocUI เขียนทับ
+        //       ลิมิตที่เทสต์ตั้งไว้ (80/120 → 85/125 ตามค่าที่บัญชีนั้นเคยบันทึก) ⇒ S6 พลาดทั้งที่ลอจิกถูก
+        //    ⇒ ชุดทดสอบเป็น “ออฟไลน์ + ป้อนค่าเอง” จึงต้องกันค่าจากบัญชีจริงไว้ (ทดสอบผ่านทุกเครื่อง)
+        pinSpeedPrefsAgainstDoc(cw);
         stubsInstalled = true;
+    }
+
+    let limitWrites = [];
+    function watchLimitWrites(cw) {
+        ['userSpeedLimitKmh', 'userSpeedTollKmh'].forEach((key) => {
+            let v = cw[key];
+            try {
+                Object.defineProperty(cw, key, {
+                    configurable: true,
+                    get: () => v,
+                    set: (nv) => {
+                        v = nv;
+                        if (limitWrites.length < 60) {
+                            let where = '(สแตกอ่านไม่ได้)';
+                            try { where = String(new Error().stack || '').split('\n')[2] || where; } catch (e) {}
+                            limitWrites.push(key + ' = ' + nv + ' @ ' + where.trim());
+                        }
+                    }
+                });
+            } catch (e) {}
+        });
+    }
+    function resetLimitWrites() { limitWrites = []; }
+
+    // 🔒 เก็บค่าลิมิต/สวิตช์ที่ “ชุดทดสอบตั้งไว้” ให้ทนการมาถึงของสแนปช็อตบัญชีจริง
+    //    (ค่าก่อน apply = ค่าที่เทสต์เพิ่งป้อน → ใส่กลับหลัง apply ทุกครั้ง)
+    function pinSpeedPrefsAgainstDoc(cw) {
+        const real = cw.__applyUserDocUI;
+        if (typeof real !== 'function' || real.__spdPinned) return;
+        const wrapped = function (data) {
+            const keep = {
+                city: cw.userSpeedLimitKmh, toll: cw.userSpeedTollKmh,
+                auto: cw.userSpeedZoneAuto, warn: cw.userSpeedWarn,
+                zoneLast: cw.__spdZoneLast
+            };
+            const sw = cw.document.getElementById('editSpeedWarn');
+            const za = cw.document.getElementById('editSpeedZoneAuto');
+            const swc = sw ? sw.checked : null, zac = za ? za.checked : null;
+            const out = real.apply(this, arguments);
+            cw.userSpeedLimitKmh = keep.city; cw.userSpeedTollKmh = keep.toll;
+            cw.userSpeedZoneAuto = keep.auto; cw.userSpeedWarn = keep.warn;
+            cw.__spdZoneLast = keep.zoneLast;
+            if (sw && swc !== null) sw.checked = swc;
+            if (za && zac !== null) za.checked = zac;
+            try { cw.__renderSpeedLimitBox(); } catch (e) {}
+            return out;
+        };
+        wrapped.__spdPinned = true;
+        cw.__applyUserDocUI = wrapped;
     }
 
     async function closeAllModals() {
@@ -260,7 +317,7 @@
             return seen.map(s => s[0] + ' = ' + s[1] + '/' + s[2] + ' กม./ชม.').join(' · ');
         });
 
-        await runScenario('S5 · โชว์ “โซนที่ใช้อยู่” ทั้งจอใหญ่และการ์ดหน้าหลัก + ไฮไลต์ช่องโซนที่ใช้', async () => {
+        await runScenario('S5 · “โซนที่ใช้อยู่” อยู่บนการ์ดหน้าหลัก + ช่องโซนที่ใช้ (จอใหญ่ไม่โชว์ชิปโซนแล้ว)', async () => {
             resetDefaults(cw);
             armRoute();
             moveTo(4);
@@ -272,8 +329,10 @@
             const chip = el('tzSpeedZoneChip');
             const small = txt('smallSpeedLimit');
             const chipStyle = cw.getComputedStyle(chip).display;
-            assert(chipStyle !== 'none', 'ชิปโซนบนจอใหญ่ต้องโชว์ (ได้ display:' + chipStyle + ')');
-            assert(String(chip.innerText).indexOf('ทางด่วน') >= 0, 'ชิปต้องบอก “โซนทางด่วน” แต่ได้ “' + chip.innerText + '”');
+            // ⛔ (19 ก.ย. 69 รอบ 3 · ผู้ใช้สั่ง) “โซนในเมือง/โซนนอกเมือง” ห้ามแสดงบนการ์ดความเร็วของจอมิเตอร์ใหญ่อีก
+            //   ⇒ บอกโซนได้จาก “การ์ดหน้าหลัก” กับ “หน้าตั้งค่าลิมิต” เท่านั้น
+            assert(chipStyle === 'none', 'ชิปโซนบนจอใหญ่ต้องถูกซ่อนแล้ว (ได้ display:' + chipStyle + ')');
+            assert(String(chip.innerText).indexOf('ทางด่วน') >= 0, 'ข้อความในชิปต้องยังอัปเดตตามโซน (ได้ “' + chip.innerText + '”)');
             assert(small.indexOf('120') >= 0 && small.indexOf('ทางด่วน') >= 0, 'การ์ดหน้าหลักต้องขึ้น “ลิมิต 120 · ทางด่วน” แต่ได้ “' + small + '”');
             const onRows = ['speedLimitCityBox', 'speedLimitTollBox'].filter(id => el(id).classList.contains('on'));
             assert(onRows.length === 1 && onRows[0] === 'speedLimitTollBox', 'ช่องโซนที่ใช้ต้องไฮไลต์ “บนทางด่วน” เท่านั้น แต่ได้ ' + JSON.stringify(onRows));
@@ -281,11 +340,12 @@
             await wait(20);
             const zoneTxt = txt('speedZoneNow');
             assert(zoneTxt.indexOf('ทางด่วน') >= 0 && zoneTxt.indexOf('120') >= 0, 'การ์ดตั้งค่าต้องบอกว่ากำลังใช้ลิมิตของทางด่วน แต่ได้ “' + zoneTxt + '”');
-            return 'ชิป = “' + chip.innerText + '” · การ์ดหน้าหลัก = “' + small + '” · ตั้งค่า = “' + zoneTxt + '”';
+            return 'ชิปโซนบนจอใหญ่ = ซ่อน (display:' + chipStyle + ' ข้อความ “' + chip.innerText + '”) · การ์ดหน้าหลัก = “' + small + '” · ตั้งค่า = “' + zoneTxt + '”';
         });
 
         await runScenario('S6 · ลิมิตที่ใช้ตัดสิน “เตือนเกิน” จริง: เกิน 80 บนถนน = ติ๊ด · 81 บนทางด่วน = เงียบ', async () => {
             resetDefaults(cw);
+            resetLimitWrites();
             armRoute();
             moveTo(4);
             const a0 = along();
@@ -304,9 +364,15 @@
             beats = []; cw.__spdTick(125);
             await wait(2300);
             const tollOverBeeps = beats.length;
-            assert(cityBeeps === 5, 'บนถนน 85 กม./ชม. (ลิมิต 80) ควรติ๊ด 5 ครั้ง แต่ได้ ' + cityBeeps);
-            assert(tollBeeps === 0, 'บนทางด่วน 85 กม./ชม. (ลิมิต 120) ต้องไม่ติ๊ด แต่ได้ ' + tollBeeps + ' ครั้ง');
-            assert(tollOverBeeps > 0, 'บนทางด่วน 125 กม./ชม. (เกิน 120) ต้องติ๊ด แต่ได้ 0');
+            // 🔎 เก็บสถานะจริงไว้ในข้อความ error — เวลาพลาดจะรู้ทันทีว่าลิมิต/โซน/รอบติ๊ดเพี้ยนตรงไหน
+            const diag = ' [โซน=' + cw.__spdZoneNow() + ' · ลิมิต=' + cw.__spdLimitNow() +
+                ' · ในเมือง/ทางด่วน=' + cw.userSpeedLimitKmh + '/' + cw.userSpeedTollKmh +
+                ' · สลับอัตโนมัติ=' + (cw.userSpeedZoneAuto !== false) +
+                ' · รอบติ๊ดที่=' + (cw.__spdEpiCount || 0) + ' · ติ๊ดค้าง=' + (cw.__spdOver ? 'เกินอยู่' : 'ไม่เกิน') +
+                ' · ติ๊ดรวมรอบนี้=' + beats.length + ' · ใครเขียนค่าลิมิต=' + JSON.stringify(limitWrites.slice(-4)) + ']';
+            assert(cityBeeps === 5, 'บนถนน 85 กม./ชม. (ลิมิต 80) ควรติ๊ด 5 ครั้ง แต่ได้ ' + cityBeeps + diag);
+            assert(tollBeeps === 0, 'บนทางด่วน 85 กม./ชม. (ลิมิต 120) ต้องไม่ติ๊ด แต่ได้ ' + tollBeeps + ' ครั้ง' + diag);
+            assert(tollOverBeeps > 0, 'บนทางด่วน 125 กม./ชม. (เกิน 120) ต้องติ๊ด แต่ได้ 0' + diag);
             return 'ถนน 85 = ' + cityBeeps + ' ติ๊ด · ทางด่วน 85 = ' + tollBeeps + ' ติ๊ด · ทางด่วน 125 = ' + tollOverBeeps + ' ติ๊ด';
         });
 
@@ -419,37 +485,62 @@
         });
 
         // 🧭 (19 ก.ย. 69) ผู้ใช้ถามว่า “เมนูลิมิตความเร็วอยู่ตรงไหน หาไม่เจอ” → ต้องเข้าได้จากหน้างานในคแตะเดียว
-        await runScenario('S11 · ทางลัด: แตะชิป “ลิมิต” บนจอมิเตอร์ใหญ่ → เปิดหน้าตั้งค่าตรงกล่องลิมิตทันที (ยศไม่มีสิทธิ์ = ไม่เปิด + เตือน)', async () => {
+        // ⚡ (19 ก.ย. 69) กติกาใหม่ตามที่ผู้ใช้สั่ง: แตะชิป “ลิมิต” = เปิด “ป๊อปเร็ว” บนจอมิเตอร์เอง (ไม่ต้องออกจากจอ)
+        //    · มีปุ่ม − / + ทีละ 5 · สลับโซนได้ · มีทางไปหน้าตั้งค่าเต็ม (“ตั้งค่าเต็ม ›”) ที่ยังเลื่อน+กระพริบกรอบให้
+        await runScenario('S11 · ทางลัด: แตะชิป “ลิมิต” → ป๊อปเร็วบนจอ (±5 · สลับโซน · ไปตั้งค่าเต็มได้) · ยศไม่มีสิทธิ์ = ไม่เปิด + เตือน', async () => {
             resetDefaults(cw);
             await wait(30);
             try { cw.toggleModal('generalSettingsModal', false); } catch (e) {}
+            try { if (typeof cw.spdQuickClose === 'function') cw.spdQuickClose(); } catch (e) {}
             const chip = el('tzSpeedLimitChip');
             assert(!!chip, 'ไม่พบชิป “ลิมิต” #tzSpeedLimitChip บนการ์ดความเร็ว');
             const oc = String(chip.getAttribute('onclick') || '');
-            assert(oc.indexOf('__spdOpenSettings') >= 0, 'ชิปต้องกดได้เพื่อพาไปหน้าตั้งค่า (ได้ onclick = ' + oc + ')');
+            assert(oc.indexOf('spdQuickToggle') >= 0, 'ชิปต้องเปิดป๊อปเร็ว (ได้ onclick = ' + oc + ')');
+            cw.__spdTick(60);                              // ให้ชิปแสดงก่อน (ชิปซ่อนเมื่อไม่มีลิมิต)
             chip.click();
+            await wait(120);
+            const pop = el('spdQuick');
+            assert(!!pop, 'ไม่พบป๊อปเร็ว #spdQuick');
+            assert(cw.getComputedStyle(pop).display !== 'none', 'แตะชิปแล้วป๊อปเร็วต้องเปิด แต่ได้ display:' + cw.getComputedStyle(pop).display);
+            const num = el('spdQuickNum');
+            assert(!!num && String(num.innerText).trim() === String(cw.userSpeedLimitKmh), 'เลขในป๊อปต้องเท่าลิมิตปัจจุบัน (' + cw.userSpeedLimitKmh + ') แต่ได้ “' + (num ? num.innerText : '') + '”');
+            assert(String(el('spdQuickMinus').getAttribute('onclick')).indexOf('spdQuickStep(-5)') >= 0
+                && String(el('spdQuickPlus').getAttribute('onclick')).indexOf('spdQuickStep(5)') >= 0, 'ปุ่ม − / + ต้องเป็นทีละ 5');
+            assert(String(el('spdQuickZoneCity').getAttribute('onclick')).indexOf("spdQuickPickZone('city')") >= 0
+                && String(el('spdQuickZoneToll').getAttribute('onclick')).indexOf("spdQuickPickZone('toll')") >= 0, 'ต้องมีปุ่มสลับโซนในป๊อป');
+            // ลด 1 ครั้ง → ต้องลง 5 จริง และไม่เปิดหน้าต่างอื่นทับ
+            const before = parseInt(String(num.innerText), 10);
+            el('spdQuickMinus').click();
+            await wait(60);
+            const afterMinus = parseInt(String(el('spdQuickNum').innerText), 10);
+            assert(afterMinus === before - 5, 'กด − ในป๊อปต้องลด 5 (' + before + ' → ' + afterMinus + ')');
+            try { cw.spdQuickClose(); } catch (e) {}
+            // “ตั้งค่าเต็ม ›” → ยังพาไปหน้าตั้งค่าตรงกล่องลิมิต + กระพริบกรอบได้เหมือนเดิม
+            cw.spdQuickOpenFull();
             let r = null, inView = false;
             for (let i = 0; i < 20 && !inView; i++) { await wait(100); r = el('speedLimitBox').getBoundingClientRect(); inView = (r.top > 0 && r.bottom <= cw.innerHeight + 4); }
             const opened = cw.getComputedStyle(el('generalSettingsModal')).display;
-            assert(opened === 'flex', 'แตะชิปแล้วต้องเปิด “ตั้งค่าทั่วไป” แต่ได้ display:' + opened);
+            assert(opened === 'flex', '“ตั้งค่าเต็ม ›” ต้องเปิด “ตั้งค่าทั่วไป” แต่ได้ display:' + opened);
             assert(cw.getComputedStyle(el('speedLimitBox')).display !== 'none' && r.height > 0, 'กล่อง “ลิมิตความเร็ว” ต้องแสดงอยู่');
             assert(inView, 'กล่องลิมิตต้องถูกเลื่อนมาอยู่ในจอ (top ' + Math.round(r.top) + ' · bottom ' + Math.round(r.bottom) + ' · จอ ' + cw.innerHeight + ')');
             assert(el('speedLimitBox').classList.contains('spd-flash'), 'ต้องกระพริบกรอบให้เห็นว่าอยู่ตรงไหน (ไม่พบคลาส spd-flash)');
             const btnTxt = Array.from(cw.document.querySelectorAll('#speedLimitBox .spd-step-btn')).map(b => b.getAttribute('onclick')).join(' | ');
             assert(/bumpSpeedLimit\(-5\)/.test(btnTxt) && /bumpSpeedLimit\(5\)/.test(btnTxt), 'ปุ่มในกล่องต้องเป็น ±5 แต่ได้ ' + btnTxt);
-            // ยศที่ไม่มีสิทธิ์ → ต้องไม่เปิดหน้าต่าง + บอกเหตุผล (ไม่เงียบ)
+            // ยศที่ไม่มีสิทธิ์ → ต้องไม่เปิดทั้งป๊อปและหน้าตั้งค่า + บอกเหตุผล (ไม่เงียบ)
             try { cw.toggleModal('generalSettingsModal', false); } catch (e) {}
             const realPerm = cw.canUseSpeedAlert, realToast = cw.showToast;
             const toasts = [];
             cw.showToast = function (m) { toasts.push(String(m)); };
             cw.canUseSpeedAlert = () => false;
-            let after = 'x';
-            try { chip.click(); await wait(350); after = cw.getComputedStyle(el('generalSettingsModal')).display; }
+            let after = 'x', popAfter = 'x';
+            try { chip.click(); await wait(350); after = cw.getComputedStyle(el('generalSettingsModal')).display; popAfter = cw.getComputedStyle(el('spdQuick')).display; }
             finally { cw.canUseSpeedAlert = realPerm; cw.showToast = realToast; }
             assert(after === 'none', 'ตำแหน่งที่ไม่มีสิทธิ์ต้องไม่เปิดหน้าตั้งค่า แต่ได้ display:' + after);
+            assert(popAfter === 'none', 'ตำแหน่งที่ไม่มีสิทธิ์ต้องไม่เปิดป๊อปเร็วด้วย แต่ได้ display:' + popAfter);
             assert(toasts.join(' ').indexOf('สิทธิ์') >= 0, 'ต้องบอกผู้ใช้ว่าไม่มีสิทธิ์ แต่ได้: ' + JSON.stringify(toasts));
             try { cw.toggleModal('generalSettingsModal', false); } catch (e) {}
-            return 'แตะชิป → “ตั้งค่าทั่วไป” เปิด · กล่องลิมิตอยู่กลางจอ (top ' + Math.round(r.top) + '/' + cw.innerHeight + ') + กระพริบกรอบ ✓ · ปุ่ม ±5 ✓ · ยศไม่มีสิทธิ์ → ไม่เปิด + “' + toasts.join(' ') + '”';
+            try { if (typeof cw.spdQuickClose === 'function') cw.spdQuickClose(); } catch (e) {}
+            return 'แตะชิป → ป๊อปเร็วเปิด (ลิมิต ' + before + ' → กด − = ' + afterMinus + ') · ปุ่ม ±5 + สลับโซน ✓ · “ตั้งค่าเต็ม ›” → กล่องลิมิตอยู่กลางจอ (top ' + Math.round(r.top) + '/' + cw.innerHeight + ') + กระพริบกรอบ ✓ · ยศไม่มีสิทธิ์ → ไม่เปิดทั้งคู่ + “' + toasts.join(' ') + '”';
         });
 
         // คืนสภาพเดิม

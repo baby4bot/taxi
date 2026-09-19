@@ -337,16 +337,21 @@
             assert(shownTabs('appLookTabs').length === 1, 'ต้องเหลือแท็บเดียว แต่พบ ' + shownTabs('appLookTabs').length);
             assert(cw.getComputedStyle(cw.document.getElementById('appLookTabs')).display === 'none', 'เหลือแท็บเดียว ไม่ควรมีแถบแท็บ');
             assert(cw.__appLookTab === 'scrollbar', 'ต้องเปิดที่แท็บแถบเลื่อน แต่ได้ ' + cw.__appLookTab);
-            // (ข) navToll — เหลือสิทธิ์ทางด่วนอย่างเดียว
+            // (ข) navToll — เหลือสิทธิ์ทางด่วนอย่างเดียว (ปิด “เห็นเมนู” เฉพาะคีย์นี้ ⇒ แท็บแผนที่หายจริง)
             cw.canManageNavMap = () => false; cw.canManageTollRates = () => true;
+            const realCanSeeMenu = cw.canSeeMenu;
+            cw.canSeeMenu = (which) => (which === 'navToll') ? false : realCanSeeMenu(which);
             await closeAllModals(); await wait(140);
             cw.openNavMiniPrefsModal();
             await wait(300);
             assert(isOpen('navMiniPrefsModal'), 'มีสิทธิ์ทางด่วนอย่างเดียว แต่เปิดไม่ได้');
             assert(cw.getComputedStyle(cw.document.getElementById('navTollTabs')).display === 'none', 'เหลือแท็บเดียว (แผนที่/ทางด่วน) ไม่ควรมีแถบแท็บ');
             assert(cw.getComputedStyle(cw.document.getElementById('navTollPanelToll')).display !== 'none', 'ต้องแสดงแผงทางด่วนแทน');
+            cw.canSeeMenu = realCanSeeMenu;   // คืนค่าจริงก่อนตรวจข้อ (ค)
             // (ค) sysOps — ไม่มีสิทธิ์เลย
             cw.isAdminNow = () => false; cw.currentUserPerms = () => ({ canViewQuota: false }); cw.permNow = () => false;
+            // 👁️ (19 ก.ย. 69) “เห็นเมนู” มีผลต่อแท็บด้วย — ตั้งค่าเริ่มต้นให้ VIP/ผู้จัดการเห็น “แผนที่และค่าทางด่วน” ทั้ง 2 แท็บ
+            //    ⇒ เคส “เหลือแท็บเดียว” ต้องปิด **ทั้งสิทธิ์จัดการและสิทธิ์เห็นเมนู** ของอีกแท็บ (ไม่งั้นทั้ง 2 แท็บโชว์ตามดีไซน์ใหม่)
             await closeAllModals(); await wait(140);
             cw.openQuotaMonitor();
             await wait(260);
@@ -498,9 +503,13 @@
             });
             const hubRows = (txt.match(/class="hub-item" data-cat=/g) || []).length;
             assert(hubRows === 8, 'แถวเมนูในหน้าตั้งค่าต้องเหลือ 8 แถว แต่พบ ' + hubRows);
-            assert(txt.indexOf("hubTextItem.style.display = window.twCanLook()") >= 0, 'การซ่อน/แสดงการ์ดต้องใช้ twCanLook()');
-            assert(txt.indexOf("hubNavMapItem.style.display = window.twCanNavToll()") >= 0, 'การ์ดแผนที่/ทางด่วนต้องใช้ twCanNavToll()');
-            assert(txt.indexOf("hubQuotaItem.style.display = window.twCanSysOps()") >= 0, 'การ์ดโควตา/บริการต้องใช้ twCanSysOps()');
+            // 👁️ (19 ก.ย. 69) ยอด “เห็นเมนู” รายยศ: การซ่อน/แสดงแถวจริงย้ายมาใช้ hubMenuVisible() + MENU_VIEW_PERM
+            //     ⇒ เดิมตรวจหา hubXItem.style.display = twCanX() ตรง ๆ — เลิกใช้แล้ว (ตรวจการต่อสายใหม่แทน)
+            assert(txt.indexOf('window.MENU_VIEW_PERM') >= 0 && txt.indexOf('window.canSeeMenu') >= 0, 'ไม่พบตารางสิทธิ์ “เห็นเมนู” (MENU_VIEW_PERM/canSeeMenu)');
+            assert(txt.indexOf("const hv = window.hubMenuVisible();") >= 0, 'applyHubMenuVisibilityUI() ต้องอ่านผลจาก hubMenuVisible()');
+            assert(txt.indexOf("set('hubTextItem', hv.look)") >= 0, 'การ์ด “หน้าตาและข้อความแอป” ต้องผูกกับ hv.look');
+            assert(txt.indexOf("set('hubNavMapItem', hv.navToll)") >= 0, 'การ์ดแผนที่/ทางด่วนต้องผูกกับ hv.navToll');
+            assert(txt.indexOf("set('hubQuotaItem', hv.sysOps)") >= 0, 'การ์ดโควตา/บริการต้องผูกกับ hv.sysOps');
             return 'ครบ: 3 หน้าต่าง · ภาชนะที่ยุบ 4 ตัว · src ครบ 8 แท็บ · ตัวเปิดเดิม 6 ตัวชี้ twOpen · ไม่มีการเปิดภาชนะตรง ๆ · 8 แถวเมนู ✅';
         });
 
