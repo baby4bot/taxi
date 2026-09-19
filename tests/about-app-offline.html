@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — แถว/หน้าต่าง “เกี่ยวกับแอป” (รุ่นที่ติดตั้ง · วัน build · ตรวจหาอัปเดต)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: แถว “เกี่ยวกับแอป” (ในเมนูตั้งค่าการใช้งาน)</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?...fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ไม่เขียน Firestore
+        · จำลองสะพาน native <code>TaxiNative.appAboutInfo()</code> เอง
+        <br><b>สิ่งที่ผู้ใช้สั่ง:</b> *“เพิ่มแถว “เกี่ยวกับแอป” ในเมนูตั้งค่าให้โชว์รุ่นที่ติดตั้ง (1.6.1 / versionCode)
+        และวัน build พร้อมปุ่มตรวจหาอัปเดต”*
+        <br><b>ตรรกะที่ต้องพิสูจน์:</b> ① รุ่น/วัน มาจาก <b>APK ที่ติดตั้งจริง</b> ไม่ใช่ค่าที่เดาจากเว็บ
+        ② ถ้าสะพานยังไม่มี (APK รุ่นเก่า) ใช้ <code>apk-version.json</code> ได้ <b>เฉพาะเมื่อเลขรุ่นตรงกัน</b> —
+        ห้ามโชว์วันของรุ่นอื่น (จะกลายเป็น “บอกวันผิด”)
+        ③ เปิดผ่านเบราว์เซอร์ = บอกว่าเป็นเว็บ (ไม่ต้องติดตั้ง) · ④ ผลตรวจหาอัปเดตแยกครบ 6 กรณี (ใหม่กว่า/เท่ากัน/ใหม่เกิน/อ่านไฟล์ไม่ได้/ออฟไลน์/เว็บ)
+        ⑤ แถว + หน้าต่างวาดจากข้อมูลชุดเดียว และปุ่ม “ติดตั้งทันที” โผล่เฉพาะเมื่อมีรุ่นใหม่
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/about-app-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (14 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        stubsInstalled = true;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0 };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (method, url) {
+                const u = String(url);
+                const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+                if (!isLocal) { cw.__net.blockedXhr++; x.send = function () {}; return; }
+                return open.apply(null, arguments);
+            };
+            return x;
+        };
+        cw.__toasts = [];
+        try { cw.showToast = function (msg, isErr) { cw.__toasts.push({ msg: String(msg), err: !!isErr }); }; } catch (e) {}
+    }
+
+    async function bootApp(force) {
+        stubsInstalled = false;
+        if (force || frame.src === 'about:blank') {
+            frame.src = '../index.html?fsNowrite=1&aboutAppTest=1&t=' + Date.now();
+        }
+        const t0 = Date.now();
+        while (Date.now() - t0 < 220000) {
+            await wait(700);
+            try {
+                const cw = w();
+                installStubs();
+                if (cw && cw.__aboutInfo && cw.document.getElementById('mainApp') && cw.document.getElementById('mainApp').style.display === 'flex') {
+                    await wait(600);
+                    return true;
+                }
+            } catch (e) { /* ระหว่างโหลดข้ามโดเมนชั่วคราว */ }
+        }
+        throw new Error('แอปไม่บูตภายในเวลาที่กำหนด (220 วิ)');
+    }
+
+    function log(name, ok, detail) {
+        const li = document.createElement('li');
+        li.className = ok ? 'pass' : 'fail';
+        li.innerHTML = '<span class="st">' + (ok ? '✅' : '❌') + ' ' + name + '</span><div class="detail">' + (detail || '') + '</div>';
+        resultsEl.appendChild(li);
+    }
+
+    async function T(name, fn) {
+        try {
+            const detail = await fn();
+            passCount++;
+            log(name, true, detail || '');
+        } catch (e) {
+            failCount++;
+            failures.push(name + ' → ' + e.message);
+            log(name, false, e.message);
+        }
+    }
+
+    // ---------------- ตัวช่วยของชุดทดสอบ ----------------
+    // ⏱ ตัวอย่างคงที่: 19 ก.ย. 2026 21:40 น. ตามเวลาไทย (UTC+7)
+    const BUILT_MS = Date.UTC(2026, 8, 19, 14, 40, 0);   // 14:40Z = 21:40 ไทย
+    const INSTALL_MS = Date.UTC(2026, 8, 20, 0, 5, 0);    // 20 ก.ย. 07:05 ไทย
+    const BRIDGE_FULL = {
+        packageName: 'com.baby4bot.taximeter', versionName: '1.6.2', versionCode: 9,
+        pkgVersionCode: 9, apkTime: BUILT_MS, installedAt: INSTALL_MS, androidSdk: 33, brand: 'samsung'
+    };
+    // 🔧 สตับสะพาน native: { isNative, info } — info = null ⇒ ไม่มีเมธอด (APK รุ่นเก่า)
+    function stubNative(cw, isNative, info) {
+        cw.TaxiNative = {
+            isNativeApp: () => !!isNative,
+            appAboutInfo: function () {
+                if (info === null) throw new Error('no bridge');
+                return (typeof info === 'string') ? info : JSON.stringify(info || {});
+            }
+        };
+    }
+    function clearNative(cw) { try { cw.TaxiNative = undefined; } catch (e) {} }
+
+    // ============================ ชุดการทดสอบ ============================
+    async function run() {
+        resultsEl.innerHTML = '';
+        passCount = 0; failCount = 0; failures.length = 0;
+        document.getElementById('runBtn').disabled = true;
+        offlineEl.textContent = 'สถานะเน็ต: กำลังโหลดแอปจริงในไเฟรม (ตัดเน็ตทั้งชุด)...';
+        let cw;
+        try {
+            await bootApp(true);
+            cw = w();
+            assert(typeof cw.__aboutInfo === 'function', 'ไม่พบ window.__aboutInfo');
+            assert(typeof cw.__aboutVerdict === 'function', 'ไม่พบ window.__aboutVerdict');
+            assert(typeof cw.renderAboutApp === 'function', 'ไม่พบ window.renderAboutApp');
+        } catch (e) {
+            log('บูตแอป', false, e.message);
+            summaryEl.textContent = 'สรุป: บูตแอปไม่สำเร็จ — ' + e.message;
+            document.getElementById('runBtn').disabled = false;
+            return;
+        }
+
+        // ---------- S1: รูปแบบวันเวลาไทย ----------
+        await T('S1 · วันเวลาแบบไทยสั้น “19 ก.ย. 69 21:40” (ปี พ.ศ. 2 หลัก · เติมศูนย์) — ค่าเสียต้องคืนว่าง', async () => {
+            const s = cw.__aboutFmtWhen(BUILT_MS);
+            assert(/^19 \S+ 69 /.test(s), 'ต้องขึ้นต้นด้วย “19 <เดือน> 69” (ได้ ' + s + ')');
+            assert(/(21|22):40$/.test(s), 'ชั่วโมง:นาทีต้องเป็น 21:40 (ตามเวลาไทย) — ได้ ' + s);
+            const e1 = cw.__aboutFmtWhen(0), e2 = cw.__aboutFmtWhen(-5), e3 = cw.__aboutFmtWhen(NaN), e4 = cw.__aboutFmtWhen(null);
+            assert(e1 === '' && e2 === '' && e3 === '' && e4 === '', 'ค่าที่ไม่ใช่เวลาจริงต้องคืนสตริงว่าง (ห้ามเดา)');
+            return 'ได้ “' + s + '” · 0/-5/NaN/null → ว่าง';
+        });
+
+        // ---------- S2: อ่านสตริง builtAt ของ CI ----------
+        await T('S2 · อ่าน builtAt “2026-09-19 21:40 UTC” ของ CI ได้ + ขยะคืน NaN (ห้ามเดาเวลา)', async () => {
+            const a = cw.__aboutParseBuiltAt('2026-09-19 21:40 UTC');
+            const b = cw.__aboutParseBuiltAt('2026-09-19T21:40:00Z');
+            assert(a === Date.UTC(2026, 8, 19, 21, 40), 'อ่านแบบเว้นวรรคไม่ได้ (ได้ ' + a + ')');
+            assert(b === a, 'อ่านแบบ ISO (มี T) ไม่ได้ (ได้ ' + b + ')');
+            const bad = [cw.__aboutParseBuiltAt(''), cw.__aboutParseBuiltAt('ไม่ทราบ'), cw.__aboutParseBuiltAt(null)];
+            assert(bad.every(x => isNaN(x)), 'ค่าขยะต้องคืน NaN');
+            return 'UTC → ' + a + ' ms · ขยะ → NaN';
+        });
+
+        // ---------- S3: APK รุ่นใหม่ (มีสะพาน) ----------
+        await T('S3 · มีสะพาน: โชว์รุ่นที่ติดตั้ง 1.6.2 (versionCode 9) + วัน build จากไฟล์ APK ในเครื่อง', async () => {
+            const i = cw.__aboutInfo({ native: true, bridge: BRIDGE_FULL, server: { versionCode: 9, versionName: '1.6.2', builtAt: '2026-01-01 00:00 UTC' }, name: 'x', code: 0 });
+            assert(i.kind === 'apk', 'kind ต้องเป็น apk');
+            assert(i.versionText === '1.6.2 (versionCode 9)', 'รุ่นที่โชว์ผิด: ' + i.versionText);
+            assert(i.builtSrc === 'apk-file', 'วัน build ต้องมาจากไฟล์ APK ในเครื่องก่อน (ได้ ' + i.builtSrc + ')');
+            assert(i.builtText === cw.__aboutFmtWhen(BUILT_MS), 'วัน build ไม่ตรงกับไฟล์ APK (ได้ ' + i.builtText + ')');
+            assert(i.installedText === cw.__aboutFmtWhen(INSTALL_MS), 'วันติดตั้งผิด (ได้ ' + i.installedText + ')');
+            assert(i.pkg === 'com.baby4bot.taximeter' && i.brand === 'samsung' && i.sdk === 33, 'ข้อมูลเครื่อง/แพ็กเกจหาย');
+            return i.versionText + ' · build=' + i.builtText + ' (apk-file) · ติดตั้ง=' + i.installedText;
+        });
+
+        // ---------- S4: APK รุ่นเก่า (ไม่มีสะพาน) + เลขรุ่นตรงกัน = ใช้ไฟล์เว็บได้ ----------
+        await T('S4 · ไม่มีสะพาน (APK รุ่นเก่า) + apk-version.json เลขรุ่นตรงกับที่ติดตั้ง → ใช้ builtAt ได้', async () => {
+            const i = cw.__aboutInfo({
+                native: true, bridge: null, name: '1.6.1', code: 8,
+                server: { versionCode: 8, versionName: '1.6.1', builtAt: '2026-09-19 21:40 UTC' }
+            });
+            assert(i.builtSrc === 'server', 'ต้องใช้ค่าจากไฟล์เว็บเป็นทางสำรอง (ได้ ' + i.builtSrc + ')');
+            assert(i.versionText === '1.6.1 (versionCode 8)', 'รุ่นที่โชว์ผิด: ' + i.versionText);
+            return 'รุ่น 1.6.1 (8) · build=' + i.builtText + ' · ที่มา=server (เลขรุ่นตรงกัน)';
+        });
+
+        // ---------- S5: ⚠️ กันบั๊ก “บอกวันผิด” — เลขรุ่นไม่ตรง = ห้ามใช้ builtAt ของรุ่นอื่น ----------
+        await T('S5 · ไม่มีสะพาน + ไฟล์เว็บเป็นคนละรุ่น → ห้ามโชว์วัน build (กันวันผิด) + บอกในแถวว่า “ยังอ่านไม่ได้”', async () => {
+            const i = cw.__aboutInfo({
+                native: true, bridge: null, name: '1.6.1', code: 8,
+                server: { versionCode: 12, versionName: '2.0.0', builtAt: '2026-09-19 21:40 UTC' }
+            });
+            assert(i.builtText === '' && i.builtSrc === '', 'ต้องไม่โชว์วันของรุ่นอื่น (ได้ ' + i.builtText + ' / ' + i.builtSrc + ')');
+            const line = cw.__aboutRowLine(i);
+            assert(line.indexOf('ยังอ่านวันไฟล์ APK ไม่ได้') >= 0, 'แถวเมนูต้องบอกตรง ๆ ว่าอ่านวันไม่ได้ (ได้: ' + line + ')');
+            assert(line.indexOf('1.6.1') >= 0, 'แถวยังต้องโชว์รุ่นที่ติดตั้ง (ได้: ' + line + ')');
+            return 'builtText = ว่าง · แถว: “' + line + '”';
+        });
+
+        // ---------- S6: บนเบราว์เซอร์ = ไม่มี APK ----------
+        await T('S6 · เปิดผ่านเบราว์เซอร์ → บอกว่าเป็นเว็บแอป (ไม่ต้องติดตั้ง) + ไม่มีวัน build/วันติดตั้ง', async () => {
+            const i = cw.__aboutInfo({ native: false, bridge: null, server: { versionCode: 9 }, web: 'WEB123' });
+            assert(i.kind === 'web', 'kind ต้องเป็น web');
+            assert(i.builtText === '' && i.installedText === '' && i.apkTime === 0, 'ต้องไม่มีวัน build/ติดตั้งบนเว็บ');
+            const line = cw.__aboutRowLine({ kind: 'web', web: 'WEB123' });
+            assert(line.indexOf('เปิดผ่านเว็บเบราว์เซอร์') >= 0 && line.indexOf('WEB123') >= 0, 'แถวเว็บผิด: ' + line);
+            return 'แถว: “' + line + '”';
+        });
+
+        // ---------- S7: สะพานพัง = ต้องไม่ทำแอปพัง (ถอยไปทางสำรอง) ----------
+        await T('S7 · สะพานตอบขยะ/โยน error → อ่านไม่ได้ (ไม่ throw) และยังคืนข้อมูลได้', async () => {
+            stubNative(cw, true, 'ไม่ใช่ JSON {{{');
+            const b1 = cw.__aboutBridge();
+            assert(b1 === null, 'JSON พังต้องคืน null (ได้ ' + JSON.stringify(b1) + ')');
+            stubNative(cw, true, null);   // โยน error
+            const b2 = cw.__aboutBridge();
+            assert(b2 === null, 'สะพานโยน error ต้องคืน null');
+            const i = cw.__aboutInfo({ native: true, bridge: cw.__aboutBridge(), name: '1.6.1', code: 8, server: null });
+            assert(i.versionText === '1.6.1 (versionCode 8)', 'ต้องถอยไปใช้รุ่นที่แอปอ่านเอง (ได้ ' + i.versionText + ')');
+            return 'สะพานพัง → null · ถอยไปใช้ค่าที่แอปอ่านเอง (' + i.versionText + ')';
+        });
+
+        // ---------- S8: ผลตรวจหาอัปเดต 6 กรณี ----------
+        await T('S8 · ผลตรวจหาอัปเดต: เว็บ / ออฟไลน์ / อ่านไฟล์รุ่นไม่ได้ / ใหม่กว่า / เท่ากัน / ใหม่เกิน', async () => {
+            const V = cw.__aboutVerdict;
+            const SRV = { versionCode: 10, versionName: '1.7.0', builtAt: '2026-09-19 21:40 UTC' };
+            const web = V({ native: false });
+            const off = V({ native: true, mineCode: 9 });
+            const nofile = V({ native: true, mineCode: 9, server: null });
+            const newer = V({ native: true, mineCode: 9, server: SRV });
+            const latest = V({ native: true, mineCode: 10, server: SRV });
+            const ahead = V({ native: true, mineCode: 11, server: SRV });
+            const offlineFlag = V({ native: true, mineCode: 9, server: SRV, offline: true });
+            assert(web.state === 'web', 'กรณีเว็บผิด: ' + web.state);
+            assert(offlineFlag.state === 'offline', 'ออฟไลน์ต้องมาก่อนทุกกรณี (ได้ ' + offlineFlag.state + ')');
+            assert(nofile.state === 'nofile', 'อ่านไฟล์รุ่นไม่ได้ผิด: ' + nofile.state);
+            assert(newer.state === 'newer' && newer.text.indexOf('1.7.0') >= 0 && newer.text.indexOf('10') >= 0, 'กรณีมีรุ่นใหม่ผิด: ' + newer.text);
+            assert(latest.state === 'latest', 'กรณีรุ่นล่าสุดผิด: ' + latest.state);
+            assert(ahead.state === 'ahead', 'กรณีใหม่เกินผิด: ' + ahead.state);
+            assert(off.state === 'nofile', 'ยังไม่ตรวจเลย (server ว่าง) ต้องบอกว่า “อ่านไฟล์ไม่ได้” ไม่ใช่หลอกว่าเป็นรุ่นล่าสุด');
+            return [web.state, offlineFlag.state, nofile.state, newer.state, latest.state, ahead.state].join(' · ') + ' — “' + newer.text + '”';
+        });
+
+        // ---------- S9: แถวในเมนูตั้งค่า (ของจริงใน DOM) ----------
+        await T('S9 · แถว “เกี่ยวกับแอป” อยู่ในเมนูตั้งค่าการใช้งานจริง + วาดรุ่น/วันจากข้อมูลชุดเดียวกัน', async () => {
+            stubNative(cw, true, BRIDGE_FULL);
+            const item = cw.document.getElementById('hubAboutItem');
+            assert(!!item, 'ไม่พบแถว #hubAboutItem ในเมนูตั้งค่า');
+            assert(item.classList.contains('hub-item'), 'แถวต้องเป็น .hub-item (สไตล์เดียวกับเมนูอื่น)');
+            assert(typeof cw.openAboutAppModal === 'function', 'แถวต้องกดเปิดหน้าต่างได้');
+            cw.renderAboutApp();
+            const desc = cw.document.getElementById('hubAboutDesc').textContent;
+            const pill = cw.document.getElementById('hubAboutVerPill').textContent;
+            assert(pill.indexOf('1.6.2') >= 0 && pill.indexOf('9') >= 0, 'ป้ายรุ่นบนแถวผิด: ' + pill);
+            assert(desc.indexOf('1.6.2') >= 0 && desc.indexOf('versionCode 9') >= 0, 'คำอธิบายแถวต้องมีรุ่น+เลขรุ่น (ได้: ' + desc + ')');
+            assert(desc.indexOf(cw.__aboutFmtWhen(BUILT_MS)) >= 0, 'คำอธิบายแถวต้องมีวัน build (ได้: ' + desc + ')');
+            clearNative(cw);
+            return 'ป้าย “' + pill + '” · แถว “' + desc + '”';
+        });
+
+        // ---------- S10: หน้าต่าง “เกี่ยวกับแอป” + ปุ่มติดตั้งทันที ----------
+        await T('S10 · หน้าต่าง “เกี่ยวกับแอป”: มีรุ่น/วัน build/วันติดตั้ง/เว็บแอป + ปุ่มติดตั้งโผล่เฉพาะเมื่อมีรุ่นใหม่', async () => {
+            stubNative(cw, true, BRIDGE_FULL);
+            cw.__aboutLastCheck = null;
+            cw.renderAboutApp();
+            const body = cw.document.getElementById('aboutAppBody');
+            const html = body.innerHTML;
+            assert(cw.document.getElementById('aboutAppModal'), 'ไม่พบหน้าต่าง #aboutAppModal');
+            assert(html.indexOf('1.6.2 (versionCode 9)') >= 0, 'หน้าต่างต้องโชว์รุ่นที่ติดตั้ง');
+            assert(html.indexOf(cw.__aboutFmtWhen(BUILT_MS)) >= 0, 'หน้าต่างต้องโชว์วัน build');
+            assert(html.indexOf(cw.__aboutFmtWhen(INSTALL_MS)) >= 0, 'หน้าต่างต้องโชว์วันติดตั้ง');
+            assert(html.indexOf('เว็บแอป') >= 0, 'หน้าต่างต้องโชว์รุ่นเว็บแอป');
+            assert(cw.document.getElementById('aboutCheckBtn'), 'ต้องมีปุ่ม “ตรวจหาอัปเดต” ในหน้าต่าง');
+            const inst = cw.document.getElementById('aboutInstallBtn');
+            assert(inst.style.display === 'none', 'ยังไม่ตรวจ → ปุ่มติดตั้งต้องซ่อน');
+            cw.__aboutLastCheck = { at: Date.now(), verdict: { state: 'latest', text: 'เป็นรุ่นล่าสุดแล้ว' } };
+            cw.renderAboutApp();
+            assert(cw.document.getElementById('aboutInstallBtn').style.display === 'none', 'รุ่นล่าสุด → ปุ่มติดตั้งต้องยังซ่อน');
+            cw.__aboutLastCheck = { at: Date.now(), verdict: { state: 'newer', text: 'มีรุ่นใหม่ 1.7.0 (10)' } };
+            cw.renderAboutApp();
+            const inst2 = cw.document.getElementById('aboutInstallBtn');
+            assert(inst2.style.display !== 'none', 'มีรุ่นใหม่ → ปุ่มติดตั้งต้องโผล่');
+            assert(cw.document.getElementById('aboutAppBody').innerHTML.indexOf('มีรุ่นใหม่ 1.7.0 (10)') >= 0, 'ต้องโชว์ผลตรวจล่าสุด');
+            clearNative(cw);
+            return 'แถวครบ (รุ่น/วัน build/วันติดตั้ง/เว็บ) · ปุ่มติดตั้งซ่อน→โผล่ตามผลตรวจ';
+        });
+
+        // ---------- S11: กดปุ่มตรวจหาอัปเดต = ใช้ตัวตรวจเดิม + เก็บเวลา + แจ้งด้วย toast ----------
+        await T('S11 · กด “ตรวจหาอัปเดต” → เรียกตัวตรวจเดิมของแอป 1 ครั้ง · เก็บผล+เวลา · ปุ่มกลับมากดได้', async () => {
+            stubNative(cw, true, BRIDGE_FULL);
+            let calls = 0;
+            const orig = cw.__apkUpdateCheck;
+            cw.__apkUpdateCheck = async (why) => { calls++; return 'stub:' + why; };
+            cw.__aboutLastCheck = null;
+            cw.__toasts.length = 0;
+            const ok = await cw.aboutAppCheck();
+            cw.__apkUpdateCheck = orig;
+            assert(calls === 1, 'ต้องเรียกตัวตรวจเดิม 1 ครั้ง (ได้ ' + calls + ')');
+            assert(cw.__aboutLastCheck && cw.__aboutLastCheck.at > 0, 'ต้องเก็บเวลาที่ตรวจ');
+            assert(typeof ok === 'string' && ok.length > 0, 'ต้องคืนสถานะผลตรวจ');
+            const btn = cw.document.getElementById('aboutCheckBtn');
+            assert(btn && btn.disabled === false, 'ปุ่มต้องกลับมากดได้หลังตรวจเสร็จ');
+            assert(cw.__toasts.length === 1, 'ต้องแจ้งผลด้วย toast 1 ครั้ง (ได้ ' + cw.__toasts.length + ')');
+            clearNative(cw);
+            return 'เรียก 1 ครั้ง · สถานะ=' + ok + ' · toast: “' + cw.__toasts[0].msg + '”';
+        });
+
+        // ---------- S12: แถวไม่ยิงเน็ตเอง ----------
+        await T('S12 · แถว/หน้าต่างไม่ยิงคำขอออกเน็ตเอง (ใช้ตัวตรวจเดิม + ค่าในเครื่องเท่านั้น)', async () => {
+            const before = cw.__net.blockedFetch;
+            window.__x = cw.renderAboutApp();
+            cw.__aboutInfo();
+            cw.__aboutVerdict({ native: true, mineCode: 9, server: { versionCode: 9 } });
+            await wait(250);
+            assert(cw.__net.blockedFetch === before, 'มีคำขอออกเน็ตงอกมา ' + (cw.__net.blockedFetch - before) + ' ครั้ง');
+            return 'ยิงออกเน็ตเพิ่ม = 0 ครั้ง (ของที่ทำไม่ออกเน็ตเอง)';
+        });
+
+        // ---------- S13: ไม่มีช่องติ๊กดิบโผล่ในหน้าต่างใหม่ (กติกาด่านก่อน push) ----------
+        await T('S13 · หน้าต่างใหม่ไม่มีช่องติ๊กเปล่า (ปุ่มเป็น <button> ตามกติกา .app-switch ของโปรเจกต์)', async () => {
+            stubNative(cw, true, BRIDGE_FULL);
+            cw.__aboutLastCheck = null;
+            cw.renderAboutApp();
+            const body = cw.document.getElementById('aboutAppBody');
+            const boxes = body.querySelectorAll('input[type="checkbox"]');
+            assert(boxes.length === 0, 'มีช่องติ๊ก ' + boxes.length + ' อันในหน้าต่าง “เกี่ยวกับแอป”');
+            assert(body.querySelectorAll('button').length === 0, 'หน้าต่างเนื้อหาควรเป็นข้อมูลอ่านล้วน (ปุ่มอยู่ท้ายหน้าต่าง)');
+            clearNative(cw);
+            return 'ช่องติ๊กดิบ = 0 · เนื้อหาเป็นข้อมูลล้วน';
+        });
+
+        // ---------- S14: ข้อความ “แอปอ่านหน้าเว็บสด” + สะพานที่ต้องมีใน APK รุ่นใหม่ ----------
+        await T('S14 · หน้าต่างบอกความจริงว่า “แก้เว็บไม่ต้องติดตั้ง APK ใหม่” และ APK รุ่นใหม่ต้องมีสะพานนี้', async () => {
+            stubNative(cw, true, BRIDGE_FULL);
+            cw.__aboutLastCheck = null;
+            cw.renderAboutApp();
+            const html = cw.document.getElementById('aboutAppBody').innerHTML;
+            assert(html.indexOf('ไม่ต้องติดตั้ง APK ใหม่') >= 0, 'ต้องบอกว่าแก้เว็บไม่ต้องติดตั้งใหม่ (ได้ไม่ครบ)');
+            const bridge = cw.__aboutBridge();
+            assert(bridge && bridge.versionCode === 9, 'อ่านค่าจากสะพานต้องได้ versionCode 9');
+            assert(cw.ABOUT_PKG_WANTED === 'com.baby4bot.taximeter', 'ชื่อแพ็กเกจที่คาดไว้เปลี่ยนไป: ' + cw.ABOUT_PKG_WANTED);
+            clearNative(cw);
+            return 'สะพานคืน versionCode ' + bridge.versionCode + ' · ข้อความ “ไม่ต้องติดตั้ง APK ใหม่” มีจริง';
+        });
+
+        // -------- สรุป --------
+        summaryEl.textContent = (failCount === 0 ? '✅ ผ่านทั้งหมด ' : '❌ ล้มเหลว ') + passCount + '/' + (passCount + failCount)
+            + (failCount ? ' — ' + failures.join(' | ') : ' (ทุกสถานการณ์)');
+        offlineEl.textContent = 'สถานะเน็ต: ตัดแล้ว — คำขอออกเน็ตที่ถูกบล็อกทั้งหมด ' + cw.__net.blockedFetch + ' ครั้ง (เฉพาะที่แอปยิงเองตอนบูต)';
+        document.getElementById('runBtn').disabled = false;
+    }
+
+    document.getElementById('runBtn').addEventListener('click', run);
+    run();
+})();
+</script>
+</body>
+</html>

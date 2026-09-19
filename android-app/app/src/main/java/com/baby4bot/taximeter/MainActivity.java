@@ -640,6 +640,48 @@ public class MainActivity extends Activity {
             return BuildConfig.VERSION_NAME;
         }
 
+        /** ℹ️ ข้อมูลรุ่น/วันของ APK ที่ติดตั้งอยู่ (JSON สตริง) — ใช้กับแถว “เกี่ยวกับแอป” (ผู้ใช้สั่ง 20 ก.ย. 69)
+         *  · apkTime     = mtime ของ “ไฟล์ APK ที่ติดตั้ง” = วัน/เวลาที่ไฟล์นี้ถูกสร้าง (วัน build จริงของรุ่นที่ติดตั้ง)
+         *  · installedAt = วันที่ติดตั้ง/อัปเดตแอปนี้บนเครื่องนี้ (PackageInfo.lastUpdateTime)
+         *  ⚠️ versionCode อ่านจาก BuildConfig ของรุ่นที่คอมไพล์ (ตรงกับที่ประกาศใน apk-version.json) · pkgVersionCode = ค่าจาก PackageManager
+         *  ⚠️ ห้ามเรียก getLongVersionCode() (ต้อง API 28 · minSdk 26) และห้ามให้ exception ทำสะพานพัง — คืน {} เสมอเมื่ออ่านไม่ได้ */
+        @JavascriptInterface
+        public String appAboutInfo() {
+            try {
+                int pkgCode = 0;
+                long installedAt = 0;
+                try {
+                    android.content.pm.PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+                    if (pi != null) {
+                        pkgCode = pi.versionCode;
+                        installedAt = pi.lastUpdateTime;
+                    }
+                } catch (Exception ignored) {
+                }
+                long apkTime = 0;
+                try {
+                    android.content.pm.ApplicationInfo ai = getApplicationInfo();
+                    if (ai != null && ai.sourceDir != null) {
+                        apkTime = new java.io.File(ai.sourceDir).lastModified();
+                    }
+                } catch (Exception ignored) {
+                }
+                String pkg = getPackageName();
+                String brand = Build.MANUFACTURER;
+                return "{\"packageName\":\"" + (pkg == null ? "" : pkg) + "\""
+                        + ",\"versionName\":\"" + (BuildConfig.VERSION_NAME == null ? "" : BuildConfig.VERSION_NAME) + "\""
+                        + ",\"versionCode\":" + BuildConfig.VERSION_CODE
+                        + ",\"pkgVersionCode\":" + pkgCode
+                        + ",\"apkTime\":" + apkTime
+                        + ",\"installedAt\":" + installedAt
+                        + ",\"androidSdk\":" + Build.VERSION.SDK_INT
+                        + ",\"brand\":\"" + (brand == null ? "" : brand.toLowerCase(java.util.Locale.ROOT)) + "\""
+                        + "}";
+            } catch (Exception e) {
+                return "{}";
+            }
+        }
+
         /** ผู้ใช้เปิดสิทธิ์ "ติดตั้งจากแหล่งที่ไม่รู้จัก" ให้แอปนี้แล้วหรือยัง (Android 8+ เท่านั้นที่ต้องขอ) */
         @JavascriptInterface
         public boolean canInstallPackages() {
