@@ -128,6 +128,19 @@
         } catch (e) {}
     }
 
+    // ⏳ รอให้แอป “ว่างจริง” ก่อนเริ่มสถานการณ์
+    //   ในสภาพตัดเน็ต แอปจะยิง Firestore ซ้ำ ๆ ตอนบูต ทำให้ setTimeout ของหน้าทดสอบยืดได้
+    //   (เคยเห็น ~1 วินาทีต่อ 30ms) ⇒ สถานการณ์แรก ๆ timeout ทั้งที่แอปถูกต้อง
+    async function waitForQuietApp(ms) {
+        const lim = ms || 90000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const a = Date.now();
+            await wait(50);
+            if (Date.now() - a < 250) return true;      // ตัวจับเวลาตรงเวลา = แอปว่างแล้ว
+        }
+        return false;
+    }
+
     async function loadApp() {
         const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
         frame.src = '../index.html?fsNowrite=1';
@@ -143,6 +156,7 @@
                 await closeAllModals();
                 await waitForNoLoader(12000);
                 await wait(200);
+                await waitForQuietApp(90000);
                 return;
             }
             await wait(80);

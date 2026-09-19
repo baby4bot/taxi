@@ -39,7 +39,7 @@
         <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
         <code>http://127.0.0.1:58911/tests/speed-zone-offline.html</code>
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (10 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (11 สถานการณ์)</button>
     <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
     <div id="summary"></div>
     <ol id="results"></ol>
@@ -359,21 +359,30 @@
             return 'บนทางด่วน แต่โซนที่ใช้ = ' + zone + ' · ลิมิต ' + lim + ' · การ์ด: “' + zoneTxt + '”';
         });
 
-        await runScenario('S9 · ปุ่ม − / + แยก 2 ช่อง (แตะช่องทางด่วนไม่กระทบช่องในเมือง) + เซฟได้ค่าครบ', async () => {
+        // 🐞 (19 ก.ย. 69) ผู้ใช้สั่ง: “ปุ่มบวก ลบ บวกเพิ่มทีละ 5” (อยากถึง 100/110/120 โดยไม่ต้องกด 20 ครั้ง)
+        await runScenario('S9 · ปุ่ม − / + ปรับทีละ 5 · แยก 2 ช่อง (แตะช่องทางด่วนไม่กระทบช่องในเมือง) + เซฟได้ค่าครบ', async () => {
             resetDefaults(cw);
             await wait(20);
             const before = { city: el('speedLimitVal').innerText, toll: el('speedLimitTollVal').innerText };
-            cw.bumpSpeedLimit(1, false, 'toll');
-            cw.bumpSpeedLimit(1, false, 'toll');
-            cw.bumpSpeedLimit(-1);
-            await wait(20);
-            const after = { city: el('speedLimitVal').innerText, toll: el('speedLimitTollVal').innerText, vars: [cw.userSpeedLimitKmh, cw.userSpeedTollKmh] };
             assert(before.city === '80' && before.toll === '120', 'ค่าตั้งต้นบนจอควรเป็น 80/120 แต่ได้ ' + JSON.stringify(before));
-            assert(after.city === '79' && after.toll === '122', 'แตะช่องทางด่วน 2 ครั้ง (+2=122) · ช่องในเมือง −1 (=79) แต่ได้ ' + JSON.stringify(after));
+            // กดปุ่มจริงบนจอ (ไม่เรียกฟังก์ชันตรง ๆ) — ปุ่มยิ่งต้องผูกกับค่าใหม่
+            const cityPlus = cw.document.querySelector('[aria-label="เพิ่มลิมิตในเมืองขึ้น 5 กม./ชม."]');
+            const tollPlus = cw.document.querySelector('[aria-label="เพิ่มลิมิตบนทางด่วนขึ้น 5 กม./ชม."]');
+            const cityMinus = cw.document.querySelector('[aria-label="ลดลิมิตในเมืองลง 5 กม./ชม."]');
+            assert(cityPlus && tollPlus && cityMinus, 'ไม่พบปุ่ม − / + ที่บอก “ทีละ 5” (ป้ายยังเป็น 1 หรือปุ่มหาย)');
+            cityPlus.click(); await wait(30);                       // 80 → 85
+            const afterOne = el('speedLimitVal').innerText;
+            tollPlus.click(); tollPlus.click(); await wait(30);     // 120 → 130
+            cityMinus.click(); await wait(30);                     // 85 → 80 (กลับค่าเดิม)
+            const after = { city: el('speedLimitVal').innerText, toll: el('speedLimitTollVal').innerText, vars: [cw.userSpeedLimitKmh, cw.userSpeedTollKmh] };
+            assert(afterOne === '85', 'กด + ในเมืองครั้งเดียวต้องเป็น 85 (ทีละ 5) แต่ได้ ' + afterOne);
+            assert(after.city === '80' && after.toll === '130', 'ช่องในเมืองต้องกลับเป็น 80 · ช่องทางด่วน 120+5+5 = 130 แต่ได้ ' + JSON.stringify(after));
+            const rowNow = txt('speedWarnRowNow');
+            assert(/ในเมือง 80/.test(rowNow) && /ทางด่วน 130/.test(rowNow), 'แถวในลิสต์ต้องโชว์ค่าที่ตั้งไว้ (ผู้ใช้หาเมนูไม่เจอ) แต่ได้: ' + rowNow);
             const fields = cw.__spdPayloadFields();
-            assert(fields.speedLimitKmh === 79 && fields.speedLimitTollKmh === 122 && fields.speedZoneAuto === true && fields.speedWarn === true,
+            assert(fields.speedLimitKmh === 80 && fields.speedLimitTollKmh === 130 && fields.speedZoneAuto === true && fields.speedWarn === true,
                 'ฟิลด์ที่จะเซฟต้องครบ (speedLimitKmh/speedLimitTollKmh/speedZoneAuto/speedWarn) แต่ได้ ' + JSON.stringify(fields));
-            return 'บนจอ ' + after.city + '/' + after.toll + ' · ตัวแปร ' + after.vars.join('/') + ' · ฟิลด์เซฟ ' + JSON.stringify(fields);
+            return 'กดปุ่มจริงทีละ 5: 80→85→80 · ทางด่วน 120→130 · แถวในลิสต์ “' + rowNow + '” · ฟิลด์เซฟ ' + JSON.stringify(fields);
         });
 
         await runScenario('S10 · สายไฟในโค้ดจริง + ไม่กินโควตา TomTom (ตัวเลขโซนคิดในเครื่อง 100%)', async () => {
@@ -409,6 +418,40 @@
             return 'โควตา route ' + q0 + ' → ' + q1 + ' · คำขอ TomTom เพิ่ม ' + (net1 - net0) + ' · สายไฟ ' + need.length + ' จุดครบ';
         });
 
+        // 🧭 (19 ก.ย. 69) ผู้ใช้ถามว่า “เมนูลิมิตความเร็วอยู่ตรงไหน หาไม่เจอ” → ต้องเข้าได้จากหน้างานในคแตะเดียว
+        await runScenario('S11 · ทางลัด: แตะชิป “ลิมิต” บนจอมิเตอร์ใหญ่ → เปิดหน้าตั้งค่าตรงกล่องลิมิตทันที (ยศไม่มีสิทธิ์ = ไม่เปิด + เตือน)', async () => {
+            resetDefaults(cw);
+            await wait(30);
+            try { cw.toggleModal('generalSettingsModal', false); } catch (e) {}
+            const chip = el('tzSpeedLimitChip');
+            assert(!!chip, 'ไม่พบชิป “ลิมิต” #tzSpeedLimitChip บนการ์ดความเร็ว');
+            const oc = String(chip.getAttribute('onclick') || '');
+            assert(oc.indexOf('__spdOpenSettings') >= 0, 'ชิปต้องกดได้เพื่อพาไปหน้าตั้งค่า (ได้ onclick = ' + oc + ')');
+            chip.click();
+            let r = null, inView = false;
+            for (let i = 0; i < 20 && !inView; i++) { await wait(100); r = el('speedLimitBox').getBoundingClientRect(); inView = (r.top > 0 && r.bottom <= cw.innerHeight + 4); }
+            const opened = cw.getComputedStyle(el('generalSettingsModal')).display;
+            assert(opened === 'flex', 'แตะชิปแล้วต้องเปิด “ตั้งค่าทั่วไป” แต่ได้ display:' + opened);
+            assert(cw.getComputedStyle(el('speedLimitBox')).display !== 'none' && r.height > 0, 'กล่อง “ลิมิตความเร็ว” ต้องแสดงอยู่');
+            assert(inView, 'กล่องลิมิตต้องถูกเลื่อนมาอยู่ในจอ (top ' + Math.round(r.top) + ' · bottom ' + Math.round(r.bottom) + ' · จอ ' + cw.innerHeight + ')');
+            assert(el('speedLimitBox').classList.contains('spd-flash'), 'ต้องกระพริบกรอบให้เห็นว่าอยู่ตรงไหน (ไม่พบคลาส spd-flash)');
+            const btnTxt = Array.from(cw.document.querySelectorAll('#speedLimitBox .spd-step-btn')).map(b => b.getAttribute('onclick')).join(' | ');
+            assert(/bumpSpeedLimit\(-5\)/.test(btnTxt) && /bumpSpeedLimit\(5\)/.test(btnTxt), 'ปุ่มในกล่องต้องเป็น ±5 แต่ได้ ' + btnTxt);
+            // ยศที่ไม่มีสิทธิ์ → ต้องไม่เปิดหน้าต่าง + บอกเหตุผล (ไม่เงียบ)
+            try { cw.toggleModal('generalSettingsModal', false); } catch (e) {}
+            const realPerm = cw.canUseSpeedAlert, realToast = cw.showToast;
+            const toasts = [];
+            cw.showToast = function (m) { toasts.push(String(m)); };
+            cw.canUseSpeedAlert = () => false;
+            let after = 'x';
+            try { chip.click(); await wait(350); after = cw.getComputedStyle(el('generalSettingsModal')).display; }
+            finally { cw.canUseSpeedAlert = realPerm; cw.showToast = realToast; }
+            assert(after === 'none', 'ตำแหน่งที่ไม่มีสิทธิ์ต้องไม่เปิดหน้าตั้งค่า แต่ได้ display:' + after);
+            assert(toasts.join(' ').indexOf('สิทธิ์') >= 0, 'ต้องบอกผู้ใช้ว่าไม่มีสิทธิ์ แต่ได้: ' + JSON.stringify(toasts));
+            try { cw.toggleModal('generalSettingsModal', false); } catch (e) {}
+            return 'แตะชิป → “ตั้งค่าทั่วไป” เปิด · กล่องลิมิตอยู่กลางจอ (top ' + Math.round(r.top) + '/' + cw.innerHeight + ') + กระพริบกรอบ ✓ · ปุ่ม ±5 ✓ · ยศไม่มีสิทธิ์ → ไม่เปิด + “' + toasts.join(' ') + '”';
+        });
+
         // คืนสภาพเดิม
         resetDefaults(cw);
         try { cw.isManualRunning = false; } catch (e) {}
@@ -426,7 +469,7 @@
         } catch (e) {
             summaryEl.innerHTML = '<span style="color:var(--red)">ตั้งชุดทดสอบไม่สำเร็จ: ' + (e && e.message ? e.message : e) + '</span>';
         } finally {
-            btnRun.disabled = false; btnRun.textContent = '🔄 รันการทดสอบใหม่ (10 สถานการณ์)';
+            btnRun.disabled = false; btnRun.textContent = '🔄 รันการทดสอบใหม่ (11 สถานการณ์)';
         }
     });
 

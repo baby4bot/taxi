@@ -72,6 +72,8 @@
     await bootApp();
     const cw = w();
     const d = (...a) => cw.__versionCheckDecide(...a);
+    // ⏱️ ปิดการเด้งอัตโนมัติตอนเปิดแอปไว้ก่อน — ชุดนี้ตรวจแบบเรียกเองทีละครั้ง (ไม่งั้นแผงโผล่มาแทรกระหว่างข้อ)
+    cw.__wnNoAuto = true;
 
     await scenario('1. ตัวตัดสินใจ: เวอร์ชันตรงกัน → ไม่ทำอะไร', async () => {
       assert(d('abc123', 'abc123', {}) === 'none', 'ต้องได้ none (ได้ ' + d('abc123', 'abc123', {}) + ')');
@@ -254,6 +256,125 @@
       return 'เคยอ่าน → เงียบ · ยังไม่เคย → เด้ง · ปิดแล้วจดค่าลงเครื่อง (v=' + (localSeen ? localSeen.v : '') + ')';
     });
 
+    // ============================================================
+    // 🆕 ชุดที่ 15–20: ทาง “เปิดแอปแล้วเจอรุ่นใหม่” (boot path · __whatsNewOnBoot)
+    //    ผู้ใช้สั่ง 19 ก.ย. 69: “ให้แอปเด้งสรุปสั้น ๆ ว่ามีอะไรใหม่เฉพาะเมื่อ APP_WEB_VERSION เปลี่ยน
+    //    โดยดึงจากประวัติเวอร์ชันและปิดได้” ⇒ เคสจริงคือปิดแอป/ปิดจอแล้วเปิดใหม่ (ไม่ใช่แค่รีโหลดในเซสชัน)
+    // ============================================================
+    await scenario('15. เปิดแอปครั้งแรก (ยังไม่เคยอ่านรุ่นไหน) → ไม่เด้ง + จดรุ่นนี้ว่าอ่านแล้ว', async () => {
+      const T = cw.__whatsNewTest;
+      assert(T && typeof T.onBoot === 'function', 'ไม่พบตะขั้ว T.onBoot สำหรับทางเปิดแอป');
+      // ⚠️ สตับคำตอบเซิร์ฟเวอร์เป็น “ไม่รู้จัก” เพื่อไม่ให้ชุดทดสอบยิง Firestore จริง (บัญชีผู้ใช้จริงอาจเคยอ่านรุ่นนี้แล้ว)
+      T.clearLocalSeen(); T.clearRecord(); T.seenOverride({});
+      const out = await T.onBoot('test');
+      assert(out === 'first', 'ผู้ใช้ใหม่ต้องได้ first เงียบ ๆ (ได้ ' + out + ')');
+      assert(T.panelText() === null, 'ห้ามเด้งแผงใส่ผู้ใช้ที่เพิ่งเปิดครั้งแรก');
+      const s = T.localSeen();
+      assert(s && s.v === T.running(), 'ต้องจดว่ารับรุ่นนี้แล้ว (ได้ ' + JSON.stringify(s) + ')');
+      return 'first → เงียบ · จดอ่านแล้ว v=' + s.v;
+    });
+
+    await scenario('16. รุ่นที่อ่านล่าสุด = รุ่นที่รันอยู่ → ไม่เด้ง', async () => {
+      const T = cw.__whatsNewTest;
+      T.clearLocalSeen(); T.clearRecord(); T.seenOverride({});
+      T.setLocalSeen(T.running(), T.notesNow());
+      const out = await T.onBoot('test');
+      assert(out === 'same', 'รุ่นเดิมต้องเงียบ (ได้ ' + out + ')');
+      assert(T.panelText() === null, 'ต้องไม่มีแผง');
+      return 'same → เงียบ';
+    });
+
+    await scenario('17. รุ่นเปลี่ยน + เทียบได้ → เด้ง “เฉพาะหัวข้อที่เพิ่มมาใหม่”', async () => {
+      const T = cw.__whatsNewTest;
+      const notes = T.notesNow();
+      assert(notes.length >= 3, 'ประวัติเวอร์ชันวันนี้ต้องมีหัวข้อให้ทดสอบ (มี ' + notes.length + ')');
+      T.clearLocalSeen(); T.clearRecord(); T.seenOverride({});
+      T.setLocalSeen('oldver000', notes.slice(0, 2));      // เคยอ่านรุ่นเก่า ตอนนั้นมี 2 หัวข้อ
+      const out = await T.onBoot('test');
+      assert(/^shown:\d+$/.test(out), 'ต้องเด้งแผงสรุป (ได้ ' + out + ')');
+      const txt = T.panelText() || '';
+      assert(/มีอะไรใหม่ในเวอร์ชันนี้/.test(txt), 'แผงต้องมีหัวข้อ “มีอะไรใหม่ในเวอร์ชันนี้” (ได้: ' + txt.slice(0, 40) + '…)');
+      const newNode = notes[2];
+      assert(txt.includes(newNode.slice(0, 12)), 'ต้องแสดงหัวข้อใหม่จากประวัติเวอร์ชันจริง (ได้: ' + JSON.stringify(newNode) + ')');
+      assert(!txt.includes(notes[0].slice(0, 12)), 'หัวข้อที่เคยอ่านแล้วต้องไม่ถูกแสดงซ้ำ');
+      assert(/ใหม่ \d+ รายการ/.test(txt), 'ต้องบอกว่าเป็น “ใหม่ N รายการ” (ได้: ' + txt.slice(0, 120) + ')');
+      const el = cw.document.getElementById('whatsNewPanel');
+      assert(el && !el.classList.contains('modal-overlay'), 'แผงต้องเป็นกล่องเล็ก ไม่ใช่ออฟเลย์ที่บังจอ');
+      assert(cw.getComputedStyle(el).position === 'fixed', 'แผงต้องลอยทับ ไม่ดันเนื้อหา');
+      return 'รุ่นใหม่ (เทียบได้) → แสดง ' + out.replace('shown:', '') + ' รายการ เฉพาะของใหม่ · ไม่ซ้ำของเดิม';
+    });
+
+    await scenario('18. กดปิด → จดว่าอ่านรุ่นนี้แล้ว + เปิดใหม่แล้วไม่เด้งซ้ำ', async () => {
+      const T = cw.__whatsNewTest;
+      assert(T.panelVisible(), 'ต้องมีแผงค้างอยู่จากข้อก่อนหน้า');
+      const xBtn = cw.document.getElementById('whatsNewClose');
+      assert(!!xBtn, 'ต้องมีปุ่ม ✕ ให้ปิดได้');
+      xBtn.click();
+      await wait(80);
+      assert(!T.panelVisible(), 'กด ✕ แล้วแผงต้องหาย');
+      const s = T.localSeen();
+      assert(s && s.v === T.running(), 'ปิดแล้วต้องจดว่า “อ่านรุ่นนี้แล้ว” (ได้ ' + JSON.stringify(s) + ')');
+      assert(Array.isArray(s.notes) && s.notes.length > 0, 'ต้องจดหัวข้อ ณ รุ่นนี้ไว้ เพื่อเทียบครั้งถัดไป');
+      const again = await T.onBoot('test');
+      assert(again === 'same', 'เปิดอีกครั้งต้องไม่เด้งซ้ำ (ได้ ' + again + ')');
+      return '✕ ปิดได้ · จดอ่านแล้ว v=' + s.v + ' (โน้ต ' + s.notes.length + ' หัวข้อ) · เปิดซ้ำ → same';
+    });
+
+    await scenario('19. กลางเที่ยว → เลื่อนไว้ก่อน (ไม่บังจอมิเตอร์) แล้วเด้งตอนจบเที่ยว', async () => {
+      const T = cw.__whatsNewTest;
+      T.clearLocalSeen(); T.clearRecord(); T.seenOverride({});
+      cw.isManualRunning = false; cw.isMeterPaused = false;
+      T.setLocalSeen('oldver000', T.notesNow().slice(0, 2));
+      cw.isManualRunning = true; cw.isMeterPaused = false;
+      const out = await T.onBoot('test');
+      assert(out === 'defer-trip', 'กำลังเดินมิเตอร์ต้องเลื่อนไปก่อน (ได้ ' + out + ')');
+      assert(T.panelText() === null, 'ห้ามเด้งแผงทับจอมิเตอร์');
+      assert(T.localSeen().v === 'oldver000', 'ห้ามจดว่าอ่านแล้วตอนที่ยังไม่เด้ง');
+      cw.isManualRunning = false; cw.isMeterPaused = false;
+      const after = await T.onBoot('trip-end');
+      assert(/^shown:\d+$/.test(after), 'จบเที่ยวแล้วต้องเด้ง (ได้ ' + after + ')');
+      cw.document.getElementById('whatsNewOk').click();
+      await wait(80);
+      assert(!T.panelVisible(), 'กด “รับทราบ” แล้วแผงต้องหาย');
+      return 'กลางเที่ยว = defer (ไม่จดว่าอ่าน) · จบเที่ยว = เด้ง · ปุ่มรับทราบปิดได้';
+    });
+
+    await scenario('20. ข้ามเครื่อง: เอกสารผู้ใช้บอกว่าเคยอ่านรุ่นนี้แล้ว → เงียบ', async () => {
+      const T = cw.__whatsNewTest;
+      cw.isManualRunning = false; cw.isMeterPaused = false;
+      T.clearLocalSeen(); T.clearRecord();
+      T.seenOverride({ uid: 'tester', v: T.running(), at: Date.now() });   // อ่านรุ่นนี้แล้วจากเครื่องอื่น
+      const out = await T.onBoot('test');
+      assert(out === 'seen', 'ต้องรู้ว่าเคยอ่านแล้ว (ได้ ' + out + ')');
+      assert(T.panelText() === null, 'ต้องไม่เด้ง');
+      assert(T.localSeen().v === T.running(), 'ต้องจดลงเครื่องไว้ด้วย (รอบถัดไปไม่ต้องถามเซิร์ฟเวอร์)');
+      // เทียบได้แต่ไม่มีของใหม่ (push ที่ไม่เพิ่มหัวข้อ) → เงียบ ไม่กวนผู้ใช้
+      T.clearLocalSeen();
+      T.seenOverride({ uid: 'tester', v: 'otherver00', at: Date.now() });
+      T.setLocalSeen('oldver000', T.notesNow());
+      const out2 = await T.onBoot('test');
+      assert(out2 === 'nothing-new', 'ไม่มีหัวข้อใหม่ต้องเงียบ (ได้ ' + out2 + ')');
+      assert(T.panelText() === null, 'ต้องไม่มีแผง');
+      assert(T.localSeen().v === T.running(), 'ต้องจดรุ่นใหม่ไว้ เพื่อไม่ให้ถามซ้ำ');
+      T.seenOverride(null); T.clearLocalSeen(); T.clearRecord();
+      return 'เคยอ่านที่เครื่องอื่น → seen (เงียบ) · ไม่มีหัวข้อใหม่ → nothing-new (เงียบ) · จดรุ่นทั้งสองกรณี';
+    });
+
+    await scenario('21. ไม่มีความถอยหลัง: รีโหลดอัตโนมัติในเซสชัน (ทางเดิม) ยังทำงานเหมือนเดิม', async () => {
+      const T = cw.__whatsNewTest;
+      T.clearLocalSeen(); T.clearRecord();
+      T.seenOverride({ uid: 'tester', v: 'otherver00' });
+      T.setRecord({ to: T.running(), from: 'oldver000', at: Date.now(), date: '2026-09-18', beforeNotes: [] });
+      const out = await cw.__whatsNewAfterUpdate('test');
+      assert(/^shown:\d+$/.test(out), 'ทางเดิมต้องเด้งได้เหมือนก่อนแก้ (ได้ ' + out + ')');
+      cw.document.getElementById('whatsNewOk').click();
+      await wait(80);
+      assert((await cw.__whatsNewAfterUpdate('test')) === 'none', 'ปิดแล้วต้องไม่เด้งซ้ำในรอบเดียวกัน');
+      T.clearRecord(); T.clearLocalSeen(); T.seenOverride(null);
+      return 'หลังรีโหลดอัตโนมัติยังเด้ง + ปิดแล้วไม่ซ้ำ (ไม่ถูกของใหม่ทับ) · ข้อ 1–14 ยังผ่านครบ';
+    });
+
+    cw.__wnNoAuto = false;
     if (failures.length) console.warn('ล้มเหลว:', failures);
   }
 

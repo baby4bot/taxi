@@ -1,0 +1,18 @@
+{
+  "_note": "ทะเบียนชุดทดสอบออฟไลน์ของ 'สิทธิ์รายยศ' — tests/perm-test-check.ps1 บังคับว่าถ้ารอบไหนแก้สิทธิ์ตัวไหน ต้องมีชุดทดสอบของสิทธินั้นในทะเบียนนี้ + มีผลรันผ่านที่ผูกกับ md5 ของ index.html ปัจจุบัน (tests/perm-test-last-run.json) มิฉะนั้น push ไม่ผ่าน",
+  "_howto": [
+    "1) เขียน/แก้ชุดทดสอบใน tests/<ชื่อ>-offline.html ให้กดปุ่มจริงในแอปจริง แล้วนับสถานการณ์ที่ตรวจ",
+    "2) เพิ่มรายการใน permissions ด้านล่าง: \"<คีย์สิทธิ์>\": { \"suite\": \"tests/<ไฟล์>.html\", \"expect\": <จำนวนสถานการณ์>, \"label\": \"<ชื่อสิทธิ์>\" }",
+    "3) รันชุดทดสอบในเบราว์เซอร์ให้ผ่านครบ แล้วบันทึกผล: powershell -NoProfile -ExecutionPolicy Bypass -File tests/perm-test-record.ps1 -Suite tests/<ไฟล์>.html -Pass 8 -Total 8",
+    "4) รันด่าน: powershell -NoProfile -ExecutionPolicy Bypass -File tests/perm-test-check.ps1  (เพิ่ม -Coverage เพื่อดูว่าสิทธิ์ตัวไหนยังไม่มีชุดทดสอบ)"
+  ],
+  "permissions": {
+    "canUseSpeedAlert": { "suite": "tests/speed-alert-perm-offline.html", "expect": 8, "label": "แจ้งเตือนความเร็วเกินกำหนด (ตั้งลิมิต + เสียงติ๊ดเตือน)" },
+    "canStartMeterRoute": { "suite": "tests/meter-perm-offline.html", "expect": 8, "label": "เริ่มมิเตอร์จากหน้าสรุปเส้นทาง" },
+    "canUseMiniMap": { "suite": "tests/minimap-autoopen-offline.html", "expect": 13, "label": "ใช้แผนที่นำทาง (Mini Map) ตอนขับ" },
+    "miniMapAutoOpen": { "suite": "tests/minimap-autoopen-offline.html", "expect": 13, "label": "เปิดมินิแมพอัตโนมัติเมื่อเริ่มเที่ยว" },
+    "roleDefaults": { "suite": "tests/meter-perm-offline.html", "expect": 8, "pseudo": true, "label": "โครงสร้างค่าเริ่มต้นรายยศ (DEFAULT_ROLE_PERMS / ยศลอกจาก User)" },
+    "canViewQuota": { "suite": "tests/applook-tabs-offline.html", "expect": 16, "label": "ดูโควต้าการใช้งาน (แท็บที่ 1 ของโควตาและบริการระบบ)" },
+    "canManageService": { "suite": "tests/applook-tabs-offline.html", "expect": 16, "label": "จัดการ Portal — หมวดหมู่/รหัส USSD/เบอร์บริการ (แท็บที่ 2)" }
+  }
+}

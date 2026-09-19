@@ -193,6 +193,38 @@ if (Test-Path $mmChecker) {
   Fail 'tests/minimap-start-guard.ps1 missing'
 }
 
+# --- 3c-ter) a per-role permission change must ship a passing offline suite ----
+#   (owner request 19 Sep 2026: "ถ้างานรอบนั้นแก้สิทธิ์รายยศ ต้องบังคับให้มีชุด
+#    ทดสอบออฟไลน์ของสิทธินั้นผ่านก่อน มิฉะนั้น push ไม่ผ่าน")
+#   The gate compares the file being pushed with the build that is already live
+#   (git HEAD of the repo copy) and, for every per-role permission it finds
+#   touched (key added/removed, per-role default flipped, any source line that
+#   mentions the key changed, DEFAULT_ROLE_PERMS plumbing changed), demands:
+#     * a registered offline suite (tests/perm-test-map.json)
+#     * a passing run of that suite recorded against this exact md5
+#       (tests/perm-test-last-run.json, written by tests/perm-test-record.ps1)
+$permChecker = Resolve-FromRoot 'tests/perm-test-check.ps1'
+if (Test-Path $permChecker) {
+  $pOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $permChecker -Index $Index -Repo $Repo 2>&1 | Out-String
+  $pBad = @($pOut -split "`r?`n" | Where-Object { $_ -match '^\[FAIL\]' })
+  if ($pBad.Count) {
+    Fail 'permission gate not clean -> a per-role permission changed without a passing offline suite'
+    foreach ($l in $pBad) { Say ('        ' + $l.Trim()) }
+    Say  '       (fix: register the suite in tests/perm-test-map.json, run it, then tests/perm-test-record.ps1 -Suite <file> -Pass <n> -Total <n>)'
+    Say  '       (full Thai detail: tests/perm-test-check-report.txt)'
+  } else {
+    $pTouched = ([regex]::Match($pOut, 'touched\s*:\s*([^\r\n]*)')).Groups[1].Value
+    if ($pTouched -and $pTouched.Trim() -ne '(none)') {
+      Pass ('permission gate: touched ' + $pTouched.Trim() + ' -> registered suite(s) passed on this build')
+      foreach ($l in @($pOut -split "`r?`n" | Where-Object { $_ -match '^\[PASS\] .*->.*md5 ok' })) { Say ('        ' + $l.Trim()) }
+    } else {
+      Pass 'permission gate: no per-role permission changed this round'
+    }
+  }
+} else {
+  Fail 'tests/perm-test-check.ps1 missing'
+}
+
 # --- 3d) never ship the APK signing key -------------------------------------
 #   (owner request 18 Sep 2026: "ติดตั้งทับได้เลย ไม่ต้องถอนของเก่า" -> the key at
 #    .freebuff/signing-key/ + GitHub Actions secrets keeps one identity forever.

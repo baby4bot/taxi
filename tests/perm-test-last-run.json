@@ -1,0 +1,51 @@
+{
+    "index.html":  {
+                       "tests/applook-tabs-offline.html":  {
+                                                               "at":  "2026-09-19 19:49",
+                                                               "note":  "preview run 16/16 (19 ก.ย. 69): panes + Portal list + quota pane; md5 ไม่รวมบรรทัดประทับเวอร์ชัน",
+                                                               "suiteMd5":  "6DD7C75AE99EED2CAF62B6FA55EBDFF7",
+                                                               "pass":  16,
+                                                               "total":  16,
+                                                               "keys":  [
+                                                                            "canViewQuota",
+                                                                            "canManageService"
+                                                                        ],
+                                                               "md5":  "D45BE6272B05A874D4F629B7D49B9120"
+                                                           },
+                       "tests/meter-perm-offline.html":  {
+                                                             "at":  "2026-09-19 18:43",
+                                                             "note":  "preview run: 8/8 after the boot-race harness fix",
+                                                             "suiteMd5":  "47088AD0F5BD8981F1FCAF77B6498820",
+                                                             "pass":  8,
+                                                             "total":  8,
+                                                             "keys":  [
+                                                                          "canStartMeterRoute",
+                                                                          "roleDefaults"
+                                                                      ],
+                                                             "md5":  "56A1F92051F05AB4E5BCB70C654BC908"
+                                                         },
+                       "tests/speed-alert-perm-offline.html":  {
+                                                                   "at":  "2026-09-19 19:49",
+                                                                   "note":  "preview run 8/8 (19 ก.ย. 69); md5 ไม่รวมบรรทัดประทับเวอร์ชัน",
+                                                                   "suiteMd5":  "40CEAA4451B6E9133307587106820094",
+                                                                   "pass":  8,
+                                                                   "total":  8,
+                                                                   "keys":  [
+                                                                                "canUseSpeedAlert"
+                                                                            ],
+                                                                   "md5":  "D45BE6272B05A874D4F629B7D49B9120"
+                                                               },
+                       "tests/minimap-autoopen-offline.html":  {
+                                                                   "at":  "2026-09-19 18:38",
+                                                                   "note":  "preview run: 13/13 after the boot-race harness fix",
+                                                                   "suiteMd5":  "FD31D4978C43F810219C42571CB7D3BD",
+                                                                   "pass":  13,
+                                                                   "total":  13,
+                                                                   "keys":  [
+                                                                                "canUseMiniMap",
+                                                                                "miniMapAutoOpen"
+                                                                            ],
+                                                                   "md5":  "56A1F92051F05AB4E5BCB70C654BC908"
+                                                               }
+                   }
+}

@@ -33,7 +33,7 @@
         โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ป้อนความเร็วเข้าไปตรง ๆ ผ่าน <code>__spdTick(ความเร็ว)</code>
         (หน้าจริงเรียกโดยไม่ส่งค่า → อ่านจาก GPS) แล้ว <b>นับจำนวนเสียง “ติ๊ด” ที่ยิงจริง</b> ด้วยการสตับ <code>playSound</code>
         <br>กติกาที่ผู้ใช้สั่ง 18 ก.ย. 69: เกินลิมิตครั้งแรกของเที่ยว → <b>ติ๊ด 5 ครั้ง</b> แล้วหยุด · ลดความเร็วลงมาแล้วเร่งเกินอีก → <b>ติ๊ด 3 ครั้ง</b>
-        · ต้องเห็นความเร็วทั้งจอมิเตอร์ใหญ่และการ์ดหน้าหลัก · ตั้งลิมิตด้วยปุ่ม −/+ ทีละ 1 ไม่ต้องพิมพ์
+        · ต้องเห็นความเร็วทั้งจอมิเตอร์ใหญ่และการ์ดหน้าหลัก · ตั้งลิมิตด้วยปุ่ม −/+ ทีละ 5 ไม่ต้องพิมพ์
         <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
         <code>http://127.0.0.1:58911/tests/speed-warn-offline.html</code>
     </p>
@@ -321,24 +321,24 @@
             return 'ปิดสวิตช์ → ติ๊ด 0 ครั้ง · ตัวเลขความเร็วยังแสดง = ' + numNow + ' กม./ชม.';
         });
 
-        await runScenario('S8 · ปุ่ม − / + ปรับทีละ 1 + เพดาน 20–200 (กันกดรัวจนหลุด)', async () => {
+        await runScenario('S8 · ปุ่ม − / + ปรับทีละ 5 + เพดาน 20–200 (กันกดรัวจนหลุด)', async () => {
             const from = cw.userSpeedLimitKmh;
-            cw.bumpSpeedLimit(1);
-            const plus1 = cw.userSpeedLimitKmh;
-            cw.bumpSpeedLimit(-1);
-            const minus1 = cw.userSpeedLimitKmh;
-            for (let i = 0; i < 300; i++) cw.bumpSpeedLimit(-1);
+            cw.bumpSpeedLimit(5);
+            const plus5 = cw.userSpeedLimitKmh;
+            cw.bumpSpeedLimit(-5);
+            const minus5 = cw.userSpeedLimitKmh;
+            for (let i = 0; i < 300; i++) cw.bumpSpeedLimit(-5);
             const low = cw.userSpeedLimitKmh;
-            for (let i = 0; i < 400; i++) cw.bumpSpeedLimit(1);
+            for (let i = 0; i < 400; i++) cw.bumpSpeedLimit(5);
             const high = cw.userSpeedLimitKmh;
             const shown = limitVal().innerText;
             cw.userSpeedLimitKmh = from; cw.__renderSpeedLimitBox();
-            assert(plus1 === from + 1, 'กด + ควรเพิ่มทีละ 1 (ได้ ' + plus1 + ')');
-            assert(minus1 === from, 'กด − ควรลดกลับเท่าเดิม (ได้ ' + minus1 + ')');
+            assert(plus5 === from + 5, 'กด + ควรเพิ่มทีละ 5 (ได้ ' + plus5 + ')');
+            assert(minus5 === from, 'กด − ควรลดกลับเท่าเดิม (ได้ ' + minus5 + ')');
             assert(low === 20, 'กด − รัว ๆ ต้องไม่ต่ำกว่า 20 แต่ได้ ' + low);
             assert(high === 200, 'กด + รัว ๆ ต้องไม่เกิน 200 แต่ได้ ' + high);
             assert(shown === '200', 'ตัวเลขใหญ่บนหน้าตั้งค่าควรตรงกับค่า (ได้ ' + shown + ')');
-            return 'จาก ' + from + ' → +1 = ' + plus1 + ' → −1 = ' + minus1 + ' · กด − รัว 300 ครั้ง = ' + low + ' · กด + รัว 400 ครั้ง = ' + high + ' · ตัวเลขบนหน้าจอ = ' + shown;
+            return 'จาก ' + from + ' → +5 = ' + plus5 + ' → −5 = ' + minus5 + ' · กด − รัว 300 ครั้ง = ' + low + ' · กด + รัว 400 ครั้ง = ' + high + ' · ตัวเลขบนหน้าจอ = ' + shown;
         });
 
         await runScenario('S9 · พักมิเตอร์ (หยุดชั่วคราว) → ไม่ติ๊ด แม้ความเร็วเกิน', async () => {

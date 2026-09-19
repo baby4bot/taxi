@@ -39,7 +39,7 @@
         <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
         <code>http://127.0.0.1:58911/tests/applook-tabs-offline.html</code> แบบ “ตรงไปที่หน้านี้” (อย่าซ้อนใน iframe ของหน้าอื่น)
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (13 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (16 สถานการณ์)</button>
     <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
     <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
     <div id="summary"></div>
@@ -172,7 +172,8 @@
         try {
             await closeAllModals();
             await wait(120);
-            const out = await Promise.race([fn(), wait(30000).then(() => { throw new Error('สถานการณ์ timeout 30 วิ'); })]);
+            // ⏱ (19 ก.ย. 69) 45 วิ (เดิม 30) — สถานการณ์ S2 วาดลิสต์ข้อความทั้งชุด ถ้าแอปเพิ่งบูตเสร็จ CPU ยังแน่นแล้วชุดทดสอบตกหล่น
+            const out = await Promise.race([fn(), wait(45000).then(() => { throw new Error('สถานการณ์ timeout 45 วิ'); })]);
             row.classList.add('pass');
             row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
             passCount++;
@@ -194,10 +195,22 @@
     }
 
     // ============================ ชุดทดสอบ ============================
+    // 🧊 รอให้แอป “ว่างจริง” ก่อนเริ่มสถานการณ์แรก — กันชุดทดสอบแย่ง CPU กับตอนบูต (เจอจริง: S2 timeout จ่าย ๆ)
+    async function waitAppIdle(cw) {
+        for (let i = 0; i < 120; i++) {
+            const loader = cw.document.getElementById('appLoader');
+            const busy = !!loader && cw.getComputedStyle(loader).display !== 'none';
+            if (!busy && cw.document.readyState === 'complete') { await wait(500); return true; }
+            await wait(150);
+        }
+        return false;
+    }
+
     async function runAll() {
         resultsEl.innerHTML = ''; passCount = 0; failCount = 0; failures.length = 0;
         await loadApp();
         const cw = w();
+        await waitAppIdle(cw);
 
         await runScenario('S1 · หน้าตั้งค่าการใช้งานเหลือ 8 แถว — เมนูเก่า 4 แถวถูกลบ (หน้าจอโหลด · แถบเลื่อน · อัตราค่าทางด่วน · Portal)', async () => {
             const doc = cw.document;
@@ -489,6 +502,79 @@
             assert(txt.indexOf("hubNavMapItem.style.display = window.twCanNavToll()") >= 0, 'การ์ดแผนที่/ทางด่วนต้องใช้ twCanNavToll()');
             assert(txt.indexOf("hubQuotaItem.style.display = window.twCanSysOps()") >= 0, 'การ์ดโควตา/บริการต้องใช้ twCanSysOps()');
             return 'ครบ: 3 หน้าต่าง · ภาชนะที่ยุบ 4 ตัว · src ครบ 8 แท็บ · ตัวเปิดเดิม 6 ตัวชี้ twOpen · ไม่มีการเปิดภาชนะตรง ๆ · 8 แถวเมนู ✅';
+        });
+
+        // 🐞 (19 ก.ย. 69) บั๊กจริงที่ผู้ใช้เจอ: แผงที่มีกล่องเลื่อน “มี id” (Portal) ได้คลาส .tw-panel-host ที่
+        //    `display:flex !important` → inline display:none ของ twTab สู้ไม่ได้ ⇒ เห็น 2 แท็บพร้อมกัน
+        await runScenario('S14 · เห็นทีละแผงเท่านั้น (ห้ามแผงซ้อนจาก !important) — ครบทั้ง 3 หน้าต่าง', async () => {
+            asAdmin();
+            const wins = [
+                { k: 'look', open: () => cw.openAppLookModal('order') },
+                { k: 'navToll', open: () => cw.openNavMiniPrefsModal() },
+                { k: 'sysOps', open: () => cw.openQuotaMonitor() }
+            ];
+            const bad = [];
+            for (const win of wins) {
+                await closeAllModals(); await wait(160);
+                win.open(); await wait(420);
+                for (const info of cw.twTabs(win.k)) {
+                    if (!info.can) continue;
+                    const got = cw.twTab(win.k, info.t.id);
+                    if (got !== info.t.id) continue;                 // แท็บนี้ถูกข้าม (ไม่มีสิทธิ์) = ไม่ต้องตรวจ
+                    await wait(230);
+                    const vis = cw.twTabs(win.k).filter(x => x.can)
+                        .map(x => x.t.panel)
+                        .filter(p => { const e = cw.document.getElementById(p); return e && cw.getComputedStyle(e).display !== 'none'; });
+                    if (vis.length !== 1) bad.push(win.k + '/' + info.t.id + ' → เห็น ' + vis.length + ' แผง: ' + vis.join(' + '));
+                    else if (vis[0] !== info.t.panel) bad.push(win.k + '/' + info.t.id + ' → แผงที่เห็นคือ ' + vis[0]);
+                }
+            }
+            assert(bad.length === 0, bad.join(' | '));
+            await closeAllModals();
+            return 'ทั้ง 3 หน้าต่าง (9 แท็บ) แสดงทีละแผงเท่านั้น — ไม่มีแผงซ้อน ✅';
+        });
+
+        // 🐞 ต่อจาก S14: แผง Portal ถูกซ่อนด้วยคลาสได้แล้ว ⇒ ต้อง “วาดลิสต์จริง” ตอนกดแท็บ (เดิมค้างที่ “กำลังโหลดข้อมูล...”)
+        await runScenario('S15 · กดแท็บ “จัดการ Portal” แล้วลิสต์ต้องถูกวาดจริง (ไม่ค้างที่คำว่า กำลังโหลดข้อมูล...)', async () => {
+            asAdmin();
+            cw.currentServiceData = [];                  // ยังไม่โหลดข้อมูล = ต้องเห็น “ยังไม่มีรายการในระบบ” (พิสูจน์ว่าตัววาดทำงาน)
+            await closeAllModals(); await wait(160);
+            cw.twOpen('sysOps', 'portal');
+            await wait(700);
+            const sc = cw.document.getElementById('serviceListContainer');
+            assert(sc, 'ไม่พบกล่องลิสต์ Portal');
+            assert(sc.closest('#sysOpsPanelPortal'), 'กล่องลิสต์ Portal ไม่ได้อยู่ในแผงของแท็บ Portal');
+            const txt = String(sc.innerText || '').trim();
+            assert(!/กำลังโหลดข้อมูล/.test(txt), 'ลิสต์ Portal ยังค้างที่ “กำลังโหลดข้อมูล...” (ตัววาดไม่ทำงาน)');
+            assert(/ยังไม่มีรายการในระบบ/.test(txt), 'ยังไม่ตั้งข้อมูล แต่ไม่เห็นข้อความ “ยังไม่มีรายการในระบบ” (ได้: ' + txt.slice(0, 40) + ')');
+            // ใส่ข้อมูลจำลอง → กดแท็บเดิมอีกครั้ง = ต้องวาดตามข้อมูลใหม่
+            cw.currentServiceData = [{ id: 'c1', name: 'ทดสอบหมวด', items: [{ id: 'i1', title: 'รายการทดสอบ', code: '*111#' }] }];
+            cw.twTab('sysOps', 'quota'); await wait(200);
+            cw.twTab('sysOps', 'portal'); await wait(400);
+            const cards = sc.querySelectorAll('.sp-card').length;
+            assert(cards === 1, 'กลับเข้าแท็บ Portal แล้วไม่วาดตามข้อมูลใหม่ (การ์ด = ' + cards + ')');
+            cw.currentServiceData = [];
+            await closeAllModals();
+            return 'ลิสต์ Portal วาดเองตอนกดแท็บ + วาดใหม่ทุกครั้งที่กลับเข้าแท็บ (การ์ด ' + cards + ') ✅';
+        });
+
+        // 🐞 (19 ก.ย. 69) ผู้ใช้ทักว่าแท็บ “โควต้าการใช้งาน” ก็ค้างที่คำว่า “กำลังโหลดข้อมูล...” เหมือนกัน
+        //   ⇒ ต้องพิสูจน์ว่า “ตัววาดโควตาทำงานจริง”: แผงถูกวาดด้วย JS (ไม่ใช่ HTML ค้าง) และมีตัวเลข/หัวข้อขึ้นจริง
+        await runScenario('S16 · กดแท็บ “โควต้าการใช้งาน” แล้วต้องมีเนื้อหาจริง (ไม่ว่าง/ไม่ค้างที่ กำลังโหลดข้อมูล...)', async () => {
+            asAdmin();
+            await closeAllModals(); await wait(160);
+            const body = cw.document.getElementById('quotaMonitorBody');
+            assert(body, 'ไม่พบกล่องเนื้อหาโควตา #quotaMonitorBody');
+            body.innerHTML = '<div style="text-align:center;">กำลังโหลดข้อมูล...</div>';   // ตั้งกับดักไว้ก่อน
+            cw.twOpen('sysOps', 'quota');
+            await wait(800);
+            const txt = String(body.innerText || '').trim();
+            assert(!/กำลังโหลดข้อมูล/.test(txt), 'แท็บโควตายังค้างที่ “กำลังโหลดข้อมูล...” (ตัววาดไม่ทำงาน)');
+            assert(txt.length > 40, 'เนื้อหาโควตาสั้นผิดปกติ (ได้ ' + txt.length + ' ตัวอักษร)');
+            assert(/TomTom/.test(txt) && /Firestore/.test(txt), 'ต้องมีทั้งหัวข้อโควตา TomTom และ Firestore (ได้: ' + txt.slice(0, 60) + ')');
+            assert(cw.document.getElementById('ttLimitInput') || cw.document.querySelector('#quotaMonitorBody input'), 'ไม่พบช่องกรอกวงเงินโควตาในแผง (ตัววาดไม่ครบ)');
+            await closeAllModals();
+            return 'แผงโควตาวาดเองครบ ' + txt.length + ' ตัวอักษร — มีหัวข้อ TomTom + Firestore + ช่องกรองเงิน ✅';
         });
 
         renderSummary();

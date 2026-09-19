@@ -658,6 +658,9 @@
         .spd-limit-val.is-sm { font-size: 42px; letter-spacing: -1px; }
         .spd-zone-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.03); transition: border-color .2s ease, background .2s ease; }
         .spd-zone-row.on { border-color: rgba(56,189,248,0.55); background: rgba(56,189,248,0.10); }
+        /* 🧭 (19 ก.ย. 69) แตะชิป “ลิมิต” บนจอมิเตอร์ใหญ่ → เปิดหน้าตั้งค่ามาให้เลย แล้วกระพริบกรอบให้เห็นว่าอยู่ตรงไหน */
+        .spd-flash { animation: spd-flash 1.8s ease; }
+        @keyframes spd-flash { 0%, 100% { box-shadow: none; } 12%, 55% { box-shadow: 0 0 0 3px rgba(255,210,77,0.75); } }
         .spd-zone-row .spd-zone-name { flex: 1; font-size: 13.5px; font-weight: 700; color: #e6e9f0; min-width: 0; }
         .spd-zone-row .spd-zone-name small { display: block; font-size: 11px; font-weight: 400; color: var(--text-dim); margin-top: 2px; }
         /* 🎚️ (19 ก.ย. 69) “ระยะเตือนก่อนถึงด่าน” แยกโซน (ในเมือง / ความเร็วสูง) + รายด่าน (ในหน้าอัตราค่าทางด่วน) */
@@ -3288,34 +3291,35 @@
      ⚠️ ต้องอัปเดต PF_BLOCKS + pfOrderMigrate ด้วย ไม่งั้นตัวจัดลำดับบล็อกจะดึงการ์ดนี้กลับขึ้นไปใต้ธีมตามลำดับที่เคยบันทึกไว้ -->
 <div class="qr-card" id="googleLinkCard"><div class="qr-card-head"><span class="material-symbols-outlined" style="font-size: 18px; color: #4285F4;">account_circle</span> บัญชี Google (ทางเลือกล็อกอิน)</div><div class="qr-card-sub">ผูกบัญชีนี้กับ Google ⇒ ครั้งต่อไปกดปุ่มเดียวเข้าสู่ระบบได้เลย · <b>รหัสผ่านเดิมยังใช้ได้เหมือนเดิม</b> และบัญชีอื่นในเครื่องก็ผูกได้คนละบัญชีกัน · ใช้ได้<b>ทุกตำแหน่ง</b> (แอดมิน · ผู้จัดการ · ผู้ใช้ · ยศอื่นที่สร้างเพิ่ม)</div><div id="googleLinkStatus" class="qr-card-hint">—</div><div style="position: relative; margin-top: 10px;"><button id="googleLinkBtn" onclick="window.linkGoogleAccount()" class="manual-timer-btn" style="width: 100%; justify-content: center; background: #ffffff; color: #1f1f1f; gap: 8px; font-weight: 600;"><svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true" style="flex-shrink:0;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> <span id="googleLinkBtnLabel">ผูกบัญชี Google</span></button><button id="googleUnlinkBtn" onclick="window.unlinkGoogleAccount()" class="manual-timer-btn google-unlink-icon" style="display: none;" title="ยกเลิกการผูกบัญชี Google" aria-label="ยกเลิกการผูกบัญชี Google"><span class="material-symbols-outlined">link_off</span></button></div></div><div class="qr-card" id="pinCard"><div class="qr-card-head"><span class="material-symbols-outlined" style="font-size: 18px; color: var(--neon-yellow);">key</span> PIN ยืนยันรายการสำคัญ <span id="pinCardMandatory" style="font-size:11px; color:var(--accent-red); font-weight:700;">(บังคับทุกบัญชี)</span></div><div class="qr-card-sub">PIN 6 หลักใช้แทนรหัสผ่านตอนแก้ข้อมูลสำคัญ (แก้สมาชิก · ลบรูป · เปลี่ยนสิทธิ์) — <b>บัญชีที่สมัคร/เข้าใช้ด้วย Google ซึ่งยังไม่มีรหัสผ่าน จะแก้ข้อมูลสำคัญได้ต่อเมื่อตั้ง PIN แล้ว</b> · PIN ของแต่ละบัญชีแยกกันคนละชุด ตั้งเลขเดียวกันกับคนอื่นก็ใช้ได้ ไม่กระทบกัน</div><div id="pinStatusText" class="qr-card-hint">—</div><div style="display: flex; gap: 8px; margin-top: 10px;"><button id="pinSetupBtn" onclick="window.openPinSetup()" class="manual-timer-btn" style="flex: 1; justify-content: center; background: var(--neon-green); color: #fff;"><span class="material-symbols-outlined" style="font-size: 19px;">add</span> ตั้ง PIN</button><button id="pinClearBtn" onclick="window.clearPinFlow()" class="manual-timer-btn" style="display: none; flex: 1; justify-content: center; background: rgba(239,68,68,0.92); color: #fff;"><span class="material-symbols-outlined" style="font-size: 19px;">delete</span> ลบ PIN</button></div><div style="display: flex; gap: 8px; margin-top: 8px;"><button id="pinDevBtn" onclick="window.devUnlockToggle()" class="manual-timer-btn" style="flex: 1; justify-content: center; background: #5b6472; color: #fff;"><span class="material-symbols-outlined" style="font-size: 19px;">fingerprint</span> ปลดล็อกด้วยเครื่อง</button></div><div id="pinDevHint" style="font-size: 11px; color: var(--text-dim); line-height: 1.55; margin-top: 7px;"></div></div><!-- 🔑 (ย้ายมา 15 ก.ย. · ปรับ 17 ก.ย. 69) การ์ด PIN อยู่ถัดจากแถว “ประเภทรถประจำ” · หัวข้อ “ธีมการแสดงผล” ย้ายขึ้นไปต่อจาก “QR Code รับเงิน” (ก่อนการ์ดบัญชี Google)
      🔑 (18 ก.ย. 69) การ์ด PIN ถูก “ย้ายโหนดจริง” ไปแท็บ “PIN ยืนยันสำคัญ” ในหน้าต่าง “ตั้งค่าทั่วไป” (เมนูตั้งค่าการใช้งาน) ตอนบูตแอป — HTML ต้นทางยังอยู่ตรงนี้เพื่อให้ id เดิมใช้ได้ (ตัวย้าย = window.__mountPinPanel) --><label style="text-align: left;">เบิกเวลาจอด/รถติดหลังแอปถูกปิดได้สูงสุด</label><select id="editKillCap" style="width:100%; margin-bottom:6px; background:rgba(255,255,255,0.08); color:white; border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:12px; font-size:15px; text-align:left;"><option value="0" selected>ไม่จำกัด (ค่าเริ่มต้น)</option><option value="5">5 นาที</option><option value="10">10 นาที</option><option value="15">15 นาที</option><option value="20">20 นาที</option><option value="30">30 นาที</option><option value="60">60 นาที</option></select><div style="font-size:11px; color:var(--text-dim); text-align:left; margin-bottom:var(--space-field);">ถ้าแอปถูกปิด/คิลแล้วรถจอดนิ่งตลอดช่วงนั้น ระบบจะเบิกเวลาจอดให้สูงสุดเท่านี้ (0 = เบิกเต็มตามจริง) เพื่อกันค่าโดยสารบวมถ้าลืมจบเที่ยวข้ามคืน</div><label id="profileManualFsRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เปิดเต็มจอตอนนี้ (เต็มหน้าจอ)<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">กดสวิตช์เปิด = ซ่อนแถบเบราว์เซอร์บน-ล่างให้เหมือนแอป (ใช้ได้บน Android Chrome/Firefox/Edge — iOS Safari จำเป็นต้องติดตั้ง PWA)</span></span><label class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="editManualFs" onchange="window.toggleAppFullscreenFromProfile(this)" style="display:none;"><span class="app-slider"></span></label></label><label id="profileKeepAwakeRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">ห้ามจอดับระหว่างจับเที่ยว<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">ใช้ <b>Wake Lock</b> ให้จอค้างระหว่างเที่ยว — จอติด = GPS เก็บต่อเนื่อง ⇒ <b>เวลารถติดตรงมิเตอร์</b> (ปิดได้ถ้ากังวลเรื่องแบต แต่ช่วงที่จอดับจะได้เป็นค่าประมาณ — ดู “ค่าชดเชย” ในหน้าประวัติเที่ยว)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editKeepAwake" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">สั่นเมื่อมี toast ทอง<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เช่น กลับจากเบื้องหลัง / ใกล้ถึงปลายทาง / เตือนโควตา (ปิดถ้าไม่อยากให้สั่นตอนขับ)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editVibrateGold" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เสียงติ๊งเมื่อมีข้อความแจ้งเตือน<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เล่นเสียงสั้น ๆ ทุกครั้งที่ toast เด้ง (เช่น เริ่มต่อ / เตือนทางด่วน) — ปิดถ้าไม่อยากให้เสียงรบกวนตอนขับ</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editToastSound" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เสียงนำทางพูด (ภาษาไทย)<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">พูดบอกก่อนถึงจุดเลี้ยว เช่น “อีก 300 เมตร เลี้ยวซ้าย” แล้วพูดชื่อท่าเมื่อใกล้ถึง — ช่วยเมื่อไม่ได้มองจอ (ทำงานคู่กับเสียงติ๊งและสั่น ปิดได้ถ้าไม่ต้องการ)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editNavVoice" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เริ่มต่อเที่ยวค้างอัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เปิดแอปแล้วเจอเที่ยวที่ยังไม่สิ้นสุด → เริ่มมิเตอร์ต่อให้ทันทีพร้อมเปิดจอมิเตอร์ใหญ่ (ไม่ต้องกด "เริ่มต่อ")</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editAutoResume" checked><span class="app-slider"></span></span></label><label id="profileAutoFsRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เปิดแอปแล้วขอเต็มจออัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">แตะครั้งแรกหลังเปิดแอปจะซ่อนแถบเบราว์เซอร์ให้อัตโนมัติ (ใช้ได้บน Android Chrome/Firefox/Edge — iOS Safari ไม่มีฟีเจอร์นี้ ต้องติดตั้งแอป)</span></span><span class="app-switch" style="flex-shrink:0;"><input type="checkbox" id="editAutoFs" checked><span class="app-slider"></span></span></label><!-- 🚀 (18 ก.ย. 69) ลิมิตความเร็ว + เตือนเมื่อเกิน — ขอจากผู้ใช้: ตั้งค่าในเมนูตั้งค่าการใช้งาน → ตั้งค่าทั่วไป · กด −/+ ทีละ 1 ไม่ต้องพิมพ์ · ตัวเลขใหญ่ -->
-            <label id="speedWarnRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;"><span style="flex:1; font-size:15px;">เตือนเมื่อความเร็วเกินลิมิต<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เกินค่าที่ตั้งไว้ = มีเสียงติ๊ด ๆ + สั่น เตือน <b>5 ครั้ง</b> แล้วหยุด · ถ้าลดความเร็วลงมาจะไม่เตือนซ้ำ · พอเร่งเกินอีกจะเตือนอีกครั้ง <b>3 ครั้ง</b> (ใช้ตอนจับเวลามิเตอร์ทั้งแบบใส่ระยะทางและไม่ใส่)</span></span><span class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="editSpeedWarn" onchange="window.__spdSyncUi&&window.__spdSyncUi()" checked><span class="app-slider"></span></span></label>
+            <label id="speedWarnRow" style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:var(--space-field); cursor:pointer;">        <span style="flex:1; font-size:15px;">เตือนเมื่อความเร็วเกินลิมิต<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เกินค่าที่ตั้งไว้ = มีเสียงติ๊ด ๆ + สั่น เตือน <b>5 ครั้ง</b> แล้วหยุด · ถ้าลดความเร็วลงมาจะไม่เตือนซ้ำ · พอเร่งเกินอีกจะเตือนอีกครั้ง <b>3 ครั้ง</b> (ใช้ตอนจับเวลามิเตอร์ทั้งแบบใส่ระยะทางและไม่ใส่)</span><span id="speedWarnRowNow" style="display:block; font-size:11.5px; color:#7dd3fc; font-weight:700; margin-top:4px;"></span></span><span class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="editSpeedWarn" onchange="window.__spdSyncUi&&window.__spdSyncUi()" checked><span class="app-slider"></span></span></label>
             <div id="speedLimitBox" style="text-align:left; margin-bottom:var(--space-field); background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.28); border-radius:14px; padding:12px 14px;">
-                <div style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; color:#7dd3fc; margin-bottom:10px;"><span class="material-symbols-outlined" style="font-size:18px;">speed</span> ลิมิตความเร็ว <span style="font-size:11px; color:var(--text-dim); font-weight:400;">(2 โซน — 19 ก.ย. 69)</span></div>
+                <div style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; color:#7dd3fc; margin-bottom:4px;"><span class="material-symbols-outlined" style="font-size:18px;">speed</span> ลิมิตความเร็ว <span style="font-size:11px; color:var(--text-dim); font-weight:400;">(2 โซน · กด − / + ทีละ 5 — 19 ก.ย. 69)</span></div>
+                <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">ตั้งได้ 20–200 กม./ชม. · เช่น 100 ในเมือง / 120 บนทางด่วน — เกินค่าที่ตั้ง = เสียงติ๊ด + สั่น</div>
                 <div id="speedZoneNow" style="font-size:12px; font-weight:700; color:#7dd3fc; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.30); border-radius:12px; padding:8px 10px; margin-bottom:10px; line-height:1.5;">โซนที่ใช้อยู่: ในเมือง · ลิมิต 80 กม./ชม.</div>
                 <div id="speedLimitCityBox" class="spd-zone-row on" style="margin-bottom:9px;">
                     <div class="spd-zone-name">🏙️ ในเมือง / ถนนปกติ<small>ใช้เมื่อไม่ได้อยู่บนทางด่วน</small></div>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <button type="button" class="spd-step-btn is-sm" onclick="window.bumpSpeedLimit(-1)" aria-label="ลดลิมิตในเมืองลง 1 กม./ชม.">−</button>
+                        <button type="button" class="spd-step-btn is-sm" onclick="window.bumpSpeedLimit(-5)" aria-label="ลดลิมิตในเมืองลง 5 กม./ชม.">−</button>
                         <div style="text-align:center; min-width:86px;">
                             <div id="speedLimitVal" class="spd-limit-val is-sm">80</div>
                             <div style="font-size:10.5px; color:var(--text-dim); margin-top:3px;">กม./ชม.</div>
                         </div>
-                        <button type="button" class="spd-step-btn is-sm" onclick="window.bumpSpeedLimit(1)" aria-label="เพิ่มลิมิตในเมืองขึ้น 1 กม./ชม.">+</button>
+                        <button type="button" class="spd-step-btn is-sm" onclick="window.bumpSpeedLimit(5)" aria-label="เพิ่มลิมิตในเมืองขึ้น 5 กม./ชม.">+</button>
                     </div>
                 </div>
                 <div id="speedLimitTollBox" class="spd-zone-row" style="margin-bottom:10px;">
                     <div class="spd-zone-name">🛣️ บนทางด่วน<small>ใช้เมื่อรถอยู่บนช่วงทางด่วนของเส้นทาง</small></div>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <button type="button" class="spd-step-btn is-sm" onclick="window.bumpSpeedLimit(-1, false, 'toll')" aria-label="ลดลิมิตบนทางด่วนลง 1 กม./ชม.">−</button>
+                        <button type="button" class="spd-step-btn is-sm" onclick="window.bumpSpeedLimit(-5, false, 'toll')" aria-label="ลดลิมิตบนทางด่วนลง 5 กม./ชม.">−</button>
                         <div style="text-align:center; min-width:86px;">
                             <div id="speedLimitTollVal" class="spd-limit-val is-sm">120</div>
                             <div style="font-size:10.5px; color:var(--text-dim); margin-top:3px;">กม./ชม.</div>
                         </div>
-                        <button type="button" class="spd-step-btn is-sm" onclick="window.bumpSpeedLimit(1, false, 'toll')" aria-label="เพิ่มลิมิตบนทางด่วนขึ้น 1 กม./ชม.">+</button>
+                        <button type="button" class="spd-step-btn is-sm" onclick="window.bumpSpeedLimit(5, false, 'toll')" aria-label="เพิ่มลิมิตบนทางด่วนขึ้น 5 กม./ชม.">+</button>
                     </div>
                 </div>
                 <label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px; cursor:pointer;"><span style="flex:1; font-size:14px;">สลับลิมิตตามโซนอัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">รถเข้าช่วงทางด่วน = ใช้ลิมิตทางด่วนทันที · ออกมาแล้วกลับไปใช้ลิมิตในเมืองเอง (ปิด = ใช้ลิมิตในเมืองค่าเดียวตลอด)</span></span><span class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="editSpeedZoneAuto" onchange="window.__spdSyncUi&&window.__spdSyncUi()" checked><span class="app-slider"></span></span></label>
-                <div style="font-size:11px; color:var(--text-dim); text-align:left; margin-top:8px; line-height:1.55;">กด − / + ปรับทีละ 1 · ใช้ได้ 20–200 กม./ชม. · ตัวเลขความเร็วบนจอมิเตอร์จะเปลี่ยนเป็นสีแดงเมื่อเกินลิมิตของโซนนั้น · สลับโซนแล้วเริ่มนับรอบเตือนใหม่ให้</div>
+                <div style="font-size:11px; color:var(--text-dim); text-align:left; margin-top:8px; line-height:1.55;">กด − / + ปรับทีละ <b>5</b> · ใช้ได้ 20–200 กม./ชม. (เช่น 100 ในเมือง · 120 บนทางด่วน) · ตัวเลขความเร็วบนจอมิเตอร์จะเปลี่ยนเป็นสีแดงเมื่อเกินลิมิตของโซนนั้น · สลับโซนแล้วเริ่มนับรอบเตือนใหม่ให้</div>
             </div>
             <!-- 🔐 (19 ก.ย. 69) ยศที่แอดมินติ๊กออกจากสิทธิ์ “แจ้งเตือนความเร็วเกินกำหนด” → ซ่อนสวิตช์ + กล่องลิมิต แล้วขึ้นข้อความนี้แทน -->
             <div id="speedPermHint" style="display:none; font-size:12px; color:var(--neon-yellow); background:rgba(241,196,15,0.10); border:1px solid rgba(241,196,15,0.35); border-radius:10px; padding:8px 12px; margin-bottom:var(--space-field); text-align:left;">🔒 <b>แจ้งเตือนความเร็วเกินกำหนด</b> ถูกปิดไว้สำหรับตำแหน่งของคุณ — ติดต่อผู้ดูแลระบบถ้าต้องการใช้</div>
@@ -3371,6 +3375,11 @@
            — ให้กล่องเลื่อนเดิมทำหน้าที่เลื่อนเอง (ไม่ซ้อน scroll 2 ชั้น) ⚠️ ใช้คลาส ไม่ใช้ inline display เพราะ twTab ล้าง inline display ตอนสลับแท็บ */
         .modal-content-scroll.tw-panel-host { display: flex !important; flex-direction: column; overflow: hidden; }
         .modal-content-scroll.tw-panel-host > .modal-content-scroll { flex: 1 1 auto; min-height: 0; }
+        /* 🐞 (19 ก.ย. 69) แผงที่ถูกซ่อนต้องชนะ `!important` ข้างบนได้ — เดิม twTab ตั้ง inline `display:none`
+           แต่ `!important` ในคลาสทับ ⇒ หน้าต่างที่แผงมีกล่องเลื่อน “ที่มี id” (เช่น #serviceListContainer ของ Portal)
+           โชว์เนื้อหาทั้ง 2 แท็บพร้อมกัน แล้วแท็บที่ยังไม่เคยวาดก็ค้างที่คำว่า “กำลังโหลดข้อมูล...”
+           ⇒ ใช้คลาส .tw-hide เป็นตัวซ่อน (twTab สลับคลาสนี้) */
+        .modal-content-scroll.tw-hide { display: none !important; }
         /* 🧩 (19 ก.ย. 69) หัวหน้าต่าง “โควตาและบริการระบบ” มีชื่อยาว + ปุ่มรีเฟรชอยู่ขวา ⇒ เดิมคำว่า “รีเฟรช” ทับชื่อหน้าต่าง
            ⇒ เหลือไอคอน (มี tooltip “ดึงยอดใหม่จากเซิร์ฟเวอร์” อยู่แล้ว) ให้ชื่อหน้าต่างมีที่พอ */
         #quotaRefreshBtn { padding: 7px 9px; }
@@ -3938,7 +3947,7 @@
         <div class="tz-speed-card" id="tzSpeedCard">
             <span class="material-symbols-outlined tz-speed-icon">speed</span>
             <div class="tz-speed-main"><span id="tzSpeedNum">0</span><span class="tz-speed-unit">กม./ชม.</span></div>
-            <div class="tz-speed-side"><span class="tz-speed-zone-chip" id="tzSpeedZoneChip">🏙️ โซนในเมือง</span><span class="tz-speed-limit-chip" id="tzSpeedLimitChip"><span class="material-symbols-outlined" style="font-size:14px;">speed</span> ลิมิต <b id="tzSpeedLimitVal">80</b></span></div>
+            <div class="tz-speed-side"><span class="tz-speed-zone-chip" id="tzSpeedZoneChip">🏙️ โซนในเมือง</span><span class="tz-speed-limit-chip" id="tzSpeedLimitChip" onclick="window.__spdOpenSettings()" title="ตั้งค่าลิมิตความเร็ว (กด − / + ทีละ 5)" role="button" tabindex="0" style="cursor:pointer;"><span class="material-symbols-outlined" style="font-size:14px;">speed</span> ลิมิต <b id="tzSpeedLimitVal">80</b><span class="material-symbols-outlined" style="font-size:14px; opacity:0.85;">tune</span></span></div>
         </div>
         <!-- 🕒 (19 ก.ย. 69) ย้ายแถว “เริ่ม/วินาที” ลงมาติดแถวสถิติ (วิ่งแล้ว/รถติด/เหลือ) — จอมิเตอร์ใหญ่เตี้ยลง พอดีจอโทรศัพท์ -->
         <div class="tz-header is-below">
@@ -8675,9 +8684,20 @@
         } catch (e) {}
         return null;
     };
-    const wnWriteLocalSeen = (uid, v) => {
-        try { localStorage.setItem(WN_SEEN_KEY, JSON.stringify({ uid: wnNorm(uid), v: wnNorm(v), at: Date.now() })); } catch (e) {}
+    //   · `notes` (ถ้าส่งมา) = “หัวข้อที่มีอยู่ตอนที่อ่านรุ่นนั้น” → ใช้เทียบว่าอะไรเพิ่มมาทีหลัง (ไม่ต้องมีเน็ต)
+    const wnWriteLocalSeen = (uid, v, notes) => {
+        try {
+            const rec = { uid: wnNorm(uid), v: wnNorm(v), at: Date.now() };
+            if (Array.isArray(notes)) rec.notes = notes.map(wnNorm).filter(Boolean);
+            else {
+                // ไม่ส่งโน้ตมา (เช่นเขียนจากทางเซิร์ฟเวอร์) → รักษาโน้ตเดิมไว้ถ้าเป็นรุ่นเดียวกัน (อย่าลบทิ้งโดยไม่ตั้งใจ)
+                const prev = JSON.parse(localStorage.getItem(WN_SEEN_KEY) || 'null');
+                if (prev && wnNorm(prev.v) === rec.v && Array.isArray(prev.notes)) rec.notes = prev.notes;
+            }
+            localStorage.setItem(WN_SEEN_KEY, JSON.stringify(rec));
+        } catch (e) {}
     };
+    const wnPanelVisible = () => { const el = document.getElementById('whatsNewPanel'); return !!(el && el.style.display !== 'none'); };
     // อ่านจากเซิร์ฟเวอร์ — ช้า/ล่ม/ไม่มีเน็ต = คืน null (ยังแสดงสรุปให้ ไม่ทวงถาม)
     const wnFetchSeen = async (uid) => {
         if (wnSeenOverride) return wnSeenOverride;
@@ -8696,7 +8716,7 @@
         const ver = wnNorm(v);
         if (!ver) return 'no-version';
         const uid = wnNorm(loggedInUserId);
-        wnWriteLocalSeen(uid, ver);
+        wnWriteLocalSeen(uid, ver, wnCurrentNotes());   // จดหัวข้อ ณ วันนี้ไว้เทียบกับรุ่นถัดไป (เด้งเฉพาะของใหม่)
         if (!uid) return 'local-only';
         try {
             const patch = { whatsNewSeen: { v: ver, at: Date.now() } };
@@ -8745,13 +8765,21 @@
             document.body.appendChild(el);
         }
         const bullets = info.notes.map((n) => '<li style="margin:5px 0; display:flex; gap:7px; align-items:flex-start;"><span style="color:#38bdf8;">•</span><span style="flex:1 1 auto;">' + wnEsc(n) + '</span></li>').join('');
+        // 🆕 สองทางที่แผงนี้โผล่: (ก) รีโหลดอัตโนมัติในเซสชัน (auto ≠ false) · (ข) เปิดแอปแล้วเจอรุ่นใหม่ (auto === false)
+        // 🧮 บอก “ของใหม่จริง” ให้ครบจำนวน — ถ้าแสดงไม่หมดเพราะมีเพดาน 6 รายการ ให้บอกว่ากำลังแสดงกี่จากกี่
+        const _freshN = (typeof info.freshCount === 'number' && info.freshCount > 0) ? info.freshCount : info.notes.length;
+        const _shownN = info.notes.length;
+        const subLine = (info.auto === false ? 'อัปเดตเวอร์ชันใหม่' : 'อัปเดตให้อัตโนมัติแล้ว') + ' · ' +
+            (info.exact ? 'ใหม่ ' : 'ไฮไลต์ ') + _freshN + ' รายการ' +
+            (_freshN > _shownN ? ' (แสดง ' + _shownN + ')' : '') +
+            (info.date ? ' · ' + wnEsc(info.date) : '');
         el.innerHTML =
             '<div style="display:flex; align-items:flex-start; gap:8px;">' +
                 '<span class="material-symbols-outlined" style="font-size:18px; color:#38bdf8;">auto_awesome</span>' +
                 '<div style="flex:1 1 auto; font-weight:800;">มีอะไรใหม่ในเวอร์ชันนี้</div>' +
                 '<button type="button" id="whatsNewClose" aria-label="ปิด" style="border:0; background:transparent; color:#9fb6c8; font-size:17px; line-height:1; padding:2px 4px; cursor:pointer;">✕</button>' +
             '</div>' +
-            '<div style="opacity:.78; margin:2px 0 8px; font-size:11.5px;">อัปเดตให้อัตโนมัติแล้ว · ' + (info.exact ? 'ใหม่ ' : 'ไฮไลต์ ') + info.notes.length + ' รายการ' + (info.date ? ' · ' + wnEsc(info.date) : '') + '</div>' +
+            '<div style="opacity:.78; margin:2px 0 8px; font-size:11.5px;">' + subLine + '</div>' +
             '<ul style="margin:0; padding:0; list-style:none; max-height:34vh; overflow:auto;">' + bullets + '</ul>' +
             '<div style="display:flex; gap:8px; margin-top:10px;">' +
                 '<button type="button" id="whatsNewHistory" style="flex:1 1 auto; padding:8px 10px; border-radius:10px; border:1px solid rgba(56,189,248,0.45); background:rgba(56,189,248,0.12); color:#7dd3fc; font-weight:700; font-size:12px; cursor:pointer;">ดูประวัติเวอร์ชัน</button>' +
@@ -8789,6 +8817,40 @@
         } catch (e) { return 'error'; }
     };
     // 🔎 ตรวจซ้ำหลังรู้ตัวตนผู้ใช้ (เช่นเพิ่งล็อกอิน): ถ้าบัญชีนี้เคยอ่านรุ่นนี้แล้ว → ปิดแผงทันที
+    // ============================================================
+    // 🆕 (19 ก.ย. 69 · ผู้ใช้ขอ) เด้งสรุป “มีอะไรใหม่” ตอน “เปิดแอป” เมื่อ APP_WEB_VERSION เปลี่ยนจากรุ่นที่บัญชีนี้เคยอ่าน
+    //    ต่างจาก __whatsNewAfterUpdate (ตัวนั้นเด้งเฉพาะ “หลังรีโหลดอัตโนมัติในเซสชันเดียว”)
+    //    ⇒ ตัวนี้ครอบเคสจริงของผู้ใช้: ปิดแอป/ปิดจอ แล้วเปิดใหม่ (หรือเปิดผ่าน APK) ซึ่งโหลดโค้ดรุ่นใหม่มาเลย
+    //    ใช้แผง + ตัวจด “อ่านแล้ว” ชุดเดียวกัน (wnShowPanel · wnMarkSeen → ซิงก์ข้ามเครื่องผ่านเอกสารผู้ใช้)
+    //    เงียบเมื่อ: เครื่องใหม่/ยังไม่เคยอ่านอะไร · รุ่นเดิม · ไม่มีหัวข้อใหม่ · กำลังเดินมิเตอร์
+    // ============================================================
+    window.__whatsNewOnBoot = async (why) => {
+        try {
+            const running = wnNorm(window.APP_WEB_VERSION);
+            if (!running) return 'no-version';
+            const uid = wnNorm(loggedInUserId);
+            let seen = wnLocalSeen(uid);
+            // 🌐 ยังไม่รู้ว่า “รุ่นที่รันอยู่” อ่านไปหรือยัง → ถามเอกสารผู้ใช้ (เผื่ออ่านจากเครื่องอื่นมาแล้ว)
+            if (!seen || wnNorm(seen.v) !== running) {
+                const srv = await wnFetchSeen(uid);
+                if (srv && wnNorm(srv.v) === running) { wnWriteLocalSeen(uid, running); return 'seen'; }   // อ่านรุ่นนี้แล้วที่เครื่องอื่น → เงียบ
+                if (srv && !seen) seen = srv;                                                            // ยังไม่มีข้อมูลในเครื่อง → ใช้ของเซิร์ฟเวอร์เป็นรุ่นตั้งต้น
+            }
+            // เครื่องใหม่/ผู้ใช้ใหม่ (ยังไม่เคยอ่านรุ่นไหนเลย) → จดรุ่นนี้แล้วเงียบ ไม่กวน
+            if (!seen || !wnNorm(seen.v)) { wnWriteLocalSeen(uid, running, wnCurrentNotes()); return 'first'; }
+            if (wnNorm(seen.v) === running) return 'same';
+            if (wnPanelVisible()) return 'already';
+            // 🚕 กลางเที่ยว = เลื่อนไปก่อน (ห้ามบังจอมิเตอร์) — เด้งอีกครั้งตอนจบเที่ยว/กลับเข้าแอป
+            if (window.isManualRunning || window.isMeterPaused) return 'defer-trip';
+            const notes = wnCurrentNotes();
+            const before = Array.isArray(seen.notes) ? seen.notes.map(wnNorm).filter(Boolean) : [];
+            const exact = before.length > 0;                       // เทียบได้จริงไหม (มีหัวข้อของรุ่นเดิมที่จดไว้)
+            const fresh = exact ? notes.filter((n) => !before.includes(n)) : notes.slice(0, 4);
+            if (!fresh.length) { wnWriteLocalSeen(uid, running, notes); return 'nothing-new'; }
+            wnShowPanel({ notes: fresh.slice(0, 6), freshCount: fresh.length, date: wnCurrentDate(), from: wnNorm(seen.v), exact: exact, auto: false });
+            return 'shown:' + Math.min(fresh.length, 6);
+        } catch (e) { return 'error'; }
+    };
     window.__whatsNewRecheck = async () => {
         try {
             const el = document.getElementById('whatsNewPanel');
@@ -8809,7 +8871,14 @@
         clearLocalSeen: () => { try { localStorage.removeItem(WN_SEEN_KEY); } catch (e) {} },
         panelText: () => { const el = document.getElementById('whatsNewPanel'); return el && el.style.display !== 'none' ? el.textContent : null; },
         setRecord: (o) => { try { localStorage.setItem(WN_KEY, JSON.stringify(o)); } catch (e) {} },
-        clearRecord: () => wnClear()
+        clearRecord: () => wnClear(),
+        // 🆕 ตะขั้วของทาง “เปิดแอปแล้วเจอรุ่นใหม่” (boot path)
+        onBoot: (why) => window.__whatsNewOnBoot(why),
+        notesNow: () => wnCurrentNotes(),
+        dateNow: () => wnCurrentDate(),
+        setLocalSeen: (v, notes) => { wnWriteLocalSeen('', v, notes); return wnLocalSeen(''); },
+        panelVisible: () => wnPanelVisible(),
+        markSeen: (v) => wnMarkSeen(v)
     };
     window.__webVersionTest = {
         showPill: (v) => verShowPill(v || 'test-version'),
@@ -8819,6 +8888,10 @@
     setTimeout(() => { window.__webUpdateCheck('boot'); }, VER_FIRST_CHECK_MS);
     // หลังอัปเดตเองเสร็จ → สรุป “มีอะไรใหม่” (เช็คหลังแอปเริ่มทำงานแล้ว เพื่อไม่แย่งจังหวะบูต)
     setTimeout(() => { try { Promise.resolve(window.__whatsNewAfterUpdate('boot')).catch(() => {}); } catch (e) {} }, 3500);
+    // 🆕 (19 ก.ย. 69) เปิดแอปแล้วรุ่นเว็บเปลี่ยนจากรุ่นที่อ่านล่าสุด → สรุปสั้น ๆ ว่ามีอะไรใหม่ (ปิดได้)
+    //    หน่วง 4200ms = หลังตัวบน (3500ms) เพื่อไม่ให้เด้งซ้อนกัน · ตัวจริงมี guard ในตัวเอง (รุ่นเดิม/ไม่มีของใหม่ = เงียบ)
+    //    🧪 `window.__wnNoAuto = true` = ปิดเฉพาะ “การเด้งอัตโนมัติ” (ชุดทดสอบเรียกเองทีละครั้ง) — ตัวฟังก์ชันยังเรียกตรงได้เสมอ
+    setTimeout(() => { if (window.__wnNoAuto) return; try { Promise.resolve(window.__whatsNewOnBoot('boot')).catch(() => {}); } catch (e) {} }, 4200);
     setInterval(() => { window.__webUpdateCheck('interval'); }, VER_CHECK_EVERY_MS);
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) return;
@@ -10969,8 +11042,14 @@
         sysOps: {
             host: 'quotaMonitorModal', bar: 'sysOpsTabs', head: null, deny: 'คุณไม่มีสิทธิ์เข้าส่วนนี้',
             tabs: [
-                { id: 'quota', btn: 'sysOpsTabBtnQuota', panel: 'sysOpsPanelQuota', head: 'โควต้าการใช้งาน', icon: 'data_usage', label: 'โควต้าการใช้งาน', self: true, can: () => { try { return !!(window.isAdminNow() || (window.currentUserPerms && window.currentUserPerms().canViewQuota)); } catch (e) { return false; } } },
-                { id: 'portal', btn: 'sysOpsTabBtnPortal', panel: 'sysOpsPanelPortal', head: 'จัดการ Portal', icon: 'settings_applications', label: 'จัดการ Portal', src: 'servicePortalModal', can: () => { try { return !!window.permNow('canManageService'); } catch (e) { return false; } } }
+                // 🐞 (19 ก.ย. 69) ตั้ง `onShow` ให้ทั้ง 2 แท็บ — เดิมกดแท็บ “จัดการ Portal” ตรง ๆ แล้วลิสต์ไม่ถูกวาด
+                //    ค้างที่คำว่า “กำลังโหลดข้อมูล...” (ตัววาดอยู่ใน openServicePortal ซึ่งไม่ได้ถูกเรียกจากแท็บ)
+                { id: 'quota', btn: 'sysOpsTabBtnQuota', panel: 'sysOpsPanelQuota', head: 'โควต้าการใช้งาน', icon: 'data_usage', label: 'โควต้าการใช้งาน', self: true,
+                  onShow: () => { try { if (typeof window.renderQuotaMonitor === 'function') window.renderQuotaMonitor(); } catch (e) {} },
+                  can: () => { try { return !!(window.isAdminNow() || (window.currentUserPerms && window.currentUserPerms().canViewQuota)); } catch (e) { return false; } } },
+                { id: 'portal', btn: 'sysOpsTabBtnPortal', panel: 'sysOpsPanelPortal', head: 'จัดการ Portal', icon: 'settings_applications', label: 'จัดการ Portal', src: 'servicePortalModal',
+                  onShow: () => { try { if (typeof window.spEnsureLive === 'function') window.spEnsureLive(); } catch (e) {} },
+                  can: () => { try { return !!window.permNow('canManageService'); } catch (e) { return false; } } }
             ]
         }
     };
@@ -11074,7 +11153,13 @@
         d.tabs.forEach(t => {
             const on = (t.id === pick.id);
             const p = document.getElementById(t.panel);
-            if (p) { p.style.display = on ? '' : 'none'; if (on) p.scrollTop = 0; }
+            if (p) {
+                // 🐞 (19 ก.ย. 69) แผงที่เป็น “ที่วางกล่องเลื่อนที่มี id” มีคลาส .tw-panel-host ที่ `display:flex !important`
+                //    ⇒ inline display:none สู้ไม่ได้ ต้องซ่อนด้วยคลาส .tw-hide คู่กันเสมอ
+                p.classList.toggle('tw-hide', !on);
+                p.style.display = on ? '' : 'none';
+                if (on) p.scrollTop = 0;
+            }
             const b = document.getElementById(t.btn); if (b) b.classList.toggle('on', on);
         });
         if (d.head) { const h = document.getElementById(d.head); if (h) h.textContent = pick.head; }
@@ -16778,6 +16863,8 @@
         try { if (typeof window.__tollGateReset === 'function') window.__tollGateReset(); } catch (e) {}
         // 🔄 จบเที่ยว + ปิดหน้าสรุปแล้ว: ถ้ามีเวอร์ชันเว็บใหม่ค้างอยู่ ให้อัปเดตให้ตอนนี้ (ไม่รบกวนกลางเที่ยว)
         try { if (typeof window.__webUpdateApplyIfPending === 'function') window.__webUpdateApplyIfPending('trip-end'); } catch (e) {}
+        // 🆕 จบเที่ยวแล้วค่อยเด้งสรุป “มีอะไรใหม่” ที่เลื่อนไว้ตอนกลางเที่ยว (ไม่บังจอมิเตอร์)
+        try { if (typeof window.__whatsNewOnBoot === 'function') setTimeout(() => window.__whatsNewOnBoot('trip-end'), 1500); } catch (e) {}
         window.hideCatchUpStatus();
         window.renderStartButton();
         $('manualTimerBtn').classList.remove('active');
@@ -18028,7 +18115,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '9ada92e4c7';
+    const APP_WEB_VERSION = 'c5f6b7b122';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -18558,6 +18645,16 @@
         ['2026-09-19', '👤 ผู้ใช้ทั่วไปเริ่มจากปิด — ดูเส้นทาง/ราคาได้ แต่กดเริ่มมิเตอร์แล้วขึ้นข้อความเตือน'],
         ['2026-09-19', '⏱️ ปุ่มจับเวลามิเตอร์ปกติยังใช้ได้ทุกยศ — สิทธิ์ใหม่คุมเฉพาะเที่ยวมีจุดหมาย'],
         ['2026-09-19', '⚙️ แอดมินติ๊กเปิด/ปิดสิทธิ์รายยศได้ และมอบให้รายคนได้'],
+        ['2026-09-19', '🆕 เปิดแอปแล้วเจอรุ่นใหม่ — เด้งสรุป “มีอะไรใหม่” สั้น ๆ ให้อ่าน'],
+        ['2026-09-19', '🧾 หัวข้อสรุปดึงจากประวัติเวอร์ชันจริง — ใช้ได้แม้ไม่มีเน็ต'],
+        ['2026-09-19', '✕ ปิดได้ทันที · จำว่าอ่านแล้วต่อบัญชี ข้ามเครื่องไม่เด้งซ้ำ'],
+        ['2026-09-19', '🚕 กลางเที่ยวไม่เด้ง — รอจบเที่ยวก่อน แล้วค่อยขึ้นให้อ่าน'],
+        ['2026-09-19', '🧭 แตะชิป “ลิมิต” บนจอมิเตอร์ใหญ่ = เปิดหน้าตั้งค่าลิมิตความเร็วให้เลย'],
+        ['2026-09-19', '🔦 เปิดมาแล้วกระพริบกรอบกล่อง “ลิมิตความเร็ว” — รู้ทันทีว่าตั้งที่ไหน'],
+        ['2026-09-19', '➕➖ ลิมิตความเร็วปรับทีละ 5 (80→100→120) — ไม่ต้องกด 20 ครั้ง'],
+        ['2026-09-19', '🐞 แก้หน้าต่าง “โควตาและบริการระบบ” ค้างคำว่า “กำลังโหลดข้อมูล…”'],
+        ['2026-09-19', '🐞 กดแท็บ “จัดการ Portal” แล้วลิสต์ USSD/เบอร์บริการขึ้นครบทุกครั้ง'],
+        ['2026-09-19', '🐞 เห็นทีละแท็บ — ไม่มีเนื้อหาสองแท็บซ้อนกันอีก'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -19086,6 +19183,8 @@
         if(!loggedInUserId) return;
         // 🆕 รู้ตัวตนผู้ใช้แล้ว → ถ้าบัญชีนี้เคยอ่านสรุปเวอร์ชันนี้แล้ว ให้ปิดแผง “มีอะไรใหม่” ทันที (ไม่เด้งซ้ำข้ามเครื่อง)
         try { if (window.__whatsNewRecheck) window.__whatsNewRecheck(); } catch (e) {}
+        // 🆕 แล้วถ้ายังไม่เคยอ่านรุ่นที่กำลังรันอยู่ → เด้งสรุป “มีอะไรใหม่” ตอนนี้ (เพิ่งล็อกอิน = มี uid ให้ซิงก์ข้ามเครื่องได้)
+        try { if (window.__whatsNewOnBoot) Promise.resolve(window.__whatsNewOnBoot('after-login')).catch(() => {}); } catch (e) {}
         window.listenGlobalMenuOrder(); // 🌍 ฟังลำดับเมนูส่วนกลาง (แอดมินจัดเรียง → ทุก user เห็นแบบนั้นเรียลไทม์)
         window.listenAppConfig(); // ⚙️ ฟังค่าตั้งค่าระบบ (เปิด/ปิดบันทึก log ล็อกอินเอาต์ ฯลฯ)
         if(!permsUnsub) {            permsUnsub = onSnapshot(doc(db, "settings", "roles"), (docSnap) => { window.globalPermissions = docSnap.exists() ? docSnap.data() : {}; window.fillRoleSelects(); window.applyPermissionsUI(); }); }
@@ -21237,6 +21336,12 @@
         const t = Math.min(window.SPD_LIMIT_MAX, Math.max(window.SPD_LIMIT_MIN, parseInt(window.userSpeedTollKmh, 10) || window.SPD_TOLL_DEFAULT));
         const box = document.getElementById('speedLimitVal'); if (box) box.innerText = String(v);
         const boxT = document.getElementById('speedLimitTollVal'); if (boxT) boxT.innerText = String(t);
+        // 🏷️ (19 ก.ย. 69) โชว์ค่าที่ตั้งไว้ที่ “แถวในลิสต์” ด้วย — ผู้ใช้รายงานว่า “หาเมนูไม่เจอ” (ต้องเห็นตั้งแต่ยังไม่เปิดกล่อง)
+        const rowNow = document.getElementById('speedWarnRowNow');
+        if (rowNow) {
+            const rTxt = 'ลิมิตที่ตั้งไว้: ในเมือง ' + v + ' · ทางด่วน ' + t + ' กม./ชม.';
+            if (rowNow.__spdTxt !== rTxt) { rowNow.__spdTxt = rTxt; rowNow.innerText = rTxt; }
+        }
         const row = document.getElementById('speedLimitBox'); if (row) row.style.opacity = (window.userSpeedWarn === false) ? '0.5' : '1';
         const swAuto = document.getElementById('editSpeedZoneAuto');
         if (swAuto) swAuto.checked = (window.userSpeedZoneAuto !== false);
@@ -21274,15 +21379,17 @@
         try { if (typeof window.dirtyFormTouch === 'function') window.dirtyFormTouch('general'); } catch (e) {}
         return window.userSpeedWarn;
     };
-    // ➕➖ ตั้งลิมิตทีละ 1 (ผู้ใช้: “มีปุ่มบวก ลบ ไม่ต้องพิมพ์เป็นตัวเลข”) — เร็วได้ · โหมดทดเร็ว ๆ จะข้ามทีละ 5
-    //   zone = 'city' (ค่าเริ่มต้น) หรือ 'toll' — คนละค่ากัน จำแยกตามโซน
+    // ➕➖ ตั้งลิมิตทีละ 5 (ผู้ใช้สั่ง 19 ก.ย. 69: “อยากจะให้เตือนเมื่อขับเร็วถึง 100 110 120 — บวกเพิ่มทีละ 5”
+    //   เดิมทีละ 1 ⇒ ต้องกด 20 ครั้งกว่าจะถึง 100) · ไม่ต้องพิมพ์ตัวเลข · zone = 'city' หรือ 'toll' จำแยกตามโซน
     window.bumpSpeedLimit = (delta, fast, zone) => {
         // อ่านค่าจากสวิตช์ก่อน — เผื่อผู้ใช้เพิ่งปิด/เปิดสวิตช์แล้วยังไม่ได้กด “บันทึกข้อมูล”
         const swNow = document.getElementById('editSpeedWarn');
         if (swNow && ((typeof window.canUseSpeedAlert !== 'function') || window.canUseSpeedAlert())) window.userSpeedWarn = !!swNow.checked;
         const zwNow = document.getElementById('editSpeedZoneAuto');
         if (zwNow) window.userSpeedZoneAuto = !!zwNow.checked;
-        const step = ((delta || 0) < 0 ? -1 : 1) * (fast ? 5 : 1);
+        // ปุ่มบนจอส่ง ±5 (ผู้ใช้สั่ง “บวกเพิ่มทีละ 5”) · เรียกโดยไม่ส่งค่า = 5 · ยังรับ delta แปลก ๆ ได้ (โค้ด/เทสต์เก่า)
+        const _d = (typeof delta === 'number' && delta !== 0) ? delta : 5;
+        const step = (_d < 0 ? -1 : 1) * Math.max(1, Math.abs(_d));
         const toll = (String(zone) === 'toll');
         const cur = toll ? (parseInt(window.userSpeedTollKmh, 10) || window.SPD_TOLL_DEFAULT) : (parseInt(window.userSpeedLimitKmh, 10) || 80);
         const next = Math.min(window.SPD_LIMIT_MAX, Math.max(window.SPD_LIMIT_MIN, cur + step));
@@ -21292,6 +21399,32 @@
         try { window.playSound(step > 0 ? 'plus' : 'minus'); } catch (e) {}
         try { if (typeof window.dirtyFormTouch === 'function') window.dirtyFormTouch('general'); } catch (e) {}
         return next;
+    };
+    // 🧭 (19 ก.ย. 69 · ผู้ใช้ถามว่า “เมนูลิมิตความเร็วอยู่ตรงไหน หาไม่เจอ”) ทางลัดจากหน้างาน:
+    //   แตะชิป “ลิมิต 80” บนการ์ดความเร็ว (จอมิเตอร์ใหญ่) = เปิด “ตั้งค่าการใช้งาน › ตั้งค่าทั่วไป”
+    //   แล้วเลื่อนไปที่กล่อง “ลิมิตความเร็ว” + กระพริบกรอบ 1.8 วิ → รู้ทันทีว่าตั้งที่ไหน (ไม่ต้องหาเมนูเอง)
+    window.__spdOpenSettings = () => {
+        try {
+            if (typeof window.canUseSpeedAlert === 'function' && !window.canUseSpeedAlert()) {
+                return window.showToast('ตำแหน่งของคุณยังไม่ได้รับสิทธิ์ตั้งลิมิตความเร็ว — ติดต่อผู้ดูแลระบบ', true);
+            }
+        } catch (e) {}
+        try { if (typeof window.openGeneralSettingsModal === 'function') window.openGeneralSettingsModal('general'); else return; } catch (e) { return; }
+        window.__spdFlashLimitBox();
+    };
+    //   เลื่อนกล่องลิมิตเข้ามากลางจอ + ไฮไลต์ — รอ 2 จังหวะ (toggleModal ล้าง scrollTop ที่ 0 มิลลิวินาที)
+    window.__spdFlashLimitBox = () => {
+        [180, 520].forEach((ms) => setTimeout(() => {
+            try {
+                const box = document.getElementById('speedLimitBox');
+                if (!box || box.offsetParent === null) return;   // ซ่อนอยู่ (ยศนี้ไม่มีสิทธิ์) — ไม่ต้องเลื่อน
+                box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                box.classList.remove('spd-flash');
+                void box.offsetWidth;                            // รีสตาร์ทอนิเมชันถ้าแตะซ้ำ
+                box.classList.add('spd-flash');
+                setTimeout(() => { try { box.classList.remove('spd-flash'); } catch (e) {} }, 2100);
+            } catch (e) {}
+        }, ms));
     };
     // 🖥️ ตัววาดความเร็ว + ตัวเตือนเกินลิมิต — เรียกทุก tick จาก updateLiveMeterDisplay()
     //    ⚠️ แยกเป็น “อ่านค่า → วาด → ตัดสินเตือน” ล้วน ๆ เพื่อให้ทดสอบออฟไลน์ได้โดยไม่ต้องมี DOM จริง
@@ -23062,15 +23195,17 @@
         const t = title.toLowerCase(); if(t.includes('วัน')) return 'calendar_today'; if(t.includes('เน็ต') || t.includes('wifi') || t.includes('เนต')) return 'wifi'; if(t.includes('โทร') || t.includes('นาที')) return 'phone'; if(t.includes('โบนัส') || t.includes('เงิน') || t.includes('บาท')) return 'card_giftcard'; if(t.includes('เติม') || t.includes('พิเศษ')) return 'favorite'; if(t.includes('เจ้าของ') || t.includes('ปชช') || t.includes('บัตร')) return 'person'; if(t.includes('ข้อความ') || t.includes('sms')) return 'message'; if(t.includes('ยกเลิก')) return 'block'; return 'smartphone'; 
     };
 
-    window.openServicePortal = (isManageMode = false) => {
-        window.currentServiceModeManage = isManageMode; window.twOpen('sysOps', 'portal');   // 🧩 (19 ก.ย. 69) Portal = แท็บที่ 2 ของ “โควตาและบริการระบบ”
+    // 🧩 (19 ก.ย. 69) แยก “วาดลิสต์ + ต่อ listener” ออกมา — เพื่อให้เรียกได้จากแท็บ “จัดการ Portal”
+    //    (ผู้ใช้กดแท็บเอง) ไม่ใช่เฉพาะตอนเปิดผ่าน openServicePortal · เรียกซ้ำได้ปลอดภัย (listener ต่อครั้งเดียว)
+    window.spEnsureLive = () => {
         let isGodSp = currentUserRole === "Admin"; let myPermsSp = isGodSp ? window.godPermsAll() : window.effectiveRolePerms(currentUserRole);
-        document.getElementById('serviceModalTitle').innerText = isManageMode ? "จัดการ SERVICE PORTAL" : "SERVICE PORTAL";
-        document.getElementById('adminServiceAddSection').style.display = (isManageMode && (isGodSp || myPermsSp.canManageService)) ? 'block' : 'none';
-
+        const titleEl = document.getElementById('serviceModalTitle');
+        if (titleEl) titleEl.innerText = window.currentServiceModeManage ? "จัดการ SERVICE PORTAL" : "SERVICE PORTAL";
+        const addSec = document.getElementById('adminServiceAddSection');
+        if (addSec) addSec.style.display = (window.currentServiceModeManage && (isGodSp || myPermsSp.canManageService)) ? 'block' : 'none';
         // 🛟 (19 ก.ย. 69) กันพังเมื่อยังไม่มีข้อมูล/เน็ตหลุด — เดิมถ้า currentServiceData ยังไม่ถูกตั้ง ค่าจะ undefined แล้ว render โยน error ทันที
         if (!Array.isArray(window.currentServiceData)) window.currentServiceData = [];
-        window.renderServicePortalUI();
+        try { window.renderServicePortalUI(); } catch (e) {}
         if(!serviceDataUnsub) {
             try {
                 serviceDataUnsub = onSnapshot(doc(db, "system", "service_data"), (docSnap) => {
@@ -23078,6 +23213,10 @@
                 });
             } catch (e) { serviceDataUnsub = null; }
         }
+    };
+    window.openServicePortal = (isManageMode = false) => {
+        window.currentServiceModeManage = isManageMode; window.twOpen('sysOps', 'portal');   // 🧩 (19 ก.ย. 69) Portal = แท็บที่ 2 ของ “โควตาและบริการระบบ”
+        window.spEnsureLive();
     };
 
     window.renderServicePortalUI = () => {
