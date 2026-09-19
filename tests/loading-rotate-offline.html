@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — หน้าจอโหลดหลายรูป + สลับอัตโนมัติตามเทศกาล</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: หน้าจอโหลดหลายรูป + สลับอัตโนมัติตามเทศกาล</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?...</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ไม่เขียน Firestore
+        <br><b>สิ่งที่ผู้ใช้ขอ (20 ก.ย. 69):</b> *“ให้แอดมินอัปโหลดรูปหน้าจอโหลดได้หลายรูปแล้วตั้งเวลาสลับอัตโนมัติตามเทศกาล”*
+        <br><b>กติกาที่ต้องพิสูจน์:</b>
+        ① รูปที่ตรง <b>ช่วงเทศกาล</b> (เดือน-วัน ใช้ซ้ำทุกปี) ถูกเลือกก่อนเสมอ · ② ช่วงคร่อมปีใหม่ (12-28 → 01-05) ต้องจับได้
+        ③ ถ้าไม่มีเทศกาลตรง → <b>สลับตามเวลา</b> (เปลี่ยนรูปเมื่อข้ามช่วงเวลาต่อรูป) · ④ ปิดสลับ = รูปแรกในคิว
+        ⑤ คิวว่าง/ปิดทุกรูป = กลับไปใช้ <b>รูปหลัก</b> (พฤติกรรมเดิมไม่พัง) · ⑥ เพดาน 6 รูป + งบขนาดรวมกันไม่ให้เอกสาร Firestore เกิน 1 MB
+        ⑦ สวิตช์ทุกตัวเป็น <code>.app-switch</code> (ไม่มีช่องติ๊กดิบ) · ⑧ เพิ่มหลายไฟล์พร้อมกันได้ · ⑨ ตอนเปิดแอปใหม่ จอโหลดต้องใช้รูปที่คิวเลือก
+        ⑩ ทั้งหมดนี้ <b>ไม่ยิงคำขอออกเน็ตเพิ่ม</b>
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/loading-rotate-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    const IMG_A = 'data:image/jpeg;base64,' + 'A'.repeat(400);
+    const IMG_B = 'data:image/jpeg;base64,' + 'B'.repeat(600);
+    const IMG_C = 'data:image/jpeg;base64,' + 'C'.repeat(800);
+    const IMG_MAIN = 'data:image/jpeg;base64,' + 'M'.repeat(500);
+
+    const QUEUE = [
+        { id: 'a', image: IMG_A, name: 'คริสต์มาส', from: '12-24', to: '12-26', on: true },
+        { id: 'b', image: IMG_B, name: 'ปีใหม่', from: '12-28', to: '01-05', on: true },
+        { id: 'c', image: IMG_C, name: 'ไม่ระบุ', from: '', to: '', on: true }
+    ];
+    const Q = (extra) => Object.assign({ listJson: JSON.stringify(QUEUE), rotateOn: true, rotateSec: 30, image: IMG_MAIN }, extra || {});
+    const at = (iso) => new Date(iso).getTime();
+
+    // ============================ สตับ: ตัดเน็ตทั้งหมด ============================
+    let stubsInstalled = false;
+    let netBaseline = 0;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        stubsInstalled = true;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lsFetch: 0 };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            if (u.indexOf('/settings/loading_screen') >= 0) { cw.__net.lsFetch++; return Promise.resolve({ ok: false, json: () => Promise.resolve({}) }); }
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (method, url) {
+                const u = String(url);
+                const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+                if (!isLocal) { cw.__net.blockedXhr++; x.send = function () {}; return; }
+                return open.apply(null, arguments);
+            };
+            return x;
+        };
+        cw.__toasts = [];
+        try { cw.showToast = function (msg, isErr) { cw.__toasts.push(String(msg)); }; } catch (e) {}
+    }
+
+    // 🔧 เขียนแคช “ก่อนแอปบูต” — เพื่อพิสูจน์ว่าจอโหลดจริงใช้รูปจากคิวตั้งแต่รอบแรก
+    function seedCache(payload) {
+        try { localStorage.setItem('taxi_loading_screen_v1', JSON.stringify(payload)); } catch (e) {}
+    }
+
+    async function bootApp(force) {
+        stubsInstalled = false;
+        if (force || frame.src === 'about:blank') {
+            frame.src = '../index.html?fsNowrite=1&loadingRotateTest=1&t=' + Date.now();
+        }
+        const t0 = Date.now();
+        while (Date.now() - t0 < 220000) {
+            await wait(700);
+            try {
+                const cw = w();
+                installStubs();
+                if (cw && cw.lsRenderQueue && cw.document.getElementById('mainApp') && cw.document.getElementById('mainApp').style.display === 'flex') {
+                    await wait(600);
+                    return true;
+                }
+            } catch (e) { /* ระหว่างโหลดข้ามโดเมนชั่วคราว */ }
+        }
+        throw new Error('แอปไม่บูตภายในเวลาที่กำหนด (220 วิ)');
+    }
+
+    function log(name, ok, detail) {
+        const li = document.createElement('li');
+        li.className = ok ? 'pass' : 'fail';
+        li.innerHTML = '<span class="st">' + (ok ? '✅' : '❌') + ' ' + name + '</span><div class="detail">' + (detail || '') + '</div>';
+        resultsEl.appendChild(li);
+    }
+    async function T(name, fn) {
+        try { const d = await fn(); passCount++; log(name, true, d || ''); }
+        catch (e) { failCount++; failures.push(name + ' → ' + e.message); log(name, false, e.message); }
+    }
+
+    // ---------------- ตัวช่วย: เปิดแผงหน้าจอโหลดแบบเลี่ยงการย้ายโหนด ----------------
+    async function openPanel(cw) {
+        cw.isAdminNow = () => true;
+        cw.currentUserPerms = () => ({ canManageLoadingScreen: true });
+        cw.lsCanManage = () => true;
+        try { cw.twOpen = () => true; } catch (e) {}
+        try { await cw.openLoadingScreenModal(); } catch (e) {}
+        try { cw.toggleModal('loadingScreenModal', true); } catch (e) {}
+        await wait(120);
+    }
+    const setQueue = (cw, list, rotateOn, rotateSec) => {
+        cw.__lsQLive.list = list.map(e => Object.assign({}, e));
+        cw.__lsQLive.rotateOn = !!rotateOn;
+        cw.__lsQLive.rotateSec = rotateSec || 30;
+        cw.lsRenderQueue(); cw.lsRenderPreview();
+    };
+
+    // ============================ ชุดการทดสอบ ============================
+    async function run() {
+        resultsEl.innerHTML = '';
+        passCount = 0; failCount = 0; failures.length = 0;
+        document.getElementById('runBtn').disabled = true;
+        offlineEl.textContent = 'สถานะเน็ต: กำลังโหลดแอปจริงในไเฟรม (ตัดเน็ตทั้งชุด)...';
+        let cw;
+        try {
+            // ⚠️ ตั้งแคช “ก่อนแอปบูต” = จำลองเครื่องที่แอดมินบันทึกคิวรูปไว้แล้ว (ใช้พิสูจน์ S12)
+            seedCache({ image: IMG_MAIN, title: 'กำลังโหลดข้อมูล...', focusX: 50, listJson: JSON.stringify(QUEUE), rotateOn: false, rotateSec: 30 });
+            await bootApp(true);
+            cw = w();
+            assert(typeof cw.__lsPickEntry === 'function', 'ไม่พบ window.__lsPickEntry (ยังไม่ได้ต่อกลไกคิวรูป)');
+            assert(typeof cw.lsRenderQueue === 'function', 'ไม่พบ window.lsRenderQueue');
+            netBaseline = cw.__net.blockedFetch;
+        } catch (e) {
+            log('บูตแอป', false, e.message);
+            summaryEl.textContent = 'สรุป: บูตแอปไม่สำเร็จ — ' + e.message;
+            document.getElementById('runBtn').disabled = false;
+            return;
+        }
+
+        // ---------- S1: รูปที่ตรงช่วงเทศกาลถูกเลือกก่อน ----------
+        await T('S1 · วันที่ 25 ธ.ค. → ต้องเลือกรูป “คริสต์มาส” (ช่วงเทศกาล 12-24→12-26)', async () => {
+            const p = cw.__lsPickEntry(Q(), at('2026-12-25T09:00:00+07:00'));
+            assert(p.why === 'festival', 'ต้องเป็น festival (ได้ ' + p.why + ')');
+            assert(p.name === 'คริสต์มาส', 'ต้องได้คริสต์มาส (ได้ ' + p.name + ')');
+            assert(p.image === IMG_A, 'ต้องได้รูปของคริสต์มาส');
+            return 'why=festival · name=คริสต์มาส · ลำดับ ' + (p.index + 1) + '/' + p.total;
+        });
+
+        // ---------- S2: ช่วงเทศกาลคร่อมปีใหม่ ----------
+        await T('S2 · ช่วงคร่อมปี (12-28 → 01-05) ต้องจับได้ทั้ง 30 ธ.ค. และ 2 ม.ค.', async () => {
+            const a = cw.__lsPickEntry(Q(), at('2026-12-30T09:00:00+07:00'));
+            const b = cw.__lsPickEntry(Q(), at('2027-01-02T09:00:00+07:00'));
+            assert(a.name === 'ปีใหม่' && b.name === 'ปีใหม่', 'ต้องได้ปีใหม่ทั้งสองวัน (ได้ ' + a.name + ' / ' + b.name + ')');
+            assert(cw.__lsInWindow('12-28', '01-05', '01-02') === true, '__lsInWindow ต้องคืน true สำหรับคร่อมปี');
+            assert(cw.__lsInWindow('12-28', '01-05', '06-15') === false, '__lsInWindow ต้องคืน false เมื่อนอกช่วง');
+            return 'คร่อมปี: 12-30 → ปีใหม่ · 01-02 → ปีใหม่';
+        });
+
+        // ---------- S3: ไม่มีเทศกาลตรง → สลับตามเวลา ----------
+        await T('S3 · วันธรรมดา + เปิดสลับทุก 30 วิ → เลขช่วงเวลาเปลี่ยน = รูปเปลี่ยน', async () => {
+            const t0 = at('2026-09-20T10:00:00+07:00');
+            const p0 = cw.__lsPickEntry(Q(), t0);
+            const p1 = cw.__lsPickEntry(Q(), t0 + 30000);   // ข้าม 1 ช่วง
+            const p2 = cw.__lsPickEntry(Q({ rotateSec: 60 }), t0 + 30000); // ช่วง 60 วิ → ยังไม่ข้าม
+            assert(p0.why === 'rotate' && p1.why === 'rotate', 'ต้องเป็น rotate');
+            assert(p0.index !== p1.index, 'ข้าม 30 วิ ต้องได้อีกรูป (ได้ ' + p0.index + ' เท่าเดิม)');
+            assert(p2.index === 0, 'ช่วง 60 วิ ยังไม่ข้าม → ต้องยังเป็นรูปแรกในสล็อต (ได้ ' + p2.index + ')');
+            return 'สล็อต 30 วิ: รูป ' + (p0.index + 1) + ' → ' + (p1.index + 1) + ' · สล็อต 60 วิ: คงเดิม';
+        });
+
+        // ---------- S4: ปิดสลับ = รูปแรก ----------
+        await T('S4 · ปิด “สลับรูปอัตโนมัติ” → ใช้รูปแรกในคิวเสมอ (ไม่ขึ้นกับเวลา)', async () => {
+            const a = cw.__lsPickEntry(Q({ rotateOn: false }), at('2026-09-20T10:00:00+07:00'));
+            const b = cw.__lsPickEntry(Q({ rotateOn: false }), at('2026-09-20T23:59:00+07:00'));
+            assert(a.why === 'first' && b.why === 'first', 'ต้องเป็น first');
+            assert(a.index === 0 && b.index === 0, 'ต้องเป็นรูปแรก');
+            return 'why=first · รูปแรกคงที่ไม่ว่าเวลาไหน';
+        });
+
+        // ---------- S5: คิวว่าง / ปิดทุกรูป = กลับไปใช้รูปหลัก ----------
+        await T('S5 · คิวว่าง หรือ ปิดทุกรูป → กลับไปใช้ “รูปหลัก” (พฤติกรรมเดิมไม่พัง)', async () => {
+            const empty = cw.__lsPickEntry({ listJson: '', rotateOn: true, rotateSec: 30, image: IMG_MAIN }, at('2026-12-25T09:00:00+07:00'));
+            const allOff = cw.__lsPickEntry(Q({ listJson: JSON.stringify(QUEUE.map(e => Object.assign({}, e, { on: false }))) }), at('2026-12-25T09:00:00+07:00'));
+            assert(empty.why === 'single' && empty.image === IMG_MAIN, 'คิวว่างต้องใช้รูปหลัก');
+            assert(allOff.why === 'single' && allOff.image === IMG_MAIN, 'ปิดทุกรูปต้องใช้รูปหลัก');
+            return 'คิวว่าง → single · ปิดทุกรูป → single (รูปหลัก ' + Math.round(IMG_MAIN.length * 0.75 / 1024) + ' KB)';
+        });
+
+        // ---------- S6: เพดาน 6 รูป + ข้อมูลพัง ----------
+        await T('S6 · ข้อมูลพัง/เกินเพดาน ต้องไม่ทำให้จอโหลดพัง (ตัดที่ 6 รูป · JSON เสีย = คิวว่าง)', async () => {
+            const many = []; for (let i = 0; i < 9; i++) many.push({ id: 'q' + i, image: 'data:image/jpeg;base64,' + 'x'.repeat(200 + i), name: '', from: '', to: '', on: true });
+            const capped = cw.__lsParsedList({ listJson: JSON.stringify(many) });
+            const broken = cw.__lsParsedList({ listJson: '{ไม่ใช่ JSON' });
+            const notArray = cw.__lsParsedList({ listJson: '{"a":1}' });
+            const tinyImg = cw.__lsParsedList({ listJson: JSON.stringify([{ id: 'z', image: 'สั้น', name: '', from: '', to: '', on: true }]) });
+            assert(capped.length === 6, 'ต้องตัดเหลือ 6 รูป (ได้ ' + capped.length + ')');
+            assert(broken.length === 0 && notArray.length === 0 && tinyImg.length === 0, 'ข้อมูลเสีย/รูปสั้นเกินไป ต้องถูกข้าม');
+            assert(capped.length <= cw.LDS_LIST_MAX, 'ต้องไม่เกิน LDS_LIST_MAX');
+            return '9 รูป → เก็บ 6 · JSON เสีย → 0 · รูปสั้น → 0';
+        });
+
+        // ---------- S7: ค่าเวลาสลับ clamp ----------
+        await T('S7 · เวลาต่อรูปต้องถูก clamp 5–3600 วินาที และค่าขยะ → 30', async () => {
+            const got = [cw.__lsRotateClamp(1), cw.__lsRotateClamp(99999), cw.__lsRotateClamp('abc'), cw.__lsRotateClamp(-5), cw.__lsRotateClamp(45)];
+            assert(got[0] === 5 && got[1] === 3600, 'ต้อง clamp เป็น 5/3600 (ได้ ' + got.join(',') + ')');
+            assert(got[2] === 30 && got[3] === 30, 'ค่าขยะ/ติดลบ ต้องเป็นค่าเริ่มต้น 30');
+            assert(got[4] === 45, 'ค่าปกติต้องคงเดิม');
+            return 'clamp = [' + got.join(', ') + '] · ค่าเริ่มต้น ' + cw.LDS_ROT_DEF + ' วิ · เพดานคิว ' + cw.LDS_LIST_MAX + ' รูป';
+        });
+
+        // ---------- S8: UI — แถวคิว + สวิตช์เป็น pill ----------
+        await T('S8 · แถวคิวในหน้าแอดมิน: มีสวิตช์แบบ pill ทุกตัว · ไม่มีช่องติ๊กดิบ · มีป้าย “ใช้ตอนนี้”', async () => {
+            await openPanel(cw);
+            setQueue(cw, QUEUE, false, 30);
+            await wait(120);
+            const box = document.getElementById('lsQueueBox', cw.document) || cw.document.getElementById('lsQueueBox');
+            const rows = box.querySelectorAll('[data-qid]');
+            const pills = box.querySelectorAll('.app-switch input[type=checkbox]');
+            const raw = Array.from(box.querySelectorAll('input[type=checkbox]')).filter(i => !i.closest('.app-switch'));
+            const badge = box.querySelector('span');
+            assert(rows.length === 3, 'ต้องมี 3 แถว (ได้ ' + rows.length + ')');
+            assert(pills.length === 3, 'ทุกแถวต้องมีสวิตช์ pill (ได้ ' + pills.length + ')');
+            assert(raw.length === 0, 'ต้องไม่มีช่องติ๊กดิบ (ได้ ' + raw.length + ')');
+            assert(box.textContent.indexOf('ใช้ตอนนี้') >= 0, 'ต้องมีป้าย “ใช้ตอนนี้” ที่รูปซึ่งถูกใช้อยู่');
+            assert(badge, 'มีป้ายในแถว');
+            return '3 แถว · 3 pill · 0 ช่องติ๊กดิบ · ป้าย “ใช้ตอนนี้” ทำงาน';
+        });
+
+        // ---------- S9: เพิ่มหลายไฟล์พร้อมกัน ----------
+        await T('S9 · เลือกหลายไฟล์พร้อมกัน → เข้าคิวครบ + ตั้งชื่อจากชื่อไฟล์ + งบขนาดต่อรูปถูกคำนวณ', async () => {
+            const mkFile = async (name, hue) => {
+                const c = document.createElement('canvas'); c.width = 1080; c.height = 1920;
+                const x = c.getContext('2d'); x.fillStyle = 'hsl(' + hue + ',70%,45%)'; x.fillRect(0, 0, 1080, 1920);
+                const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.95));
+                return new File([blob], name + '.jpg', { type: 'image/jpeg' });
+            };
+            setQueue(cw, [], true, 30);
+            const f1 = await mkFile('xmas', 300), f2 = await mkFile('songkran', 190), f3 = await mkFile('newyear', 30);
+            await cw.lsQueueAddFiles({ target: { files: [f1, f2, f3], value: '' } });
+            await wait(100);
+            const st = cw.lsQueueSummary();
+            assert(st.count === 3, 'ต้องได้ 3 รูป (ได้ ' + st.count + ')');
+            const names = cw.lsQueueList().map(e => e.name).join(',');
+            assert(names === 'xmas,songkran,newyear', 'ชื่อต้องมาจากชื่อไฟล์ (ได้ ' + names + ')');
+            assert(st.kb > 0 && st.kb < cw.LDS_QUEUE_KB, 'ขนาดรวมต้องอยู่ในงบ ' + cw.LDS_QUEUE_KB + ' KB (ได้ ' + st.kb + ')');
+            return 'เพิ่ม 3 ไฟล์รวดเดียว · ชื่อ = ' + names + ' · รวม ' + st.kb + ' KB (งบ ' + cw.LDS_QUEUE_KB + ' KB)';
+        });
+
+        // ---------- S10: พรีวิวโชว์รูปจากคิว + บอกที่มา ----------
+        await T('S10 · กล่องพรีวิวต้องโชว์รูปที่คิวเลือก + บอกที่มาว่า “รูปจากคิว”', async () => {
+            setQueue(cw, QUEUE, true, 30);
+            await wait(150);
+            const img = cw.document.getElementById('lsPreviewImg');
+            const src = img.getAttribute('src') || '';
+            const label = cw.__lsPreviewSourceLabel || '';
+            const hint = (cw.document.getElementById('lsSizeHint') || {}).textContent || '';
+            assert([IMG_A, IMG_B, IMG_C].indexOf(src) >= 0, 'พรีวิวต้องเป็นรูปจากคิว ไม่ใช่รูปหลัก');
+            assert(label.indexOf('รูปจากคิว') === 0, 'ต้องบอกที่มาว่า “รูปจากคิว…” (ได้ ' + label + ')');
+            assert(hint.indexOf('จะขึ้นตอนเปิดแอปในขณะนี้') >= 0, 'ต้องบอกว่ารูปนี้จะขึ้นตอนเปิดแอป');
+            return 'label = ' + label;
+        });
+
+        // ---------- S11: ย้าย/ลบ/ปิดรูป มีผลต่อการเลือก ----------
+        await T('S11 · ลบรูป / ย้ายลำดับ / ปิดสวิตช์รูป → การเลือกเปลี่ยนตามทันที', async () => {
+            setQueue(cw, QUEUE, false, 30);
+            await wait(80);
+            const ids0 = cw.lsQueueList().map(e => e.id).join(',');
+            const first = cw.lsQueuePicked();
+            const dbg = ' [ids=' + ids0 + ' why=' + first.why + ' idx=' + first.index + ' len=' + (first.image || '').length + ' isMain=' + (first.image === IMG_MAIN) + ']';
+            cw.lsQueueMove('c', -1);                     // ย้าย “ไม่ระบุ” ขึ้นมาอันดับ 2
+            const ids1 = cw.lsQueueList().map(e => e.id).join(',');
+            const moved = cw.lsQueuePicked();
+            cw.lsQueueToggle('a', false);                // ปิดคริสต์มาส
+            const off = cw.lsQueuePicked();
+            cw.lsQueueRemove('a');                       // ลบคริสต์มาสออก
+            const removed = cw.lsQueuePicked();
+            assert(first.image === IMG_A, 'เริ่มต้นต้องเป็นรูปแรก (คริสต์มาส)' + dbg);
+            assert(ids1 === 'a,c,b', 'ย้าย c ขึ้น 1 → ลำดับต้องเป็น a,c,b (ได้ ' + ids1 + ' · ก่อนย้าย = ' + ids0 + ')');
+            assert(off.image === IMG_C, 'ปิดคริสต์มาสแล้วรูปแรกที่ใช้ได้คือ “ไม่ระบุ” (why=' + off.why + ' idx=' + off.index + ' len=' + (off.image || '').length + ')');
+            assert(cw.lsQueueList().length === 2 && removed.image === IMG_C, 'ลบแล้วเหลือ 2 รูป และยังใช้ “ไม่ระบุ”');
+            return 'ย้าย/ปิด/ลบ ทำงาน · เหลือ ' + cw.lsQueueList().length + ' รูป (ใช้ ' + moved.why + ')';
+        });
+
+        // ---------- S12: จุดที่บั๊กจริงเคยเกิด — “เส้นทาง merge” ที่ตัวจอโหลดใช้รับค่าจากแคช/เซิร์ฟเวอร์ ----------
+        //   ⚠️ ต้องทดสอบแบบเจาะจง (ไม่พึ่งการบูต/ข้อมูลจริงบนเซิร์ฟเวอร์) เพราะเครื่องจริงอาจมีคิวรูปอยู่แล้ว
+        await T('S12 · __ldsApply() ต้องรับ listJson/rotateOn/rotateSec จากแคชได้ (บั๊กเดิม: เปิดแอปใหม่ได้ “รูปหลัก” เสมอ)', async () => {
+            cw.__ldsCfg.listJson = '';                 // จำลอง: ยังไม่มีคิว (เครื่องใหม่)
+            cw.__ldsCfg.rotateOn = false;
+            cw.__ldsCfg.image = IMG_MAIN;
+            cw.__ldsApply({ listJson: JSON.stringify(QUEUE), rotateOn: true, rotateSec: 30 });
+            const st = cw.__ldsState();
+            const src = cw.document.getElementById('ldsPhoto').getAttribute('src') || '';
+            assert(st.listCount === 3, 'หลัง __ldsApply ต้องมีคิว 3 รูป (ได้ ' + st.listCount + ')');
+            assert(src !== IMG_MAIN && src.length > 20, 'รูปบนจอโหลดต้องมาจากคิว ไม่ใช่รูปหลัก');
+            cw.__ldsApply(null);
+            const again = cw.document.getElementById('ldsPhoto').getAttribute('src') || '';
+            assert(again === src, 'เรียกซ้ำต้องยังเป็นรูปเดิม (ไม่สุ่มใหม่ระหว่างโหลด)');
+            return 'merge ได้คิว 3 รูป · รูปบนจอ = ' + (st.pickedWhy) + ' · เรียกซ้ำได้รูปเดิม';
+        });
+
+        // ---------- S12-bis: ของจริง — บูตใหม่แล้วจอโหลดต้องใช้ “รูปจากคิว” ถ้ามีคิวอยู่ในเครื่อง/เซิร์ฟเวอร์ ----------
+        await T('S12-bis · เปิดแอปใหม่ (บูตจริง) → จอโหลดต้องใช้รูปที่คิวเลือก ไม่ใช่รูปหลัก', async () => {
+            seedCache({ image: IMG_MAIN, title: 'กำลังโหลดข้อมูล...', focusX: 50, listJson: JSON.stringify(QUEUE), rotateOn: true, rotateSec: 30 });
+            await bootApp(true);
+            cw = w();
+            installStubs();
+            await wait(600);
+            const st = cw.__ldsState();
+            const src = cw.document.getElementById('ldsPhoto').getAttribute('src') || '';
+            assert(st.listCount >= 3, 'ต้องเห็นคิวในเครื่อง/เซิร์ฟเวอร์ (ได้ ' + st.listCount + ')');
+            assert(st.pickedWhy !== 'single', 'ต้องเลือกรูปจากคิว (ได้ ' + st.pickedWhy + ')');
+            const own = cw.__lsParsedList(cw.__ldsCfg);
+            assert(own.some(e => e.image === src), 'รูปบนจอโหลดต้องเป็นรูปที่คิวเลือกจริง');
+            return 'listCount=' + st.listCount + ' · pickedWhy=' + st.pickedWhy + ' · รูปบนจอ = รูปจากคิว (ตรงกับตัวเลือกของคิว)';
+        });
+
+        // ---------- S13: เทศกาลชนะการสลับเวลา (บนจอโหลดจริง) ----------
+        await T('S13 · เมื่อของจริงตรงช่วงเทศกาล จอโหลดต้องใช้รูปเทศกาล (ชนะการสลับตามเวลา)', async () => {
+            // จำลอง “วันนี้ = 25 ธ.ค.” โดยเลื่อนเวลาของเครื่องในไเฟรม
+            const cw2 = cw;
+            const realNow = cw2.Date.now;
+            cw2.Date.now = () => at('2026-12-25T09:00:00+07:00');
+            try {
+                const pick = cw2.__lsPickEntry({ listJson: JSON.stringify(QUEUE), rotateOn: true, rotateSec: 30, image: IMG_MAIN }, cw2.Date.now());
+                assert(pick.why === 'festival' && pick.name === 'คริสต์มาส', 'ต้องเลือกคริสต์มาส (ได้ ' + pick.why + '/' + pick.name + ')');
+                // และรูปที่เลือกต้องถูกทาลงจอจริงเมื่อเรียก __ldsApply
+                cw2.__ldsCfg.listJson = JSON.stringify(QUEUE); cw2.__ldsCfg.rotateOn = true; cw2.__ldsCfg.rotateSec = 30;
+                cw2.__ldsApply(null);
+                const src = (cw2.document.getElementById('ldsPhoto').getAttribute('src') || '');
+                assert(src === IMG_A, 'รูปบนจอต้องเป็นของคริสต์มาส');
+                return 'วันที่จำลอง 25 ธ.ค. → จอโหลดใช้ “คริสต์มาส” แม้เปิดสลับอัตโนมัติ';
+            } finally { cw2.Date.now = realNow; }
+        });
+
+        // ---------- S14: payload ที่จะบันทึก = สิ่งที่ผู้ใช้เห็น ----------
+        await T('S14 · ตอนกด “บันทึก” ต้องส่ง listJson/rotateOn/rotateSec ตรงกับที่ตั้งในหน้าจอ', async () => {
+            await openPanel(cw);
+            setQueue(cw, QUEUE, true, 60);
+            await wait(100);
+            const cfg = cw.lsQueueCfg();
+            const parsed = JSON.parse(cfg.listJson);
+            assert(parsed.length === 3, 'ต้องส่ง 3 รูป');
+            assert(cfg.rotateOn === true && cfg.rotateSec === 60, 'ต้องส่ง rotateOn=true / rotateSec=60 (ได้ ' + cfg.rotateOn + '/' + cfg.rotateSec + ')');
+            assert(parsed[0].from === '12-24' && parsed[0].to === '12-26', 'ต้องเก็บช่วงเทศกาลของรูปแรก');
+            const tooBig = cw.__lsRotateClamp(99999);
+            cw.lsQueueStepRotate(99999); const clamped = cw.lsQueueCfg().rotateSec;
+            assert(clamped === tooBig && clamped === 3600, 'กดบวกค้างต้องถูก clamp ที่ 3600 (ได้ ' + clamped + ')');
+            return 'payload: 3 รูป · rotateOn=true · rotateSec 60 → clamp 3600 เมื่อเกิน';
+        });
+
+        // ---------- S15: ไม่ยิงคำขอออกเน็ตเพิ่ม ----------
+        await T('S15 · ทั้งชุด (เลือก/สลับ/เพิ่มรูป) ต้องไม่ยิงคำขอออกเน็ตเพิ่มเลย', async () => {
+            const before = cw.__net.blockedFetch;
+            cw.__lsPickEntry(Q(), Date.now());
+            cw.lsQueuePicked();
+            cw.lsQueueSummary();
+            cw.lsRenderQueue();
+            await wait(120);
+            const after = cw.__net.blockedFetch;
+            assert(after === before, 'ต้องไม่มีคำขอออกเน็ตเพิ่ม (เพิ่มขึ้น ' + (after - before) + ')');
+            return 'คำขอออกเน็ตนอกเครื่อง = ' + after + ' (เท่าเดิม — กลไกคิวรูปคำนวณในเครื่องล้วน)';
+        });
+
+        const okAll = failCount === 0;
+        summaryEl.textContent = (okAll ? '✅ ผ่านทั้งหมด ' : '❌ ไม่ผ่าน ') + passCount + '/' + (passCount + failCount) + (okAll ? ' สถานการณ์' : ' — ดูรายละเอียดสีแดงด้านบน');
+        summaryEl.style.color = okAll ? '#2ecc71' : '#ff5b5b';
+        offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งชุด (คำขอออกเน็ตนอกเครื่องที่ถูกบล็อก = ' + cw.__net.blockedFetch + ' ครั้ง — ตัวแอปยิงตามปกติ)';
+        document.getElementById('runBtn').disabled = false;
+    }
+
+    document.getElementById('runBtn').addEventListener('click', run);
+    window.addEventListener('load', () => setTimeout(run, 400));
+})();
+</script>
+</body>
+</html>

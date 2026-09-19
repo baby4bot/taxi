@@ -245,6 +245,37 @@
             return 'จำค่าในเครื่อง = ' + JSON.stringify(later) + ' · ตอนเพิ่งกด = ' + (early === null ? '(ยังไม่เขียน → เป็นการบันทึกรวบ)' : early);
         });
 
+        // ---------- S6-bis: ค่าจาก “เอกสารบัญชี” ที่มาถึงทีหลัง ต้องไม่ทับค่าที่ผู้ใช้เพิ่งกด (บั๊กจริง 20 ก.ย. 69) ----------
+        //   อาการเดิม: กด + (3→4) → snapshot บัญชีมาถึงก่อน debounce 900 ms เขียน ⇒ ค่าเด้งกลับเป็นค่าเดิม (6) แล้วถูกบันทึกทับ
+        await T('S6-bis · ผู้ใช้กด −/+ แล้วค่าจากบัญชีมาถึงทีหลัง ต้องไม่ทับค่าที่เพิ่งตั้ง', async () => {
+            cw.applyToastTime(3, false);
+            await wait(1200);
+            cw.localStorage.removeItem(cw.__toastTimeKey);
+            cw.bumpToastSec(1);                                                        // ผู้ใช้กด + → 4 วินาที
+            cw.__applyUserDocUI({ role: 'User', username: 'driver1', displayName: 'คนขับหนึ่ง', toastSec: 6, toastHold: false });   // snapshot มาถึงตอนนี้ (ค่าเดิม 6)
+            await wait(1200);
+            const stored = JSON.parse(cw.localStorage.getItem(cw.__toastTimeKey) || '{}');
+            assert(cw.__toastUserSec() === 4, 'ค่าบนจอต้องเป็น 4 ไม่ถูกทับ (ได้ ' + cw.__toastUserSec() + ')');
+            assert(stored.sec === 4, 'ค่าที่บันทึกในเครื่องต้องเป็น 4 ไม่ใช่ 6 (ได้ ' + JSON.stringify(stored) + ')');
+            assert(cw.__ttDocShouldWin() === false, 'ช่วงกันทับต้องยัง active อยู่ (15 วิ)');
+            return 'กด + → 4 · snapshot บัญชีส่ง 6 มาถึง → ยังเป็น 4 และบันทึก 4';
+        });
+
+        // ---------- S6-ter: ไม่มีการแก้เอง → ค่าจากบัญชียังต้องชนะ (ข้ามเครื่องยังทำงานปกติ) ----------
+        await T('S6-ter · ไม่ได้แก้เอง → ค่าจากบัญชียังใช้ได้ (ข้ามเครื่องไม่พัง)', async () => {
+            cw.__ttPendingUntil = 0;                                                   // จำลอง: หมดช่วงกันทับแล้ว
+            cw.__applyUserDocUI({ role: 'User', username: 'driver1', displayName: 'คนขับหนึ่ง', toastSec: 12, toastHold: true });
+            assert(cw.__toastUserSec() === 12, 'ต้องรับ 12 วินาทีจากบัญชี (ได้ ' + cw.__toastUserSec() + ')');
+            assert(cw.userToastHold === true, 'ต้องรับโหมด “ค้างไว้” จากบัญชี');
+            await cw.__ttSaveNow();
+            const stored = JSON.parse(cw.localStorage.getItem(cw.__toastTimeKey) || '{}');
+            assert(stored.sec === 12, 'ต้องจำค่าจากบัญชีลงเครื่อง (ได้ ' + JSON.stringify(stored) + ')');
+            cw.toastTimeReset();                                                       // เก็บกวาดให้ชุดถัดไปเริ่มที่ค่าเริ่มต้น
+            await wait(1100);
+            assert(cw.__toastUserSec() === 3, 'รีเซ็ตกลับ 3 วินาที (ได้ ' + cw.__toastUserSec() + ')');
+            return 'รับ 12 วิ + โหมดค้างไว้จากบัญชี → แล้วรีเซ็ตกลับ 3 วิ';
+        });
+
         // ---------- S7: โหมดทดสอบไม่แตะ Firestore · เส้นทางบันทึกต่อสายจริง ----------
         await T('S7 · เส้นทางบันทึกต่อสายจริง · โหมดทดสอบไม่แตะ Firestore เลย', async () => {
             let fsWrites = 0;
