@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — เตือนล่วงหน้า “โควตา TomTom ใช้ไป 80%” + เสียงพูด</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; white-space: pre-wrap; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: เตือนล่วงหน้า “โควตา TomTom ใช้ไป 80%” + เสียงพูดบอกยอดที่เหลือ/จะหมดตอนไหน</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsnowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> ·
+        เรียกตรรกะจริง <code>__ttQuotaWarnInfo()</code> / <code>ttQuotaWarnCheck()</code> และอ่านแบนเนอร์จริง <code>#ttQuotaWarnBanner</code>
+        <br><b>กติกาที่ผู้ใช้สั่ง 19 ก.ย. 69:</b> “แจ้งเตือน<b>ล่วงหน้า</b>เมื่อโควตา TomTom ใช้ไป <b>80%</b> พร้อม<b>เสียงพูด</b>บอกว่า<b>เหลือกี่ครั้ง</b>และ<b>จะหมดตอนไหน</b>
+        โดย<b>ไม่ต้องรอให้หมดก่อน</b>”
+        <br>⇒ ต้องพิสูจน์: ① เกณฑ์เริ่มต้น 80% + ตั้งเองได้ ② ยังไม่ถึงเกณฑ์ = เงียบ · 80% = เตือน · 95% = เตือนซ้ำแบบเร่งด่วน
+        ③ เลือกถังที่ใช้เกินมากสุด + ตัวเลขใช้ไป/เพดาน/เหลือ ถูก ④ ประมาณวันที่จะหมดจากอัตราการใช้จริง (และบอกเมื่อไม่หมดก่อนรอบใหม่)
+        ⑤ ข้อความเสียงพูดมีครบ (เปอร์เซ็นต์ · เหลือกี่ครั้ง · จะหมด/ไม่หมดก่อนรอบใหม่ · รอบใหม่เริ่ม) ⑥ แบนเนอร์ขึ้นจริงบนจอ + ปิดเอง 12 วิ
+        ⑦ เสียงพูดถูกเรียกจริง + ไม่พูดซ้ำในรอบเดิม ⑧ <b>ยิงจากตัวนับจริง</b> <code>countTomTomCall()</code> แล้วเตือนเองได้ ⑨ ขึ้นเดือนใหม่ = เตือนได้อีก
+        ⑩ ตั้งเกณฑ์ได้จากหน้าโควตา + <b>ไม่กินโควตา TomTom</b>
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/quota-warn80-offline.html</code>
+        <br>⚠️ ชุดนี้เขียน localStorage ชั่วคราวแล้ว<b>คืนค่าเดิมทุกคีย์</b>ตอนจบ (ไม่ทำลายยอดนับจริงของเครื่อง)
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (10 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const KEYS = ['tomtom_usage_daily', 'tomtom_usage_monthly', 'tomtom_monthly_limit', 'tomtom_daily_limit',
+        'tomtom_warn_pct', 'tomtom_qwarn_route', 'tomtom_qwarn_search',
+        'tomtom_warned_route_1', 'tomtom_warned_route_2', 'tomtom_warned_search_1', 'tomtom_warned_search_2'];
+    let savedStorage = null;
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[quota-warn80-test]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตทั้งหมด ============================
+    let stubsInstalled = false;
+    let blocked = 0;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedTomtom: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0;
+            if (!isLocal) {
+                cw.__net.blockedFetch++; cw.__net.lastUrl = u; blocked++;
+                if (u.indexOf('tomtom.com') >= 0) { cw.__net.blockedTomtom++; }
+                return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u));
+            }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) { cw.__net.blockedXhr = (cw.__net.blockedXhr || 0) + 1; blocked++; x.__blocked = true; return; }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.__ttQuotaWarnInfo === 'function' && typeof cw.ttQuotaWarnCheck === 'function'
+                && typeof cw.quotaWarnShow === 'function' && typeof cw.countTomTomCall === 'function'
+                && typeof cw.tomtomUsageMonth === 'function' && typeof cw.__ttExhaustInfo === 'function') {
+                installStubs();
+                await wait(200);
+                await closeAllModals();
+                await wait(300);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    // ============================ เครื่องมือทดสอบ ============================
+    const el = (id) => w().document.getElementById(id);
+    const bannerText = () => { const b = el('ttQuotaWarnBanner'); return b ? String(b.innerText || '').replace(/\s+/g, ' ').trim() : '(ไม่มีแบนเนอร์)'; };
+    const store = () => w().localStorage;
+    const snapshotStorage = () => {
+        const s = {}; KEYS.forEach((k) => { try { s[k] = store().getItem(k); } catch (e) {} });
+        return s;
+    };
+    const restoreStorage = () => {
+        if (!savedStorage) return;
+        KEYS.forEach((k) => {
+            try { if (savedStorage[k] === null || savedStorage[k] === undefined) store().removeItem(k); else store().setItem(k, savedStorage[k]); } catch (e) {}
+        });
+    };
+    const seedMonth = (obj) => { try { if (obj === null) store().removeItem('tomtom_usage_monthly'); else store().setItem('tomtom_usage_monthly', JSON.stringify(obj)); } catch (e) {} };
+    const seedMonthLimit = (obj) => { try { if (obj === null) store().removeItem('tomtom_monthly_limit'); else store().setItem('tomtom_monthly_limit', JSON.stringify(obj)); } catch (e) {} };
+    const seedWarnPct = (v) => { try { if (v === null) store().removeItem('tomtom_warn_pct'); else store().setItem('tomtom_warn_pct', String(v)); } catch (e) {} };
+
+    // ⚠️ ตัวตรวจอัตโนมัติของแอป (ตอนเปิดแอป + ตอนกลับเข้าแอป) ยิงเองได้ระหว่างเทสต์ ⇒ ปิดไว้ก่อน
+    //    แล้วเรียก “ตัวจริง” ที่เก็บไว้ตรง ๆ ในเทสต์ · S8 ค่อยเปิดกลับเพื่อพิสูจน์ว่าตัวนับเรียกจริง
+    let realCheck = null;
+    const muteAuto = () => { try { w().ttQuotaWarnCheck = () => null; } catch (e) {} };
+    const unmuteAuto = () => { try { w().ttQuotaWarnCheck = realCheck; } catch (e) {} };
+    const fresh = () => { const cw = w(); cw.quotaWarnHide(); try { cw.__ttQuotaWarnForget(); } catch (e) {} };
+
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(30000).then(() => { throw new Error('สถานการณ์ timeout 30 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ไม่ผ่าน</span> ' + name + '\n<span class="detail">' + ((e && e.message) ? e.message : e) + '</span>';
+            failCount++;
+            failures.push(name + ' → ' + ((e && e.message) ? e.message : e));
+        }
+    }
+
+    // ============================ ชุดสถานการณ์ ============================
+    async function runAll() {
+        const cw = w();
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+        savedStorage = snapshotStorage();
+        realCheck = cw.ttQuotaWarnCheck;
+        muteAuto();
+        fresh();
+
+        await runScenario('S1 · เกณฑ์เริ่มต้น = 80% · ตั้งเองได้ 50–99 · ค่าที่ไม่ถูกต้องถูกปฏิเสธ', async () => {
+            seedWarnPct(null);
+            assert(cw.ttWarnPct() === 80, 'เกณฑ์เริ่มต้นต้องเป็น 80 แต่ได้ ' + cw.ttWarnPct());
+            assert(cw.TT_WARN_PCT_URGENT === 95, 'เกณฑ์เร่งด่วนต้องเป็น 95 แต่ได้ ' + cw.TT_WARN_PCT_URGENT);
+            assert(cw.setTtWarnPct(70) === true && cw.ttWarnPct() === 70, 'ตั้ง 70% ต้องสำเร็จ');
+            assert(cw.setTtWarnPct(49) === false && cw.setTtWarnPct(100) === false && cw.ttWarnPct() === 70, 'ค่านอกช่วง 50–99 ต้องถูกปฏิเสธ');
+            seedWarnPct(null);
+            assert(cw.ttWarnPct() === 80, 'ล้างค่าแล้วต้องกลับเป็น 80');
+            return 'เริ่มต้น 80 · ตั้ง 70 ได้ · 49/100 ถูกปฏิเสธ · เร่งด่วน 95';
+        });
+
+        await runScenario('S2 · ยังไม่ถึงเกณฑ์ = เงียบ · 80% = เตือน · 95% = เตือนซ้ำแบบเร่งด่วน (คนละคีย์)', async () => {
+            seedMonthLimit(null);
+            seedWarnPct(null);
+            const M = { month: cw.ttCurrentMonth(), route: 15999, search: 0 };
+            const low = cw.__ttQuotaWarnInfo(M, { nowMs: Date.UTC(2026, 8, 19, 12) });               // 79.995%
+            assert(low === null, 'ต่ำกว่า 80% ต้องไม่เตือน แต่ได้ ' + JSON.stringify(low && low.pctTxt));
+            const at80 = cw.__ttQuotaWarnInfo({ month: M.month, route: 16000, search: 0 }, { nowMs: Date.UTC(2026, 8, 19, 12) });
+            const at95 = cw.__ttQuotaWarnInfo({ month: M.month, route: 19000, search: 0 }, { nowMs: Date.UTC(2026, 8, 19, 12) });
+            assert(at80 && at80.level === 1, '80% ต้องเป็นระดับ 1 แต่ได้ ' + (at80 && at80.level));
+            assert(at95 && at95.level === 2, '95% ต้องเป็นระดับ 2 แต่ได้ ' + (at95 && at95.level));
+            assert(at80.key !== at95.key, 'คนละระดับต้องคนละคีย์ (จะได้ยิงซ้ำได้) — ' + at80.key + ' / ' + at95.key);
+            assert(at80.pctTxt === '80' && at95.pctTxt === '95', 'เปอร์เซ็นต์บนแบนเนอร์ไม่ตรง: ' + at80.pctTxt + '/' + at95.pctTxt);
+            assert(at95.head.indexOf('ใกล้หมดแล้ว') >= 0, 'ระดับ 2 ต้องเป็นข้อความเร่งด่วน: ' + at95.head);
+            return '79.995% = เงียบ · 80% = ' + at80.head + ' · 95% = ' + at95.head;
+        });
+
+        await runScenario('S3 · เลือกถังที่ใช้เกินมากสุด + ตัวเลข ใช้ไป/เพดาน/เหลือ ถูกต้อง', async () => {
+            seedMonthLimit({ route: 20000, search: 2500 });
+            const r = cw.__ttResetInfo(Date.UTC(2026, 8, 19, 12));
+            const a = cw.__ttQuotaWarnInfo({ month: cw.ttCurrentMonth(), route: 17000, search: 2200 }, { nowMs: Date.UTC(2026, 8, 19, 12), todayRoute: 412 });
+            assert(a.bucket === 'search' && a.pctTxt === '88', 'ต้องเลือกถัง “ค้นหา” (88% > 85% ของเส้นทาง) แต่ได้ ' + a.bucket + '/' + a.pctTxt);
+            const b = cw.__ttQuotaWarnInfo({ month: cw.ttCurrentMonth(), route: 17000, search: 900 }, { nowMs: Date.UTC(2026, 8, 19, 12), todayRoute: 412 });
+            assert(b.bucket === 'route' && b.used === 17000 && b.cap === 20000 && b.remain === 3000,
+                'ถังเส้นทางต้องถูกเลือกพร้อมตัวเลขถูก แต่ได้ ' + JSON.stringify({ k: b.bucket, u: b.used, c: b.cap, r: b.remain }));
+            assert(b.why1.indexOf('เหลือ <b>3,000 ครั้ง</b> จาก 20,000') >= 0, 'บรรทัด “เหลือ” ไม่ตรง: ' + b.why1);
+            assert(b.why1.indexOf('วันนี้ 412 ครั้ง') >= 0, 'ต้องบอกยอดวันนี้ด้วย: ' + b.why1);
+            assert(b.why3.indexOf('รอบใหม่ 1 ต.ค. 69') >= 0 && b.why3.indexOf('อีก 11 วัน 12 ชม.') >= 0, 'บรรทัดรอบใหม่ไม่ตรง: ' + b.why3);
+            assert(b.reset.atMs === r.atMs, 'เวลารีเซ็ตไม่ตรงกับตัวกลาง');
+            return 'เลือกถังเส้นทาง · ' + b.why1 + ' · ' + b.why3;
+        });
+
+        await runScenario('S4 · ประมาณ “จะหมดตอนไหน” จากอัตราการใช้จริง + บอกเมื่อไม่หมดก่อนรอบใหม่', async () => {
+            const ex1 = cw.__ttExhaustInfo(8000, 20000, Date.UTC(2026, 8, 10, 0, 0, 0));   // วันที่ 10 → 800/วัน
+            assert(Math.round(ex1.perDay) === 800, 'อัตราต่อวันต้องเป็น 800 แต่ได้ ' + ex1.perDay);
+            assert(Math.round(ex1.remainDays) === 15, 'เหลืออีก ~15 วัน แต่ได้ ' + ex1.remainDays);
+            assert(ex1.dayText === '25 กันยายน', 'วันที่คาดว่าจะหมดต้องเป็น 25 กันยายน แต่ได้ “' + ex1.dayText + '”');
+            assert(ex1.before === true, 'ต้องบอกว่าหมดก่อนรอบใหม่ (25 ก.ย. < 1 ต.ค.)');
+            const ex2 = cw.__ttExhaustInfo(8000, 20000, Date.UTC(2026, 8, 25, 0, 0, 0));  // วันที่ 25 → 320/วัน
+            assert(ex2.before === false, 'อัตราช้าไม่ควรหมดก่อนรอบใหม่ แต่ได้ ' + ex2.before);
+            const ex3 = cw.__ttExhaustInfo(0, 20000, Date.UTC(2026, 8, 25, 0, 0, 0));
+            assert(ex3.remainDays === null && ex3.before === false, 'ยังไม่มีการใช้ = ไม่ต้องประมาณ');
+            const info = cw.__ttQuotaWarnInfo({ month: cw.ttCurrentMonth(), route: 8000, search: 0 }, { nowMs: Date.UTC(2026, 8, 10, 0, 0, 0), threshold: 0 });
+            assert(info.why2.indexOf('จะหมด ~25 กันยายน') >= 0, 'บรรทัด “จะหมด” ไม่ตรง: ' + info.why2);
+            const info2 = cw.__ttQuotaWarnInfo({ month: cw.ttCurrentMonth(), route: 8000, search: 0 }, { nowMs: Date.UTC(2026, 8, 25, 0, 0, 0), threshold: 0 });
+            assert(info2.why2.indexOf('ยังไม่หมดก่อนรอบใหม่') >= 0, 'บรรทัด “ไม่หมดก่อนรอบใหม่” ไม่ตรง: ' + info2.why2);
+            return '10 ก.ย. → หมด ~25 ก.ย. · 25 ก.ย. → ยังไม่หมดก่อนรอบใหม่ · ยังไม่ใช้ = ไม่ประมาณ';
+        });
+
+        await runScenario('S5 · ข้อความเสียงพูดมีครบ: เปอร์เซ็นต์ · เหลือกี่ครั้ง · จะหมดเมื่อไหร่ · รอบใหม่เริ่ม', async () => {
+            const inf = cw.__ttQuotaWarnInfo({ month: cw.ttCurrentMonth(), route: 16400, search: 0 }, { nowMs: Date.UTC(2026, 8, 10, 0, 0, 0), threshold: 0 });
+            const s = String(inf.speech || '');
+            assert(s.indexOf('โควตาแผนที่ใช้ไป 82 เปอร์เซ็นต์') === 0, 'คำพูดต้องขึ้นต้นด้วยเปอร์เซ็นต์ แต่ได้ “' + s + '”');
+            assert(s.indexOf('เหลือ 3600 ครั้ง') > 0, 'คำพูดต้องบอกยอดที่เหลือ (ไม่ใส่จุลภาค — ให้ TTS อ่านออกเสียงได้) แต่ได้ “' + s + '”');
+            assert(s.indexOf('คาดว่าจะหมดวันที่') > 0 && s.indexOf('กันยายน') > 0, 'คำพูดต้องบอกว่าจะหมดตอนไหน แต่ได้ “' + s + '”');
+            assert(s.indexOf('รอบใหม่เริ่ม 1 ตุลาคม') > 0, 'คำพูดต้องบอกว่ารอบใหม่เริ่มเมื่อไหร่ แต่ได้ “' + s + '”');
+            assert(/[0-9,]/.test(s) === false || s.indexOf(',') < 0, 'คำพูดไม่ควรมีจุลภาคคั่นหลัก: “' + s + '”');
+            const inf2 = cw.__ttQuotaWarnInfo({ month: cw.ttCurrentMonth(), route: 8000, search: 0 }, { nowMs: Date.UTC(2026, 8, 25, 0, 0, 0), threshold: 0 });
+            assert(String(inf2.speech).indexOf('ยังไม่หมดก่อนรอบใหม่') > 0, 'กรณีไม่หมดก่อนรอบใหม่ คำพูดต้องบอกด้วย: ' + inf2.speech);
+            return 'เสียงพูด: “' + s + '”';
+        });
+
+        await runScenario('S6 · แบนเนอร์ขึ้นจริงบนจอ (#ttQuotaWarnBanner) · ไม่รับคลิก · ปิดเองใน 12 วินาที', async () => {
+            fresh();
+            const inf = cw.__ttQuotaWarnInfo({ month: cw.ttCurrentMonth(), route: 18000, search: 0 }, { nowMs: Date.UTC(2026, 8, 19, 12), todayRoute: 30 });
+            assert(cw.quotaWarnShow(inf) === true, 'สั่งโชว์ต้องสำเร็จ');
+            const box = el('ttQuotaWarnBanner');
+            assert(box && cw.quotaWarnVisible(), 'แบนเนอร์ต้องขึ้น (มีคลาส show)');
+            const cs = cw.getComputedStyle(box);
+            assert(cs.position === 'fixed' && cs.pointerEvents === 'none', 'ต้องเป็น fixed + ไม่รับคลิก (pointer-events:none) แต่ได้ ' + cs.position + '/' + cs.pointerEvents);
+            assert(cw.__TT_QUOTA_WARN_MS === 12000, 'เวลาค้างบนจอต้อง 12 วินาที แต่ได้ ' + cw.__TT_QUOTA_WARN_MS);
+            const t = bannerText();
+            assert(t.indexOf('เหลือ 2,000 ครั้ง') >= 0 && t.indexOf('รอบใหม่') >= 0, 'ข้อความบนจอไม่ครบ: ' + t);
+            assert(box.className.indexOf('lv2') < 0, '90% ต้องยังเป็นสีระดับ 1 (ไม่ใช่เร่งด่วน) แต่ได้คลาส “' + box.className + '”');
+            cw.quotaWarnHide();
+            assert(!cw.quotaWarnVisible(), 'สั่งซ่อนต้องซ่อนทันที');
+            return 'ข้อความ: “' + t + '”';
+        });
+
+        await runScenario('S7 · เสียงพูดถูกเรียกจริง + แจ้งครั้งเดียวต่อระดับต่อเดือน (กดที่ 95% แล้วได้ยินอีกรอบ)', async () => {
+            fresh();
+            seedMonth({ month: cw.ttCurrentMonth(), route: 17000, search: 0 });   // 85%
+            seedWarnPct(null);
+            // ⚠️ กับดักที่เจอจริง: เสียงของสถานการณ์ก่อนหน้าหน่วง 320ms ก่อนพูด ⇒ รอให้คิวเก่าพ้นก่อนค่อยติดตะขอเก็บคำพูด
+            await wait(600);
+            const spoken = [];
+            const realSpeak = cw.navVoiceSpeak;
+            cw.navVoiceSpeak = (tx) => { spoken.push(String(tx)); return true; };
+            try {
+                const r1 = realCheck();          // ⚠️ เรียก “ตัวจริง” (cw.ttQuotaWarnCheck ถูกปิดไว้กันตัวตรวจอัตโนมัติของแอป)
+                await wait(600);
+                assert(!!r1 && r1.level === 1, 'ครั้งแรกต้องแจ้งระดับ 1 แต่ได้ ' + JSON.stringify(r1 && r1.level));
+                assert(spoken.length === 1, 'ต้องมีเสียงพูด 1 ครั้ง แต่ได้ ' + spoken.length + ' — ' + spoken.join(' | '));
+                assert(spoken[0].indexOf('โควตาแผนที่ใช้ไป 85 เปอร์เซ็นต์') === 0, 'คำพูดไม่ตรง: ' + spoken[0]);
+                const r2 = realCheck();
+                await wait(400);
+                assert(r2 === null, 'แจ้งซ้ำระดับเดิมต้องเงียบ แต่ได้ ' + JSON.stringify(r2 && r2.key));
+                assert(spoken.length === 1, 'ต้องไม่พูดซ้ำ แต่ได้ ' + spoken.length);
+                seedMonth({ month: cw.ttCurrentMonth(), route: 19500, search: 0 });   // 97.5% → ระดับ 2
+                const r3 = realCheck();
+                await wait(600);
+                assert(!!r3 && r3.level === 2, 'ขยับขึ้นระดับเร่งด่วนต้องแจ้งอีกครั้ง แต่ได้ ' + JSON.stringify(r3 && r3.level));
+                assert(spoken.length === 2, 'ต้องมีเสียงรอบที่สอง (รวม 2) แต่ได้ ' + spoken.length);
+                assert(spoken[1].indexOf('โควตาแผนที่ใช้ไป 98 เปอร์เซ็นต์') === 0 || spoken[1].indexOf('โควตาแผนที่ใช้ไป 97 เปอร์เซ็นต์') === 0,
+                    'คำพูดรอบเร่งด่วนไม่ตรง: ' + spoken[1]);
+                cw.__ttQuotaWarnForget();
+                const r4 = realCheck();
+                await wait(400);
+                assert(!!r4, 'ล้าง “แจ้งไปแล้ว” แล้วต้องแจ้งได้อีกครั้ง (ใช้กับปุ่มตั้งเกณฑ์ใหม่)');
+            } finally { cw.navVoiceSpeak = realSpeak; }
+            return 'แจ้ง 85% → เงียบรอบเดิม → แจ้งซ้ำที่ 97.5% · ล้างค่าแล้วแจ้งใหม่ได้';
+        });
+
+        await runScenario('S8 · ยิงจากตัวนับจริง countTomTomCall() → ถึงเกณฑ์แล้วเตือนเอง (ไม่รอให้หมด)', async () => {
+            fresh();
+            cw.quotaWarnHide();
+            seedMonthLimit(null);
+            seedMonth({ month: cw.ttCurrentMonth(), route: 15999, search: 0 });   // อีก 1 ครั้ง = 80%
+            const spoken = [];
+            const realSpeak = cw.navVoiceSpeak;
+            cw.navVoiceSpeak = (tx) => { spoken.push(String(tx)); return true; };
+            const net0 = cw.__net.blockedTomtom || 0;
+            let asked = 0;
+            unmuteAuto();     // ให้ตัวนับเรียกตัวตรวจจริง (จำลองสถานะใช้งานจริง)
+            try {
+                cw.countTomTomCall('route');     // ← 16000 = 80% พอดี
+                await wait(500);
+                assert(cw.quotaWarnVisible(), 'พอถึง 80% แบนเนอร์ต้องขึ้นเองจากตัวนับ (ไม่ต้องรอหมด)');
+                assert(spoken.length === 1, 'ต้องมีเสียงพูด 1 ครั้ง แต่ได้ ' + spoken.length);
+                asked = 1;
+                cw.quotaWarnHide();
+                for (let i = 0; i < 5; i++) { cw.countTomTomCall('route'); }
+                await wait(300);
+                assert(!cw.quotaWarnVisible(), 'ยิงเพิ่มอีก 5 ครั้ง (ยังไม่ถึง 95%) ต้องไม่เด้งซ้ำ');
+                assert(spoken.length === 1, 'ต้องไม่พูดซ้ำ แต่ได้ ' + spoken.length);
+            } finally { cw.navVoiceSpeak = realSpeak; muteAuto(); }
+            const net1 = cw.__net.blockedTomtom || 0;
+            assert(net1 === net0, 'การเตือนต้องไม่ยิงคำขอออกเน็ต (' + net0 + ' → ' + net1 + ')');
+            return 'ยิงครั้งที่ 16,000 (80% พอดี) → แบนเนอร์+เสียงขึ้นเอง · อีก 5 ครั้งถัดไปเงียบ · คำขอ TomTom +' + (net1 - net0);
+        });
+
+        await runScenario('S9 · ขึ้นเดือนใหม่ = เตือนได้อีกครั้ง (คีย์ผูกกับรอบเดือน) + ตัวเฟดตัวนับตรงกัน', async () => {
+            fresh();
+            seedMonth({ month: '2026-08', route: 19900, search: 0 });   // เดือนก่อนเต็ม
+            const a = realCheck();                                      // ยอดเดือนนี้ = 0 → ไม่เตือน
+            assert(a === null, 'ยอดเดือนนี้ยัง 0 ต้องไม่เตือน (ของเดือนก่อนไม่ถูกนำมาคิด) แต่ได้ ' + JSON.stringify(a && a.key));
+            seedMonth({ month: cw.ttCurrentMonth(), route: 16800, search: 0 });
+            const b = realCheck();
+            assert(!!b && b.key.indexOf(cw.ttCurrentMonth()) === 0, 'คีย์ต้องขึ้นต้นด้วยเดือนปัจจุบัน (ขึ้นเดือนใหม่ = ยิงได้อีก) แต่ได้ ' + (b && b.key));
+            const old = cw.__ttQuotaWarnInfo({ month: '2026-08', route: 16800, search: 0 }, { threshold: 80 });
+            assert(old.key.indexOf('2026-08') === 0 && old.key !== b.key, 'คนละเดือนต้องคนละคีย์');
+            return 'เดือนเก่าเต็ม ≠ เตือนเดือนนี้ · คีย์ = ' + b.key;
+        });
+
+        await runScenario('S10 · หน้าโควตามีช่องตั้งเกณฑ์ + ปุ่มฟังตัวอย่าง · สายไฟในโค้ดจริง · ไม่กินโควตา TomTom', async () => {
+            fresh();
+            seedMonthLimit(null);
+            const q0 = cw.tomtomUsageToday().route;
+            const net0 = cw.__net.blockedTomtom || 0;
+            cw.renderQuotaMonitor();
+            const html = String((el('quotaMonitorBody') || {}).innerHTML || '');
+            assert(/id="ttWarnPctInput"/.test(html), 'หน้าโควตาต้องมีช่องตั้งเกณฑ์เตือนล่วงหน้า');
+            assert(/ttQuotaWarnTest\(\)/.test(html), 'หน้าโควตาต้องมีปุ่มฟังเสียงตัวอย่าง');
+            assert(/เตือนล่วงหน้าเมื่อใช้ถึง/.test(html), 'ต้องมีข้อความอธิบายเกณฑ์');
+            await wait(600);   // ⚠️ กันเสียงของสถานการณ์ก่อนหน้าหน่วง 320ms แล้วหลุดเข้ามาในตะขอเก็บคำพูด
+            const spoke = [];
+            const realSpeak = cw.navVoiceSpeak;
+            cw.navVoiceSpeak = (tx) => { spoke.push(String(tx)); return true; };
+            try {
+                assert(cw.ttQuotaWarnTest() === true, 'ปุ่มฟังตัวอย่างต้องทำงานได้แม้ยังไม่ถึงเกณฑ์');
+                await wait(500);
+                assert(cw.quotaWarnVisible() && spoke.length === 1, 'ปุ่มตัวอย่างต้องโชว์แบนเนอร์ + พูด 1 ครั้ง (บาร์ ' + cw.quotaWarnVisible() + ' · เสียง ' + spoke.length + ')');
+            } finally { cw.navVoiceSpeak = realSpeak; cw.quotaWarnHide(); }
+            const q1 = cw.tomtomUsageToday().route;
+            const net1 = cw.__net.blockedTomtom || 0;
+            assert(q1 === q0 && net1 === net0, 'งานนี้ต้องไม่ยิงคำขอ TomTom (โควตา ' + q0 + '→' + q1 + ' · คำขอ +' + (net1 - net0) + ')');
+            const src = await fetch('../index.html').then(r => r.text());
+            const need = [
+                ['เกณฑ์เริ่มต้น 80%', /window\.TT_WARN_PCT_DEFAULT = 80/],
+                ['เกณฑ์เร่งด่วน 95%', /window\.TT_WARN_PCT_URGENT = 95/],
+                ['อ่าน/ตั้งเกณฑ์', /window\.setTtWarnPct = \(v\) =>/],
+                ['ประมาณอัตราการใช้ต่อวัน', /window\.__ttDaysElapsed = \(nowMs\) =>/],
+                ['ประมาณวันที่จะหมด', /window\.__ttExhaustInfo = \(used, cap, nowMs\) =>/],
+                ['ตัวตัดสิน + ข้อความ', /window\.__ttQuotaWarnInfo = \(month, opts\) =>/],
+                ['แบนเนอร์บนสุด', /#ttQuotaWarnBanner\{position:fixed/],
+                ['แสดงแบนเนอร์', /window\.quotaWarnShow = \(info\) =>/],
+                ['กันแจ้งซ้ำต่อระดับ', /window\.__ttQuotaWarnSeen = \(bucket\) =>/],
+                ['ตรวจ+แจ้ง', /window\.ttQuotaWarnCheck = \(opts\) =>/],
+                ['ปุ่มฟังเสียงตัวอย่าง', /window\.ttQuotaWarnTest = \(\) =>/],
+                ['เสียงพูดผ่านลำโพงนำทางเดิม', /window\.navVoiceSpeak\(spk, true\)/],
+                ['ตรวจเองตอนเปิดแอป/กลับเข้าแอป', /function ttQuotaWarnAuto\(\)/],
+                ['ต่อสายจากตัวนับจริง', /typeof window\.ttQuotaWarnCheck === 'function'\) window\.ttQuotaWarnCheck\(\)/]
+            ];
+            const miss = need.filter(([n, re]) => !re.test(src)).map(([n]) => n);
+            assert(miss.length === 0, 'โค้ดจริงขาด: ' + miss.join(' · '));
+            return 'ปุ่ม/ช่องในหน้าโควตาครบ · คำขอ TomTom +' + (net1 - net0) + ' · สายไฟ ' + need.length + ' จุดครบ';
+        });
+
+        // คืนค่าทุกคีย์ให้เหมือนก่อนทดสอบ (ไม่ทับยอดนับจริงของเครื่อง)
+        unmuteAuto();
+        restoreStorage();
+        fresh();
+        try { cw.navWarnBarHide(); cw.navFailClear(); } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const btnRun = document.getElementById('runBtn');
+        btnRun.disabled = true; btnRun.textContent = '⏳ กำลังรัน...';
+        try {
+            if (!stubsInstalled) await loadApp();
+            await runAll();
+            offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งหมดในชุดทดสอบ (บล็อกคำขอออกนอกเครื่อง ' + blocked + ' ครั้ง)';
+        } catch (e) {
+            summaryEl.innerHTML = '<span style="color:var(--red)">ตั้งชุดทดสอบไม่สำเร็จ: ' + (e && e.message ? e.message : e) + '</span>';
+        } finally {
+            btnRun.disabled = false; btnRun.textContent = '🔄 รันการทดสอบใหม่ (10 สถานการณ์)';
+        }
+    });
+
+    const paintSummary = () => {
+        summaryEl.innerHTML = (failCount === 0
+            ? '<span style="color:var(--green)">✅ ผ่านทั้งหมด ' + passCount + ' / ' + (passCount + failCount) + ' สถานการณ์</span>'
+            : '<span style="color:var(--red)">❌ ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + '</span>\n' + failures.join('\n'));
+    };
+    setInterval(paintSummary, 500);
+
+    (async () => {
+        try { await loadApp(); await runAll(); offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งหมดในชุดทดสอบ (บล็อกคำขอออกนอกเครื่อง ' + blocked + ' ครั้ง)'; }
+        catch (e) { log('auto-load failed', e); }
+    })();
+})();
+</script>
+</body>
+</html>

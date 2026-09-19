@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — มินิแมพยุบเองเมื่อออกจากทางด่วน (เหลือปุ่มเปิดสีฟ้า)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 960px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    button.alt { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 960px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: มินิแมพ “ยุบเอง” เมื่อรถออกจากช่วงทางด่วน</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · เลื่อนรถเหมือน GPS จริง
+        (<code>navMiniSetRoute</code> + <code>navMiniSetTolls</code> + <code>navMiniUpdate</code>) · เรียกตัวเฝ้าจริง <code>navMiniTollExitTick()</code>
+        <br>ผู้ใช้สั่ง: <i>“ให้มินิแมพปิดตัวเองกลับไปยุบเมื่อรถออกจากช่วงทางด่วนแล้ว (เหลือแต่ปุ่มเปิดสีฟ้า) เพื่อไม่ให้กินแบตและโควตากระเบื้องต่อ”</i>
+        <br>ตรวจ 4 ชั้น: ① กติกาตัดสิน (กี่วิถึงยุบ · อยู่ในทางด่วน = ห้ามยุบ) ② ของจริงบนจอ (ยุบเอง + ปุ่มสีฟ้าขึ้น)
+        ③ เคารพเจตนาผู้ใช้ (คนกดเปิดเอง/กด ✕ เอง = ห้ามยุบให้) ④ ไม่กินโควตา TomTom เพิ่มแม้แต่ครั้งเดียว
+        <br>⚠️ ตัวจับเวลาจริง (ทุก 1 วินาที) ต้องมีมิเตอร์เดินอยู่ ⇒ ชุดนี้เรียก <code>navMiniTollExitTick()</code> ตรง ๆ เหมือน GPS จริงยิงถี่
+        และมีสถานการณ์สุดท้ายตรวจว่า <b>โค้ดจริงเรียกตัวนี้จากตัวจับเวลาจริง</b> (กันคนลบสายไฟออก)
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/minimap-toll-exit-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (11 สถานการณ์)</button>
+    <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const CACHE_KEYS = ['taxi_active_trip_v1', 'taxi_chg_note_days_v1'];
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const log = (...a) => { try { console.log('[toll-exit-test]', ...a); } catch (e) {} };
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตออกทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;      // 🚫 ห้ามเขียนเที่ยวลง Firestore จริง
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) {
+                    cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.__blocked = true; return;
+                }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test: ไม่ใช้ GPS' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        stubsInstalled = true;
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.startNavigationMap === 'function' && typeof cw.navMiniSetRoute === 'function'
+                && typeof cw.navMiniTollZone === 'function' && typeof cw.navMiniTollExitTick === 'function') {
+                installStubs();
+                await wait(200);
+                try { cw.isManualRunning = false; } catch (e) {}
+                try { CACHE_KEYS.forEach(k => cw.localStorage.removeItem(k)); } catch (e) {}
+                await closeAllModals();
+                await waitForNoLoader(12000);
+                await wait(200);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ');
+    }
+
+    // ============================ เครื่องมือทดสอบ ============================
+    // เส้นทางตรงเหนือ-ใต้ ~4.4 กม. (จุดห่างกัน ~100 ม.) — พออ่านระยะบนเส้นทางละเอียดระดับ 100 ม.
+    const ROUTE = (() => { const a = []; for (let i = 0; i <= 44; i++) { a.push([13.70 + i * 0.0009, 100.50]); } return a; })();
+
+    const el = (id) => w().document.getElementById(id);
+    const isShown = () => { const e = el('navMini'); return !!(e && e.classList.contains('show')); };
+    const dbg = () => (w().navMiniDebug ? w().navMiniDebug() : {});
+    // 🔵 ปุ่มเปิดสีฟ้า = ไม่ถูกซ่อน + มีคลาส map-ready
+    const blueBtn = () => { const b = el('btnLiveMapZoom') || el('btnLiveMap'); return b ? { hidden: b.classList.contains('is-hidden'), blue: b.classList.contains('map-ready') } : null; };
+
+    function grantAdmin(autoOpen) {
+        const cw = w();
+        cw.__testRole = 'Admin';
+        const all = Object.assign({}, cw.globalPermissions || {});
+        all.Admin = Object.assign({}, all.Admin || {}, { canUseMiniMap: true, miniMapAutoOpen: !!autoOpen });
+        cw.globalPermissions = all;
+        cw.canUseMiniMap = () => true;
+    }
+    // เที่ยวทางด่วน + แผนที่เปิดเองตามกติกาจริงของแอป
+    function armTollTrip() {
+        const cw = w();
+        grantAdmin(true);
+        cw.navMiniSetTolls(null);
+        cw.setUserTollMode(true);
+        cw.navMiniSetRoute(ROUTE, 'ทดสอบออกจากทางด่วน');
+        cw.startNavigationMap(ROUTE[0][0], ROUTE[0][1], ROUTE[44][0], ROUTE[44][1], 'ทดสอบออกจากทางด่วน', 4.4, ROUTE);
+        cw.isManualRunning = true;
+        cw.isMeterPaused = false;
+        try { cw.__tollGateReset(); } catch (e) {}
+        cw.navMiniUpdate(ROUTE[0][0], ROUTE[0][1], 60);
+    }
+    function setTollSpan(fromKm, endKm) {
+        w().navMiniSetTolls({ hasTolls: true, booths: [{ startKm: fromKm, endKm: endKm, gateIn: 'บางนา', from: 'บางนา', to: 'ดินแดง', price: 65, system: 'expressway' }] });
+    }
+    function moveTo(idx, kmh) { w().navMiniUpdate(ROUTE[idx][0], ROUTE[idx][1], kmh || 60); }
+    const along = () => w().navMiniAlongKm();
+    // เดินตัวเฝ้าจริงซ้ำ ๆ เหมือนจับเวลาทุกวินาที
+    // ⚠️ คืน “สิ่งที่เกิดขึ้นระหว่างช่วงเวลา” ไม่ใช่ค่าของครั้งสุดท้าย — เพราะหลังยุบแล้วครั้งถัดไปจะคืน 'none' เสมอ
+    async function tickFor(ms, step) {
+        const t0 = Date.now();
+        const seen = { last: 'none', closed: false, reopened: false, acts: [] };
+        while (Date.now() - t0 < ms) {
+            const act = w().navMiniTollExitTick();
+            seen.last = act;
+            if (seen.acts.length < 12 && seen.acts[seen.acts.length - 1] !== act) seen.acts.push(act);
+            if (act === 'close') seen.closed = true;
+            if (act === 'reopen') seen.reopened = true;
+            await wait(step || 120);
+        }
+        return seen;
+    }
+    function resetAll() {
+        const cw = w();
+        cw.MM_TOLL_EXIT_GRACE_MS = 15000;
+        cw.__appConfig = Object.assign({}, cw.__appConfig || {}, { miniMapAutoCloseTollExit: true, miniMapAutoOpenTollOnly: true });
+        cw.renderMiniMapAutoOpenSettings();
+        try { cw.navMiniSetTolls(null); } catch (e) {}
+        try { cw.navMiniHide(true); } catch (e) {}
+        try { cw.isManualRunning = false; } catch (e) {}
+        try { cw.setUserTollMode(false); } catch (e) {}
+    }
+
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            await closeAllModals();
+            await wait(100);
+            const out = await Promise.race([fn(), wait(40000).then(() => { throw new Error('สถานการณ์ timeout 40 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ไม่ผ่าน</span> ' + name + '\n<span class="detail">' + ((e && e.message) ? e.message : e) + '</span>';
+            failCount++;
+            failures.push(name + ' → ' + ((e && e.message) ? e.message : e));
+        }
+        renderSummary();
+    }
+
+    function renderSummary() {
+        summaryEl.innerHTML = 'ผลรวม: <span style="color:var(--green)">ผ่าน ' + passCount + '</span> / ' +
+            '<span style="color:' + (failCount ? 'var(--red)' : '#e6e9f0') + '">' + (passCount + failCount) + '</span>' +
+            (failCount ? ' — <span style="color:var(--red)">ล้มเหลว ' + failCount + '</span>' : ' — ✅ ครบทุกสถานการณ์');
+        const n = (w() && w().__net) ? w().__net : { blockedFetch: 0, blockedXhr: 0 };
+        offlineEl.textContent = 'สถานะเน็ต: บล็อกคำขอออกนอกเครื่อง ' + (n.blockedFetch + n.blockedXhr) + ' ครั้ง (fetch ' + n.blockedFetch + ' · xhr ' + n.blockedXhr + ')';
+    }
+
+    // ============================ ชุดสถานการณ์ ============================
+    async function runAll() {
+        resultsEl.innerHTML = ''; passCount = 0; failCount = 0; failures.length = 0;
+        await loadApp();
+        const cw = w();
+        resetAll();
+
+        // ---------- ① กติกาล้วน ----------
+        await runScenario('S1 · มีตัวคุม “ยุบแผนที่เองเมื่อออกจากทางด่วน” ในหน้าตั้งค่าจริง · ค่าเริ่มต้น = เปิด', async () => {
+            const box = el('miniMapAutoCloseTollExit');
+            assert(box, 'ไม่พบสวิตช์ id="miniMapAutoCloseTollExit" ในหน้าตั้งค่า (แอดมินหาไม่เจอ = ปิดไม่ได้)');
+            const wrap = box.closest('.app-switch');
+            assert(wrap && wrap.querySelector('.app-slider'), 'สวิตช์ต้องเป็นแบบเลื่อน (.app-switch + .app-slider) ตามด่าน switch-check');
+            const txt = (box.closest('label') ? box.closest('label').textContent : '');
+            assert(txt.indexOf('ยุบ') >= 0 && txt.indexOf('ออกจากทางด่วน') >= 0, 'ชื่อสวิตช์ไม่สื่อ: ' + txt.slice(0, 90));
+            assert(box.checked === true, 'ค่าเริ่มต้นต้องเป็นเปิด (ผู้ใช้สั่งให้ยุบเอง)');
+            assert(cw.miniMapAutoCloseTollExit() === true, 'ตัวอ่านค่าต้องคืน true เป็นค่าเริ่มต้น');
+            assert(typeof cw.setMiniMapAutoCloseTollExit === 'function', 'ไม่พบตัวเขียนค่า (แอดมินบันทึกไม่ได้)');
+            cw.__appConfig = Object.assign({}, cw.__appConfig, { miniMapAutoCloseTollExit: false });
+            assert(cw.miniMapAutoCloseTollExit() === false, 'ปิดในหน้าตั้งค่าแล้วตัวอ่านค่ายังคืน true');
+            cw.__appConfig = Object.assign({}, cw.__appConfig, { miniMapAutoCloseTollExit: true });
+            return 'สวิตช์อยู่ในหน้าตั้งค่า · เป็นสวิตช์เลื่อน · ค่าเริ่มต้นเปิด · อ่าน/เขียนค่าได้ (ปิดแล้วอ่านได้ false) ✅';
+        });
+
+        await runScenario('S2 · กติกาตัดสิน: อยู่ในทางด่วนห้ามยุบ · ออกนอกทางด่วนครบเวลาจึงยุบ', async () => {
+            const D = cw.__mmTollExitDecide;
+            assert(typeof D === 'function', 'ไม่พบกติกาล้วน __mmTollExitDecide()');
+            const base = { setting: true, userClosed: false, auto: true, hidden: false, graceMs: 15000 };
+            const cases = [
+                ['อยู่ในทางด่วน', Object.assign({}, base, { open: true, zone: 'toll', cityMs: 999999 }), 'none'],
+                ['ออกนอกทางด่วน 5 วิ (ยังไม่ครบ 15)', Object.assign({}, base, { open: true, zone: 'city', cityMs: 5000 }), 'wait'],
+                ['ออกนอกทางด่วน 15 วิ (ครบพอดี)', Object.assign({}, base, { open: true, zone: 'city', cityMs: 15000 }), 'close'],
+                ['ออกนอกทางด่วน 40 วิ', Object.assign({}, base, { open: true, zone: 'city', cityMs: 40000 }), 'close'],
+                ['ยังไม่รู้ตำแหน่งบนเส้นทาง', Object.assign({}, base, { open: true, zone: 'unknown', cityMs: 40000 }), 'none'],
+                ['แผนที่ไม่ได้แสดงและไม่ได้ยุบ', Object.assign({}, base, { open: false, hidden: false, zone: 'city', cityMs: 40000 }), 'none'],
+                ['ยุบอยู่ + เข้าทางด่วนอีกช่วง', Object.assign({}, base, { open: false, hidden: true, zone: 'toll', cityMs: 0 }), 'reopen'],
+                ['ยุบอยู่ + ยังอยู่นอกทางด่วน', Object.assign({}, base, { open: false, hidden: true, zone: 'city', cityMs: 40000 }), 'none']
+            ];
+            const bad = cases.filter(([n, o, exp]) => D(o) !== exp).map(([n, o, exp]) => n + ' → ' + D(o) + ' (ควร ' + exp + ')');
+            assert(bad.length === 0, bad.join(' · '));
+            return cases.map(([n, o, exp]) => n + ' = ' + exp).join(' · ');
+        });
+
+        await runScenario('S3 · เคารพเจตนาผู้ใช้: คนกดเปิดเอง / กด ✕ เอง ต้องไม่ถูกยุบให้', async () => {
+            const D = cw.__mmTollExitDecide;
+            const out = {
+                userOpened: D({ setting: true, auto: false, open: true, hidden: false, zone: 'city', cityMs: 999999 }),
+                userClosed: D({ setting: true, auto: true, userClosed: true, open: true, hidden: false, zone: 'city', cityMs: 999999 }),
+                adminOff: D({ setting: false, auto: true, open: true, hidden: false, zone: 'city', cityMs: 999999 })
+            };
+            assert(out.userOpened === 'none', 'ผู้ใช้กดเปิดเองแล้วระบบยังจะยุบให้ (ผิด): ' + out.userOpened);
+            assert(out.userClosed === 'none', 'ผู้ใช้กด ✕ เองแล้วระบบยังยุ่ง (ผิด): ' + out.userClosed);
+            assert(out.adminOff === 'none', 'แอดมินปิดตัวคุมแล้วระบบยังยุบอยู่ (ผิด): ' + out.adminOff);
+            return 'เปิดเอง → none ✅ · กด ✕ เอง → none ✅ · แอดมินปิดตัวคุม → none ✅';
+        });
+
+        await runScenario('S4 · ผูกกับสถานะจริงของมอดูล: autoTollOpened / userClosedThisTrip / pref.hidden มีผลจริง', async () => {
+            const D = cw.__mmTollExitDecide;
+            armTollTrip();
+            assert(isShown(), 'เที่ยวทางด่วนต้องเปิดแผนที่เองก่อน (กติกาเดิม) — แผนที่ไม่เปิด');
+            moveTo(6, 60);
+            setTollSpan(0.3, 1.2);            // รถอยู่บนช่วงทางด่วน
+            cw.MM_TOLL_EXIT_GRACE_MS = 1500;
+            const inToll = await tickFor(2200);
+            assert(inToll.closed === false && isShown(), 'อยู่บนทางด่วนแต่ระบบยุบแผนที่ (ผิด): ' + JSON.stringify(inToll.acts));
+            moveTo(30, 60);                    // ออกนอกช่วงทางด่วนแล้ว
+            const act = await tickFor(2400);
+            assert(act.closed === true, 'ออกจากทางด่วนแล้วไม่ยุบ (acts=' + JSON.stringify(act.acts) + ')');
+            assert(isShown() === false, 'ยังแสดงแผนที่อยู่ทั้งที่สั่งยุบ');
+            assert(dbg().hidden === true, 'สถานะภายในไม่ใช่ “ยุบ” (pref.hidden ต้องเป็น true)');
+            const b = blueBtn();
+            assert(b && b.hidden === false, 'ไม่ขึ้นปุ่มเปิดสีฟ้า (ผู้ใช้จะเปิดกลับไม่ได้)');
+            assert(b.blue === true, 'ปุ่มเปิดขึ้นแต่ไม่ใช่สีฟ้า (map-ready)');
+            return 'อยู่บนทางด่วน (km ' + along().toFixed(2) + ') → ไม่ยุบ · ออกนอกทางด่วน → ยุบเอง · pref.hidden = true · ปุ่มเปิดสีฟ้าขึ้น ✅';
+        });
+
+        await runScenario('S5 · ยุบแล้วขับเข้าทางด่วนช่วงที่สอง → ระบบเปิดเองอีกครั้ง (ไม่ต้องกดเอง)', async () => {
+            armTollTrip();
+            moveTo(4, 60);
+            setTollSpan(0.3, 1.0);
+            cw.MM_TOLL_EXIT_GRACE_MS = 1200;
+            moveTo(28, 60);
+            assert((await tickFor(2000)).closed === true, 'รอบแรก: ต้องยุบก่อน');
+            assert(isShown() === false, 'รอบแรก: แผนที่ยังแสดงอยู่');
+            // ต่อช่วงทางด่วนช่วงที่สอง (km 2.6–3.4) แล้วขับเข้าไป
+            setTollSpan(2.6, 3.4);
+            moveTo(30, 60);
+            const back = await tickFor(1200);
+            assert(back.reopened === true, 'เข้าทางด่วนช่วงถัดไปแล้วไม่เปิดเอง (acts=' + JSON.stringify(back.acts) + ')');
+            // ยืนยัน “เปิดอยู่จริง” — ถ้าจังหวะ DOM สะดุดชั่วขณะให้ยิง tick ซ้ำ (บนช่วงทางด่วน tick ต้องเปิดค้าง ไม่มีทางปิด)
+            let opened = isShown() && dbg().hidden === false;
+            if (!opened) { await wait(600); moveTo(30, 60); cw.navMiniTollExitTick(); opened = isShown() && dbg().hidden === false; }
+            const d2 = dbg();
+            assert(opened, 'สั่งเปิดเองแล้วแต่แผนที่ยังไม่แสดง (acts=' + JSON.stringify(back.acts)
+                + ' vis=' + d2.visible + ' hid=' + d2.hidden + ' zone=' + JSON.stringify(cw.navMiniTollZone())
+                + ' canAuto=' + cw.canMiniMapAutoOpen() + ')');
+            return 'ยุบก่อน ✅ → เข้าทางด่วนช่วงที่สอง (km ' + along().toFixed(2) + ') → เปิดเองอัตโนมัติ ✅';
+        });
+
+        await runScenario('S6 · ผู้ใช้กดเปิดเอง (ปุ่มสีฟ้า) แล้วออกนอกทางด่วน → ต้องไม่ถูกยุบให้', async () => {
+            armTollTrip();
+            moveTo(4, 60);
+            setTollSpan(0.3, 1.0);
+            cw.MM_TOLL_EXIT_GRACE_MS = 1200;
+            moveTo(28, 60);
+            assert((await tickFor(2000)).closed === true, 'เตรียมสถานะ: ต้องยุบก่อน');
+            cw.navMiniReopen();                      // 🔵 ผู้ใช้กดปุ่มเปิดเอง
+            assert(isShown(), 'กดปุ่มเปิดกลับมาแล้วแต่แผนที่ยังไม่แสดง');
+            const act = await tickFor(2200);
+            assert(act.closed === false, 'ผู้ใช้เปิดเอง แต่ระบบยังยุบให้ (acts=' + JSON.stringify(act.acts) + ')');
+            assert(isShown() === true, 'ผู้ใช้เปิดเองแล้วถูกยุบให้ (ผิด — ต้องเคารพเจตนา)');
+            return 'กดปุ่มเปิดเอง → ระบบไม่ยุบให้แม้ออกนอกทางด่วนแล้ว ✅';
+        });
+
+        await runScenario('S7 · ผู้ใช้กด ✕ เองกลางเที่ยว → ระบบต้องไม่เปิดคืนเองตอนเข้าทางด่วนช่วงถัดไป', async () => {
+            armTollTrip();
+            moveTo(4, 60);
+            setTollSpan(0.3, 1.0);
+            cw.MM_TOLL_EXIT_GRACE_MS = 1200;
+            cw.navMiniHideByUser();                  // ✕ โดยผู้ใช้
+            assert(isShown() === false, 'กด ✕ แล้วแผนที่ยังแสดงอยู่');
+            setTollSpan(2.6, 3.4);
+            moveTo(30, 60);
+            const act = await tickFor(1600);
+            assert(act.reopened === false && act.closed === false, 'กด ✕ เองแล้วระบบยังเปิดคืน/ยุบให้: ' + JSON.stringify(act.acts));
+            assert(isShown() === false, 'กด ✕ เองแล้วแผนที่โผล่กลับมาเอง (ผิด)');
+            return 'กด ✕ เอง → เข้าทางด่วนช่วงถัดไปก็ยังไม่เปิดคืน ✅ (กติกาเดิมยังอยู่)';
+        });
+
+        await runScenario('S8 · แอดมินปิดตัวคุม → พฤติกรรมเดิมกลับมา (แผนที่ค้างเปิดจนจบเที่ยว)', async () => {
+            armTollTrip();
+            cw.__appConfig = Object.assign({}, cw.__appConfig, { miniMapAutoCloseTollExit: false });
+            cw.renderMiniMapAutoOpenSettings();
+            assert(el('miniMapAutoCloseTollExit').checked === false, 'ปิดตัวคุมแล้วสวิตช์ในหน้าตั้งค่าไม่สะท้อนค่า');
+            moveTo(4, 60);
+            setTollSpan(0.3, 1.0);
+            cw.MM_TOLL_EXIT_GRACE_MS = 800;
+            moveTo(30, 60);
+            const act = await tickFor(1600);
+            assert(act.closed === false, 'ปิดตัวคุมแล้วยังยุบอยู่ (ผิด): acts=' + JSON.stringify(act.acts));
+            assert(isShown() === true, 'ปิดตัวคุมแล้วแผนที่ถูกยุบ (พฤติกรรมเดิมหายไป)');
+            cw.__appConfig = Object.assign({}, cw.__appConfig, { miniMapAutoCloseTollExit: true });
+            cw.renderMiniMapAutoOpenSettings();
+            assert(el('miniMapAutoCloseTollExit').checked === true, 'เปิดตัวคุมกลับแล้วสวิตช์ไม่สะท้อนค่า');
+            return 'ปิดตัวคุม → ไมยุบ (แผนที่ค้างเปิด) ✅ · สวิตช์ในหน้าตั้งค่าสะท้อนค่าทั้งเปิด/ปิด ✅';
+        });
+
+        await runScenario('S9 · ไม่อนุญาตให้เปิดเองเมื่ออยู่ “นอก” ทางด่วน (กันเปิดเองผิดกติกาหลังรีเฟรช)', async () => {
+            armTollTrip();
+            moveTo(4, 60);
+            setTollSpan(0.3, 1.0);
+            moveTo(30, 60);                          // อยู่นอกช่วงทางด่วน
+            const allowedOutside = cw.miniMapZoneAllowsAutoOpen();
+            assert(allowedOutside === false, 'อยู่นอกทางด่วนแล้วยังอนุาตให้ระบบเปิดเอง (ผิด)');
+            cw.navMiniSetTolls(null);
+            const allowedUnknown = cw.miniMapZoneAllowsAutoOpen();
+            assert(allowedUnknown === true, 'ยังไม่รู้ตำแหน่งบนเส้นทาง กลับไม่อนุาตให้เปิดเอง (ต้นเที่ยวจะไม่เปิด)');
+            cw.__appConfig = Object.assign({}, cw.__appConfig, { miniMapAutoCloseTollExit: false });
+            cw.renderMiniMapAutoOpenSettings();
+            assert(cw.miniMapZoneAllowsAutoOpen() === true, 'ปิดตัวคุมแล้วต้องกลับไปใช้กติกาเดิม (อนุาตเสมอ)');
+            cw.__appConfig = Object.assign({}, cw.__appConfig, { miniMapAutoCloseTollExit: true });
+            return 'อยู่ในทางด่วน/ยังไม่รู้ตำแหน่ง = เปิดเองได้ · ออกนอกแล้ว = ห้ามเปิดเอง · ปิดตัวคุม = กติกาเดิม ✅';
+        });
+
+        await runScenario('S10 · ไม่กินโควตา TomTom เลยแม้แต่ครั้งเดียวจากการยุบเอง (และไม่ยิงเน็ตเพิ่ม)', async () => {
+            armTollTrip();
+            moveTo(4, 60);
+            setTollSpan(0.3, 1.0);
+            cw.MM_TOLL_EXIT_GRACE_MS = 900;
+            // นับคำขอ TomTom จริง: ครอบตัวนับของแอปไว้ (TomTom เรียกผ่าน window.countTomTomCall)
+            const realCount = cw.countTomTomCall;
+            let ttCalls = 0;
+            cw.countTomTomCall = function () { ttCalls++; return realCount ? realCount.apply(null, arguments) : null; };
+            const before = { today: (cw.tomtomUsageToday() || {}).route || 0, month: (cw.tomtomUsageMonth() || {}).route || 0 };
+            const netBefore = { blockedFetch: cw.__net.blockedFetch, blockedXhr: cw.__net.blockedXhr, lastUrl: cw.__net.lastUrl };
+            moveTo(30, 60);
+            await tickFor(2400);
+            const after = { today: (cw.tomtomUsageToday() || {}).route || 0, month: (cw.tomtomUsageMonth() || {}).route || 0 };
+            const ttBlocked = (/tomtom/i.test(cw.__net.lastUrl || '') && cw.__net.blockedFetch > netBefore.blockedFetch) ? 1 : 0;
+            cw.countTomTomCall = realCount;
+            assert(ttCalls === 0, 'ระหว่างยุบเองมีการเรียกตัวนับโควตา TomTom ' + ttCalls + ' ครั้ง (ต้องเป็น 0)');
+            assert(after.today === before.today && after.month === before.month,
+                'ตัวนับโควตาขยับ: วัน ' + before.today + '→' + after.today + ' · เดือน ' + before.month + '→' + after.month);
+            assert(ttBlocked === 0, 'มีการยิงคำขอไป TomTom ระหว่างยุบเอง');
+            return 'คำขอ TomTom = 0 ครั้ง (นับจากตัวนับจริง) · ตัวนับโควตาไม่ขยับ (วัน/เดือนเท่าเดิม) ✅';
+        });
+
+        await runScenario('S11 · สายไฟในโค้ดจริง: ตัวจับเวลามิเตอร์เรียกตัวเฝ้า + ยุบผ่านทางที่อนุาต (ไม่เรียก show() เอง)', async () => {
+            const res = await fetch('../index.html?cb=' + Date.now());
+            const src = await res.text();
+            const need = [
+                ['กติกาล้วน __mmTollExitDecide', /window\.__mmTollExitDecide = \(o\) =>/],
+                ['ตัวเฝ้ารายวินาที', /window\.navMiniTollExitTick = function \(\)/],
+                ['เรียกจากตัวจับเวลาจริง', /if \(typeof window\.navMiniTollExitTick === 'function'\) \{ try \{ window\.navMiniTollExitTick\(\); \} catch \(e\) \{\} \}/],
+                ['สวิตช์ในหน้าตั้งค่าจริง', /id="miniMapAutoCloseTollExit"/],
+                ['อ่านค่าจาก config', /window\.miniMapAutoCloseTollExit = \(\) =>/],
+                ['เขียนค่า settings/app_config', /miniMapAutoCloseTollExit: target/],
+                ['กันเปิดเองเมื่อพ้นทางด่วน', /if \(window\.miniMapTripIsToll\(\) && !window\.miniMapZoneAllowsAutoOpen\(\)\) return false;/],
+                ['เปิดเองผ่าน autoOpenAtStart (ทางเดียวที่อนุาต)', /else if \(act === 'reopen'\) \{/],
+                ['ตั้ง autoTollOpened ตอนเปิดโดยระบบ', /autoTollOpened = true;   \/\/ 🛣️ เปิดโดยระบบ/],
+                ['ล้างค่าเมื่อผู้ใช้เปิดเอง', /autoTollOpened = false;   \/\/ 🛣️ ผู้ใช้เปิดเอง/],
+                ['ล้างค่าเมื่อผู้ใช้กด ✕ เอง', /autoTollOpened = false;      \/\/ 🛣️ ผู้ใช้ปิดเอง/]
+            ];
+            const miss = need.filter(([n, re]) => !re.test(src)).map(([n]) => n);
+            assert(miss.length === 0, 'โค้ดจริงขาดสายไฟ: ' + miss.join(' · '));
+            // ⛔ บล็อกใหม่ต้องไม่เรียก show() ตรง ๆ (ต้องผ่าน autoOpenAtStart เท่านั้น)
+            const blk = src.slice(src.indexOf('window.navMiniTollExitTick = function ()'), src.indexOf('window.navMiniSetTolls = function (t)'));
+            assert(blk.length > 100, 'อ่านบล็อกตัวเฝ้าไม่ได้ (โค้ดเปลี่ยนโครงสร้าง)');
+            assert(blk.indexOf('show()') < 0, 'ตัวเฝ้าเรียก show() ตรง ๆ (ต้องผ่าน autoOpenAtStart เท่านั้น)');
+            assert(blk.indexOf('pref.hidden = false') < 0, 'ตัวเฝ้าตั้ง pref.hidden = false เอง (ห้าม — ต้องผ่าน autoOpenAtStart)');
+            return 'สายไฟ ' + need.length + ' จุดครบ · บล็อกตัวเฝ้าไม่เรียก show()/pref.hidden=false เอง ✅ (ผ่านด่าน minimap-start-guard)';
+        });
+
+        resetAll();
+        renderSummary();
+        summaryEl.innerHTML += failures.length
+            ? ' — <span style="color:var(--red)">ดูรายการที่ล้มเหลวด้านบน</span>'
+            : ' — 🎉 ทั้งชุดผ่าน';
+        try { console.log('[toll-exit-test] DONE', { passCount: passCount, failCount: failCount, failures: failures }); } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', () => { runAll().catch(e => { summaryEl.textContent = 'ชุดทดสอบล้ม: ' + (e && e.message ? e.message : e); }); });
+    document.getElementById('dbgBtn').addEventListener('click', () => {
+        const cw = w();
+        alert(JSON.stringify({
+            role: cw.__testRole || '(ไม่ตั้ง)',
+            shown: isShown(), dbg: dbg(), btn: blueBtn(),
+            setting: cw.miniMapAutoCloseTollExit ? cw.miniMapAutoCloseTollExit() : null,
+            zoneAllows: cw.miniMapZoneAllowsAutoOpen ? cw.miniMapZoneAllowsAutoOpen() : null,
+            zone: (cw.navMiniTollZone ? cw.navMiniTollZone() : null),
+            grace: cw.MM_TOLL_EXIT_GRACE_MS
+        }, null, 2));
+    });
+    window.addEventListener('load', () => { runAll().catch(e => { summaryEl.textContent = 'ชุดทดสอบล้ม: ' + (e && e.message ? e.message : e); }); });
+})();
+</script>
+</body>
+</html>

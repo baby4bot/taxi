@@ -406,11 +406,21 @@
             const txt = await res.text();
             const call = 'if (window.canMiniMapAutoOpen && window.canMiniMapAutoOpen()) { autoOpenAtStart(); }';
             const callCount = txt.split(call).length - 1;
-            assert(callCount === 2, 'ต้องมีการเรียก canMiniMapAutoOpen() 2 จุด (เริ่มเที่ยว + กลับเข้าแอป) แต่พบ ' + callCount);
+            // 🛣️ (19 ก.ย. 69) มีจุดเรียกเพิ่มได้ (เช่นตอนเข้าทางด่วนช่วงถัดไปของงาน “ยุบเองเมื่อออกจากทางด่วน”)
+            //    ⇒ เช็ค “อย่างน้อย 2” + ต้องอยู่ในบล็อกของเส้นทางเริ่มแผนที่ทั้งสองจริง (ไม่ใช่ย้ายไปที่อื่นแล้วเหลือแต่ตัวเลข)
+            assert(callCount >= 2, 'ต้องมีการเรียก canMiniMapAutoOpen() อย่างน้อย 2 จุด (เริ่มเที่ยว + กลับเข้าแอป) แต่พบ ' + callCount);
+            const blockHasCall = (marker) => {
+                const i = txt.indexOf(marker);
+                if (i < 0) return false;
+                const nextTop = txt.indexOf('\n    window.', i + marker.length);
+                return txt.slice(i, nextTop > 0 ? nextTop : txt.length).indexOf(call) >= 0;
+            };
+            assert(blockHasCall('window.startNavigationMap = function ('), 'บล็อก startNavigationMap ไม่ผ่าน canMiniMapAutoOpen() แล้ว (เปิดเองผิดกติกา)');
+            assert(blockHasCall('window.navMiniResume = function'), 'บล็อก navMiniResume ไม่ผ่าน canMiniMapAutoOpen() แล้ว (เปิดเองผิดกติกา)');
             assert(txt.indexOf('function autoOpenAtStart()') >= 0, 'ไม่พบ autoOpenAtStart()');
             assert(txt.indexOf('if (userClosedThisTrip) { hideNow(); return false; }') >= 0, 'ไม่มีการกัน “ผู้ใช้ปิดเอง” ใน autoOpenAtStart()');
             assert(txt.indexOf("{ id: 'perm_miniMapAutoOpen'") >= 0, 'ไม่พบสวิตช์ perm_miniMapAutoOpen ในรายการสิทธิ์');
-            return 'พบครบ: จุดเรียก 2 ที่ · autoOpenAtStart · กันผู้ใช้ปิดเอง · สวิตช์ในรายการสิทธิ์ ✅';
+            return 'พบครบ: จุดเรียก ' + callCount + ' ที่ (ครบทั้ง 2 เส้นทางเริ่มแผนที่) · autoOpenAtStart · กันผู้ใช้ปิดเอง · สวิตช์ในรายการสิทธิ์ ✅';
         });
 
         renderSummary();
