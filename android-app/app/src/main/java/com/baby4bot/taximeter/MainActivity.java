@@ -63,6 +63,7 @@ public class MainActivity extends Activity {
     private static final int REQ_PERMS = 1001;
     private static final int REQ_FILE = 1002;
     private static final int REQ_GOOGLE = 1003;
+    // 🔓 (20 ก.ย. 69) คำขอ “ยืนยันด้วยรหัสเครื่อง” ผ่านหน้า Keyguard (ดู DeviceUnlock.REQ)
 
     private WebView web;
     private ValueCallback<Uri[]> filePathCallback;
@@ -306,6 +307,8 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
+        // 🔓 ผลจากหน้า “ยืนยันรหัสเครื่อง” (Android 8–9 หรือเครื่องที่ไม่มีเซนเซอร์) — คืนผลให้หน้าเว็บต่อ
+        if (DeviceUnlock.onActivityResult(this, req, res)) return;
         if (req == REQ_GOOGLE) {
             try {
                 GoogleSignInAccount acc = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException.class);
@@ -415,6 +418,33 @@ public class MainActivity extends Activity {
         });
     }
 
+    /** 🔓 ส่งผลลัพธ์ของ “ปลดล็อกด้วยเครื่อง” กลับให้หน้าเว็บ (เธรด UI ของแอป) */
+    private void sendDeviceUnlockResult(String reqId, boolean ok, String credId, String err) {
+        final String script = "window.__onNativeDeviceUnlock(" + JSONObject.quote(reqId == null ? "" : reqId) + ","
+                + (ok ? "true" : "false") + ","
+                + JSONObject.quote(credId == null ? "" : credId) + ","
+                + (err == null ? "null" : JSONObject.quote(err)) + ");";
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (web != null) web.evaluateJavascript(script, null);
+                } catch (Exception ignored) {
+                }
+            }
+        });
+    }
+
+    /** 🔓 ตัวรับผลจากชั้น DeviceUnlock → แปลงเป็นสคริปต์ให้หน้าเว็บ (เรียกจาก UI thread แล้ว) */
+    private DeviceUnlock.Cb deviceUnlockCb(final String reqId) {
+        return new DeviceUnlock.Cb() {
+            @Override
+            public void done(boolean ok, String credId, String err) {
+                sendDeviceUnlockResult(reqId, ok, credId, err);
+            }
+        };
+    }
+
     // 🔋 (18 ก.ย. 69) ขอยกเว้น "การประหยัดแบตเตอรี่" หนึ่งครั้งต่อการติดตั้ง — ครั้งแรกที่เริ่มจับเที่ยว
     //    ทำไมต้องมี: ถ้าไม่ยกเว้น ระบบจะเข้าสู่ Doze เมื่อจอดับ → หยุดส่งพิกัดให้แอป
     //    ⇒ ช่วงนั้นแอปไม่มีหลักฐานว่าวิ่งหรือจอด = "เวลารถติด" เพี้ยน (ต้นเหตุที่ผู้ใช้แจ้ง)
@@ -480,6 +510,57 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public boolean isNativeApp() {
             return true;
+        }
+
+        // ─────────────────────────── 🔓 ปลดล็อกด้วยเครื่อง (ลายนิ้วมือ/ใบหน้า/รหัสเครื่อง) ───────────────────────────
+        //  ทำไมต้องมีสะพานนี้: WebAuthn (navigator.credentials) ใช้ใน Android WebView ไม่ได้
+        //  ⇒ บน APK ปุ่ม “ลงทะเบียนปลดล็อกด้วยเครื่อง” เดิมขึ้นว่าใช้ไม่ได้ทุกครั้ง (ผู้ใช้แจ้ง 20 ก.ย. 69)
+        //  ฝั่งเว็บตัดสินใจจาก hasNativeDeviceUnlock() → ใช้เส้นทางนี้แทน WebAuthn
+
+        /** APK รุ่นนี้มีสะพานปลดล็อกด้วยเครื่องหรือยัง (รุ่นเก่าจะไม่มีเมธอดนี้ → undefined) */
+        @JavascriptInterface
+        public boolean hasNativeDeviceUnlock() {
+            return true;
+        }
+
+        /** เครื่องนี้มีลายนิ้วมือ/ใบหน้า/รหัสเครื่องให้ใช้ไหม */
+        @JavascriptInterface
+        public boolean deviceUnlockAvailable() {
+            return DeviceUnlock.available(MainActivity.this);
+        }
+
+        /** ลงทะเบียนเครื่องนี้ให้บัญชี uid — ผลลัพธ์ส่งกลับทาง window.__onNativeDeviceUnlock(reqId, ok, credId, err) */
+        @JavascriptInterface
+        public void deviceUnlockEnroll(final String uid, final String reqId) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    DeviceUnlock.start(MainActivity.this, uid, true, deviceUnlockCb(reqId));
+                }
+            });
+        }
+
+        /** ยืนยันตัวตนด้วยหน้าปลดล็อกของเครื่อง (ต้องลงทะเบียนไว้ก่อน) */
+        @JavascriptInterface
+        public void deviceUnlockAuth(final String uid, final String reqId) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    DeviceUnlock.start(MainActivity.this, uid, false, deviceUnlockCb(reqId));
+                }
+            });
+        }
+
+        /** ลงทะเบียนเครื่องนี้ให้บัญชีนี้ไว้แล้วหรือยัง (อ่านจากที่เก็บของแอป — ไม่ใช่ของหน้าเว็บ) */
+        @JavascriptInterface
+        public boolean deviceUnlockHas(final String uid) {
+            return DeviceUnlock.has(MainActivity.this, uid);
+        }
+
+        /** ยกเลิกการลงทะเบียนของบัญชีนี้ */
+        @JavascriptInterface
+        public boolean deviceUnlockRemove(final String uid) {
+            return DeviceUnlock.remove(MainActivity.this, uid);
         }
 
         /** APK รุ่นนี้รองรับล็อกอิน Google ในตัวหรือยัง (ฝั่งเว็บใช้ตัดสินว่าโชว์ปุ่มหรือบอกให้ใช้ไอดี/PIN) */

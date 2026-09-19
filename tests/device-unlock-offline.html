@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — “ปลดล็อกด้วยเครื่อง” (ลายนิ้วมือ/ใบหน้า) บน APK + เบราว์เซอร์</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: “ปลดล็อกด้วยเครื่อง” (APK + เบราว์เซอร์)</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?...</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ไม่เขียน Firestore
+        <br><b>สิ่งที่ผู้ใช้แจ้ง (20 ก.ย. 69):</b> *“ปุ่มลงทะเบียนปลดล็อกด้วยลายนิ้วมือ ถ้าใช้ผ่านโทรศัพท์มันใช้ไม่ได้ มันเคยใช้ได้อยู่แล้ว”*
+        <br><b>สาเหตุจริง:</b> WebAuthn (<code>navigator.credentials</code>) <b>ใช้ไม่ได้ใน Android WebView</b> (Okta/Duo ยืนยันตรงกัน)
+        ⇒ ใน APK ปุ่มนี้ขึ้น “เครื่องนี้/ที่อยู่นี้ยังใช้ไม่ได้” ทุกเครื่อง · ใน Chrome มือถือยังใช้ได้
+        <br><b>วิธีแก้:</b> เพิ่มสะพาน <code>TaxiNative.hasNativeDeviceUnlock</code> ให้ APK เรียก “หน้าปลดล็อกของระบบ” (DeviceUnlock.java — framework BiometricPrompt/Keyguard, ไม่เพิ่ม dependency)
+        <br>⇒ ต้องพิสูจน์: ① เลือกเส้นทางถูก (มีสะพาน = ใช้อุปกรณ์ · ไม่มี = ใช้ WebAuthn) ② ลงทะเบียนแล้วจำได้ทั้งสองที่ (แอป + เว็บ)
+        ③ ยกเลิกในแอป = ปุ่มกลับเป็น “ลงทะเบียน” ④ ตอบกลับผิดคำขอ/หมดเวลา ต้องไม่ค้าง ⑤ ยังเคารพสิทธิ์ “ปลดล็อกด้วยเครื่อง”
+        ⑥ ข้อความบนหน้าจอบอกสาเหตุตรงจุด (ไม่ขึ้นข้อความ WebAuthn งง ๆ อีก) ⑦ ไม่ยิงคำขอออกเน็ต/ไม่เขียน Firestore
+        ⑧ ข้อความเมื่อไม่สำเร็จเป็นภาษาไทยทุกกรณี (เดิมโชว์รหัสดิบอย่าง <code>error-13</code>)
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/device-unlock-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (15 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        stubsInstalled = true;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0 };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (method, url) {
+                const u = String(url);
+                const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+                if (!isLocal) { cw.__net.blockedXhr++; x.send = function () {}; return; }
+                return open.apply(null, arguments);
+            };
+            return x;
+        };
+        cw.__toasts = [];
+        try { cw.showToast = function (msg, isErr) { cw.__toasts.push(String(msg)); }; } catch (e) {}
+    }
+
+    async function bootApp(force) {
+        stubsInstalled = false;
+        if (force || frame.src === 'about:blank') {
+            frame.src = '../index.html?fsNowrite=1&devUnlockTest=1&t=' + Date.now();
+        }
+        const t0 = Date.now();
+        while (Date.now() - t0 < 220000) {
+            await wait(700);
+            try {
+                const cw = w();
+                installStubs();
+                if (cw && cw.devUnlockCore && cw.document.getElementById('mainApp') && cw.document.getElementById('mainApp').style.display === 'flex') {
+                    await wait(600);
+                    return true;
+                }
+            } catch (e) { /* ระหว่างโหลดข้ามโดเมนชั่วคราว */ }
+        }
+        throw new Error('แอปไม่บูตภายในเวลาที่กำหนด (220 วิ)');
+    }
+
+    function log(name, ok, detail) {
+        const li = document.createElement('li');
+        li.className = ok ? 'pass' : 'fail';
+        li.innerHTML = '<span class="st">' + (ok ? '✅' : '❌') + ' ' + name + '</span><div class="detail">' + (detail || '') + '</div>';
+        resultsEl.appendChild(li);
+    }
+
+    async function T(name, fn) {
+        try {
+            const detail = await fn();
+            passCount++;
+            log(name, true, detail || '');
+        } catch (e) {
+            failCount++;
+            failures.push(name + ' → ' + e.message);
+            log(name, false, e.message);
+        }
+    }
+
+    // ============================ สะพานแอปจำลอง ============================
+    //  บันทึกทุกการเรียก + ตอบกลับทาง window.__onNativeDeviceUnlock เหมือนแอปจริง
+    function installFakeBridge(cw, opts) {
+        const o = opts || {};
+        o.enrolled = o.enrolled || {};
+        const calls = [];
+        const api = {
+            hasNativeDeviceUnlock: () => (o.bridgeVersion !== 'old'),
+            deviceUnlockAvailable: () => (o.available !== false),
+            deviceUnlockHas: (uid) => !!o.enrolled[uid],
+            deviceUnlockEnroll: (uid, reqId) => {
+                calls.push({ fn: 'enroll', uid: uid, reqId: reqId });
+                if (o.autoAnswer === false) return;
+                setTimeout(() => {
+                    const ok = (o.enrollOk !== false);
+                    if (ok) o.enrolled[uid] = 'CRED-NEW';
+                    cw.__onNativeDeviceUnlock(reqId, ok, ok ? 'CRED-NEW' : '', ok ? '' : 'canceled');
+                }, 10);
+            },
+            deviceUnlockAuth: (uid, reqId) => {
+                calls.push({ fn: 'auth', uid: uid, reqId: reqId });
+                if (o.autoAnswer === false) return;
+                setTimeout(() => {
+                    const ok = (o.authOk !== false);
+                    cw.__onNativeDeviceUnlock(reqId, ok, ok ? (o.enrolled[uid] || '') : '', ok ? '' : 'canceled');
+                }, 10);
+            },
+            deviceUnlockRemove: (uid) => { calls.push({ fn: 'remove', uid: uid }); delete o.enrolled[uid]; return true; }
+        };
+        cw.TaxiNative = api;
+        cw.__fake = { calls: calls, state: o, api: api };
+        return o;
+    }
+
+    // ============================ ชุดการทดสอบ ============================
+    async function run() {
+        resultsEl.innerHTML = '';
+        passCount = 0; failCount = 0; failures.length = 0;
+        document.getElementById('runBtn').disabled = true;
+        offlineEl.textContent = 'สถานะเน็ต: กำลังโหลดแอปจริงในไเฟรม (ตัดเน็ตทั้งชุด)...';
+        let cw;
+        try {
+            await bootApp(true);
+            cw = w();
+            assert(cw.devUnlockCore && typeof cw.devUnlockCore.enroll === 'function', 'ไม่พบ window.devUnlockCore (ยังไม่ได้ต่อกลไกปลดล็อกด้วยเครื่อง)');
+        } catch (e) {
+            log('บูตแอป', false, e.message);
+            summaryEl.textContent = 'สรุป: บูตแอปไม่สำเร็จ — ' + e.message;
+            document.getElementById('runBtn').disabled = false;
+            return;
+        }
+
+        // ---------- S1: ตรวจสะพานแอป (APK รุ่นใหม่ vs รุ่นเก่า vs เบราว์เซอร์) ----------
+        await T('S1 · ตรวจสะพานแอปถูกต้อง — APK ใหม่ / APK เก่า / เบราว์เซอร์', () => {
+            delete cw.TaxiNative;
+            assert(cw.devUnlockNative() === null, 'ไม่มีสะพาน = ต้องเป็น null (เบราว์เซอร์)');
+            cw.TaxiNative = {};                                  // APK รุ่นเก่า: มีสะพานแต่ยังไม่มีเมธอดนี้
+            assert(cw.devUnlockNative() === null, 'APK รุ่นเก่า (ไม่มี hasNativeDeviceUnlock) = ต้องเป็น null');
+            const whyOld = cw.devUnlockWhy();
+            assert(whyOld.indexOf('อัปเดตแอป') >= 0, 'APK รุ่นเก่าต้องบอกให้อัปเดตแอป (ได้: ' + whyOld + ')');
+            installFakeBridge(cw, {});
+            assert(cw.devUnlockNative() === cw.TaxiNative, 'APK รุ่นใหม่ = ต้องได้สะพานกลับมา');
+            return 'ไม่มีสะพาน → null · รุ่นเก่า → null + บอกให้อัปเดตแอป · รุ่นใหม่ → ใช้สะพาน';
+        });
+
+        // ---------- S2: ความพร้อมใช้ + ข้อความสาเหตุ ----------
+        await T('S2 · devUnlockSupported/why ตามที่เครื่องบอก (มีเซนเซอร์/ไม่มี/ไม่มีรหัสล็อกจอ)', () => {
+            installFakeBridge(cw, { available: true });
+            assert(cw.devUnlockSupported() === true, 'มีเซนเซอร์ = ใช้ได้');
+            assert(cw.devUnlockWhy() === '', 'ใช้ได้ = ไม่มีข้อความเตือน');
+            installFakeBridge(cw, { available: false });
+            assert(cw.devUnlockSupported() === false, 'ไม่มีเซนเซอร์/ไม่มีรหัสล็อกจอ = ใช้ไม่ได้');
+            const why = cw.devUnlockWhy();
+            assert(why.indexOf('รหัสล็อกจอ') >= 0, 'ต้องบอกให้ตั้งรหัสล็อกจอก่อน (ได้: ' + why + ')');
+            return 'พร้อมใช้ = true · ไม่พร้อม = false + “' + why.slice(0, 46) + '…”';
+        });
+
+        // ---------- S3: ลงทะเบียนผ่านสะพานแอป (เส้นทาง APK) ----------
+        await T('S3 · ลงทะเบียนบน APK → เรียกหน้าปลดล็อกของระบบ + จำไว้ทั้งฝั่งแอปและฝั่งเว็บ', async () => {
+            const st = installFakeBridge(cw, { available: true });
+            const r = await cw.devUnlockCore.enroll('uid-A');
+            assert(r.ok === true, 'ลงทะเบียนต้องสำเร็จ (ได้ err=' + r.err + ')');
+            assert(cw.__fake.calls.length === 1 && cw.__fake.calls[0].fn === 'enroll', 'ต้องเรียก deviceUnlockEnroll 1 ครั้ง');
+            assert(cw.__fake.calls[0].uid === 'uid-A', 'ต้องส่ง uid ของบัญชีไป (ได้ ' + cw.__fake.calls[0].uid + ')');
+            assert(!!cw.__fake.calls[0].reqId, 'ต้องส่งรหัสคำขอไปด้วย (ไว้จับคู่ผลลัพธ์)');
+            assert(st.enrolled['uid-A'] === 'CRED-NEW', 'ฝั่งแอปต้องจำ credential ไว้');
+            assert(cw.devUnlockHas('uid-A') === true, 'devUnlockHas ต้องเป็น true');
+            const mir = cw.devUnlockRead()['uid-A'];
+            assert(mir && mir.via === 'native', 'ฝั่งเว็บต้องจำว่าเป็นของ “แอป” (ได้ ' + (mir && mir.via) + ')');
+            return 'เรียก enroll 1 ครั้ง (uid + reqId) · ฝั่งแอป = CRED-NEW · ฝั่งเว็บ via=native';
+        });
+
+        // ---------- S4: ผู้ใช้กดยกเลิก = ไม่จำว่า “ลงทะเบียนแล้ว” ----------
+        await T('S4 · ผู้ใช้กดยกเลิกบนหน้าปลดล็อก → ไม่สำเร็จ และไม่ถูกจำว่าลงทะเบียน', async () => {
+            installFakeBridge(cw, { available: true, enrollOk: false });
+            const r = await cw.devUnlockCore.enroll('uid-B');
+            assert(r.ok === false, 'ต้องไม่สำเร็จ');
+            assert(r.err === 'canceled', 'ต้องบอกว่า “ถูกยกเลิก” (ได้ ' + r.err + ')');
+            assert(cw.devUnlockHas('uid-B') === false, 'ต้องไม่ถูกจำว่าลงทะเบียน');
+            return 'ok=false · err=canceled · devUnlockHas = false';
+        });
+
+        // ---------- S5: ยืนยันตัวตนผ่านสะพานแอป ----------
+        await T('S5 · ยืนยันตัวตนบน APK → เปิดหน้าปลดล็อกของระบบ (สำเร็จ/ถูกยกเลิก)', async () => {
+            const st = installFakeBridge(cw, { available: true, enrolled: { 'uid-C': 'CRED-C' } });
+            const ok = await cw.devUnlockCore.verify('uid-C');
+            assert(ok === true, 'ยืนยันสำเร็จต้องได้ true');
+            assert(cw.__fake.calls.filter(c => c.fn === 'auth').length === 1, 'ต้องเรียก deviceUnlockAuth 1 ครั้ง');
+            installFakeBridge(cw, { available: true, enrolled: { 'uid-C': 'CRED-C' }, authOk: false });
+            const no = await cw.devUnlockCore.verify('uid-C');
+            assert(no === false, 'ถูกยกเลิกต้องได้ false');
+            assert(st.enrolled['uid-C'] === 'CRED-C', 'การยืนยันล้มเหลวต้องไม่ลบการลงทะเบียน');
+            return 'สำเร็จ = true · ยกเลิก = false · การลงทะเบียนเดิมยังอยู่';
+        });
+
+        // ---------- S6: ยังไม่ลงทะเบียน = ห้ามเด้งหน้าปลลดล็อก ----------
+        await T('S6 · ยังไม่ลงทะเบียน → ไม่เปิดหน้าปลดล็อกเลย (กันเด้งฟรี ๆ แล้วกดไม่ผ่าน)', async () => {
+            installFakeBridge(cw, { available: true });
+            const r = await cw.devUnlockCore.verify('uid-not-enrolled');
+            assert(r === false, 'ต้องได้ false');
+            assert(cw.__fake.calls.length === 0, 'ต้องไม่เรียกสะพานเลย (เรียก ' + cw.__fake.calls.length + ' ครั้ง)');
+            return 'ไม่เรียก auth เลย · คืน false';
+        });
+
+        // ---------- S7: จับคู่คำขอผิด + หมดเวลา ----------
+        await T('S7 · ผลลัพธ์ที่ส่งมาผิดคำขอถูกละทิ้ง · คำขอที่ไม่ตอบ = หมดเวลา (ไม่ค้างทั้งแอป)', async () => {
+            installFakeBridge(cw, { available: true, autoAnswer: false });
+            const p = cw.devUnlockNativeAsk('deviceUnlockEnroll', 'uid-D', 20000);
+            await wait(30);
+            const reqId = cw.__fake.calls[0].reqId;
+            assert(cw.__onNativeDeviceUnlock('ไม่ใช่คำขอนี้', true, 'X', '') === false, 'คำขอที่ไม่มีอยู่ต้องถูกปฏิเสธ');
+            assert(cw.__onNativeDeviceUnlock(reqId, true, 'CRED-D', '') === true, 'คำขอจริงต้องตอบรับ');
+            const r = await p;
+            assert(r.ok === true && r.id === 'CRED-D', 'ต้องได้ผลของคำขอจริง (ได้ ' + JSON.stringify(r) + ')');
+            const p2 = cw.devUnlockNativeAsk('deviceUnlockEnroll', 'uid-D', 1000);   // ไม่มีใครตอบ
+            const t0 = Date.now();
+            const r2 = await p2;
+            assert(r2.ok === false && r2.err === 'timeout', 'ไม่ตอบกลับต้องหมดเวลา (ได้ ' + JSON.stringify(r2) + ')');
+            assert(Date.now() - t0 < 2500, 'ต้องหมดเวลาไวตามที่กำหนด (ใช้ ' + (Date.now() - t0) + ' ms)');
+            return 'คำขอผิดถูกละทิ้ง · คำขอจริงได้ผล · ไม่ตอบ = timeout ใน 1 วิ';
+        });
+
+        // ---------- S8: ยกเลิกการลงทะเบียน (ลบทั้ง 2 ที่) ----------
+        await T('S8 · ยกเลิกการลงทะเบียน → ลบทั้งฝั่งแอปและฝั่งเว็บ (ปุ่มกลับเป็น “ลงทะเบียน”)', async () => {
+            const st = installFakeBridge(cw, { available: true, enrolled: { 'uid-E': 'CRED-E' } });
+            const m = cw.devUnlockRead(); m['uid-E'] = { id: 'CRED-E', at: Date.now(), via: 'native' }; cw.devUnlockWrite(m);
+            assert(cw.devUnlockHas('uid-E') === true, 'ก่อนยกเลิกต้องเป็น true');
+            const ok = cw.devUnlockCore.remove('uid-E');
+            assert(ok === true, 'remove ต้องคืน true');
+            assert(st.enrolled['uid-E'] === undefined, 'ฝั่งแอปต้องถูกลบ');
+            assert(cw.__fake.calls.some(c => c.fn === 'remove'), 'ต้องเรียก deviceUnlockRemove');
+            assert(cw.devUnlockHas('uid-E') === false, 'devUnlockHas ต้องกลับเป็น false');
+            return 'ลบฝั่งแอป + ฝั่งเว็บ · devUnlockHas = false';
+        });
+
+        // ---------- S9: ยังเคารพสิทธิ์ “ปลดล็อกด้วยเครื่อง” ----------
+        await T('S9 · สิทธิ์ “ปลดล็อกด้วยเครื่อง” ยังมีผล — ยศที่ไม่ได้สิทธิ์กดแล้วไม่เรียกสะพาน', async () => {
+            installFakeBridge(cw, { available: true });
+            const save = cw.canUseDeviceUnlock;
+            cw.__toasts.length = 0;
+            cw.canUseDeviceUnlock = () => false;
+            try {
+                cw.devUnlockToggle();
+                await wait(30);
+                assert(cw.__fake.calls.length === 0, 'ห้ามเรียกสะพานเลย (เรียก ' + cw.__fake.calls.length + ' ครั้ง)');
+                assert(cw.__toasts.some(t => t.indexOf('ยังไม่ได้สิทธิ์') >= 0), 'ต้องบอกว่าไม่มีสิทธิ์ (ได้: ' + cw.__toasts.join(' | ') + ')');
+            } finally { cw.canUseDeviceUnlock = save; }
+            return 'ไม่เรียกสะพาน · ข้อความแจ้งสิทธิ์ถูกต้อง';
+        });
+
+        // ---------- S10: ข้อความบนจอ (PIN card) — บอกสาเหตุตรงจุด ----------
+        await T('S10 · ข้อความบนการ์ด PIN เลิกใช้ข้อความ WebAuthn งง ๆ — บอกสาเหตุจริงของเครื่อง/ที่อยู่', () => {
+            delete cw.TaxiNative;
+            installFakeBridge(cw, { available: true });
+            cw.pinRefreshCard();
+            let hint = (cw.document.getElementById('pinDevHint') || {}).textContent || '';
+            assert(hint.indexOf('ลายนิ้วมือ/ใบหน้า') >= 0, 'APK ที่พร้อมใช้ต้องบอกว่าใช้ลายนิ้วมือ/ใบหน้าได้ (ได้: ' + hint + ')');
+            assert(hint.indexOf('WebAuthn') < 0, 'ห้ามขึ้นข้อความ WebAuthn อีก');
+            installFakeBridge(cw, { available: false });
+            cw.pinRefreshCard();
+            hint = (cw.document.getElementById('pinDevHint') || {}).textContent || '';
+            assert(hint.indexOf('รหัสล็อกจอ') >= 0, 'ไม่มีเซนเซอร์ต้องบอกให้ตั้งรหัสล็อกจอ (ได้: ' + hint + ')');
+            delete cw.TaxiNative;
+            cw.pinRefreshCard();
+            hint = (cw.document.getElementById('pinDevHint') || {}).textContent || '';
+            assert(hint.indexOf('WebAuthn ต้องเป็น https ที่เป็น') < 0, 'ห้ามเหลือข้อความเดิมที่ผู้ใช้เห็นแล้วงง');
+            assert(hint.length > 5, 'ต้องมีข้อความบอกสาเหตุ');
+            return 'APK: ' + hint.slice(0, 60) + '…';
+        });
+
+        // ---------- S11: ป้ายปุ่ม + สถานะ “ลงทะเบียนแล้ว” ----------
+        await T('S11 · ป้ายปุ่มเปลี่ยนตามสถานะ (ลงทะเบียน / ยกเลิก) และซ่อนเมื่อไม่มีสิทธิ์', async () => {
+            installFakeBridge(cw, { available: true });
+            cw.pinRefreshCard();
+            const btn = cw.document.getElementById('pinDevBtn');
+            assert(!!btn, 'ต้องมีปุ่ม #pinDevBtn');
+            const label = btn.textContent.replace(/\s+/g, ' ').trim();
+            assert(label.indexOf('ลงทะเบียนปลดล็อกด้วยเครื่อง') >= 0, 'ยังไม่ลงทะเบียน = ป้าย “ลงทะเบียน…” (ได้ ' + label + ')');
+            // ⚠️ ชุดทดสอบนี้ไม่ได้ล็อกอิน (loggedInUserId ว่าง) ⇒ ทดสอบ “ตรรกะป้าย” ด้วยการบังคับว่าลงทะเบียนแล้ว
+            const saveHas = cw.devUnlockHas;
+            try {
+                cw.devUnlockHas = () => true;
+                cw.pinRefreshCard();
+                const label2 = btn.textContent.replace(/\s+/g, ' ').trim();
+                assert(label2.indexOf('ยกเลิกปลดล็อกด้วยเครื่อง') >= 0, 'ลงทะเบียนแล้ว = ป้าย “ยกเลิก…” (ได้ ' + label2 + ')');
+            } finally { cw.devUnlockHas = saveHas; }
+            return 'ก่อน = “ลงทะเบียนปลดล็อกด้วยเครื่อง” · หลังลงทะเบียน = “ยกเลิกปลดล็อกด้วยเครื่อง”';
+        });
+
+        // ---------- S12: เบราว์เซอร์ (ไม่มีสะพาน) ยังใช้ WebAuthn ได้ ----------
+        await T('S12 · เบราว์เซอร์/PWA (ไม่มีสะพาน) → ยังใช้ WebAuthn เหมือนเดิม', async () => {
+            delete cw.TaxiNative;
+            const calls = [];
+            let createdId = new Uint8Array([9, 9, 9, 9]);
+            cw.PublicKeyCredential = function () {};
+            Object.defineProperty(cw.navigator, 'credentials', {
+                configurable: true,
+                value: {
+                    create: (opt) => { calls.push('create'); return Promise.resolve({ rawId: createdId }); },
+                    get: (opt) => { calls.push('get'); return Promise.resolve({ rawId: createdId }); }
+                }
+            });
+            const saveSup = cw.devUnlockSupported;
+            cw.devUnlockSupported = () => true;      // ที่อยู่ทดสอบเป็น IP (WebAuthn ใช้ไม่ได้จริง) ⇒ ทดสอบได้แค่เส้นทางโค้ด
+            try {
+                const r = await cw.devUnlockCore.enroll('uid-G');
+                assert(r.ok === true, 'ต้องลงทะเบียนผ่าน WebAuthn ได้ (ได้ ' + JSON.stringify(r) + ')');
+                assert(calls[0] === 'create', 'ต้องเรียก navigator.credentials.create');
+                const rec = cw.devUnlockRead()['uid-G'];
+                assert(rec && rec.via === 'webauthn', 'ฝั่งเว็บต้องจำว่าเป็นของ “เบราว์เซอร์” (ได้ ' + (rec && rec.via) + ')');
+                const ok = await cw.devUnlockCore.verify('uid-G');
+                assert(ok === true && calls[1] === 'get', 'ยืนยันต้องเรียก navigator.credentials.get');
+            } finally { cw.devUnlockSupported = saveSup; }
+            return 'create → จำค่า (webauthn) → get = ยืนยันผ่าน';
+        });
+
+        // ---------- S13: ข้อความเฉพาะทาง (IP / http) ----------
+        await T('S13 · ที่อยู่ที่ WebAuthn ใช้ไม่ได้ → ข้อความบอกตรงจุด (IP ต้องเปิดผ่านโดเมน)', () => {
+            delete cw.TaxiNative;
+            const saveSup = cw.devUnlockSupported;
+            cw.devUnlockSupported = () => false;
+            try {
+                const why = cw.devUnlockWhy();
+                assert(why.indexOf('IP') >= 0 || why.indexOf('https') >= 0 || why.indexOf('Chrome') >= 0, 'ต้องบอกเหตุผลที่ใช้ได้/ไม่ได้ (ได้: ' + why + ')');
+                assert(why.indexOf('รหัสล็อกจอ') < 0, 'ที่อยู่นี้ไม่เกี่ยวกับรหัสล็อกจอ');
+                return 'ที่อยู่ทดสอบ (127.0.0.1) → “' + why.slice(0, 70) + '…”';
+            } finally { cw.devUnlockSupported = saveSup; }
+        });
+
+        // ---------- S14: ตัว “ปลดล็อกด้วยเครื่อง” เองไม่ยิงคำขอออกเน็ต ----------
+        //   (ยอดรวมของทั้งชุดอาจมีคำขอที่แอปพยายามเองตอนบูต/เชื่อม Firestore ซึ่งถูกสตับบล็อกไว้อยู่แล้ว ⇒ จึงวัดเฉพาะช่วงที่ขั้นตอนนี้ทำงาน)
+        await T('S14 · ขั้นตอนปลดล็อกด้วยเครื่องไม่ยิงคำขอออกเน็ตเลย (ใช้สะพานแอป/ของในเครื่องเท่านั้น)', async () => {
+            installFakeBridge(cw, { available: true, enrolled: { 'uid-N': 'CRED-N' } });
+            const f0 = cw.__net.blockedFetch, x0 = cw.__net.blockedXhr;
+            await cw.devUnlockCore.enroll('uid-N2');
+            await cw.devUnlockCore.verify('uid-N');
+            cw.devUnlockCore.remove('uid-N');
+            const df = cw.__net.blockedFetch - f0, dx = cw.__net.blockedXhr - x0;
+            assert(df === 0 && dx === 0, 'ต้องไม่ยิงคำขอออกเน็ตเลย (เพิ่ม fetch ' + df + ' / xhr ' + dx + ')');
+            return 'ลงทะเบียน+ยืนยัน+ยกเลิก = คำขอออกเน็ตเพิ่ม 0 (ทั้งชุดถูกบล็อก ' + cw.__net.blockedFetch + ' ครั้งจากการพยายามอื่นของแอป) 😊';
+        });
+
+        // ---------- S15: แปล “คีย์สั้น ๆ” จากชั้นแอปเป็นข้อความไทย (ไม่โชว์รหัสดิบ) ----------
+        await T('S15 · ข้อความเมื่อไม่สำเร็จเป็นภาษาไทยทุกกรณี (canceled/locked/unavailable/busy/error-13)', async () => {
+            assert(typeof cw.__devUnlockErrText === 'function', 'ต้องมี window.__devUnlockErrText');
+            const cases = [
+                ['canceled', 'ถูกยกเลิก'],
+                ['locked', 'ล็อกชั่วคราว'],
+                ['unavailable', 'รหัสล็อกจอ'],
+                ['busy', 'กำลังเปิดหน้าปลดล็อกอยู่'],
+                ['no-keyguard', 'ยังไม่ได้ตั้งรหัส'],
+                ['timeout', 'หมดเวลา'],
+                ['not-enrolled', 'ยังไม่ได้ลงทะเบียน'],
+                ['bridge-error', 'ปิดแอปแล้วเปิดใหม่'],
+                ['error-13', 'รหัส 13'],
+                ['error:SecurityException', 'SecurityException']
+            ];
+            for (const c of cases) {
+                const t = cw.__devUnlockErrText(c[0]);
+                assert(t && t.indexOf(c[1]) >= 0, 'คีย์ ' + c[0] + ' ต้องมีคำว่า “' + c[1] + '” (ได้: ' + t + ')');
+                assert(t !== c[0], 'ห้ามโชว์คีย์ ' + c[0] + ' ดิบ ๆ');
+            }
+            assert(cw.__devUnlockErrText('') === '', 'ค่าว่างต้องคืนค่าว่าง');
+            // ต้อง “ต่อสาย” จริง: ลงทะเบียน/ยืนยัน ต้องใช้ตัวแปลข้อความนี้ (ไม่ใช่ err ดิบ)
+            const src = String(cw.devUnlockRegister);
+            assert(src.indexOf('__devUnlockErrText') >= 0, 'devUnlockRegister ต้องแปลข้อความผิดพลาดเป็นไทย');
+            // ชั้นแอปส่งคีย์ “locked” มา → ต้องได้ err=locked แล้วแปลเป็นไทยได้
+            const fake = { available: true, enrollOk: false };
+            const st = installFakeBridge(cw, fake);
+            st.enrolled = st.enrolled || {};
+            cw.TaxiNative.deviceUnlockEnroll = function (uid, reqId) { setTimeout(() => cw.__onNativeDeviceUnlock(reqId, false, '', 'locked'), 10); };
+            const r = await cw.devUnlockCore.enroll('uid-L');
+            assert(r.err === 'locked', 'ต้องส่ง err=locked ขึ้นมา (ได้ ' + r.err + ')');
+            assert(cw.__devUnlockErrText(r.err).indexOf('ล็อกชั่วคราว') >= 0, 'และแปลเป็นข้อความไทยได้');
+            return 'ครบ 10 กรณี · error-13 → “รหัส 13” · locked → “ล็อกชั่วคราว…”';
+        });
+
+        // คืนสภาพ
+        delete cw.TaxiNative;
+        try { cw.pinRefreshCard(); } catch (e) {}
+        offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งชุด · คำขอออกเน็ตที่ถูกบล็อก = ' + w().__net.blockedFetch + ' · เขียน Firestore = ปิด (fsNowrite + __testNoDbWrites)';
+        summaryEl.textContent = 'สรุป: ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + (failCount ? '  → ' + failures.join(' | ') : '  ✅ ผ่านครบทุกสถานการณ์');
+        try { window.__deviceUnlockResult = { pass: passCount, fail: failCount, failures: failures.slice() }; } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', run);
+    window.addEventListener('load', () => { setTimeout(run, 50); });
+})();
+</script>
+</body>
+</html>

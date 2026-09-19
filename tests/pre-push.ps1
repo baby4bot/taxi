@@ -193,6 +193,34 @@ if (Test-Path $mmChecker) {
   Fail 'tests/minimap-start-guard.ps1 missing'
 }
 
+# --- 3c-bis-2) Android framework classes/constants must exist in android.jar --------
+#   (owner report 20 Sep 2026: "ปุ่มลงทะเบียนปลดล็อกด้วยลายนิ้วมือ ถ้าใช้ผ่านโทรศัพท์มันใช้ไม่ได้"
+#    While fixing it we found two references that would NOT compile at CI:
+#      BiometricManager.BIOMETRIC_WEAK (lives in BiometricManager.Authenticators)
+#      BiometricPrompt.BIOMETRIC_ERROR_NEGATIVE_BUTTON (that class has no such constant)
+#    This machine has NO JDK, so a broken reference only surfaces in the CI build - i.e.
+#    after the push. The gate reads the real android.jar and verifies every
+#    `import android....` and every `ClassName.CONSTANT` the APK uses. No jar -> SKIP.)
+$apiChecker = Resolve-FromRoot 'tests/android-api-check.ps1'
+if (Test-Path $apiChecker) {
+  $aOut = & powershell -NoProfile -ExecutionPolicy Bypass -File $apiChecker -Root $root 2>&1 | Out-String
+  $aBad = @($aOut -split "`r?`n" | Where-Object { $_ -match '^\[FAIL\]' })
+  $aSkip = @($aOut -split "`r?`n" | Where-Object { $_ -match '^SKIP' })
+  if ($aSkip.Count) {
+    Skip 'android-api-check: no android.jar on this machine (CI does the real compile)'
+  } elseif ($aBad.Count) {
+    Fail 'android-api-check not clean -> the APK code would not compile at CI'
+    foreach ($l in $aBad) { Say ('        ' + $l.Trim()) }
+    Say  '       (fix the reference, then re-run: powershell -File tests/android-api-check.ps1)'
+    Say  '       (full detail: tests/android-api-check-report.txt)'
+  } else {
+    $aRes = ([regex]::Match($aOut, 'checked:[^\r\n]*')).Value
+    Pass ('android-api-check: framework classes/constants all exist -> ' + $aRes.Trim())
+  }
+} else {
+  Fail 'tests/android-api-check.ps1 missing'
+}
+
 # --- 3c-ter) a per-role permission change must ship a passing offline suite ----
 #   (owner request 19 Sep 2026: "ถ้างานรอบนั้นแก้สิทธิ์รายยศ ต้องบังคับให้มีชุด
 #    ทดสอบออฟไลน์ของสิทธินั้นผ่านก่อน มิฉะนั้น push ไม่ผ่าน")

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — กล่องพรีวิว “หน้าจอโหลด” ต้องตรงกับรูปที่จอโหลดใช้จริง</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: กล่องพรีวิวหน้าจอโหลด</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?...</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ไม่เขียน Firestore
+        <br><b>สิ่งที่ผู้ใช้แจ้ง (20 ก.ย. 69):</b> *“ในเมนูโหลดหน้าจอ ทำไมรูปล่าสุดที่เลือกไปถึงไม่แสดงข้างใน”* +
+        *“เวลาโหลดเข้าโปรแกรมหรือตอนทดลองดู คำว่า TAXI METER และรูป TAXI ข้างหน้าไม่ต้องการให้มี”*
+        <br><b>สาเหตุจริง (2 ข้อ):</b>
+        ① กล่องพรีวิวอ่านแค่ “รูปที่เลือกในรอบนี้ + แคชในเครื่อง” ⇒ เครื่องที่แคชเขียนไม่ได้/รอบนั้นอ่านค่าจากเซิร์ฟเวอร์
+        ทำให้ <b>จอโหลดมีรูปจริง แต่ในกล่องขึ้น “ยังไม่มีรูป”</b> · แถม: เปิดหน้าต่างซ้ำแล้ว “รูปที่เลือกแต่ยังไม่บันทึก” ถูกล้างทิ้ง
+        ② ป้ายแบรนด์ <code>#ldsMark</code> “🚕 TAXI METER” ยังอยู่บนจอโหลด (เห็นทั้งตอนเปิดแอปและตอน “ทดลองดู”)
+        <br><b>ต้องพิสูจน์:</b> ① กล่องพรีวิวโชว์รูปเดียวกับที่จอโหลดใช้จริง ② บอกที่มาของรูปให้ผู้ใช้รู้ (เลือกใหม่/บันทึกไว้/ค่าจอโหลด)
+        ③ รูปที่เลือกแต่ยังไม่บันทึกไม่หายเมื่อเปิดหน้าต่างซ้ำ ④ เจตนา “ลบรูป” ยังได้ผล ⑤ ค่าจากเซิร์ฟเวอร์มาถึงทีหลัง = กล่องอัปเดตเอง
+        ⑥ ไม่คืน <code>null</code> ทันทีเมื่อรอบก่อนยิงไม่สำเร็จ ⑦ ไม่มีป้าย “TAXI METER” บนจอโหลดแล้ว ⑧ “ทดลองดู” ใช้รูปเดียวกับในกล่อง
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/loading-preview-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (10 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // รูปทดสอบ: data URL ขนาดพอให้ถูกนับว่า “มีรูป” (ตรรกะใช้ความยาว > 20 ตัวอักษร)
+    const IMG_A = 'data:image/jpeg;base64,' + 'A'.repeat(400);
+    const IMG_B = 'data:image/jpeg;base64,' + 'B'.repeat(900);
+
+    // ============================ สตับ: ตัดเน็ตทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        stubsInstalled = true;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lsFetch: 0 };
+        cw.__testLsAnswer = 'none';   // 'none' = จำลองว่าเซิร์ฟเวอร์ไม่ตอบ · 'doc' = ตอบเอกสารที่มีรูป IMG_B
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            if (u.indexOf('/settings/loading_screen') >= 0) {
+                cw.__net.lsFetch++;
+                if (cw.__testLsAnswer === 'doc') {
+                    return Promise.resolve({
+                        ok: true,
+                        json: () => Promise.resolve({
+                            fields: {
+                                image: { stringValue: IMG_B },
+                                title: { stringValue: 'จากเซิร์ฟเวอร์' },
+                                focusX: { integerValue: '50' }
+                            }
+                        })
+                    });
+                }
+                return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+            }
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (method, url) {
+                const u = String(url);
+                const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+                if (!isLocal) { cw.__net.blockedXhr++; x.send = function () {}; return; }
+                return open.apply(null, arguments);
+            };
+            return x;
+        };
+        cw.__toasts = [];
+        try { cw.showToast = function (msg, isErr) { cw.__toasts.push(String(msg)); }; } catch (e) {}
+    }
+
+    async function bootApp(force) {
+        stubsInstalled = false;
+        if (force || frame.src === 'about:blank') {
+            frame.src = '../index.html?fsNowrite=1&loadingPreviewTest=1&t=' + Date.now();
+        }
+        const t0 = Date.now();
+        while (Date.now() - t0 < 220000) {
+            await wait(700);
+            try {
+                const cw = w();
+                installStubs();
+                if (cw && cw.lsRenderPreview && cw.document.getElementById('mainApp') && cw.document.getElementById('mainApp').style.display === 'flex') {
+                    await wait(600);
+                    return true;
+                }
+            } catch (e) { /* ระหว่างโหลดข้ามโดเมนชั่วคราว */ }
+        }
+        throw new Error('แอปไม่บูตภายในเวลาที่กำหนด (220 วิ)');
+    }
+
+    function log(name, ok, detail) {
+        const li = document.createElement('li');
+        li.className = ok ? 'pass' : 'fail';
+        li.innerHTML = '<span class="st">' + (ok ? '✅' : '❌') + ' ' + name + '</span><div class="detail">' + (detail || '') + '</div>';
+        resultsEl.appendChild(li);
+    }
+
+    async function T(name, fn) {
+        try {
+            const detail = await fn();
+            passCount++;
+            log(name, true, detail || '');
+        } catch (e) {
+            failCount++;
+            failures.push(name + ' → ' + e.message);
+            log(name, false, e.message);
+        }
+    }
+
+    // ---------------- ตัวช่วยของชุดทดสอบ ----------------
+    function resetLsState(cw) {
+        try { cw.localStorage.removeItem('taxi_loading_screen_v1'); } catch (e) {}
+        cw.__lsSaved = { image: '', title: '', focusX: 50 };
+        cw.__lsDraft = { image: null };
+        cw.__ldsCfg = { image: '', title: '', focusX: 50 };
+        cw.__ldsRemote = undefined;
+        cw.__ldsCfgDone = false;
+    }
+    function previewState(cw) {
+        const img = cw.document.getElementById('lsPreviewImg');
+        const empty = cw.document.getElementById('lsPreviewEmpty');
+        const hint = cw.document.getElementById('lsSizeHint');
+        return {
+            src: img ? (img.getAttribute('src') || '') : '',
+            imgShown: !!(img && img.style.display !== 'none' && (img.getAttribute('src') || '').length > 20),
+            emptyShown: !!(empty && empty.style.display !== 'none'),
+            hint: hint ? hint.textContent : '',
+            source: cw.__lsImageSource ? cw.__lsImageSource() : 'n/a'
+        };
+    }
+    async function openLoadingTab(cw) {
+        cw.isAdminNow = () => true;
+        cw.currentUserPerms = () => ({ canManageLoadingScreen: true });
+        cw.lsCanManage = () => true;
+        try { cw.twOpen = () => true; } catch (e) {}   // ตัดการย้ายโหนด DOM ออก ให้ทดสอบเฉพาะตรรกะรูป
+        try { await cw.openLoadingScreenModal(); } catch (e) {}
+        // ⚠️ ต้อง “ทำให้กล่องมองเห็นจริง” ด้วย เพราะการอัปเดตอัตโนมัติ (hook) จะข้ามเมื่อกล่องไม่ถูกวาด
+        try { cw.toggleModal('loadingScreenModal', true); } catch (e) {}
+        await wait(120);
+    }
+
+    // ============================ ชุดการทดสอบ ============================
+    async function run() {
+        resultsEl.innerHTML = '';
+        passCount = 0; failCount = 0; failures.length = 0;
+        document.getElementById('runBtn').disabled = true;
+        offlineEl.textContent = 'สถานะเน็ต: กำลังโหลดแอปจริงในไเฟรม (ตัดเน็ตทั้งชุด)...';
+        let cw;
+        try {
+            await bootApp(true);
+            cw = w();
+            assert(typeof cw.lsRenderPreview === 'function', 'ไม่พบ window.lsRenderPreview');
+            assert(typeof cw.__lsImageSource === 'function', 'ไม่พบ window.__lsImageSource (ยังไม่ได้ต่อกลไกใหม่)');
+        } catch (e) {
+            log('บูตแอป', false, e.message);
+            summaryEl.textContent = 'สรุป: บูตแอปไม่สำเร็จ — ' + e.message;
+            document.getElementById('runBtn').disabled = false;
+            return;
+        }
+
+        // ---------- S1: เคสจริงของผู้ใช้ — จอโหลดมีรูป แต่กล่องพรีวิวว่าง ----------
+        await T('S1 · เคสจริง: ไม่มีแคช/ไม่มีค่าที่บันทึก แต่จอโหลดใช้รูปอยู่ → กล่องพรีวิวต้องโชว์รูปนั้น', async () => {
+            resetLsState(cw);
+            cw.__ldsCfg.image = IMG_A;      // = สิ่งที่จอโหลดใช้จริง (มาจากเซิร์ฟเวอร์)
+            cw.__ldsCfgDone = true;          // รอบก่อนยิงแล้วแต่ไม่ได้ค่า (จำลอง)
+            cw.__lsDraft = { image: null };
+            cw.__lsSaved = { image: '', title: '', focusX: 50 };
+            await openLoadingTab(cw);
+            const st = previewState(cw);
+            assert(st.source === 'live', 'ที่มาของรูปต้องเป็น “ค่าจอโหลดใช้จริง” (ได้ ' + st.source + ')');
+            assert(!st.emptyShown, 'ต้องไม่ขึ้น “ยังไม่มีรูป” อีก');
+            assert(st.src.length > 20, 'ต้องมี src ของรูปใน <img> พรีวิว');
+            assert(st.hint.indexOf('จอโหลดใช้อยู่จริง') >= 0, 'ต้องบอกผู้ใช้ว่ารูปนี้คือค่าที่จอโหลดใช้จริง (ได้: ' + st.hint + ')');
+            return 'แสดงรูปจากจอโหลดจริง · ที่มา = ' + st.source + ' · “ยังไม่มีรูป” = ซ่อน';
+        });
+
+        // ---------- S2: เลือกใหม่ในรอบนี้ = ชนะทุกอย่าง ----------
+        await T('S2 · รูปที่เลือกในรอบนี้ชนะค่าที่บันทึกไว้ + บอกว่ายังไม่ได้บันทึก', async () => {
+            cw.__lsSaved = { image: IMG_A, title: '', focusX: 50 };
+            cw.__lsDraft = { image: IMG_B };
+            cw.lsRenderPreview();
+            const st = previewState(cw);
+            assert(st.source === 'draft', 'ที่มาต้องเป็น draft (ได้ ' + st.source + ')');
+            assert(st.src === IMG_B, 'ต้องโชว์รูปที่เลือกในรอบนี้');
+            assert(st.hint.indexOf('ยังไม่ได้บันทึก') >= 0, 'ต้องเตือนว่ายังไม่ได้บันทึก (ได้: ' + st.hint + ')');
+            return 'draft ชนะ · รูป = IMG_B · ข้อความ “ยังไม่ได้บันทึก” ถูกต้อง';
+        });
+
+        // ---------- S3: ไม่มี draft → ใช้ค่าที่บันทึกไว้ ----------
+        await T('S3 · ไม่มีการเลือกใหม่ → ใช้ค่าที่บันทึกไว้ (แคช/เซิร์ฟเวอร์)', async () => {
+            cw.__lsSaved = { image: IMG_A, title: '', focusX: 50 };
+            cw.__lsDraft = { image: null };
+            cw.lsRenderPreview();
+            const st = previewState(cw);
+            assert(st.source === 'saved', 'ที่มาต้องเป็น saved (ได้ ' + st.source + ')');
+            assert(st.src === IMG_A, 'ต้องโชว์รูปที่บันทึกไว้');
+            return 'ค่าที่บันทึกไว้ถูกใช้ · ที่มา = saved';
+        });
+
+        // ---------- S4: เจตนาลบรูป ยังได้ผล ----------
+        await T('S4 · กด “ลบรูป” แล้วต้องเห็นกล่องว่างจริง (เจตนาของแอดมินต้องไม่ถูกเขียนทับ)', async () => {
+            cw.__lsSaved = { image: IMG_A, title: '', focusX: 50 };
+            cw.__ldsCfg.image = IMG_A;
+            cw.__lsDraft = { image: '' };    // เจตนาลบ
+            cw.lsRenderPreview();
+            const st = previewState(cw);
+            assert(st.source === 'draft', 'ที่มาต้องเป็น draft (เจตนาลบ) — ได้ ' + st.source);
+            assert(st.emptyShown, 'ต้องเห็น “ยังไม่มีรูป”');
+            assert(!st.imgShown, 'ต้องไม่โชว์รูปเดิมค้าง');
+            return 'เจตนาลบยังมีผล · กล่องว่างจริง';
+        });
+
+        // ---------- S5: รูปที่เลือกแต่ยังไม่บันทึก ไม่หายเมื่อเปิดหน้าต่างซ้ำ (เคส “ทดลองดู”) ----------
+        await T('S5 · เปิดหน้าต่างซ้ำ (เช่นหลังปิด “ทดลองดู”) → รูปที่เลือกแต่ยังไม่บันทึกต้องไม่หาย', async () => {
+            resetLsState(cw);
+            cw.__lsDraft = { image: IMG_B };
+            await openLoadingTab(cw);          // = เปิด/กลับเข้าหน้าต่างอีกครั้ง
+            const st = previewState(cw);
+            assert(cw.__lsDraft.image === IMG_B, 'draft ต้องไม่ถูกล้าง (ได้ ' + (cw.__lsDraft.image === null ? 'null' : 'ค่าเดิม') + ')');
+            assert(st.src === IMG_B, 'กล่องพรีวิวต้องยังโชว์รูปที่เลือกไว้');
+            return 'draft รอดจากการเปิดหน้าต่างซ้ำ · กล่องยังโชว์รูปเดิม';
+        });
+
+        // ---------- S6: ค่าจากเซิร์ฟเวอร์มาถึงทีหลัง → กล่องอัปเดตเอง ----------
+        await T('S6 · ค่าจอโหลดมาถึงทีหลัง → กล่องพรีวิวอัปเดตเองทันที (ไม่ต้องปิด/เปิดหน้าต่าง)', async () => {
+            resetLsState(cw);
+            cw.__lsDraft = { image: null };
+            cw.lsRenderPreview();
+            assert(previewState(cw).emptyShown, 'ก่อนค่ามาถึง = กล่องว่าง');
+            cw.__ldsCfg.image = IMG_A;
+            cw.__ldsApply(null);               // = ค่าจากเซิร์ฟเวอร์เพิ่งมาถึง
+            await wait(80);
+            const st = previewState(cw);
+            assert(st.src === IMG_A && !st.emptyShown, 'กล่องต้องโชว์รูปที่เพิ่งมาถึงอัตโนมัติ');
+            return 'กล่องอัปเดตเองเมื่อค่ามาถึง · ที่มา = ' + st.source;
+        });
+
+        // ---------- S7: รอบก่อนยิงไม่สำเร็จ → ต้องยิงใหม่ ไม่คืน null ทันที ----------
+        await T('S7 · รอบก่อนอ่านค่าไม่ได้ → เรียกใหม่ต้องยิงคำขอเอง (ไม่คืน null ทันที)', async () => {
+            resetLsState(cw);
+            cw.__ldsCfgDone = true;             // ต้นไฟล์ยิงจบแล้ว
+            cw.__ldsRemote = undefined;         // …แต่ไม่ได้ค่า
+            cw.__testLsAnswer = 'doc';          // รอบใหม่: เซิร์ฟเวอร์ตอบ
+            const f0 = cw.__net.lsFetch;
+            const r = await cw.loadLoadingScreenConfig();
+            const used = cw.__net.lsFetch - f0;
+            assert(used > 0, 'ต้องมีการยิงคำขอใหม่ (ยิง ' + used + ' ครั้ง)');
+            assert(r && r.image && r.image.length > 20, 'ต้องได้รูปกลับมา (ได้ ' + (r && r.image ? 'มีรูป' : 'ไม่มีรูป') + ')');
+            cw.__testLsAnswer = 'none';
+            return 'ยิงใหม่เอง ' + used + ' ครั้ง · ได้รูปกลับมา ' + Math.round(r.image.length * 0.75 / 1024) + ' KB';
+        });
+
+        // ---------- S8: ป้าย “TAXI METER” บนจอโหลดถูกลบแล้ว ----------
+        await T('S8 · จอโหลดต้องไม่มีป้าย “🚕 TAXI METER” แล้ว', async () => {
+            const mark = cw.document.getElementById('ldsMark');
+            assert(!mark, 'ยังพบแท็ก #ldsMark อยู่');
+            const loader = cw.document.getElementById('appLoader');
+            const html = loader ? loader.innerHTML : '';
+            assert(html.indexOf('TAXI METER') < 0, 'ยังพบข้อความ TAXI METER ในจอโหลด');
+            assert(html.indexOf('🚕') < 0, 'ยังพบไอคอนรถแท็กซี่ในจอโหลด');
+            const css = Array.from(cw.document.querySelectorAll('style')).map(s => s.textContent).join('\n');
+            assert(css.indexOf('.lds-mark') < 0, 'ยังเหลือสไตล์ .lds-mark');
+            return 'ไม่มี #ldsMark · ไม่มีข้อความ/ไอคอน · ไม่เหลือสไตล์';
+        });
+
+        // ---------- S9: “ทดลองดู” ใช้รูปเดียวกับในกล่อง ----------
+        await T('S9 · ปุ่ม “ทดลองดู” ต้องส่งรูปเดียวกับที่กล่องพรีวิวแสดง', async () => {
+            resetLsState(cw);
+            cw.__lsDraft = { image: IMG_B };
+            cw.lsRenderPreview();
+            let got = null;
+            cw.__lds = cw.__lds || {};
+            const savePreview = cw.__lds.preview;
+            cw.__lds.preview = (cfg) => { got = cfg; };
+            try {
+                cw.lsPreviewLive();
+            } finally { cw.__lds.preview = savePreview; }
+            assert(got && got.image === IMG_B, 'cfg ที่ส่งไปให้จอโหลดทดลองต้องเป็นรูปเดียวกับกล่อง (ได้ ' + (got && got.image ? 'รูปอื่น' : 'ว่าง') + ')');
+            return '“ทดลองดู” ส่งรูปเดียวกับกล่องพรีวิว ✓';
+        });
+
+        // ---------- S10: ไม่มีคำขอออกเน็ตเพิ่มจากขั้นตอนพรีวิว ----------
+        await T('S10 · การวาดกล่องพรีวิว/สลับที่มา “ไม่ดึงค่าจอโหลดซ้ำ” จากเซิร์ฟเวอร์', async () => {
+            resetLsState(cw);
+            // ⚠️ วัดเฉพาะคำขอ “ค่าจอโหลด” (ที่อยู่ในโซนนี้) — แอปมีการยิงของ Firestore เป็นจังหวะของตัวเองอยู่แล้ว
+            const l0 = cw.__net.lsFetch, f0 = cw.__net.blockedFetch, x0 = cw.__net.blockedXhr;
+            cw.__lsDraft = { image: IMG_A }; cw.lsRenderPreview();
+            cw.__lsDraft = { image: null }; cw.__lsSaved = { image: IMG_B, title: '', focusX: 50 }; cw.lsRenderPreview();
+            cw.__lsSaved = { image: '', title: '', focusX: 50 }; cw.__ldsCfg.image = IMG_A; cw.lsRenderPreview();
+            cw.__ldsApply(null);
+            await wait(120);
+            const dl = cw.__net.lsFetch - l0;
+            assert(dl === 0, 'ต้องไม่ดึงค่าจอโหลดซ้ำ (ดึงเพิ่ม ' + dl + ' ครั้ง)');
+            return 'วาดกล่องพรีวิว 4 ครั้ง + ค่ามาถึง = ดึงค่าจอโหลดเพิ่ม 0 ครั้ง (คำขออื่นของแอปที่ถูกบล็อก +' + (cw.__net.blockedFetch - f0) + ' fetch / +' + (cw.__net.blockedXhr - x0) + ' xhr)';
+        });
+
+        // คืนสภาพ
+        try { resetLsState(w()); w().lsRenderPreview(); } catch (e) {}
+        offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งชุด · คำขอออกเน็ตที่ถูกบล็อก = ' + w().__net.blockedFetch + ' · เขียน Firestore = ปิด (fsNowrite + __testNoDbWrites)';
+        summaryEl.textContent = 'สรุป: ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + (failCount ? '  → ' + failures.join(' | ') : '  ✅ ผ่านครบทุกสถานการณ์');
+        try { window.__loadingPreviewResult = { pass: passCount, fail: failCount, failures: failures.slice() }; } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', run);
+    window.addEventListener('load', () => { setTimeout(run, 50); });
+})();
+</script>
+</body>
+</html>

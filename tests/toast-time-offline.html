@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — ข้อความแจ้งเตือน (toast) ดีไซน์ใหม่ + เวลาที่ตั้งได้ (ค่าเริ่มต้น 3 วิ)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: ข้อความแจ้งเตือน (toast) ดีไซน์ใหม่ + เวลาที่ตั้งได้</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ไม่เขียน Firestore
+        <br><b>คำสั่งผู้ใช้ 20 ก.ย. 69:</b> *“toast ตามรูปที่ 1 มันเป็นแบบนี้อยู่ อยากให้เปลี่ยนเป็นแบบรูปที่ 2 เป็นสไตล์เหมือนอย่างนี้เลย
+        แต่ว่าให้ขึ้นไปอยู่บนสุดของโปรแกรม แล้วก็แบบเดิมที่มีการกำหนดเวลา ค่า default ของเวลาทั้งหมดเนี่ย อยากให้อยู่ที่ 3 วินาที
+        แล้วก็สามารถปรับเพิ่มได้ด้วยการกดปุ่มบวก ปุ่มลบทีละวินาที รวมถึงให้มีเป็นสวิตช์อันหนึ่งเอาไว้ประมาณว่ามันจะไม่ปิดเอง —
+        เปิดค้างไว้ตลอดจนกว่าจะปิดเอง”*
+        <br>⇒ ต้องพิสูจน์: ① ค่าเริ่มต้น = 3 วินาที ② ปุ่ม − / + ทีละ 1 วินาที ③ ช่วง 1–20 (ชนขอบแล้วไม่ไปต่อ)
+        ④ สวิตช์ “ค้างไว้จนกดปิดเอง” = ไม่มีตัวจับเวลาเลย (ไม่มีนับถอยหลัง) ⑤ ปุ่ม ✕ ปิดได้เสมอ แม้โหมดค้างไว้
+        ⑥ toast ขึ้นบนสุดของจอ และ <b>ไม่บังปุ่มหัวจอ</b> ⑦ เวลาที่แอดมินตั้งเฉพาะข้อความยังมีผลเหนือค่าผู้ใช้
+        ⑧ บันทึกอัตโนมัติ (debounce) + ปุ่ม “คืนค่า 3 วินาที” เทา/แดงตามกติกา ⑨ ไม่ยิงคำขอออกเน็ต/ไม่เขียน Firestore
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/toast-time-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (14 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+    const near = (a, b, tol) => Math.abs(a - b) <= tol;
+    const toast = () => w().document.getElementById('toastBox');
+    const shown = () => getComputedStyle(toast()).display !== 'none';
+    const t0 = Date.now();
+    // ⏱️ วัดเวลา “ซ่อนเอง” ของ toast จริง (โพลทุก 100 มิลลิวินาที)
+    async function timeToHide(cw, maxMs) {
+        const start = Date.now();
+        while (Date.now() - start < (maxMs || 9000)) {
+            if (getComputedStyle(toast()).display === 'none') return Date.now() - start;
+            await wait(100);
+        }
+        return -1;   // ไม่ซ่อนเลยภายในเวลาที่รอ (โหมดค้างไว้ = ถูกต้อง)
+    }
+
+    // ============================ สตับ: ตัดเน็ตทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        stubsInstalled = true;
+        cw.__testNoDbWrites = true;                       // ห้ามเขียน Firestore (แอปอ่านธงนี้ตอนบันทึก)
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (method, url) {
+                const u = String(url);
+                const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+                if (!isLocal) { cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.send = function () {}; return; }
+                return open.apply(null, arguments);
+            };
+            return x;
+        };
+        // 🎵 นับเสียงตอบรับ (ปุ่ม − + / คืนค่า) โดยไม่ต้องมี audio จริง · ติ๊ง toast ก็ไม่ต้องมีเสียงจริง
+        cw.__sounds = [];
+        try { cw.playSound = function (type) { cw.__sounds.push(String(type)); }; } catch (e) {}
+        try { cw.playToastTing = function () { cw.__sounds.push('ting'); }; } catch (e) {}
+    }
+
+    async function bootApp(force) {
+        stubsInstalled = false;
+        if (force || frame.src === 'about:blank') {
+            frame.src = '../index.html?fsNowrite=1&toastTest=1&t=' + Date.now();
+        }
+        const b0 = Date.now();
+        while (Date.now() - b0 < 220000) {
+            await wait(700);
+            try {
+                const cw = w();
+                installStubs();
+                if (cw && typeof cw.showToast === 'function' && typeof cw.applyToastTime === 'function' && cw.document.getElementById('toastBox') && cw.document.getElementById('mainApp') && cw.document.getElementById('mainApp').style.display !== 'none') {
+                    await wait(600);
+                    return true;
+                }
+            } catch (e) { /* ระหว่างโหลดข้ามโดเมนชั่วคราว */ }
+        }
+        throw new Error('แอปไม่บูตภายในเวลาที่กำหนด (220 วิ)');
+    }
+
+    function log(name, ok, detail) {
+        const li = document.createElement('li');
+        li.className = ok ? 'pass' : 'fail';
+        li.innerHTML = '<span class="st">' + (ok ? '✅ ผ่าน' : '❌ ไม่ผ่าน') + ' — ' + name + '</span>' + (detail ? '<div class="detail">' + detail + '</div>' : '');
+        resultsEl.appendChild(li);
+        if (ok) passCount++; else { failCount++; failures.push(name + (detail ? ' :: ' + detail : '')); }
+        summaryEl.textContent = 'สรุป: ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount;
+        return ok;
+    }
+
+    const T = async (name, fn) => {
+        try { const r = await fn(); log(name, true, typeof r === 'string' ? r : ''); return true; }
+        catch (e) { log(name, false, e && e.message ? e.message : String(e)); return false; }
+    };
+
+    async function run() {
+        resultsEl.innerHTML = '';
+        passCount = 0; failCount = 0; failures.length = 0;
+        summaryEl.textContent = '';
+        offlineEl.textContent = 'สถานะเน็ต: กำลังบูตแอปในโหมดออฟไลน์ (ตัดเน็ตทั้งหมด)…';
+        document.getElementById('runBtn').disabled = true;
+        try {
+            await bootApp(true);
+        } catch (e) {
+            log('บูตแอปใน iframe', false, e.message);
+            document.getElementById('runBtn').disabled = false;
+            return;
+        }
+        const cw = w();
+        offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตแล้ว (ไม่มีการเขียน Firestore · คำขอออกเน็ตถูกบล็อก ' + cw.__net.blockedFetch + ')';
+
+        // ---------- S1: กติกาล้วนของ __toastSecClamp ----------
+        await T('S1 · __toastSecClamp จำกัด 1–20 วินาที · ค่าขยะเป็นค่าเริ่มต้น 3', () => {
+            const c = cw.__toastSecClamp;
+            assert(c(0) === 1, 'ต่ำกว่า 1 ต้องดันขึ้นเป็น 1 (ได้ ' + c(0) + ')');
+            assert(c(-5) === 1, 'ค่าติดลบต้องดันขึ้นเป็น 1 (ได้ ' + c(-5) + ')');
+            assert(c(99) === 20, 'สูงกว่า 20 ต้องดันลงเป็น 20 (ได้ ' + c(99) + ')');
+            assert(c(7) === 7, 'ค่าปกติคงเดิม');
+            assert(c('12') === 12, 'สตริงตัวเลขอ่านได้');
+            assert(c('abc') === 3, 'ค่าขยะต้องเป็นค่าเริ่มต้น 3 (ได้ ' + c('abc') + ')');
+            assert(c(null) === 3 && c(undefined) === 3, 'ไม่มีค่า = 3');
+            assert(cw.TOAST_SEC_DEFAULT === 3, 'ค่าเริ่มต้นของระบบต้องเป็น 3 วินาที (ได้ ' + cw.TOAST_SEC_DEFAULT + ')');
+            return '0→1 · 99→20 · 7→7 · "abc"→3 · ค่าเริ่มต้น = ' + cw.TOAST_SEC_DEFAULT + ' วิ';
+        });
+
+        // ---------- S2: ค่าที่จำในเครื่อง ----------
+        await T('S2 · อ่านค่าที่จำในเครื่อง + กันค่าเสียหายใน localStorage', () => {
+            const key = cw.__toastTimeKey;
+            assert(typeof key === 'string' && key.length > 0, 'ต้องมีคีย์เก็บในเครื่อง');
+            cw.localStorage.removeItem(key);
+            const d = cw.__toastTimeLoadLocal();
+            assert(d.sec === 3 && d.hold === false, 'ไม่เคยตั้งค่า = 3 วินาที / ไม่ค้างไว้ (ได้ ' + JSON.stringify(d) + ')');
+            cw.localStorage.setItem(key, JSON.stringify({ sec: 999, hold: true }));
+            const bad = cw.__toastTimeLoadLocal();
+            assert(bad.sec === 20, 'ค่าเสียหาย 999 ต้องถูกจำกัดเป็น 20 (ได้ ' + bad.sec + ')');
+            assert(bad.hold === true, 'สวิตช์ค้างไว้ต้องอ่านได้');
+            cw.localStorage.setItem(key, 'ไม่ใช่ JSON');
+            assert(cw.__toastTimeLoadLocal().sec === 3, 'ค่าที่อ่านไม่ได้ = 3');
+            cw.localStorage.removeItem(key);
+            return 'คีย์ ' + key + ' · 999→20 · JSON เสีย → 3';
+        });
+
+        // ---------- S3: applyToastTime ซิงก์หน้าตาแถว ----------
+        await T('S3 · applyToastTime ตั้งค่า + ป้าย + สวิตช์ + สถานะปุ่ม ตรงกันหมด', () => {
+            cw.applyToastTime(8, false);
+            assert(cw.userToastSec === 8, 'ค่าต้องเป็น 8');
+            assert(cw.document.getElementById('toastSecVal').textContent === '8 วินาที', 'ป้ายต้องเป็น “8 วินาที” (ได้ ' + cw.document.getElementById('toastSecVal').textContent + ')');
+            assert(cw.document.getElementById('editToastHold').checked === false, 'สวิตช์ต้องปิด');
+            assert(cw.document.getElementById('toastTimeReset').disabled === false, 'เปลี่ยนแล้วปุ่มคืนค่าต้องกดได้');
+            cw.applyToastTime(3, false);
+            assert(cw.document.getElementById('toastTimeReset').disabled === true, 'กลับค่าเดิม = ปุ่มคืนค่าต้องเทา');
+            cw.applyToastTime(5, true);
+            assert(cw.document.getElementById('toastSecVal').textContent === 'ค้างไว้จนกดปิด', 'โหมดค้างไว้ต้องบอกชัดว่าค้างไว้จนกดปิด (ได้ ' + cw.document.getElementById('toastSecVal').textContent + ')');
+            assert(cw.document.getElementById('editToastHold').checked === true, 'สวิตช์ต้องติ๊กตามค่าจริง');
+            return '8 วิ → “8 วินาที” · กลับ 3 = เทา · โหมดค้างไว้ = “ค้างไว้จนกดปิด”';
+        });
+
+        // ---------- S4: ปุ่ม − / + ทีละ 1 ----------
+        await T('S4 · ปุ่ม − / + ปรับทีละ 1 วินาที และมีเสียงตอบรับ', () => {
+            cw.applyToastTime(3, false);
+            cw.__sounds.length = 0;
+            const up = cw.bumpToastSec(1);
+            assert(up === 4, 'กด + ต้องได้ 4 (ได้ ' + up + ')');
+            const down = cw.bumpToastSec(-1);
+            assert(down === 3, 'กด − ต้องกลับ 3 (ได้ ' + down + ')');
+            assert(cw.__sounds.length === 2, 'ต้องมีเสียงตอบรับ 2 ครั้ง (ได้ ' + cw.__sounds.length + ')');
+            return '+ → ' + up + ' วิ · − → ' + down + ' วิ · เสียง ' + cw.__sounds.join(',');
+        });
+
+        // ---------- S5: ชนเพดาน/พื้น + ปุ่มกดไม่ได้ที่ขอบ ----------
+        await T('S5 · ชนเพดาน 20 / พื้น 1 แล้วไม่ไปต่อ (ปุ่มที่ไปต่อไม่ได้ต้องเทา)', () => {
+            cw.applyToastTime(20, false);
+            assert(cw.bumpToastSec(1) === 20, 'เกิน 20 ต้องค้างที่ 20');
+            assert(cw.document.getElementById('toastSecPlus').disabled === true, 'ถึง 20 แล้วปุ่ม + ต้องกดไม่ได้');
+            cw.applyToastTime(1, false);
+            assert(cw.bumpToastSec(-1) === 1, 'ต่ำกว่า 1 ต้องค้างที่ 1');
+            assert(cw.document.getElementById('toastSecMinus').disabled === true, 'ถึง 1 แล้วปุ่ม − ต้องกดไม่ได้');
+            assert(cw.bumpToastSec(1) === 2, 'จาก 1 กด + ต้องไป 2');
+            assert(cw.document.getElementById('toastSecPlus').disabled === false, 'ยังไม่ถึง 20 = ปุ่ม + กดได้');
+            return '20+1 = 20 (ปุ่ม + เทา) · 1−1 = 1 (ปุ่ม − เทา)';
+        });
+
+        // ---------- S6: บันทึกอัตโนมัติ (debounce) + “บันทึกแล้ว ✓” ----------
+        await T('S6 · ปรับแล้วบันทึกอัตโนมัติ (ไม่ต้องกด “บันทึกข้อมูล”)', async () => {
+            cw.applyToastTime(3, false);
+            await wait(1400);                                  // เคลียร์คิวบันทึกเก่า
+            cw.localStorage.removeItem(cw.__toastTimeKey);
+            cw.bumpToastSec(1);                                // → 4 วินาที (เริ่ม debounce)
+            const early = cw.localStorage.getItem(cw.__toastTimeKey);
+            await wait(1500);
+            const later = JSON.parse(cw.localStorage.getItem(cw.__toastTimeKey) || '{}');
+            assert(later.sec === 4, 'ต้องจำค่า 4 วินาที ลงเครื่องหลังปล่อยมือ (ได้ ' + JSON.stringify(later) + ')');
+            assert(cw.document.getElementById('toastTimeSaved').style.display === 'block', 'ต้องขึ้น “บันทึกแล้ว ✓” ให้เห็น');
+            return 'จำค่าในเครื่อง = ' + JSON.stringify(later) + ' · ตอนเพิ่งกด = ' + (early === null ? '(ยังไม่เขียน → เป็นการบันทึกรวบ)' : early);
+        });
+
+        // ---------- S7: โหมดทดสอบไม่แตะ Firestore · เส้นทางบันทึกต่อสายจริง ----------
+        await T('S7 · เส้นทางบันทึกต่อสายจริง · โหมดทดสอบไม่แตะ Firestore เลย', async () => {
+            let fsWrites = 0;
+            const origTimeout = cw.__fsTimeout;
+            cw.__fsTimeout = function () { fsWrites++; return origTimeout.apply(this, arguments); };
+            try {
+                cw.__testNoDbWrites = true;
+                cw.applyToastTime(10, false);
+                await cw.__ttSaveNow();
+                assert(fsWrites === 0, 'โหมดทดสอบ (__testNoDbWrites) ต้องไม่แตะ Firestore เลย (เรียก ' + fsWrites + ' ครั้ง)');
+                const hasUser = !!cw.localStorage.getItem('taxi_user_id');
+                if (!hasUser) return 'โหมดทดสอบไม่แตะ Firestore ✔ · เครื่องนี้ยังไม่ล็อกอินจึงข้ามการตรวจเส้นทางเขียนจริง';
+                cw.__testNoDbWrites = false;
+                cw.applyToastTime(11, false);
+                await cw.__ttSaveNow();
+                assert(fsWrites >= 1, 'ค่าที่เปลี่ยนต้องถูกส่งไปบันทึกกับบัญชีจริง (เรียก __fsTimeout ' + fsWrites + ' ครั้ง)');
+                return 'โหมดทดสอบ 0 ครั้ง · โหมดจริง ' + fsWrites + ' ครั้ง (ผ่าน __fsTimeout = ที่เดียวของหน้าตั้งค่าทั่วไป)';
+            } finally {
+                cw.__testNoDbWrites = true;
+                cw.__fsTimeout = origTimeout;
+            }
+        });
+
+        // ---------- S8: ค่าเริ่มต้น 3 วินาที = ซ่อนเองจริงในราว 3 วิ ----------
+        await T('S8 · ค่าเริ่มต้น: toast ซ่อนเองในราว 3 วินาที (วัดเวลาจริง)', async () => {
+            cw.applyToastTime(3, false);
+            cw.userToastHold = false;
+            assert(cw.__toastUserSec() === 3, 'ค่าที่ผู้ใช้ตั้งต้องเป็น 3');
+            cw.showToast('ทดสอบเวลาเริ่มต้น', false, null, false, null, 'บรรทัดที่ 2');
+            assert(shown(), 'ต้องเด้งขึ้นก่อน');
+            const ms = await timeToHide(cw, 6000);
+            assert(ms > 0, 'toast ต้องซ่อนเอง (ไม่ค้าง)');
+            assert(ms >= 2600 && ms <= 3900, 'ต้องซ่อนที่ราว 3 วินาที (วัดได้ ' + ms + ' มิลลิวินาที)');
+            return 'หายเองที่ ' + ms + ' มิลลิวินาที (ค่าเริ่มต้น 3 วิ ±10%)';
+        });
+
+        // ---------- S9: ปรับเป็น 6 วินาที = อยู่จริงนานขึ้น ----------
+        await T('S9 · ปรับเป็น 6 วินาที → อยู่บนจอนานขึ้นจริง (วัดเวลาจริง)', async () => {
+            cw.applyToastTime(6, false);
+            cw.showToast('ทดสอบหกวินาที', false, null, false, null, 'บรรทัดที่ 2');
+            const ms = await timeToHide(cw, 9000);
+            assert(ms > 0, 'ต้องซ่อนเอง');
+            assert(ms >= 5400 && ms <= 7400, 'ต้องซ่อนที่ราว 6 วินาที (วัดได้ ' + ms + ' มิลลิวินาที)');
+            return 'หายเองที่ ' + ms + ' มิลลิวินาที (ตั้ง 6 วิ)';
+        });
+
+        // ---------- S10: สวิตช์ “ค้างไว้จนกดปิดเอง” = ไม่ซ่อนเอง ----------
+        await T('S10 · สวิตช์ “ค้างไว้จนกดปิดเอง” = ไม่ซ่อนเอง + ไม่มีแถบนับถอยหลัง', async () => {
+            cw.applyToastTime(3, true);
+            cw.showToast('ทดสอบโหมดค้างไว้', false, null, false, null, 'ต้องกด ✕ เอง');
+            assert(shown(), 'ต้องเด้งขึ้น');
+            assert(cw.document.getElementById('toastBox').classList.contains('toast-hold'), 'การ์ดต้องมีคลาส toast-hold');
+            assert(getComputedStyle(cw.document.getElementById('toastBar')).display === 'none', 'โหมดค้างไว้ต้องไม่มีแถบนับถอยหลัง');
+            await wait(4200);                                  // นานกว่าค่าเริ่มต้น (3 วิ) มาก
+            assert(shown(), 'โหมดค้างไว้ต้องยังอยู่บนจอหลัง 4.2 วินาที');
+            return 'ยังอยู่บนจอหลัง 4.2 วิ · มีคลาส toast-hold · ไม่มีแถบเวลา';
+        });
+
+        // ---------- S11: ปุ่ม ✕ ปิดได้เสมอ แม้โหมดค้างไว้ ----------
+        await T('S11 · ปุ่ม ✕ ปิดได้เสมอ (แม้อยู่ในโหมดค้างไว้)', async () => {
+            assert(shown(), 'ต้องยังมี toast อยู่จากข้อก่อน');
+            const x = cw.document.getElementById('toastCloseBtn');
+            assert(!!x, 'ต้องมีปุ่ม ✕');
+            const r = x.getBoundingClientRect();
+            assert(r.width > 0 && r.height > 0, 'ปุ่ม ✕ ต้องมองเห็นและกดได้จริง');
+            x.click();
+            await wait(200);
+            assert(!shown(), 'กด ✕ แล้ว toast ต้องหายทันที');
+            return 'กด ✕ → ปิดทันที (ไม่ต้องรอหมดเวลา)';
+        });
+
+        // ---------- S12: เวลาที่แอดมินตั้งเฉพาะข้อความ ยังมีผลเหนือค่าผู้ใช้ ----------
+        await T('S12 · ข้อความที่แอดมินตั้งวินาทีเฉพาะไว้ ชนะค่าของผู้ใช้', async () => {
+            cw.applyToastTime(2, false);                       // ผู้ใช้ตั้ง 2 วินาที
+            const backup = cw.__toastReg;
+            try {
+                cw.__toastReg = Object.assign({}, backup, { 'ทดสอบข้อความแอดมิน': { text: 'ทดสอบข้อความแอดมิน', sec: 6 } });
+                cw.showToast('ทดสอบข้อความแอดมิน');
+                const ms = await timeToHide(cw, 9000);
+                assert(ms > 0, 'ต้องซ่อนเอง');
+                assert(ms >= 5400, 'ต้องอยู่ตามเวลาที่แอดมินตั้ง (6 วิ) ไม่ใช่ค่าผู้ใช้ (2 วิ) — วัดได้ ' + ms + ' มิลลิวินาที');
+                return 'แอดมินตั้ง 6 วิ ชนะค่าผู้ใช้ 2 วิ (วัดได้ ' + ms + ' มิลลิวินาที)';
+            } finally {
+                cw.__toastReg = backup;
+            }
+        });
+
+        // ---------- S13: ขึ้นบนสุดของจอ + ไม่บังปุ่มหัวจอ ----------
+        await T('S13 · ขึ้นบนสุดของโปรแกรม (position:fixed) และไม่บังปุ่มหัวจอ', async () => {
+            cw.applyToastTime(12, false);
+            cw.showToast('ทดสอบตำแหน่ง', false, null, false, null, 'บรรทัดที่ 2');
+            await wait(500);                                   // รออนิเมชันเข้าที่
+            const box = toast();
+            const r = box.getBoundingClientRect();
+            assert(r.top >= 0 && r.top <= 24, 'ขอบบนต้องอยู่บนสุดของจอ (ได้ ' + r.top.toFixed(1) + 'px)');
+            assert(getComputedStyle(box).position === 'fixed', 'ต้องเป็น position:fixed');
+            assert(r.bottom < cw.innerHeight / 2, 'ต้องอยู่ครึ่งบนของจอ (ได้ ' + r.bottom.toFixed(1) + ' / ' + cw.innerHeight + ')');
+            assert(getComputedStyle(box).pointerEvents === 'none', 'ตัวการ์ดต้องปล่อยให้กดผ่านได้ (headless ปุ่มหัวจอ)');
+            assert(getComputedStyle(cw.document.getElementById('toastCloseBtn')).pointerEvents === 'auto', 'ปุ่มในการ์ดต้องกดได้');
+            return 'บนสุด ' + r.top.toFixed(1) + 'px · fixed · pointer-events:none (ปุ่ม auto) → ไม่บังปุ่มเมนู/แชร์';
+        });
+
+        // ---------- S14: อยู่ในเมนูตั้งค่า (บล็อกที่ 4) + เป็นสวิตช์จริง + ไม่มีด่านสิทธิ์ ----------
+        await T('S14 · อยู่ “ตั้งค่าการใช้งาน › ตั้งค่าทั่วไป” บล็อกที่ 4 · ใช้สวิตช์แอป · ไม่มีด่านสิทธิ์', async () => {
+            cw.applyToastTime(3, false);
+            cw.openGeneralSettingsModal('general');
+            await wait(300);
+            const row = cw.document.getElementById('toastTimeRow');
+            assert(!!row, 'ต้องมีแถว #toastTimeRow');
+            const host = cw.document.getElementById('genSettingsBody');
+            assert(row.parentElement === host, 'แถวต้องถูกย้ายเข้า #genSettingsBody แล้ว');
+            const names = [...host.children].slice(0, 4).map(el => el.id);
+            assert(names[3] === 'toastTimeRow', 'ต้องเป็นบล็อกที่ 4 จากบนสุด (ได้ ' + names.join(' → ') + ')');
+            assert(row.offsetParent !== null, 'ต้องมองเห็นได้ (ไม่ใช่ display:none)');
+            assert(typeof cw.canUseToastTime === 'undefined', 'ต้องไม่มีด่านสิทธิ์ (ทุกยศใช้ได้เหมือนกัน)');
+            const sw = cw.document.getElementById('editToastHold');
+            assert(!!sw && sw.closest('.app-switch'), 'สวิตช์ “ค้างไว้” ต้องเป็นสวิตช์แอป (.app-switch) ไม่ใช่ช่องติ๊กดิบ');
+            const raw = [...row.querySelectorAll('input[type="checkbox"]')].filter(i => !i.closest('.app-switch'));
+            assert(raw.length === 0, 'แถวนี้ต้องไม่มีช่องติ๊กดิบ (กติกา “ห้ามมีช่องติ๊กดิบในแอป”)');
+            const labels = [...row.querySelectorAll('button')].map(b => (b.id || b.textContent.trim().slice(0, 14)));
+            return 'บล็อกที่ 4 (' + names.join(' → ') + ') · ปุ่ม: ' + labels.join(' , ');
+        });
+
+        // ---------- คืนสภาพ: กลับค่าเริ่มต้น (ไม่ทิ้งค่าทดสอบไว้ให้ผู้ใช้) ----------
+        try { cw.localStorage.removeItem(cw.__toastTimeKey); cw.applyToastTime(3, false); cw.userToastHold = false; } catch (e) {}
+
+        document.getElementById('runBtn').disabled = false;
+        offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งชุด · คำขอออกเน็ตที่ถูกบล็อก = ' + w().__net.blockedFetch + ' · เขียน Firestore = ปิด (fsNowrite + __testNoDbWrites)';
+        summaryEl.textContent = 'สรุป: ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + (failCount ? '  → ' + failures.join(' | ') : '  ✅ ผ่านครบทุกสถานการณ์') + ' · ใช้เวลา ' + Math.round((Date.now() - t0) / 1000) + ' วิ';
+        try { window.__toastTimeResult = { pass: passCount, fail: failCount, failures: failures.slice() }; } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', run);
+    window.addEventListener('load', () => { setTimeout(run, 50); });
+})();
+</script>
+</body>
+</html>

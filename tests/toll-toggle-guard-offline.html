@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — ปุ่ม “ขึ้นทางด่วน” กับเส้นทางที่ไม่มีทางด่วน (บั๊กจริง 20 ก.ย. 69)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: ปุ่ม “ขึ้นทางด่วน” บนเส้นทางที่ไม่มีทางด่วน</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · สตับเส้นทาง (ไม่ยิง TomTom จริง) · ไม่เขียน Firestore
+        <br><b>คำสั่ง/บั๊กจริง 20 ก.ย. 69:</b> *“ทดสอบไปเส้นทางที่ไม่มีทางd่วน แต่พอเข้ามาหน้านี้ เราไปกดปุ่มว่าขึ้นทางด่วน
+        จริง ๆ มันต้องบอกว่าไม่มีทางด่วน แต่ดันบอกว่าขึ้นทางด่วน ... เส้นทางมันก็ไม่เปลี่ยนให้”*
+        <br>⇒ ต้องพิสูจน์: ① เส้นทางไม่มีทางด่วน + กด “ขึ้นทางด่วน” = ต้องขึ้นข้อความ <b>“เส้นทางนี้ไม่มีทางด่วน”</b> และ <b>คืนโหมดกลับเป็นเลี่ยงทางด่วน</b>
+        ② เส้นทาง <b>มี</b>ทางด่วนจริง = สลับได้ปกติ (ต้องไม่พังของเดิม) ③ <b>ไม่มีพิกัด GPS</b> ก็ยังขอเส้นทางได้
+        (ใช้ต้นทางจากเส้นทางที่จดไว้ของเที่ยวนี้) ⇒ ไม่ต้องพึ่ง GPS ④ ขอเส้นทางไม่ได้ (เน็ต/โควตา) = <b>ต้องไม่บอกว่า “ขึ้นทางด่วน”</b> — คืนโหมด + บอกความจริง
+        ⑤ ไม่มีเส้นทาง/จุดหมายเลย = คืนโหมด + บอกความจริง ⑥ ปุ่มบนหน้าสรุปเส้นทาง (`previewSetToll`) ก็ใช้กติกาเดียวกัน
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/toll-toggle-guard-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (7 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+    const has = (s, sub) => String(s || '').indexOf(sub) >= 0;
+
+    // ------------------------------ ตำแหน่งจำลอง ------------------------------
+    const START = { lat: 13.7563, lon: 100.5018 };      // กรุงเทพฯ ชั้นใน
+    const DEST = { lat: 13.6900, lon: 100.7501 };       // ออกไปทางตะวันออก (ตัวอย่างเส้นทางไม่มีทางด่วน)
+    const NO_TOLL_ROUTE = (km) => ({
+        km: km, sec: Math.round(km * 78),
+        coords: [[START.lat, START.lon], [(START.lat + DEST.lat) / 2, (START.lon + DEST.lon) / 2], [DEST.lat, DEST.lon]],
+        tolls: null, planTrafficSec: 0, planJamKm: 0, planTrafficVia: '', planJamSec: 0, planExtraSec: 0
+    });
+    const TOLL_ROUTE = (km) => ({
+        km: km, sec: Math.round(km * 66),
+        coords: [[START.lat, START.lon], [(START.lat + DEST.lat) / 2, (START.lon + DEST.lon) / 2], [DEST.lat, DEST.lon]],
+        tolls: { hasTolls: true, total: 50, avoided: false, booths: [{ system: 'expressway', price: 50, from: 'ด่านเข้า', to: 'ด่านออก' }] },
+        planTrafficSec: 0, planJamKm: 0, planTrafficVia: '', planJamSec: 0, planExtraSec: 0
+    });
+
+    // ------------------------------ สตับ ------------------------------
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        stubsInstalled = true;
+        cw.__testNoDbWrites = true;                       // ห้ามเขียน Firestore
+        cw.__net = { blockedFetch: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        // GPS ปิด (เหมือนทดสอบในที่ร่ม) — เที่ยวนี้จะไม่มี lastPos จริง
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        cw.__sounds = [];
+        try { cw.playSound = function (t) { cw.__sounds.push(String(t)); }; } catch (e) {}
+        try { cw.playToastTing = function () { cw.__sounds.push('ting'); }; } catch (e) {}
+        installToastRecorder();
+    }
+
+    // 📝 ดักข้อความแจ้งเตือนจริงของแอป (ต้องรู้ว่าขึ้น “ขึ้นทางด่วน” หรือ “ไม่มีทางด่วน”)
+    function installToastRecorder() {
+        const cw = w();
+        if (cw.__toastLog) return;
+        cw.__toastLog = [];
+        const orig = cw.showToast;
+        cw.showToast = function (msg, isError, imgUrl, gold, onClick, subtitle, actionLabel) {
+            try { cw.__toastLog.push({ msg: String(msg || ''), sub: String(subtitle || ''), isError: !!isError, at: Date.now() }); } catch (e) {}
+            return orig.apply(this, arguments);
+        };
+    }
+    const toastLog = () => (w().__toastLog || []);
+    const lastToast = () => { const l = toastLog(); return l.length ? l[l.length - 1] : { msg: '(ไม่มี)', sub: '', isError: false }; };
+    const clearToasts = () => { try { w().__toastLog.length = 0; } catch (e) {} };
+
+    // สตับ “ตัวขอเส้นทาง” — คืนเส้นทางที่กำหนด + จดว่าใครเรียก ด้วยพิกัดอะไร
+    function stubRoute(maker) {
+        const cw = w();
+        cw.__fetchCalls = [];
+        cw.fetchRouteFromTomTom = async function (dLat, dLon, sLat, sLon) {
+            cw.__fetchCalls.push({ dLat: dLat, dLon: dLon, sLat: sLat, sLon: sLon });
+            return maker ? maker() : null;   // maker = null → จำลอง “ขอเส้นทางไม่ได้” (โควตา/เน็ต)
+        };
+    }
+    function stubRouteFail() { stubRoute(null); }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    async function bootApp(force) {
+        stubsInstalled = false;
+        if (force || frame.src === 'about:blank') frame.src = '../index.html?fsNowrite=1&tollGuard=1&t=' + Date.now();
+        const b0 = Date.now();
+        while (Date.now() - b0 < 220000) {
+            await wait(500);
+            try {
+                const cw = w();
+                installStubs();
+                if (cw && typeof cw.setTollMode === 'function' && typeof cw.startTripFromPreview === 'function'
+                    && typeof cw.selectLocation === 'function' && cw.document.getElementById('mainApp')
+                    && cw.document.getElementById('mainApp').style.display !== 'none') {
+                    await wait(400);
+                    await closeAllModals();
+                    await waitForNoLoader(12000);
+                    await wait(300);
+                    return true;
+                }
+            } catch (e) { /* ระหว่างโหลดข้ามโดเมนชั่วคราว */ }
+        }
+        throw new Error('แอปไม่บูตภายในเวลาที่กำหนด (220 วิ)');
+    }
+
+    function log(name, ok, detail) {
+        const li = document.createElement('li');
+        li.className = ok ? 'pass' : 'fail';
+        li.innerHTML = '<span class="st">' + (ok ? '✅ ผ่าน' : '❌ ไม่ผ่าน') + ' — ' + name + '</span>' + (detail ? '<div class="detail">' + detail + '</div>' : '');
+        resultsEl.appendChild(li);
+        if (ok) passCount++; else { failCount++; failures.push(name + (detail ? ' :: ' + detail : '')); }
+        summaryEl.textContent = 'สรุป: ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount;
+        return ok;
+    }
+    const T = async (name, fn) => {
+        try { const r = await Promise.race([fn(), wait(30000).then(() => { throw new Error('สถานการณ์ timeout 30 วิ'); })]); log(name, true, typeof r === 'string' ? r : ''); return true; }
+        catch (e) { log(name, false, e && e.message ? e.message : String(e)); return false; }
+    };
+
+    // ------------------------------ เครื่องมือ ------------------------------
+    // ขึ้นเที่ยวจริงแบบผู้ใช้: ค้นหาเส้นทาง (สตับ) → กด “เริ่มมิเตอร์” จากหน้าสรุป
+    async function armTrip(routeMaker) {
+        const cw = w();
+        await closeAllModals();
+        cw.setUserTollMode(false);                       // เริ่มจาก “เลี่ยงทางด่วน” ทุกครั้ง
+        cw.__testUserPos = { lat: START.lat, lon: START.lon };
+        cw.isManualRunning = false; cw.isMeterPaused = false;
+        stubRoute(routeMaker);
+        cw.selectLocation('ทดสอบ (ไม่มีทางด่วน)', DEST.lat, DEST.lon);
+        await wait(700);
+        try { cw.startTripFromPreview(); } catch (e) {}
+        await wait(900);
+        try { cw.updateLiveMeterDisplay(); } catch (e) {}
+        clearToasts();
+        return cw;
+    }
+    const onMeterScreen = (cw) => !!cw.isManualRunning;
+
+    async function run() {
+        resultsEl.innerHTML = '';
+        passCount = 0; failCount = 0; failures.length = 0;
+        summaryEl.textContent = '';
+        offlineEl.textContent = 'สถานะเน็ต: กำลังบูตแอปในโหมดออฟไลน์ (ตัดเน็ตทั้งหมด)…';
+        document.getElementById('runBtn').disabled = true;
+        try { await bootApp(true); }
+        catch (e) { log('บูตแอปใน iframe', false, e.message); document.getElementById('runBtn').disabled = false; return; }
+        const cw = w();
+        offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตแล้ว (สตับเส้นทาง · ไม่เขียน Firestore · คำขอออกเน็ตถูกบล็อก ' + cw.__net.blockedFetch + ')';
+
+        // ---------- S1: บั๊กจริงที่ผู้ใช้เจอ — เส้นทางไม่มีทางด่วน + กด “ขึ้นทางด่วน” บนจอมิเตอร์ใหญ่ ----------
+        await T('S1 · เส้นทางไม่มีทางด่วน + กด “ขึ้นทางด่วน” = ต้องบอกว่าไม่มีทางด่วน + คืนโหมดเป็นเลี่ยง', async () => {
+            const c = await armTrip(() => NO_TOLL_ROUTE(13.1));
+            assert(onMeterScreen(c), 'ต้องอยู่บนจอมิเตอร์ใหญ่ (มิเตอร์เดิน) ก่อนทดสอบ');
+            assert(c.isTollwayMode === false, 'ก่อนกด ต้องเป็น “เลี่ยงทางด่วน”');
+            clearToasts();
+            await c.setTollMode(true);                       // ← ปุ่มจริงบนจอ (btnTollToggleZoom) เรียกตัวนี้
+            await wait(300);
+            const t = lastToast();
+            assert(!!t.msg && t.msg !== '(ไม่มี)', 'ต้องมีข้อความแจ้งเตือนออกมา');
+            assert(!has(t.msg, '🛣️ ขึ้นทางด่วน'), '⛔ ต้องไม่บอกว่า “ขึ้นทางด่วน” (ได้ “' + t.msg + '”)');
+            assert(has(t.msg, 'ไม่มีทางด่วน'), 'ต้องบอกว่าเส้นทางนี้ไม่มีทางด่วน (ได้ “' + t.msg + '”)');
+            assert(c.isTollwayMode === false, 'ต้องคืนโหมดกลับเป็น “เลี่ยงทางด่วน” (ได้ ' + c.isTollwayMode + ')');
+            const all = toastLog().map(x => x.msg).join(' | ');
+            assert(!has(all, '🛣️ ขึ้นทางด่วน'), 'ทั้งชุดต้องไม่มีข้อความ “ขึ้นทางด่วน” เลย (ได้: ' + all + ')');
+            return 'ข้อความ = “' + t.msg + '” · โหมดหลังกด = ' + (c.isTollwayMode ? 'ขึ้นทางด่วน' : 'เลี่ยงทางด่วน (คืนแล้ว)');
+        });
+
+        // ---------- S2: เส้นทางมีทางด่วนจริง = ต้องสลับได้ตามเดิม (กันของเดิมพัง) ----------
+        await T('S2 · เส้นทาง “มี” ทางด่วนจริง → สลับเป็นขึ้นทางด่วนได้ตามเดิม + โชว์ค่าทางด่วน', async () => {
+            const c = await armTrip(() => TOLL_ROUTE(14.2));
+            clearToasts();
+            await c.setTollMode(true);
+            await wait(300);
+            const t = lastToast();
+            assert(c.isTollwayMode === true, 'ต้องเป็น “ขึ้นทางด่วน” (ได้ ' + c.isTollwayMode + ')');
+            assert(has(t.msg, 'ทางด่วน'), 'ข้อความต้องเกี่ยวกับทางด่วน (ได้ “' + t.msg + '”)');
+            assert(has(t.msg, '50฿') || has(t.msg, '50 ฿'), 'ต้องโชว์ยอดค่าทางด่วนจริง 50฿ (ได้ “' + t.msg + '”)');
+            return 'โหมด = ขึ้นทางด่วน · ข้อความ = “' + t.msg + '”';
+        });
+
+        // ---------- S3: ไม่มีพิกัด GPS ก็ต้องยังขอเส้นทางได้ (ใช้ต้นทางที่จดไว้ของเที่ยวนี้) ----------
+        await T('S3 · ไม่มี GPS (lastPos ว่าง) = ยังขอเส้นทางใหม่ได้ด้วยต้นทางที่จดไว้ + ตรวจเจอ “ไม่มีทางด่วน”', async () => {
+            const c = await armTrip(() => NO_TOLL_ROUTE(13.1));
+            assert(!!c.__pendingRouteStart && typeof c.__pendingRouteStart.sLat === 'number', 'ต้องมีเส้นทางที่จดไว้ของเที่ยวนี้ (__pendingRouteStart)');
+            const sLat = c.__pendingRouteStart.sLat, sLon = c.__pendingRouteStart.sLon;
+            c.__testUserPos = null;                          // จำลอง “ไม่มีพิกัด GPS เลย”
+            c.__fetchCalls = [];
+            clearToasts();
+            await c.setTollMode(true);
+            await wait(300);
+            assert(c.__fetchCalls.length >= 1, 'ต้องมีการขอเส้นทางใหม่จริง (ได้ ' + c.__fetchCalls.length + ' ครั้ง)');
+            const call = c.__fetchCalls[c.__fetchCalls.length - 1];
+            assert(call.sLat === sLat && call.sLon === sLon, 'ต้องใช้ต้นทางจากเส้นทางที่จดไว้ (' + sLat + ',' + sLon + ') — ได้ (' + call.sLat + ',' + call.sLon + ')');
+            const t = lastToast();
+            assert(has(t.msg, 'ไม่มีทางด่วน'), 'ต้องสรุปว่า “ไม่มีทางด่วน” (ได้ “' + t.msg + '”)');
+            assert(c.isTollwayMode === false, 'ต้องคืนโหมดเป็นเลี่ยงทางด่วน');
+            return 'ขอเส้นทางด้วย (' + call.sLat.toFixed(4) + ',' + call.sLon.toFixed(4) + ') · ข้อความ = “' + t.msg + '”';
+        });
+
+        // ---------- S4: ขอเส้นทางไม่ได้ (เน็ต/โควตา) = ต้องไม่บอกว่า “ขึ้นทางด่วน” ----------
+        await T('S4 · ขอเส้นทางไม่ได้ (โควตา/เน็ต) → ต้องไม่บอกว่า “ขึ้นทางด่วน” + คืนโหมดเดิม', async () => {
+            const c = await armTrip(() => NO_TOLL_ROUTE(13.1));
+            stubRouteFail();                                 // ทุกครั้งที่ขอเส้นทาง = ล้ม
+            clearToasts();
+            await c.setTollMode(true);
+            await wait(300);
+            const t = lastToast();
+            assert(!has(t.msg, '🛣️ ขึ้นทางด่วน'), '⛔ ต้องไม่บอกว่า “ขึ้นทางด่วน” (ได้ “' + t.msg + '”)');
+            assert(has(t.msg, 'คำนวณเส้นทางใหม่ไม่ได้'), 'ต้องบอกตามจริงว่าคำนวณเส้นทางไม่ได้ (ได้ “' + t.msg + '”)');
+            assert(t.isError === true, 'ต้องเป็นข้อความเตือน (isError)');
+            assert(c.isTollwayMode === false, 'ต้องคืนโหมดเป็น “เลี่ยงทางด่วน” (ได้ ' + c.isTollwayMode + ')');
+            return 'ข้อความ = “' + t.msg + '” · โหมด = เลี่ยงทางด่วน (คืนแล้ว)';
+        });
+
+        // ---------- S5: ไม่มีจุดหมาย/เส้นทางเลย = คืนโหมด + บอกความจริง ----------
+        await T('S5 · ไม่มีเส้นทาง/ไม่มีจุดหมายเลย → คืนโหมด + บอกความจริง (ไม่หลอกว่าขึ้นแล้ว)', async () => {
+            const c = await armTrip(() => NO_TOLL_ROUTE(13.1));
+            try { c.clearDestination(); } catch (e) {}
+            c.__pendingRouteStart = null;                    // ไม่มีเส้นทางค้างเลย
+            c.__testUserPos = null;
+            clearToasts();
+            await c.setTollMode(true);
+            await wait(300);
+            const t = lastToast();
+            assert(!has(t.msg, '🛣️ ขึ้นทางด่วน'), '⛔ ต้องไม่บอกว่า “ขึ้นทางด่วน” (ได้ “' + t.msg + '”)');
+            assert(t.isError === true, 'ต้องเป็นข้อความเตือน');
+            assert(has(t.msg, 'ยังไม่มีเส้นทาง') || has(t.msg, 'ยังไม่ได้พิกัด'), 'ต้องบอกสาเหตุที่ขอเส้นทางไม่ได้ (ได้ “' + t.msg + '”)');
+            assert(c.isTollwayMode === false, 'ต้องคืนโหมดเป็น “เลี่ยงทางด่วน”');
+            return 'ข้อความ = “' + t.msg + '”';
+        });
+
+        // ---------- S6: สลับกลับเป็น “เลี่ยงทางด่วน” ยังทำงานปกติ ----------
+        await T('S6 · สลับกลับเป็น “เลี่ยงทางด่วน” ยังทำงานปกติ (ไม่ถูกกลไกคืนค่าใหม่รบกวน)', async () => {
+            const c = await armTrip(() => TOLL_ROUTE(14.2));
+            await c.setTollMode(true);
+            await wait(250);
+            assert(c.isTollwayMode === true, 'ก่อนทดสอบต้องเป็นขึ้นทางด่วนก่อน');
+            clearToasts();
+            await c.setTollMode(false);
+            await wait(300);
+            const t = lastToast();
+            assert(c.isTollwayMode === false, 'ต้องกลับเป็น “เลี่ยงทางด่วน” (ได้ ' + c.isTollwayMode + ')');
+            assert(!has(t.msg, 'คำนวณเส้นทางใหม่ไม่ได้'), 'เส้นทางนี้คำนวณได้ ต้องไม่ขึ้นข้อความล้มเหลว (ได้ “' + t.msg + '”)');
+            return 'ข้อความ = “' + t.msg + '” · โหมด = เลี่ยงทางด่วน';
+        });
+
+        // ---------- S7: ปุ่มบนหน้าสรุปเส้นทาง (previewSetToll) ใช้กติกาเดียวกัน ----------
+        await T('S7 · หน้าสรุปเส้นทาง (previewSetToll) ขอเส้นทางไม่ได้ → ต้องคืนโหมดเดิมด้วย', async () => {
+            const c = await armTrip(() => NO_TOLL_ROUTE(13.1));
+            c.__pendingRouteStart = { sLat: START.lat, sLon: START.lon, dLat: DEST.lat, dLon: DEST.lon, name: 'ทดสอบสรุป', km: 13.1, sec: 900, coords: [] };
+            c.setUserTollMode(false);
+            stubRouteFail();
+            clearToasts();
+            await c.previewSetToll(true);
+            await wait(300);
+            const t = lastToast();
+            assert(!has(t.msg, '🛣️ ขึ้นทางด่วน'), '⛔ หน้าสรุปต้องไม่บอกว่า “ขึ้นทางด่วน” เมื่อขอเส้นทางไม่ได้ (ได้ “' + t.msg + '”)');
+            assert(c.isTollwayMode === false, 'ต้องคืนโหมดเป็น “เลี่ยงทางด่วน” (ได้ ' + c.isTollwayMode + ')');
+            return 'ข้อความ = “' + t.msg + '” · โหมด = เลี่ยงทางด่วน (คืนแล้ว)';
+        });
+
+        // 🧹 คืนสภาพ: หยุดมิเตอร์ + กลับโหมดเลี่ยงทางด่วน (ไม่ทิ้งเที่ยวทดสอบไว้)
+        try {
+            const c = w();
+            c.isManualRunning = false; c.isMeterPaused = false;
+            c.setUserTollMode(false);
+            c.__testUserPos = null;
+        } catch (e) {}
+
+        document.getElementById('runBtn').disabled = false;
+        offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งชุด · คำขอออกเน็ตที่ถูกบล็อก = ' + w().__net.blockedFetch + ' · ไม่เขียน Firestore (fsNowrite + __testNoDbWrites)';
+        summaryEl.textContent = 'สรุป: ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + (failCount ? '  → ' + failures.join(' | ') : '  ✅ ผ่านครบทุกสถานการณ์');
+        try { window.__tollGuardResult = { pass: passCount, fail: failCount, failures: failures.slice() }; } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', run);
+    window.addEventListener('load', () => { setTimeout(run, 50); });
+})();
+</script>
+</body>
+</html>

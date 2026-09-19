@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — “ขนาดตัวอักษรเริ่มต้น” รายยศ (แอดมินกำหนด · ผู้ใช้ปรับต่อได้)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: “ขนาดตัวอักษรเริ่มต้น” รายยศ</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ไม่เขียน Firestore
+        <br><b>คำสั่งผู้ใช้ 20 ก.ย. 69:</b> *“ให้แอดมินกำหนดค่าขนาดตัวอักษรเริ่มต้นของแต่ละยศได้ (เช่น VIP เริ่ม 110%)
+        โดย user ยังปรับต่อได้เอง และมีปุ่มคืนค่าเริ่มต้นของยศนั้น”*
+        <br>⇒ ต้องพิสูจน์: ① ค่าใหม่ถูกจำกัดช่วง 85–135 (ค่าขยะ → 100) ② กล่องของแอดมินอยู่ในหน้าตั้งค่าสิทธิ์ ใช้แถบเลื่อน + ปุ่ม − / +
+        ③ ค่าที่แอดมินตั้งเป็น “ค่าเริ่มต้นของยศ” และผู้ใช้ที่ยังไม่เคยตั้งเองได้ค่านั้น ④ <b>ผู้ใช้ที่ตั้งเองแล้วไม่ถูกทับ</b>
+        ⑤ เอกสารบัญชีเดิมที่มีค่าแต่ไม่มีธง “ตั้งเอง” ต้องไม่ถูกรีเซ็ต ⑥ ปุ่ม “คืนค่าเริ่มต้นของยศ” กลับไปตามค่าเริ่มต้นของยศ (ไม่ใช่ 100 ตายตัว)
+        ⑦ ปุ่มเทาเมื่อยังไม่เปลี่ยน (กติกาทั้งแอป) ⑧ เปลี่ยนค่าเริ่มต้นของยศแล้วการ์ด “บันทึกสิทธิ์” ต้องแอคทีฟ
+        ⑨ ค่าเริ่มต้นของยศไม่ทับค่าคนที่ตั้งเอง (ทั้งตอนแอดมินบันทึก และตอนผู้ใช้ล็อกอิน) ⑩ ไม่ยิงคำขอออกเน็ต/ไม่เขียน Firestore
+        <br>⑪ ค่าที่เพิ่งบันทึกต้องถูกเขียนลง “แคชเอกสารบัญชีในเครื่อง” ด้วย — ไม่งั้นแอปที่อ่านแคชซ้ำจะทับค่าที่เพิ่งรีเซ็ตกลับเป็นค่าเก่า (เจอบั๊กจริงตอนทดสอบ)
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/role-font-default-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (17 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        stubsInstalled = true;
+        cw.__testNoDbWrites = true;                       // ห้ามเขียน Firestore (แอปอ่านธงนี้ตอนบันทึก)
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (method, url) {
+                const u = String(url);
+                const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+                if (!isLocal) { cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.send = function () {}; return; }
+                return open.apply(null, arguments);
+            };
+            return x;
+        };
+        cw.__sounds = [];
+        try { cw.playSound = function (type) { cw.__sounds.push(String(type)); }; } catch (e) {}
+    }
+
+    async function bootApp(force) {
+        stubsInstalled = false;
+        if (force || frame.src === 'about:blank') {
+            frame.src = '../index.html?fsNowrite=1&fsRoleFontTest=1&t=' + Date.now();
+        }
+        const t0 = Date.now();
+        while (Date.now() - t0 < 220000) {
+            await wait(700);
+            try {
+                const cw = w();
+                installStubs();
+                if (cw && typeof cw.roleFontDefault === 'function' && cw.document.getElementById('mainApp') && cw.document.getElementById('mainApp').style.display === 'flex') {
+                    await wait(600);
+                    return true;
+                }
+            } catch (e) { /* ระหว่างโหลดข้ามโดเมนชั่วคราว */ }
+        }
+        throw new Error('แอปไม่บูตภายในเวลาที่กำหนด (220 วิ)');
+    }
+
+    function log(name, ok, detail) {
+        const li = document.createElement('li');
+        li.className = ok ? 'pass' : 'fail';
+        li.innerHTML = '<span class="st">' + (ok ? '✅' : '❌') + ' ' + name + '</span><div class="detail">' + (detail || '') + '</div>';
+        resultsEl.appendChild(li);
+    }
+
+    async function T(name, fn) {
+        try {
+            const detail = await fn();
+            passCount++;
+            log(name, true, detail || '');
+        } catch (e) {
+            failCount++;
+            failures.push(name + ' → ' + e.message);
+            log(name, false, e.message);
+        }
+    }
+
+    // ============================ เครื่องมือช่วย ============================
+    function setRole(cw, role) {
+        // ต้องเติมรายการตำแหน่งก่อน ไม่งั้น <select> ไม่รับค่าที่ตั้ง (ค่าจะกลับเป็นตัวแรก)
+        try { if (typeof cw.fillRoleSelects === 'function') cw.fillRoleSelects(); } catch (e) {}
+        const sel = cw.document.getElementById('settingRoleSelect');
+        if (sel) sel.value = role;
+        cw.__testRole = role;                                  // ให้ myRoleKey() คืนยศนี้ (แนวเดียวกับชุดทดสอบอื่น)
+        return (sel ? sel.value : role);
+    }
+    function setRolePerm(cw, role, key, val) {
+        if (!cw.globalPermissions) cw.globalPermissions = {};
+        cw.globalPermissions[role] = Object.assign({}, cw.globalPermissions[role] || {}, { [key]: val });
+    }
+    function clearOwn(cw) {
+        cw.userFontScaleOwn = false;
+        try { cw.__fsMarkOwn(false); } catch (e) {}
+    }
+    // ปิดชุดทดสอบ = คืนค่าฟอนต์กลับ 100 + ไม่มีค่าเริ่มต้นของยศค้างอยู่ (กันชุดอื่นเพี้ยน)
+    function tidy(cw) {
+        try { delete cw.globalPermissions.VIP.fontScaleDefault; } catch (e) {}
+        try { delete cw.globalPermissions.Manager.fontScaleDefault; } catch (e) {}
+        try { delete cw.globalPermissions.User.fontScaleDefault; } catch (e) {}
+        cw.applyFontScale(100);
+        clearOwn(cw);
+    }
+
+    // ============================ ชุดการทดสอบ ============================
+    async function run() {
+        resultsEl.innerHTML = '';
+        passCount = 0; failCount = 0; failures.length = 0;
+        document.getElementById('runBtn').disabled = true;
+        offlineEl.textContent = 'สถานะเน็ต: กำลังโหลดแอปจริงในไเฟรม (ตัดเน็ตทั้งชุด)...';
+        let cw;
+        try {
+            await bootApp(true);
+            cw = w();
+            assert(typeof cw.roleFontDefault === 'function', 'ไม่พบ window.roleFontDefault (ยังไม่ได้ต่อกลไกค่าเริ่มต้นรายยศ)');
+        } catch (e) {
+            log('บูตแอป', false, e.message);
+            summaryEl.textContent = 'สรุป: บูตแอปไม่สำเร็จ — ' + e.message;
+            document.getElementById('runBtn').disabled = false;
+            return;
+        }
+        tidy(cw);
+
+        // ---------- S1: กติกาล้วนของ normalizeRoleFont ----------
+        await T('S1 · ค่าใหม่ถูกจำกัดช่วง 85–135 (ค่าขยะ/ว่าง → 100)', () => {
+            assert(cw.normalizeRoleFont(110) === 110, '110 ต้องผ่านตรง ๆ');
+            assert(cw.normalizeRoleFont(10) === 85, 'ต่ำเกินต้องค้างที่ 85 (ได้ ' + cw.normalizeRoleFont(10) + ')');
+            assert(cw.normalizeRoleFont(999) === 135, 'สูงเกินต้องค้างที่ 135 (ได้ ' + cw.normalizeRoleFont(999) + ')');
+            assert(cw.normalizeRoleFont('') === 100, 'ค่าว่างต้องเป็น 100 (ได้ ' + cw.normalizeRoleFont('') + ')');
+            assert(cw.normalizeRoleFont('abc') === 100, 'ค่าขยะต้องเป็น 100 (ได้ ' + cw.normalizeRoleFont('abc') + ')');
+            assert(cw.normalizeRoleFont(undefined) === 100, 'ไม่ระบุต้องเป็น 100');
+            return '110 → 110 · 10 → 85 · 999 → 135 · ""/abc → 100';
+        });
+
+        // ---------- S2: อ่านค่าเริ่มต้นของยศจากที่เก็บจริง ----------
+        await T('S2 · roleFontDefault อ่านจาก settings/roles (ยังไม่ตั้ง = 100)', () => {
+            tidy(cw);
+            assert(cw.roleFontDefault('VIP') === 100, 'ยังไม่ตั้ง = 100 (ได้ ' + cw.roleFontDefault('VIP') + ')');
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);
+            assert(cw.roleFontDefault('VIP') === 110, 'ตั้ง 110 แล้วต้องได้ 110 (ได้ ' + cw.roleFontDefault('VIP') + ')');
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 'พัง');
+            assert(cw.roleFontDefault('VIP') === 100, 'ค่าเสียหายในที่เก็บต้องถูกกันเป็น 100 (ได้ ' + cw.roleFontDefault('VIP') + ')');
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);
+            setRolePerm(cw, 'Manager', 'fontScaleDefault', 95);
+            assert(cw.roleFontDefault('Manager') === 95, 'ยศอื่นอ่านของตัวเอง (ได้ ' + cw.roleFontDefault('Manager') + ')');
+            assert(cw.roleFontDefault('VIP') === 110, 'ยศนี้ไม่เปลี่ยนตามยศอื่น');
+            return 'VIP = 110 · Manager = 95 · ค่าเสียหาย → 100';
+        });
+
+        // ---------- S3: กล่องของแอดมินอยู่ในหน้าตั้งค่าสิทธิ์ + ใช้แถบเลื่อน/ปุ่ม ----------
+        await T('S3 · กล่อง “ขนาดตัวอักษรเริ่มต้นของตำแหน่ง” อยู่ในหน้าตั้งค่าสิทธิ์ (แถบเลื่อน + ปุ่ม − / +)', () => {
+            setRole(cw, 'VIP');
+            cw.renderRoleFont();
+            const box = cw.document.getElementById('roleFontBox');
+            const rows = cw.document.getElementById('roleFontRows');
+            assert(!!box && !!rows, 'ต้องมี #roleFontBox / #roleFontRows ในหน้าตั้งค่าสิทธิ์');
+            assert(cw.document.getElementById('settingRoleSelect').value === 'VIP', 'ต้องเลือกตำแหน่ง VIP ในช่องเลือกตำแหน่งก่อนวาดกล่อง');
+            const panel = cw.document.getElementById('rolePanelPerms');
+            assert(panel && panel.contains(box), 'กล่องต้องอยู่ในแผงสิทธิ์ (#rolePanelPerms)');
+            const rng = cw.document.getElementById('roleFontRange');
+            assert(!!rng, 'ต้องมีแถบเลื่อน #roleFontRange');
+            assert(rng.min === '85' && rng.max === '135' && rng.step === '5', 'แถบต้องเป็น 85–135 ทีละ 5 (ได้ ' + rng.min + '-' + rng.max + '/' + rng.step + ')');
+            assert(rng.classList.contains('fs-range'), 'ต้องเป็นแถบเลื่อนสไตล์แอป (.fs-range)');
+            const vals = [...rows.querySelectorAll('div')].filter(d => d.id === 'roleFontVal');
+            assert(vals.length === 1 && vals[0].textContent.trim() === '110%', 'ป้ายต้องโชว์ค่าเริ่มต้นของยศนี้ 110% (ได้ ' + (vals[0] && vals[0].textContent) + ')');
+            const plus = [...rows.querySelectorAll('button')].filter(b => b.textContent.trim() === '+');
+            const minus = [...rows.querySelectorAll('button')].filter(b => b.textContent.trim() === '−');
+            assert(plus.length === 1 && minus.length === 1, 'ต้องมีปุ่ม + และ − อย่างละ 1 ปุ่ม');
+            assert(rows.querySelectorAll('input[type="checkbox"]').length === 0, 'ห้ามมีช่องติ๊กดิบในกล่องนี้ (กติกาแอป)');
+            return 'อยู่ใน #rolePanelPerms · แถบ 85–135/5 · ป้าย 110% · ปุ่ม − / + · ไม่มีช่องติ๊กดิบ';
+        });
+
+        // ---------- S4: ปุ่ม − / + ขยับแถบและป้าย ----------
+        await T('S4 · กด + แถบขยับไปทางขวา · กด − ขยับกลับ (ทีละ 5)', () => {
+            setRole(cw, 'VIP');
+            cw.renderRoleFont();
+            cw.__roleFontUI = 110;
+            const up = cw.bumpRoleFont(5);
+            assert(up === 115, 'กด + ต้องเป็น 115 (ได้ ' + up + ')');
+            assert(cw.document.getElementById('roleFontRange').value === '115', 'แถบต้องขยับเป็น 115 (ได้ ' + cw.document.getElementById('roleFontRange').value + ')');
+            assert(cw.document.getElementById('roleFontVal').textContent.trim() === '115%', 'ป้ายต้องเป็น 115%');
+            const down = cw.bumpRoleFont(-10);
+            assert(down === 105, 'กด − ทีละ 10 ต้องเป็น 105 (ได้ ' + down + ')');
+            assert(cw.document.getElementById('roleFontRange').value === '105', 'แถบต้องขยับกลับเป็น 105');
+            const sounds = cw.__sounds.slice(-2).join(',');
+            assert(sounds === 'plus,minus', 'ต้องมีเสียงตอบรับ + แล้ว − (ได้ ' + sounds + ')');
+            return '+ → 115 · −10 → 105 · แถบตามปุ่ม · เสียง ' + sounds;
+        });
+
+        // ---------- S5: ชนเพดาน/พื้น ----------
+        await T('S5 · ชนเพดาน 135 / พื้น 85 แล้วไม่ไปต่อ', () => {
+            setRole(cw, 'VIP');
+            cw.renderRoleFont();
+            cw.__roleFontUI = 135;
+            assert(cw.bumpRoleFont(5) === 135, '+ ที่ 135 ต้องค้าง 135');
+            cw.__roleFontUI = 85;
+            assert(cw.bumpRoleFont(-5) === 85, '− ที่ 85 ต้องค้าง 85');
+            assert(cw.onRoleFontSlide(200) === 135, 'ลากเกินขวาสุดต้องค้าง 135 (ได้ ' + cw.onRoleFontSlide(200) + ')');
+            return '135+5 = 135 · 85−5 = 85 · ลาก 200 → 135';
+        });
+
+        // ---------- S6: ปุ่มคืนค่า 100% ของยศ ----------
+        await T('S6 · ปุ่ม “คืนค่า 100%” ในกล่องแอดมิน เทา/แดงตามกติกา', () => {
+            setRole(cw, 'VIP');
+            cw.__roleFontUI = 110;
+            cw.renderRoleFont();
+            cw.__roleFontUI = 115; cw.updateRoleFontUI();
+            assert(cw.document.getElementById('roleFontResetBtn').disabled === false, 'เปลี่ยนแล้วปุ่มคืนค่าต้องกดได้');
+            const back = cw.resetRoleFont();
+            assert(back === 100, 'คืนค่าแล้วต้องเป็น 100 (ได้ ' + back + ')');
+            assert(cw.document.getElementById('roleFontRange').value === '100', 'แถบต้องกลับ 100');
+            assert(cw.document.getElementById('roleFontResetBtn').disabled === true, 'กลับค่าเดิมแล้วปุ่มต้องเทา (กดไม่ได้)');
+            return '115 → กดคืน → 100 · แถบ 100 · ปุ่มเทา';
+        });
+
+        // ---------- S7: เปลี่ยนค่าเริ่มต้นของยศ = “ยังไม่บันทึก” ----------
+        await T('S7 · เปลี่ยนค่าเริ่มต้นแล้วการ์ด “บันทึกสิทธิ์” ต้องแอคทีฟ (กติกาเทาเมื่อยังไม่เปลี่ยน)', () => {
+            setRole(cw, 'VIP');
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);
+            cw.renderRoleFont();
+            const btn = cw.document.getElementById('saveRolePermBtn');
+            cw.captureRolePermBaseline();
+            cw.updateSavePermBtn();
+            assert(btn.disabled === true, 'ยังไม่เปลี่ยน = ปุ่มบันทึกต้องเทา (กดไม่ได้)');
+            cw.bumpRoleFont(5);
+            assert(btn.disabled === false, 'เปลี่ยนค่าเริ่มต้นของยศแล้วปุ่มบันทึกต้องกดได้');
+            assert(cw.rolePermDirtyNow() === true, 'ต้องรายงานว่ามี “สิ่งที่ยังไม่บันทึก”');
+            cw.bumpRoleFont(-5);
+            assert(cw.rolePermDirtyNow() === false, 'ติ๊กไปแล้วกลับมาเท่าเดิม = ถือว่าไม่เปลี่ยน (ปุ่มเทาเหมือนเดิม)');
+            return 'ยังไม่เปลี่ยน = เทา · เปลี่ยน = เขียว · เปลี่ยนแล้วกลับ = เทา';
+        });
+
+        // ---------- S8: อ่านค่าจากกล่อง ----------
+        await T('S8 · readRoleFontFromUI อ่านค่าจากกล่อง · กล่องไม่มี = คืนค่าที่ใช้จริง (ไม่เขียนทับด้วยค่าเพี้ยน)', () => {
+            setRole(cw, 'VIP');
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);
+            cw.renderRoleFont();
+            const r125 = cw.document.getElementById('roleFontRange');
+            cw.__roleFontUI = 125; r125.value = '125'; cw.onRoleFontSlide(125);
+            assert(cw.readRoleFontFromUI() === 125, 'ต้องอ่าน 125 จากกล่อง (ได้ ' + cw.readRoleFontFromUI() + ')');
+            const rng = cw.document.getElementById('roleFontRange');
+            const keep = rng; rng.remove();
+            assert(cw.readRoleFontFromUI() === 110, 'กล่องหาย = ต้องคืนค่าที่ใช้อยู่จริง 110 (ได้ ' + cw.readRoleFontFromUI() + ')');
+            cw.document.getElementById('roleFontRows').appendChild(keep);
+            cw.renderRoleFont();
+            return 'ในกล่อง 125 → อ่านได้ 125 · ถอดกล่องออก → อ่านได้ค่าที่ใช้จริง 110 (ไม่ทับด้วยค่าเพี้ยน)';
+        });
+
+        // ---------- S9: ผู้ใช้ที่ยังไม่เคยตั้งเอง = ได้ค่าเริ่มต้นของยศ ----------
+        await T('S9 · ล็อกอินครั้งแรก (เอกสารไม่มีค่า) → ได้ค่าเริ่มต้นของยศ (VIP 110%)', () => {
+            tidy(cw);
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);
+            setRole(cw, 'VIP');
+            try { cw.localStorage.removeItem(cw.__fsKey); } catch (e) {}
+            assert(cw.__fsEffectiveFor('') === 110, 'ยังไม่ตั้งเอง = ค่าเริ่มต้นของยศ 110 (ได้ ' + cw.__fsEffectiveFor('') + ')');
+            cw.__applyUserDocUI({ role: 'VIP', username: 'vip1', displayName: 'วีไอพี' });
+            assert(cw.userFontScale === 110, 'แอปต้องใช้ 110 กับทั้งหน้าจอ (ได้ ' + cw.userFontScale + ')');
+            assert(cw.document.documentElement.style.zoom === '1.1', 'ต้องซูม 1.1 จริง (ได้ ' + cw.document.documentElement.style.zoom + ')');
+            assert(cw.userFontScaleOwn !== true, 'ยังไม่ถือว่าตั้งเอง (own = false)');
+            return '__fsEffectiveFor = 110 · userFontScale 110 · zoom 1.1 · own = false';
+        });
+
+        // ---------- S10: ผู้ใช้ที่ตั้งเองแล้ว = ไม่ถูกทับ ----------
+        await T('S10 · ผู้ใช้ที่ปรับเองไว้ 125% → ล็อกอินใหม่ยังได้ 125 (ค่าเริ่มต้นของยศไม่ทับ)', () => {
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);
+            setRole(cw, 'VIP');
+            cw.__applyUserDocUI({ role: 'VIP', username: 'vip2', displayName: 'วีไอพีสอง', fontScale: 125, fontScaleOwn: true });
+            assert(cw.userFontScale === 125, 'ต้องได้ค่าของผู้ใช้ 125 (ได้ ' + cw.userFontScale + ')');
+            assert(cw.userFontScaleOwn === true, 'ต้องจำว่าตั้งเองแล้ว');
+            assert(cw.applyMyRoleFontDefault('VIP') === false, 'แอดมินแก้ค่าเริ่มต้นยศต้องไม่ทับคนที่ตั้งเอง');
+            assert(cw.userFontScale === 125, 'ค่าต้องยังเป็น 125 หลังแอดมินบันทึก');
+            return '125 · own = true · applyMyRoleFontDefault คืน false · ยัง 125';
+        });
+
+        // ---------- S11: เอกสารเดิม (มีค่าแต่ไม่มีธง) = ไม่ถูกรีเซ็ต ----------
+        await T('S11 · เอกสารบัญชีเดิม (fontScale 125 · ไม่มีธงตั้งเอง) → ยังได้ 125 (คนเดิมไม่ถูกรีเซ็ต)', () => {
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);
+            setRole(cw, 'VIP');
+            cw.__applyUserDocUI({ role: 'VIP', username: 'vip3', displayName: 'วีไอพีสาม', fontScale: 125 });
+            assert(cw.userFontScale === 125, 'เอกสารเก่าต้องถือว่าตั้งเองแล้ว (ได้ ' + cw.userFontScale + ')');
+            assert(cw.userFontScaleOwn === true, 'ต้องบันทึกว่า own = true ในเครื่อง');
+            return 'fontScale 125 + ไม่มีธง → 125 · own = true';
+        });
+
+        // ---------- S12: ธงบอกว่า “ไม่ได้ตั้งเอง” = ตามค่าเริ่มต้นของยศ (ข้ามค่าค้างในเครื่อง) ----------
+        await T('S12 · เอกสารบอก fontScaleOwn = false → กลับมาใช้ค่าเริ่มต้นของยศ (ข้ามค่าค้างในเครื่อง)', () => {
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);
+            setRole(cw, 'VIP');
+            cw.applyFontScale(130); cw.userFontScaleOwn = true;      // จำลองเครื่องนี้เคยมีค่าของบัญชี
+            try { cw.localStorage.setItem(cw.__fsKey, '130'); cw.__fsMarkOwner('me'); cw.__fsMarkOwn(true); } catch (e) {}
+            cw.__applyUserDocUI({ role: 'VIP', username: 'vip4', displayName: 'วีไอพีสี่', fontScale: 130, fontScaleOwn: false });
+            assert(cw.userFontScale === 110, 'ต้องกลับไปค่าเริ่มต้นของยศ 110 (ได้ ' + cw.userFontScale + ')');
+            assert(cw.userFontScaleOwn === false, 'ต้องไม่ใช่ค่าตั้งเองแล้ว');
+            return 'เอกสาร own=false + เครื่องมีค่า 130 → ได้ 110';
+        });
+
+        // ---------- S13: ค่าที่ตั้งเองในเครื่อง (ยังไม่ขึ้น DB) = เก็บไว้ ----------
+        await T('S13 · ค่าที่เพิ่งตั้งในเครื่อง (บัญชีเดียวกัน · ยังไม่ขึ้นเซิร์ฟเวอร์) → ยังได้ค่านั้น', () => {
+            tidy(cw);
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);
+            setRole(cw, 'VIP');
+            try { cw.localStorage.setItem(cw.__fsKey, '125'); } catch (e) {}
+            cw.__fsMarkOwner('me-uid'); cw.__fsMarkOwn(true);
+            assert(cw.__fsEffectiveFor('me-uid') === 125, 'บัญชีเดียวกัน + ตั้งเอง = 125 (ได้ ' + cw.__fsEffectiveFor('me-uid') + ')');
+            assert(cw.__fsEffectiveFor('other-uid') === 110, 'บัญชีอื่น = ค่าเริ่มต้นของยศ 110 (ได้ ' + cw.__fsEffectiveFor('other-uid') + ')');
+            return 'เรา 125 · คนอื่น 110 (ไม่เห็นค่าของกัน)';
+        });
+
+        // ---------- S14: ปุ่มคืนค่าเริ่มต้นของยศ (ฝั่งผู้ใช้) ----------
+        await T('S14 · ปุ่ม “คืนค่าเริ่มต้นของยศ” กลับไปตามค่าเริ่มต้นของยศ + เลิกเป็นค่าตั้งเอง', async () => {
+            tidy(cw);
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);
+            setRole(cw, 'VIP');
+            cw.__applyUserDocUI({ role: 'VIP', username: 'vip5', displayName: 'วีไอพีห้า', fontScale: 125, fontScaleOwn: true });
+            assert(cw.document.getElementById('fontScaleReset').disabled === false, 'ค่าต่างจากค่าเริ่มต้น = ปุ่มคืนค่าต้องกดได้');
+            cw.__sounds.length = 0;
+            // ⚠️ เติมค่าเริ่มต้นของยศซ้ำก่อนยืนยัน — ในโหมดออฟไลน์ snapshot ของ settings/roles อาจล้างค่า
+            //    ที่ชุดทดสอบฉีดเข้าไป (ไม่เกี่ยวกับโค้ดแอป) และการบันทึกในเครื่องเป็นแบบ synchronous อยู่แล้ว
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);
+            const back = cw.fontScaleReset();
+            assert(back === 110, 'ต้องคืนเป็นค่าเริ่มต้นของยศ 110 (ได้ ' + back + ' · ค่าเริ่มต้นที่อ่านได้ ' + cw.fontScaleRoleDefault() + ' · ยศปัจจุบัน ' + cw.myRoleKey() + ')');
+            assert(cw.userFontScale === 110, 'ค่าปัจจุบันต้องเป็น 110 (ได้ ' + cw.userFontScale + ')');
+            assert(cw.userFontScaleOwn === false, 'ต้องเลิกเป็นค่าตั้งเอง (ได้ ' + cw.userFontScaleOwn + ')');
+            assert(cw.document.getElementById('fontScaleReset').disabled === true, 'กลับค่าเริ่มต้นแล้วปุ่มต้องเทา (กดไม่ได้)');
+            assert(cw.localStorage.getItem(cw.__fsKey) === '110', 'ต้องจำ 110 ลงเครื่อง (ได้ ' + cw.localStorage.getItem(cw.__fsKey) + ')');
+            assert(cw.__fsOwnLocal() === false, 'ธง “ตั้งเอง” ในเครื่องต้องถูกปิด');
+            const hint = cw.document.getElementById('fontScaleHint');
+            assert(hint && hint.textContent.indexOf('110%') >= 0, 'คำอธิบายใต้แถบต้องบอกว่า “ค่าเริ่มต้นของตำแหน่งนี้: 110%” (ได้ ' + (hint && hint.textContent) + ')');
+            return '125% (ตั้งเอง) → คืนค่าเริ่มต้นของยศ = 110% · own = false · ปุ่มเทา · เครื่องจำ 110';
+        });
+
+        // ---------- S15: ยศที่ไม่มีค่าเริ่มต้น = 100 (พฤติกรรมเดิม) ----------
+        await T('S15 · ยศที่แอดมินไม่ได้ตั้งค่าเริ่มต้น → 100% เหมือนเดิม + ปุ่มคืนค่าเทา', () => {
+            tidy(cw);
+            setRole(cw, 'User');
+            cw.applyFontScale(120);
+            assert(cw.fontScaleRoleDefault() === 100, 'ค่าเริ่มต้นของยศ = 100 (ได้ ' + cw.fontScaleRoleDefault() + ')');
+            const back = cw.fontScaleReset();
+            assert(back === 100, 'คืนค่าต้องได้ 100 (ได้ ' + back + ')');
+            assert(cw.document.getElementById('fontScaleReset').disabled === true, 'ค่า 100 = ปุ่มเทา');
+            const hint = cw.document.getElementById('fontScaleHint');
+            assert(hint && hint.textContent.indexOf('100%') >= 0, 'คำอธิบายต้องบอก 100%');
+            return 'ยศไม่ตั้งค่าเริ่มต้น = 100% · ปุ่มคืนค่าเทา · คำอธิบายถูก';
+        });
+
+        // ---------- S16b (S17): บันทึกแล้วต้องแก้ “แคชเอกสารบัญชี” ตามด้วย ----------
+        await T('S17 · บันทึกค่าแล้วแคชในเครื่องตรงกัน — แอปอ่านแคชซ้ำไม่ทับค่าที่เพิ่งรีเซ็ตกลับ', async () => {
+            tidy(cw);
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);
+            setRole(cw, 'VIP');
+            const uid = cw.localStorage.getItem('taxi_user_id') || '';
+            const ck = 'taxi_user_cache_' + uid;
+            cw.__applyUserDocUI({ role: 'VIP', username: 'vip6', displayName: 'วีไอพีหก', fontScale: 125, fontScaleOwn: true });
+            const c0 = JSON.parse(cw.localStorage.getItem(ck) || '{}');
+            assert(c0.fontScale === 125, 'แคชเริ่มต้นต้องเป็น 125 (ได้ ' + c0.fontScale + ')');
+            const back = cw.fontScaleReset();                     // บันทึกค่าเริ่มต้นของยศ
+            assert(back === 110, 'รีเซ็ตต้องได้ 110 (ได้ ' + back + ')');
+            const c1 = JSON.parse(cw.localStorage.getItem(ck) || '{}');
+            assert(c1.fontScale === 110, 'แคชต้องถูกแก้ตามที่บันทึก = 110 (ได้ ' + c1.fontScale + ')');
+            assert(c1.fontScaleOwn === false, 'แคชต้องบอกว่าไม่ใช่ค่าตั้งเอง (ได้ ' + c1.fontScaleOwn + ')');
+            setRolePerm(cw, 'VIP', 'fontScaleDefault', 110);      // กัน snapshot ออฟไลน์ล้างค่าที่ฉีดไว้
+            cw.__applyUserDocUI(c1);                              // จำลอง: แอปอ่านแคชมาใช้ซ้ำ
+            assert(cw.userFontScale === 110, 'อ่านแคชซ้ำต้องยังเป็น 110 (ได้ ' + cw.userFontScale + ')');
+            return 'แคช 125 → รีเซ็ต → แคช 110/own=false → อ่านซ้ำยังได้ 110';
+        });
+
+        // ---------- S16: แอดมินแก้ค่าเริ่มต้นของยศตัวเอง → ผู้ใช้ที่ยังไม่ตั้งเองตามทันที + ไม่ยิงเน็ต ----------
+        await T('S16 · แอดมินตั้งค่าเริ่มต้นของยศตัวเอง → ผู้ใช้ที่ยังไม่ตั้งเองเห็นผลทันที · ไม่ยิงคำขอออกเน็ต', () => {
+            tidy(cw);
+            setRole(cw, 'Manager');
+            cw.applyFontScale(100); clearOwn(cw);
+            setRolePerm(cw, 'Manager', 'fontScaleDefault', 115);
+            const __net0 = { f: cw.__net.blockedFetch, x: cw.__net.blockedXhr };
+            assert(cw.applyMyRoleFontDefault('Manager') === true, 'ยศตัวเอง + ยังไม่ตั้งเอง = ใช้ค่าใหม่');
+            assert(cw.userFontScale === 115, 'ต้องเป็น 115 ทันที (ได้ ' + cw.userFontScale + ')');
+            assert(cw.localStorage.getItem(cw.__fsKey) === '115', 'ต้องจำลงเครื่องด้วย');
+            assert(cw.__fsOwnLocal() === false, 'ยังไม่ถือว่าตั้งเอง (ค่าเริ่มต้นของยศ)');
+            assert(cw.applyMyRoleFontDefault('VIP') === false, 'คนละยศ = ไม่ทำอะไร');
+            const net = cw.__net;
+            const df = net.blockedFetch - __net0.f, dx = net.blockedXhr - __net0.x;
+            assert(df === 0 && dx === 0, 'สถานการณ์นี้ต้องไม่ยิงคำขอออกเน็ตเพิ่มเลย (เพิ่ม fetch ' + df + ' / xhr ' + dx + ')');
+            return 'Manager 115% ทันที · จำลงเครื่อง · ยศอื่นไม่กระทบ · คำขอออกเน็ตเพิ่ม = 0 (ทั้งชุดถูกบล็อก ' + net.blockedFetch + ' ครั้งจากการพยายามอื่นของแอป)';
+        });
+
+        tidy(cw);
+        offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งชุด · คำขอออกเน็ตที่ถูกบล็อก = ' + w().__net.blockedFetch + ' · เขียน Firestore = ปิด (fsNowrite + __testNoDbWrites)';
+        summaryEl.textContent = 'สรุป: ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + (failCount ? '  → ' + failures.join(' | ') : '  ✅ ผ่านครบทุกสถานการณ์');
+        try { window.__roleFontResult = { pass: passCount, fail: failCount, failures: failures.slice() }; } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', run);
+    window.addEventListener('load', () => { setTimeout(run, 50); });
+})();
+</script>
+</body>
+</html>

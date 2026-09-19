@@ -32,6 +32,8 @@
         โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ไม่เขียน Firestore
         <br><b>คำสั่งผู้ใช้ 20 ก.ย. 69:</b> *“ฟอนต์บางส่วนมันเล็ก ... อยากให้มีแถบสกรอลล์เลื่อน เลื่อนไปทางขวาก็ใหญ่ขึ้น
         ปรับไปเรื่อย ๆ แล้วก็เมนูให้อยู่ในเมนูตั้งค่า ทุก user จัดการปรับได้ ไม่ว่าจะล็อกอินด้วยยศไหน”*
+        <br><b>เพิ่ม 20 ก.ย. 69 (ผู้ใช้ย้ำ):</b> *“อยากให้มีการปรับขนาดฟอนต์ เป็นสไลด์บาร์ + มีบวกมีลบ · พอกดบวกสไลด์ก็ไปทางขวา กดลบก็ไปทางซ้าย
+        · ให้เป็นหัวข้อในเมนูตั้งค่า · ให้เห็นทุก user ทุกไอดี · ปรับแยกของใครของมัน ไม่มาเกี่ยวกัน”* ⇒ S7 (แถบขยับตามปุ่ม) · S13 (แยกต่อบัญชี) · S14 (เป็นหัวข้อ)
         <br>⇒ ต้องพิสูจน์: ① ค่าถูกจำกัดช่วง 85–135 (ค่าขยะ/ค่าว่าง → 100) ② ลากแล้ว <b>ตัวอักษรโตจริง</b> เป็นสัดส่วน
         ③ 100% = ถอด zoom ออกเป๊ะ ④ ไม่เกิดการเลื่อนแนวนอน ⑤ ปุ่ม − / + ทีละ 5 และไม่เกินช่วง
         ⑥ ปล่อยนิ้ว = บันทึกอัตโนมัติ (debounce) ลงเครื่อง ⑦ ปุ่ม “คืนค่า 100%” เทาเมื่อยังไม่เปลี่ยน · แดงเมื่อเปลี่ยน
@@ -40,7 +42,7 @@
         <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
         <code>http://127.0.0.1:58911/tests/font-scale-offline.html</code>
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (13 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (15 สถานการณ์)</button>
     <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
     <div id="summary"></div>
     <ol id="results"></ol>
@@ -228,16 +230,21 @@
             return probe.map(p => p.s + '%: ' + p.sw + '≤' + p.iw).join(' · ');
         });
 
-        // ---------- S7: ปุ่ม − / + ทีละ 5 ----------
-        await T('S7 · ปุ่ม − / + ปรับทีละ 5 และมีเสียงตอบรับ', () => {
+        // ---------- S7: ปุ่ม − / + ทีละ 5 + แถบเลื่อนขยับตาม (ขวา/ซ้าย) ----------
+        await T('S7 · ปุ่ม − / + ปรับทีละ 5 · **แถบเลื่อนขยับตามด้วย** (มากไปขวา · ลบไปซ้าย)', () => {
+            const rng = cw.document.getElementById('fontScaleRange');
             cw.applyFontScale(100);
+            assert(rng.value === '100', 'ตั้งต้นแถบต้องอยู่กลางที่ 100 (ได้ ' + rng.value + ')');
             cw.__sounds.length = 0;
             const up = cw.bumpFontScale(5);
             assert(up === 105, 'กด + ต้องได้ 105 (ได้ ' + up + ')');
+            assert(rng.value === '105', '➡️ กำ + แล้วแถบเลื่อนต้องขยับไปทางขวาเอง (ได้ ' + rng.value + ')');
+            assert(cw.document.getElementById('fontScaleVal').textContent === '105%', 'ป้าย% ต้องขึ้นตาม');
             const down = cw.bumpFontScale(-5);
             assert(down === 100, 'กด − ต้องกลับ 100 (ได้ ' + down + ')');
+            assert(rng.value === '100', '⬅️ กำ − แล้วแถบเลื่อนต้องกลับมาทางซ้าย (ได้ ' + rng.value + ')');
             assert(cw.__sounds.length === 2, 'ต้องมีเสียงตอบรับ 2 ครั้ง (ได้ ' + cw.__sounds.length + ')');
-            return '+ → ' + up + ' · − → ' + down + ' · เสียง ' + cw.__sounds.join(',');
+            return '+ → ' + up + '% (แถบ ' + rng.value + ' = 100 หลังกด −) · เสียง ' + cw.__sounds.join(',');
         });
 
         // ---------- S8: ชนเพดาน/พื้น ----------
@@ -334,6 +341,49 @@
             assert(rawChecks.length === 0, 'แถวนี้ต้องไม่มีช่องติ๊กเลย (กติกา “ห้ามมีช่องติ๊กดิบ”)');
             const btns = [...row.querySelectorAll('button')].map(b => b.id || b.textContent.trim().slice(0, 12));
             return 'บล็อกที่ 3 (' + names.join(' → ') + ') · ปุ่ม: ' + btns.join(' , ');
+        });
+
+        // ---------- S13: 🔒 แยกค่าต่อบัญชี (ผู้ใช้ย้ำ 20 ก.ย. 69) ----------
+        await T('S13 · แยกค่าต่อบัญชี — คนอื่นต้องไม่ได้ค่าของเรา (และเราได้ของเรา)', async () => {
+            const uid = cw.localStorage.getItem('taxi_user_id');
+            if (!uid) return 'ข้าม: เครื่องทดสอบนี้ยังไม่ล็อกอิน (กติกายังทดสอบได้ในโหมดทดลอง: __fsFallbackFor) — ดู S13b';
+            cw.__testNoDbWrites = true;
+            cw.applyFontScale(125);
+            await cw.__fsSaveNow();                        // บันทึกค่านี้ = ของบัญชีที่ล็อกอินอยู่
+            assert(cw.localStorage.getItem(cw.__fsKey) === '125', 'ต้องจำ 125 ในเครื่อง');
+            assert(cw.__fsOwnerUid() === uid, 'ต้องจำ “เจ้าของค่า” ว่าเป็นบัญชีนี้ (ได้ ' + cw.__fsOwnerUid() + ')');
+            assert(cw.__fsFallbackFor(uid) === 125, 'บัญชีเดิมกลับมา = ได้ค่าของตัวเอง 125 (ได้ ' + cw.__fsFallbackFor(uid) + ')');
+            const other = cw.__fsFallbackFor('someone-else-uid');
+            assert(other === 100, '❗ บัญชีอื่นต้องไม่เห็นค่าของเรา — ต้องเป็น 100 (ได้ ' + other + ')');
+            // จำลอง “บัญชีอื่นเคยใช้เครื่องนี้”: เจ้าของค่าในเครื่องเป็นคนอื่น ⇒ เอกสารที่ไม่มีค่า fontScale ต้องได้ 100 ไม่ใช่ 125
+            //   (เป็นเส้นทางเดียวกับที่ __applyUserDocUI ใช้จริง: เอกสารไม่มีค่า → ถาม __fsFallbackFor(loggedInUserId))
+            try {
+                cw.__fsMarkOwner('other-uid');
+                cw.__applyUserDocUI({ role: 'User', username: 'อื่น', displayName: 'อีกคน' });
+                assert(cw.userFontScale === 100, 'เอกสารที่ไม่มีค่า + เจ้าของในเครื่องเป็นคนอื่น = 100 (ได้ ' + cw.userFontScale + ')');
+                assert(cw.document.documentElement.style.zoom === '', 'ต้องถอด zoom ออก (ไม่ได้ค่าของคนก่อน)');
+            } finally {
+                cw.applyFontScale(100);
+                await cw.__fsSaveNow();
+            }
+            return 'เจ้าของค่า = ' + uid.slice(0, 6) + '… · ของเรา 125 · ของคนอื่น 100 · เอกสารคนอื่นไม่มีค่า → 100 (ไม่เห็นค่าของกัน)';
+        });
+
+        // ---------- S14: ต้องมี “หัวข้อ” ชัดเจน (ผู้ใช้ขอ “ช่วยตั้งเป็นหัวข้อให้หน่อย”) ----------
+        await T('S14 · มีหัวข้อของตัวเองชัดเจน (ตัวเบิ้ม + ตัวหนา + เส้นคั่น) และบอก “ทุกตำแหน่ง/แยกต่อบัญชี”', async () => {
+            cw.openGeneralSettingsModal('general');
+            const row = cw.document.getElementById('fontScaleRow');
+            const head = row.children[0];
+            const titleSpan = [...head.querySelectorAll('span')].find(s => s.textContent.trim() === 'ขนาดตัวอักษร');
+            assert(!!titleSpan, 'ต้องมีข้อความหัวข้อ “ขนาดตัวอักษร”');
+            const cs = cw.getComputedStyle(titleSpan);
+            const fsz = parseFloat(cs.fontSize), fw = parseInt(cs.fontWeight, 10) || 400;
+            assert(fsz >= 16, 'หัวข้อต้องใหญ่กว่าป้ายทั่วไป (ต้อง ≥ 16px — ได้ ' + fsz + 'px)');
+            assert(fw >= 700, 'หัวข้อต้องตัวหนา (ได้ ' + fw + ')');
+            const desc = row.innerText.replace(/\s+/g, ' ');
+            assert(desc.indexOf('ทุกตำแหน่ง') >= 0, 'คำอธิบายต้องบอกว่า “ทุกตำแหน่ง” ปรับได้');
+            assert(desc.indexOf('แยกค่า') >= 0 || desc.indexOf('แยกค่าต่อบัญชี') >= 0, 'คำอธิบายต้องบอกว่าแยกค่าต่อบัญชี');
+            return 'หัวข้อ ' + fsz + 'px/หนา ' + fw + ' · คำอธิบาย: ' + desc.slice(0, 90) + '…';
         });
 
         document.getElementById('runBtn').disabled = false;

@@ -63,32 +63,57 @@
         
         .flex-center { display: flex; align-items: center; justify-content: center; }
         
+        /* ==================== 🔔 (20 ก.ย. 69 · ผู้ใช้สั่ง) ข้อความแจ้งเตือน (toast) ดีไซน์ใหม่ ====================
+           คำสั่งผู้ใช้: “toast ตามรูปที่ 1 มันเป็นแบบนี้อยู่ อยากให้เปลี่ยนเป็นแบบรูปที่ 2 เป็นสไตล์เหมือนอย่างนี้เลย
+                        แต่ว่าให้ขึ้นไปอยู่บนสุดของโปรแกรม · ค่า default ของเวลาทั้งหมด 3 วินาที ปรับขึ้นได้ทีละ 1 วินาที
+                        · มีสวิตช์ ‘ไม่ปิดเอง’ ให้ค้างไว้จนกดปิด”
+           ของเดิม: กล่องกลางจอ กว้างตามข้อความ ตัวอักษรทองเรืองแสง หมดเวลาเอง 1.5 วิ (อ่านไม่ทัน — ผู้ใช้ติง)
+           ของใหม่: การ์ดบนสุดของจอ สไตล์เดียวกับแผง “มีอะไรใหม่” (หัว + คำอธิบาย + ปุ่ม) ชิดซ้าย อ่านง่าย
+           ⚠️ กับดักสำคัญ 2 ข้อ:
+             ① pointer-events: none ที่ตัวการ์ด (เปิดเฉพาะปุ่ม) ⇒ ระหว่าง toast โชว์ยังจิ้ม “เมนู/แชร์” ที่หัวจอได้
+                (เดิมการ์ดบังหัวจอ 3 วิ = กดปุ่มไม่ได้เลย) · การกดด้วยโค้ด (el.click()) ยังทำงานปกติ
+             ② ห้ามลบ id เดิม (toastMsg · toastIcon · toastImg · toastSub) — โค้ดและชุดทดสอบหลายที่อ้างถึง
+           ถ้าเป็น #toastBox.toast-hold ⇒ โหมด “ค้างไว้จนกดปิด” ไม่มีนับถอยหลัง (แถบเวลาถูกซ่อน) */
         #toastBox {
-            position: fixed; top: calc(env(safe-area-inset-top, 0px) + 70px); left: 50%; transform: translateX(-50%); /* กลางซ้าย-ขวา อยู่ด้านบน (ใต้หัวโปรแกรม) */
-            background: linear-gradient(165deg, #262033, #17131f);
-            border: 1px solid rgba(241,196,15,0.45);
-            color: white; width: auto; max-width: 88vw; min-width: 0; height: auto; min-height: 0; /* ไม่ฟิกซ์ขนาด — ยืดหดตามข้อความ */
-            padding: 12px 26px; border-radius: 20px; z-index: 200000;
-            display: none; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-            font-size: 15px; font-weight: 600; text-align: center;
-            box-shadow: 0 18px 50px rgba(0,0,0,0.7), 0 0 26px rgba(241,196,15,0.22);
-            animation: toastCenterPop 0.35s cubic-bezier(.2,.9,.3,1.25) forwards;
-            white-space: normal; line-height: 1.35;
+            position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); left: 50%; transform: translateX(-50%);
+            z-index: 200000; display: none; flex-direction: column; align-items: stretch; gap: 6px;
+            width: min(92vw, 430px); max-width: 92vw;
+            background: linear-gradient(165deg, rgba(38,32,51,0.97), rgba(23,19,31,0.97));
+            border: 1px solid rgba(241,196,15,0.45); border-radius: 16px;
+            padding: 11px 13px 10px; box-shadow: 0 16px 44px rgba(0,0,0,0.62);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            color: #fff; font-size: 14px; font-weight: 600; line-height: 1.45; text-align: left;
+            white-space: normal; overflow: hidden;
+            pointer-events: none; /* ⬆ ① ดูคอมเมนต์ด้านบน */
+            animation: toastTopPop 0.3s cubic-bezier(.2,.9,.3,1.2) both;
         }
-        @keyframes toastCenterPop { 
-            from { opacity: 0; transform: translateX(-50%) scale(0.86); } 
-            to { opacity: 1; transform: translateX(-50%) scale(1); } 
-        }
-        #toastBox #toastIcon { font-size: 40px; color: #ffd700; line-height: 1; } /* ไอคอนคมชัด ไม่มี blur/เรืองแสง */
-        #toastBox #toastMsg { font-weight: 700; color: #ffd700; font-size: 17px; letter-spacing: 0.2px; white-space: nowrap; max-width: 100%; overflow: hidden; } /* ฟอนต์เท่ากันทุก toast เริ่ม 17px — ย่ออัตโนมัติถ้ายาวเกิน (JS) */
-        #toastSub { font-size: 13px; color: rgba(255,255,255,0.62); font-weight: 400; display: none; }
-        .toast-img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; display: none; border: 2px solid rgba(241,196,15,0.5); }
+        #toastBox button { pointer-events: auto; } /* ⬆ เปิดให้เฉพาะปุ่มเท่านั้น */
+        .toast-head { display: flex; align-items: flex-start; gap: 8px; }
+        #toastBox #toastIcon { font-size: 19px; color: #f1c40f; line-height: 1.25; flex-shrink: 0; } /* ไอคอนคมชัด ไม่มี blur/เรืองแสง */
+        #toastBox #toastMsg { flex: 1 1 auto; min-width: 0; font-weight: 800; font-size: 14.5px; letter-spacing: 0.2px; color: #ffe9a8; overflow-wrap: anywhere; }
+        #toastSub { font-size: 12px; color: rgba(255,255,255,0.66); font-weight: 400; display: none; overflow-wrap: anywhere; }
+        .toast-img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; display: none; flex-shrink: 0; border: 1.5px solid rgba(241,196,15,0.5); }
+        .toast-x { border: 0; background: transparent; color: #b9c2d0; font-size: 15px; line-height: 1; padding: 1px 4px; cursor: pointer; flex-shrink: 0; font-family: 'Kanit', sans-serif; }
+        .toast-x:active { transform: scale(0.88); color: #fff; }
+        .toast-foot { display: none; gap: 8px; }
+        #toastBox.show-foot .toast-foot { display: flex; }
+        .toast-btn { flex: 1 1 auto; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(241,196,15,0.45); background: rgba(241,196,15,0.10); color: #ffd24d; font-family: 'Kanit', sans-serif; font-weight: 700; font-size: 12.5px; cursor: pointer; }
+        .toast-btn.is-primary { border: 0; background: linear-gradient(135deg, #ffd54f, #ffb300); color: #2a1c00; }
+        .toast-btn:active { transform: scale(0.97); }
+        .toast-bar { height: 3px; border-radius: 99px; background: rgba(255,255,255,0.12); overflow: hidden; }
+        .toast-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #f1c40f, #ffb300); }
+        #toastBox.toast-hold .toast-bar { display: none; } /* โหมด “ค้างไว้” = ไม่มีนับถอยหลัง */
+        @keyframes toastTopPop { from { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.97); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
         /* toast "กลับจากเบื้องหลัง" — สีทองเด่น + ไอคอนหมุน ให้คนขับเห็นชัด */
-        @keyframes toastGoldPop { 0% { opacity: 0; transform: translateX(-50%) scale(0.86); } 45% { opacity: 1; transform: translateX(-50%) scale(1.05); box-shadow: 0 0 40px rgba(241,196,15,0.5), 0 18px 50px rgba(0,0,0,0.7); } 100% { opacity: 1; transform: translateX(-50%) scale(1); } }
-        #toastBox.toast-gold { border-color: #f1c40f; animation: toastGoldPop 0.5s ease-out forwards; }
+        @keyframes toastGoldPop { 0% { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.97); } 45% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.02); box-shadow: 0 0 40px rgba(241,196,15,0.5), 0 16px 44px rgba(0,0,0,0.62); } 100% { opacity: 1; transform: translateX(-50%) scale(1); } }
+        #toastBox.toast-gold { border-color: #f1c40f; box-shadow: 0 16px 44px rgba(0,0,0,0.62), 0 0 26px rgba(241,196,15,0.30); animation: toastGoldPop 0.5s ease-out forwards; }
         #toastBox.toast-gold #toastIcon { color: #f1c40f; animation: spinPulse 1.4s ease-in-out infinite; }
         @keyframes spinPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.2) rotate(15deg); } }
-        #toastBox.toast-gold #toastMsg { color: #ffe9a8; text-shadow: 0 0 10px rgba(241,196,15,0.35); }
+        html.oled #toastBox { background: #000; } /* โหมดดำ OLED — การ์ดดำสนิท ประหยัดแบต */
+        html.light #toastBox { background: linear-gradient(165deg, #ffffff, #f1f4fa); border-color: rgba(200,140,0,0.45); color: #16203a; }
+        html.light #toastBox #toastMsg { color: #8a6100; }
+        html.light #toastSub { color: #56627a; }
+        html.light .toast-x { color: #56627a; }
 
         .hamburger-btn {
             background: transparent; border: none; color: var(--neon-yellow); cursor: pointer; 
@@ -389,8 +414,8 @@
         html.light .fs-range::-webkit-slider-thumb, html.light .fs-range::-moz-range-thumb { border-color: #7c3aed; }
         /* 🔄 ปุ่ม “คืนค่า 100%” ของแถวขนาดตัวอักษร — ใช้กติกาเดียวกับปุ่มรีเซ็ตทั้งแอป:
            มีการเปลี่ยนแปลง = แดง กดได้ · ยังไม่เปลี่ยน = เทา กดไม่ได้ (ผู้ใช้สั่งไว้ 19 ก.ย. 69) */
-        #fontScaleReset { background: rgba(239,68,68,0.92) !important; color: #fff !important; border: 1px solid rgba(220,38,38,0.95); box-shadow: 0 1px 0 rgba(0,0,0,0.3) inset, 0 4px 14px rgba(239,68,68,0.25); }
-        #fontScaleReset:disabled { background: rgba(255,255,255,0.07) !important; color: rgba(255,255,255,0.38) !important; border-color: rgba(255,255,255,0.10) !important; box-shadow: none !important; cursor: not-allowed; }
+        #fontScaleReset, #toastTimeReset, #roleFontResetBtn { background: rgba(239,68,68,0.92) !important; color: #fff !important; border: 1px solid rgba(220,38,38,0.95); box-shadow: 0 1px 0 rgba(0,0,0,0.3) inset, 0 4px 14px rgba(239,68,68,0.25); }
+        #fontScaleReset:disabled, #toastTimeReset:disabled, #roleFontResetBtn:disabled { background: rgba(255,255,255,0.07) !important; color: rgba(255,255,255,0.38) !important; border-color: rgba(255,255,255,0.10) !important; box-shadow: none !important; cursor: not-allowed; }
 
         .dropdown-box { position: absolute; background: rgba(30, 32, 45, 0.95); width: 100%; z-index: 1000; border-radius: 20px; max-height: 320px; overflow-y: auto; display: none; margin-top: 10px; border: 1px solid var(--border-glass); box-shadow: 0 15px 40px rgba(0,0,0,0.8); -ms-overflow-style: none; scrollbar-width: none; }
         .dropdown-box::-webkit-scrollbar { display: none; }
@@ -1890,12 +1915,7 @@
             position: absolute; inset: 0; z-index: 2;
             background: linear-gradient(180deg, rgba(3,5,10,0.34) 0%, rgba(3,5,10,0.40) 42%, rgba(3,5,10,0.90) 100%);
         }
-        #appLoader .lds-mark {
-            position: absolute; left: 0; right: 0; z-index: 3;
-            top: calc(env(safe-area-inset-top, 0px) + 22px);
-            text-align: center; font-size: 14px; font-weight: 700; letter-spacing: 0.6px;
-            color: #ffd76a; text-shadow: 0 2px 12px rgba(0,0,0,0.7);
-        }
+        /* ⛔ (20 ก.ย. 69) ลบป้าย “🚕 TAXI METER” บนจอโหลดตามคำสั่งผู้ใช้ — ไม่ต้องมีคำ/ไอคอนแบรนด์บนรูปแล้ว */
         #appLoader .lds-content {
             position: absolute; left: 0; right: 0; z-index: 3;
             bottom: calc(env(safe-area-inset-bottom, 0px) + 46px);
@@ -2873,11 +2893,12 @@
     </div>
 </div>
 
+<!-- ⛔ (20 ก.ย. 69) จอโหลด “ไม่มี” ป้าย 🚕 TAXI METER อีก (ผู้ใช้สั่ง) — ห้ามใส่ข้อความ/ไอคอนแบรนด์กลับเข้าไปใน #appLoader
+     ⚠️ หมายเหตุนี้ต้องอยู่นอกแท็ก #appLoader — ด่านตรวจ (tests/loading-preview-offline.html S8) ตรวจ innerHTML ของจอโหลดตรง ๆ -->
 <div id="appLoader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #05070c; z-index: 999999; display: flex; justify-content: center; align-items: center; color: var(--neon-yellow); font-size: 20px; flex-direction: column; gap: 15px;">
     <img class="lds-photo" id="ldsPhoto" alt="">
     <div class="lds-bg lds-default" id="ldsBg"></div>
     <div class="lds-scrim"></div>
-    <div class="lds-mark" id="ldsMark">🚕 TAXI METER</div>
     <div class="lds-content">
         <div class="lds-title" id="ldsTitle">กำลังโหลดข้อมูล...</div>
         <div class="lds-bar"><div class="lds-fill" id="ldsFill"></div></div>
@@ -2886,11 +2907,22 @@
     </div>
 </div>
 
-<div id="toastBox">
-    <img id="toastImg" class="toast-img" src="" alt="profile">
-    <span class="material-symbols-outlined" id="toastIcon">check_circle</span>
-    <span id="toastMsg">บันทึกข้อมูลสำเร็จ</span>
-    <span id="toastSub"></span>
+<!-- 🔔 ข้อความแจ้งเตือน (toast) ดีไซน์ใหม่ (20 ก.ย. 69 · ผู้ใช้สั่ง) — การ์ดบนสุดของจอ สไตล์เดียวกับแผง “มีอะไรใหม่”
+     โครง: หัว (ไอคอน + ข้อความ + ปุ่ม ✕) → คำอธิบายบรรทัดที่ 2 (ถ้ามี) → ปุ่ม (ถ้ามี action) → แถบเวลานับถอยหลัง
+     ⛔ ห้ามลบ id เดิม (toastMsg · toastIcon · toastImg · toastSub) — showToast และชุดทดสอบหลายที่อ้างถึง -->
+<div id="toastBox" role="status" aria-live="polite">
+    <div class="toast-head">
+        <img id="toastImg" class="toast-img" src="" alt="profile">
+        <span class="material-symbols-outlined" id="toastIcon">check_circle</span>
+        <div id="toastMsg">บันทึกข้อมูลสำเร็จ</div>
+        <button type="button" id="toastCloseBtn" class="toast-x" aria-label="ปิดข้อความแจ้งเตือน" title="ปิด (20 ก.ย. 69) ปุ่มนี้กดได้เสมอ — ไม่ต้องรอหมดเวลา">✕</button>
+    </div>
+    <div id="toastSub"></div>
+    <div class="toast-foot" id="toastFoot">
+        <button type="button" id="toastActionBtn" class="toast-btn is-primary"></button>
+        <button type="button" id="toastDismissBtn" class="toast-btn">ปิด</button>
+    </div>
+    <div class="toast-bar" id="toastBar"><i id="toastBarFill"></i></div>
 </div>
 
 <div class="card" id="mainApp" style="display: none;">
@@ -3400,8 +3432,15 @@
                  ทำงานอย่างไร: ลาก = เห็นผลสดทั้งแอป (window.applyFontScale) · ปล่อยนิ้ว = บันทึกต่อบัญชี (debounce 900 มิลลิวินาที)
                  ⛔ ห้ามย้ายแถวนี้ไปหน้า “ตั้งค่าโปรไฟล์” — ผู้ใช้สั่งชัดว่าต้องอยู่ในเมนูตั้งค่าการใช้งาน › ตั้งค่าทั่วไป -->
             <div id="fontScaleRow" style="text-align:left; margin-bottom:var(--space-field); background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.30); border-radius:14px; padding:12px 14px;">
-                <div style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; color:#d8b4fe; margin-bottom:4px;"><span class="material-symbols-outlined" style="font-size:18px;">format_size</span> ขนาดตัวอักษร <span style="font-size:11px; color:var(--text-dim); font-weight:400;">(ทุกตำแหน่งปรับได้เอง)</span><span id="fontScaleSaved" style="display:none; margin-left:auto; font-size:11px; color:#7bed9f; font-weight:700;">บันทึกแล้ว ✓</span></div>
-                <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">เลื่อนไปทางขวา = ตัวอักษรใหญ่ขึ้นทั้งแอป (หัวข้อ · คำอธิบาย · ปุ่ม · ตัวเลขบนจอมิเตอร์) · ใช้กับ <b>บัญชีนี้ทุกเครื่อง</b> · ช่วง 85–135%</div>
+                <!-- 🔠 หัวข้อของแถว (20 ก.ย. 69) — ยกเป็น “หัวข้อ/หัวข้อตั้งค่า” ให้เห็นชัดว่ากำลังตั้งค่าอะไร (ผู้ใช้ขอ)
+                     · หัวข้อ 16.5px ตัวหนา + เส้นคั่น ⇒ อ่านเป็นหัวข้อ ไม่ใช่ป้ายเล็ก ๆ
+                     · ⛔ ห้ามเปลี่ยนเป็น checkbox/ช่องกรอก — ต้องเป็นแถบเลื่อน + ปุ่ม − / + เท่านั้น -->
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(168,85,247,0.28);">
+                    <span class="material-symbols-outlined" style="font-size:22px; color:#d8b4fe;">format_size</span>
+                    <span style="font-size:16.5px; font-weight:800; color:#e9d5ff; letter-spacing:0.2px;">ขนาดตัวอักษร</span>
+                    <span id="fontScaleSaved" style="display:none; margin-left:auto; font-size:11px; color:#7bed9f; font-weight:700;">บันทึกแล้ว ✓</span>
+                </div>
+                <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.65;">เลื่อนไปทางขวา = ตัวอักษรใหญ่ขึ้นทั้งแอป (หัวข้อ · คำอธิบาย · ปุ่ม · ตัวเลขบนจอมิเตอร์) · กด <b>−</b> / <b>+</b> แถบจะเลื่อนซ้าย/ขวาให้เองทีละ 5%<br>👥 <b>ทุกตำแหน่งปรับได้เอง</b> (ผู้ใช้งาน · VIP · ผู้จัดการ · แอดมิน) · 🔒 <b>แยกค่าต่อบัญชี</b> — ตั้งของตัวเองแล้วไม่กระทบคนอื่น · ใช้กับบัญชีนี้ทุกเครื่อง · ช่วง 85–135%<br>🔠 ค่าเริ่มต้นมาจาก “<b>ค่าเริ่มต้นของตำแหน่ง</b>” ที่แอดมินตั้งไว้ (บรรทัดล่าง) · พอเราปรับเองแล้วค่าเริ่มต้นจะไม่ทับอีก · กด “คืนค่าเริ่มต้นของยศ” กลับไปตามค่าเริ่มต้นได้</div>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <button type="button" class="spd-step-btn is-sm" onclick="window.bumpFontScale(-5)" aria-label="ลดขนาดตัวอักษรลง 5%">−</button>
                     <div style="flex:1; min-width:0;">
@@ -3414,7 +3453,28 @@
                     <div style="font-size:15px; font-weight:700; color:#fff;">หัวข้อตัวอย่าง — ค่าโดยสารโดยประมาณ</div>
                     <div style="font-size:11.5px; color:var(--text-dim); margin-top:3px; line-height:1.55;">คำอธิบายตัวอย่าง — ลากแถบแล้วดูว่าพออ่านตอนขับไหม</div>
                 </div>
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:9px; font-size:11px; color:var(--text-dim);"><span>ค่าเริ่มต้น 100% = ขนาดเดิมของแอป</span><button type="button" id="fontScaleReset" onclick="window.fontScaleReset()" class="manual-timer-btn" style="padding:7px 12px; font-size:12.5px; gap:4px;" disabled><span class="material-symbols-outlined" style="font-size:17px;">restart_alt</span> คืนค่า 100%</button></div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:9px; font-size:11px; color:var(--text-dim);"><span id="fontScaleHint">ค่าเริ่มต้นของตำแหน่งนี้: 100% (ขนาดเดิมของแอป)</span><button type="button" id="fontScaleReset" onclick="window.fontScaleReset()" class="manual-timer-btn" style="padding:7px 12px; font-size:12.5px; gap:4px;" disabled><span class="material-symbols-outlined" style="font-size:17px;">restart_alt</span> คืนค่าเริ่มต้นของยศ</button></div>
+            </div>
+            <!-- ⏱️ (20 ก.ย. 69 · ผู้ใช้สั่ง) “เวลาแจ้งเตือน (toast)” — ค่าเริ่มต้น 3 วินาที · ปุ่ม − / + ทีละ 1 วินาที · สวิตช์ “ค้างไว้จนกดปิดเอง”
+                 คำสั่งผู้ใช้: “แบบเดิมที่มีการกำหนดเวลา ค่า default ของเวลาทั้งหมดอยากให้อยู่ที่ 3 วินาที
+                              สามารถปรับเพิ่มได้ด้วยการกดปุ่มบวก ปุ่มลบทีละวินาที รวมถึงให้มีสวิตช์อันหนึ่ง
+                              เอาไว้ประมาณว่ามันจะไม่ปิดเอง เปิดค้างไว้ตลอดจนกว่าจะปิดเอง”
+                 ทำงานอย่างไร: ปุ่ม/สวิตช์ = บันทึกอัตโนมัติ (debounce 900 มิลลิวินาที) + localStorage ใช้ทันทีตอนบูต · ผูกกับบัญชี (ข้ามเครื่อง)
+                 ลำดับความสำคัญของเวลา: ① ข้อความที่แอดมินตั้งวินาทีเฉพาะไว้ ② ค่าของผู้ใช้ (แถวนี้) ③ โหมดค้างไว้ = ไม่ตั้งเวลา
+                 ⛔ ห้ามย้ายแถวนี้ไปหน้า “ตั้งค่าโปรไฟล์” — ต้องอยู่ในเมนูตั้งค่าการใช้งาน › ตั้งค่าทั่วไป ตามคำสั่งผู้ใช้ -->
+            <div id="toastTimeRow" style="text-align:left; margin-bottom:var(--space-field); background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.30); border-radius:14px; padding:12px 14px;">
+                <div style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; color:#7dd3fc; margin-bottom:4px;"><span class="material-symbols-outlined" style="font-size:18px;">notifications</span> เวลาแจ้งเตือน (toast) <span style="font-size:11px; color:var(--text-dim); font-weight:400;">(ทุกตำแหน่งปรับได้เอง)</span><span id="toastTimeSaved" style="display:none; margin-left:auto; font-size:11px; color:#7bed9f; font-weight:700;">บันทึกแล้ว ✓</span></div>
+                <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">ข้อความแจ้งเตือนจะเด้งบนสุดของจอ — อยู่กี่วินาทีตั้งได้เอง (ค่าเริ่มต้น <b>3 วินาที</b>) · ใช้กับ <b>บัญชีนี้ทุกเครื่อง</b></div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button type="button" id="toastSecMinus" class="spd-step-btn is-sm" onclick="window.bumpToastSec(-1)" aria-label="ลดเวลาลง 1 วินาที">−</button>
+                    <div style="flex:1; min-width:0;">
+                        <div id="toastSecVal" style="font-size:22px; font-weight:800; color:#fff; line-height:1.15; text-align:center;">3 วินาที</div>
+                        <div style="font-size:11px; color:var(--text-dim); text-align:center; margin-top:2px;">1 – 20 วินาที · ปรับทีละ 1</div>
+                    </div>
+                    <button type="button" id="toastSecPlus" class="spd-step-btn is-sm" onclick="window.bumpToastSec(1)" aria-label="เพิ่มเวลา 1 วินาที">+</button>
+                </div>
+                <label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; cursor:pointer;"><span style="flex:1; font-size:14px;">ค้างไว้จนกดปิดเอง<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เปิด = ข้อความไม่หายเอง ต้องกด ✕ ปิดเท่านั้น (ยังมีปุ่ม ✕ ให้ปิดเสมอ)</span></span><span class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="editToastHold" onchange="window.toastTimeCommit(null, this.checked)"><span class="app-slider"></span></span></label>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; font-size:11px; color:var(--text-dim);"><button type="button" onclick="window.toastDemo()" class="manual-timer-btn" style="padding:7px 12px; font-size:12.5px; gap:4px; background:#0ea5e9;"><span class="material-symbols-outlined" style="font-size:17px;">play_circle</span> ทดลองเด้งดู</button><button type="button" id="toastTimeReset" onclick="window.toastTimeReset()" class="manual-timer-btn" style="padding:7px 12px; font-size:12.5px; gap:4px;" disabled><span class="material-symbols-outlined" style="font-size:17px;">restart_alt</span> คืนค่า 3 วินาที</button></div>
             </div>
             <!-- 🔐 (19 ก.ย. 69) ยศที่แอดมินติ๊กออกจากสิทธิ์ “แจ้งเตือนความเร็วเกินกำหนด” → ซ่อนสวิตช์ + กล่องลิมิต แล้วขึ้นข้อความนี้แทน -->
             <div id="speedPermHint" style="display:none; font-size:12px; color:var(--neon-yellow); background:rgba(241,196,15,0.10); border:1px solid rgba(241,196,15,0.35); border-radius:10px; padding:8px 12px; margin-bottom:var(--space-field); text-align:left;">🔒 <b>แจ้งเตือนความเร็วเกินกำหนด</b> ถูกปิดไว้สำหรับตำแหน่งของคุณ — ติดต่อผู้ดูแลระบบถ้าต้องการใช้</div>
@@ -3984,7 +4044,7 @@
 
 <!-- 🗂 (17 ก.ย. 69) หน้าต่างนี้ไม่ถูกเปิดเป็นหน้าต่างอีกแล้ว — เหลือเป็น “ภาชนะต้นทาง”: เนื้อหาข้างในจะถูกย้ายเข้า #rolePanelFrames (แท็บที่ 2 ของ #roleSettingsModal) ตอนเปิดครั้งแรก — ⛔ ห้ามเปิด #avatarFrameModal ตรง ๆ และห้ามใช้ id ข้างในซ้ำ --><div id="avatarFrameModal" class="modal-overlay" style="z-index: 10006;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('avatarFrameModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">🎨 กรอบอวตาร</h3><button class="btn-close-floating" onclick="window.toggleModal('avatarFrameModal', false)"><span class="material-symbols-outlined">close</span></button></div><div class="modal-content-scroll" style="text-align:left;"><div style="font-size:12px; color:var(--text-dim); line-height:1.6; margin-bottom:12px;">กรอบรูปอวตารใช้แสดง “ใครเป็นใคร” ได้ทันทีโดยไม่ต้องอ่านชื่อ — ตั้งเป็น <b style="color:#ffd24d;">กรอบของยศ</b> (ทุกคนในยศนั้นได้เหมือนกัน) หรือ <b style="color:#ffd24d;">มอบให้เป็นรายคน</b> เป็นพิเศษก็ได้ · <b>กรอบรายคนชนะกรอบของยศเสมอ</b></div><div id="afSelectedBox" style="display:flex; align-items:center; gap:12px; background:rgba(255,210,77,0.07); border:1px solid rgba(255,210,77,0.32); border-radius:16px; padding:11px 13px; margin-bottom:12px;"></div><div style="font-size:13px; font-weight:700; color:var(--neon-yellow); margin-bottom:8px;">คลังกรอบ <span style="font-size:11px; color:var(--text-dim); font-weight:400;">(แตะการ์ดเพื่อเลือก · กรอบที่เลือกมีขอบทอง)</span></div><div class="af-grid" id="afGrid"></div><div style="margin-top:16px; padding:13px; border-radius:16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09);"><div style="font-size:13.5px; font-weight:700; color:var(--neon-yellow); margin-bottom:5px;">① ตั้งเป็นกรอบของยศ</div><div style="font-size:11.5px; color:var(--text-dim); margin-bottom:9px; line-height:1.55;">ทุกคนในยศนี้จะได้กรอบที่เลือก (ยกเว้นคนที่มอบกรอบรายคนไว้) — เห็นหน้าต่างเดียวกันทุกเครื่องทันที</div><div style="display:flex; gap:8px; align-items:stretch;"><select id="afRoleSelect" style="flex:1; min-width:0; padding:12px; border-radius:14px; background:var(--input-bg); color:white; border:1px solid var(--border-glass); outline:none; font-family:'Kanit'; font-size:13.5px;"></select><button id="afApplyRoleBtn" onclick="window.afApplyToRole()" class="manual-timer-btn" style="justify-content:center; background:var(--neon-green); color:#fff; flex-shrink:0;"><span class="material-symbols-outlined" style="font-size:19px;">check</span> ใช้กับยศนี้</button></div></div><div style="margin-top:12px; padding:13px; border-radius:16px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09);"><div style="font-size:13.5px; font-weight:700; color:var(--neon-yellow); margin-bottom:5px;">② มอบกรอบให้สมาชิกรายคน</div><div style="font-size:11.5px; color:var(--text-dim); margin-bottom:9px; line-height:1.55;">คนนั้นได้กรอบนี้ทับกรอบของยศ — เลือกกรอบ “<b>ตามยศ (อัตโนมัติ)</b>” แล้วกดปุ่มเพื่อคืนค่าให้กลับไปใช้กรอบของยศ</div><select id="afUserSelect" style="display:none;"></select><div id="afUserList" class="af-user-list" style="margin-bottom:9px;"></div><button onclick="window.afApplyToUser()" class="manual-timer-btn" style="width:100%; justify-content:center; background:var(--neon-green); color:#fff;"><span class="material-symbols-outlined" style="font-size:19px;">stars</span> มอบกรอบที่เลือกให้สมาชิกคนนี้</button></div><div style="margin-top:16px; padding:13px; border-radius:16px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.08);"><div style="font-size:13.5px; font-weight:700; color:var(--neon-yellow); margin-bottom:8px;">ใช้อยู่ตอนนี้</div><div id="afCurrentList"></div></div><div style="font-size:11px; color:var(--text-dim); line-height:1.6; margin-top:12px;">🔁 กรอบหมุน/เตาะแผ่ว• ป้ายอิโมจิกระดกอยู่เสมอ · โหมด “ดำ OLED” จะหยุดแอนิเมชันทั้งหมดเพื่อประหยัดแบต และยศที่ยังไม่ได้ตั้งอะไรจะได้วงแหวนตามตำแหน่งเหมือนเดิม</div></div></div></div>
 <div id="roleSettingsModal" class="modal-overlay" style="z-index: 10005;"><div class="modal-box flex-col-box" onclick="event.stopPropagation()"><div class="modal-header"><button class="btn-back-profile" onclick="window.backToSettingsSub('roleSettingsModal')" title="กลับไปตั้งค่าการใช้งาน"><span class="material-symbols-outlined">chevron_left</span>ตั้งค่า</button><h3 style="color: var(--neon-yellow);">สิทธิ์และกรอบอวตาร</h3><button class="btn-close-floating" onclick="window.toggleModal('roleSettingsModal', false)"><span class="material-symbols-outlined">close</span></button></div><div id="roleHubTabs" class="seg-tabs"><button type="button" id="roleHubTabPerms" class="seg-tab on" onclick="window.roleHubTab('perms')"><span class="material-symbols-outlined">admin_panel_settings</span><span>สิทธิ์การใช้งาน</span></button><button type="button" id="roleHubTabFrames" class="seg-tab" onclick="window.roleHubTab('frames')"><span class="material-symbols-outlined">face_retouching_natural</span><span>กรอบอวตาร</span></button></div><div class="modal-content-scroll" id="rolePanelFrames" style="display:none; text-align:left;"></div><div class="modal-content-scroll" id="rolePanelPerms" style="text-align: left;"><label style="color: var(--neon-yellow); font-size: 13px;">เลือกตำแหน่ง (Role) ที่ต้องการตั้งค่าสิทธิ์</label><select id="settingRoleSelect" onchange="window.loadRolePermissionsToUI()" style="width: 100%; padding: 15px; border-radius: 20px; background: var(--input-bg); color: white; border: 1px solid var(--border-glass); margin-bottom: 10px; outline: none; font-family: 'Kanit';"></select><div style="display: flex; gap: 8px; margin-bottom: 6px;"><button onclick="window.addCustomRole()" id="addRoleBtn" class="role-manage-btn role-btn-add" type="button"><span class="material-symbols-outlined" style="font-size: 18px;">add</span> สร้างตำแหน่งใหม่</button><button onclick="window.renameCustomRole()" id="renameRoleBtn" class="role-manage-btn role-btn-rename" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">edit</span> เปลี่ยนชื่อ</button><button onclick="window.deleteCustomRole()" id="deleteRoleBtn" class="role-manage-btn role-btn-del" type="button" style="display: none;"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span> ลบ</button></div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: var(--space-field); text-align: left; line-height: 1.5;">ตำแหน่งระบบ (แอดมิน / ผู้จัดการ / สมาชิก VIP / ผู้ใช้งานทั่วไป) เปลี่ยนชื่อหรือลบไม่ได้ — กด "สร้างตำแหน่งใหม่" เลือก "ลอกแบบจาก" ตำแหน่งที่มีอยู่เพื่อตั้งสิทธิ์ไวขึ้น แล้วปรับสิทธิ์ด้านล่าง (ติ๊กแล้วกด บันทึกสิทธิ์)</div><div id="roleMembersPanel" class="role-members-panel"></div><div id="permRoleNote" style="display:none;"></div><div id="permListContainer" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid var(--border-glass); display: flex; flex-direction: column; gap: 15px;"></div>
-<div id="pinPolicyBox" style="margin-top: 14px; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);"><div style="font-size: 14px; color: var(--neon-yellow); font-weight: 700; margin-bottom: 2px;">🔑 นโยบาย PIN ยืนยันสำคัญ (ค่าเริ่มต้นของตำแหน่ง)</div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.5;">ตั้งค่าให้ <b>ทุกคนในตำแหน่งนี้</b> — บังคับ/ไม่บังคับตั้ง PIN · อายุ PIN ขั้นต่ำก่อนเปลี่ยน · เตือนเปลี่ยนทุกกี่วัน · ให้ถอด PIN เองได้ไหม · หลังแก้แล้วกด “บันทึกสิทธิ์” ด้านล่าง (มีผลทุกเครื่อง)</div><div id="pinPolicyRows"></div></div><!-- 🎨 (17 ก.ย. 69) บล็อก “กรอบอวตารประจำยศ” ถูกถอดออกจากหน้านี้แล้ว — ผู้ใช้สั่งว่า “ไม่จำเป็นต้องแสดงอันนี้ เพราะยังไงมันก็มีอยู่ในเมนูกรอบอวตารอยู่แล้ว”
+<div id="pinPolicyBox" style="margin-top: 14px; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);"><div style="font-size: 14px; color: var(--neon-yellow); font-weight: 700; margin-bottom: 2px;">🔑 นโยบาย PIN ยืนยันสำคัญ (ค่าเริ่มต้นของตำแหน่ง)</div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.5;">ตั้งค่าให้ <b>ทุกคนในตำแหน่งนี้</b> — บังคับ/ไม่บังคับตั้ง PIN · อายุ PIN ขั้นต่ำก่อนเปลี่ยน · เตือนเปลี่ยนทุกกี่วัน · ให้ถอด PIN เองได้ไหม · หลังแก้แล้วกด “บันทึกสิทธิ์” ด้านล่าง (มีผลทุกเครื่อง)</div><div id="pinPolicyRows"></div></div><div id="roleFontBox" style="margin-top: 14px; padding: 15px; border-radius: 15px; background: rgba(168,85,247,0.07); border: 1px solid rgba(168,85,247,0.28);"><div style="font-size: 14px; color: #e9d5ff; font-weight: 700; margin-bottom: 2px;">🔠 ขนาดตัวอักษรเริ่มต้นของตำแหน่ง</div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.5;">ตั้งค่าเริ่มต้นให้ <b>ทุกคนในตำแหน่งนี้</b> (เช่น VIP เริ่ม 110%) · ผู้ใช้ยัง<b>ปรับต่อเองได้เสมอ</b> ใน “ตั้งค่าทั่วไป › ขนาดตัวอักษร” และกดปุ่ม “<b>คืนค่าเริ่มต้นของยศ</b>” ได้ · คนที่เคยปรับเองไว้แล้วยังได้ค่าของตัวเอง (ไม่ถูกทับ) · หลังแก้แล้วกด “บันทึกสิทธิ์” ด้านล่าง (มีผลทุกเครื่อง)</div><div id="roleFontRows"></div></div><!-- 🎨 (17 ก.ย. 69) บล็อก “กรอบอวตารประจำยศ” ถูกถอดออกจากหน้านี้แล้ว — ผู้ใช้สั่งว่า “ไม่จำเป็นต้องแสดงอันนี้ เพราะยังไงมันก็มีอยู่ในเมนูกรอบอวตารอยู่แล้ว”
          ⇒ การตั้งกรอบรายยศ/รายคน เหลือที่ “แท็บที่ 2 ของหน้าต่างนี้” ที่เดียว (17 ก.ย. 69: รวมเมนูเป็น “สิทธิ์และกรอบอวตาร” — แท็บ 1 สิทธิ์ · แท็บ 2 กรอบอวตาร)
          ⚠️ อย่าลบฟังก์ชัน renderRoleFrameSelect / renderRoleFramePreview / onRoleFrameChanged เพราะมันคืนค่าเปล่า ๆ อย่างปลอดภัยเมื่อไม่มีธาตุบนจอ (กันข้อผิดพลาดตอนสคริปต์อื่นเรียก)
          ⚠️ สำคัญ: ตอนกด “บันทึกสิทธิ์” ต้องรักษาค่า avatarFrame ของยศไว้เสมอ (ดู saveRolePermissions) ไม่งั้นการบันทึกสิทธิ์จะลบกรอบของยศทิ้ง --><div style="margin-top: 14px; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);"><div style="font-size: 14px; color: var(--neon-yellow); font-weight: 700; margin-bottom: 2px;">🗺️ เปิดมินิแมพอัตโนมัติ (ทั้งระบบ)</div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px; line-height: 1.5;">คุมการเปิดเองของทุกยศพร้อมกัน (มีผลทันทีทุกเครื่อง) — ยังต้องติ๊กสิทธิ์ “เปิดมินิแมพอัตโนมัติเมื่อเริ่มเที่ยว” ให้ยศนั้นก่อน</div><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; margin-bottom: 4px;"><span style="flex:1; font-size:14px;">เปิดเองเฉพาะเที่ยว “ขึ้นทางด่วน”<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เปิด (ค่าเริ่มต้น) = ยศที่ติ๊กเปิดเอง จะเปิดแผนที่เองเฉพาะเที่ยวที่เลือกขึ้นทางด่วนเพื่อดูค่าด่าน/ทางแยก · <b>เที่ยวถนนปกติยังเริ่มจากยุบให้กดเอง</b> (ประหยัดโควตา)<br>ปิด = กลับไปเป็นแบบเดิม (ติ๊กแล้วเปิดเองทุกเที่ยว)</span></span><span class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="miniMapAutoOpenTollOnly" onchange="window.setMiniMapAutoOpenTollOnly(this.checked)" checked><span class="app-slider"></span></span></label><label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; margin-top:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px;"><span style="flex:1; font-size:14px;">ยุบแผนที่เองเมื่อออกจากทางด่วน<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">เปิด (ค่าเริ่มต้น) = พ้นช่วงทางด่วนแล้วระบบปิดแผนที่ให้เอง เหลือ <b>ปุ่มสีฟ้า</b> ให้กดเปิดใหม่ ⇒ ประหยัดแบตและโควตากระเบื้อง · เข้าทางด่วนช่วงถัดไปเปิดให้เองอีกครั้ง · คนที่กดเปิดเองจะไม่ถูกปิดให้<br>ปิด = แผนที่ค้างเปิดจนจบเที่ยว (แบบเดิม)</span></span><span class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="miniMapAutoCloseTollExit" onchange="window.setMiniMapAutoCloseTollExit(this.checked)" checked><span class="app-slider"></span></span></label></div><div style="margin-top: 14px; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);"><div style="font-size: 14px; color: var(--neon-yellow); font-weight: 700; margin-bottom: 2px;">🗂️ บันทึกประวัติ (Log)</div><div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px; line-height: 1.5;">เปิด/ปิดการบันทึก log แต่ละประเภท (เขียน Firestore ทุกครั้งที่เกิดเหตุการณ์ — ปิดประเภทที่ไม่จำเป็นเพื่อประหยัดโควตา · มีผลทันทีทุกเครื่อง)</div><div id="logSettingsBox"></div></div><button onclick="window.saveRolePermissions()" class="manual-timer-btn" style="background: var(--neon-green); width: 100%; justify-content: center; margin-top: var(--space-field);" id="saveRolePermBtn"><span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์</button></div></div></div>
@@ -4349,8 +4409,10 @@
     //    เก็บสำเนาใน localStorage ด้วย → เปิดแอปครั้งถัดไปเห็นรูป "ทันที" โดยไม่ต้องรอเน็ต
     window.loadLoadingScreenConfig = async () => {
         try { if (window.__lds && window.__lds.step) window.__lds.step(30, 'กำลังโหลดข้อมูล...'); } catch (e) {}
-        // ⚡ ถ้าสคริปต์ต้นไฟล์ยิงและทาค่าให้แล้ว → ใช้ผลเดียวกัน ไม่ยิงซ้ำ
-        if (window.__ldsCfgDone) return window.__ldsRemote || null;
+        // ⚡ ถ้าสคริปต์ต้นไฟล์ยิงและ “ได้ค่าแล้ว” → ใช้ผลเดียวกัน ไม่ยิงซ้ำ
+        //   ⚠️ (20 ก.ย. 69) เดิม: ถ้าต้นไฟล์ยิงจบแล้วแต่ไม่ได้ค่า (เน็ตสะดุด/เซิร์ฟเวอร์ไม่ตอบ) จะคืน null ทันที
+        //      ⇒ หน้าตั้งค่าโชว์ “ยังไม่มีรูป” ทั้งที่จอโหลดมีรูปอยู่ (ผู้ใช้แจ้ง) ⇒ ตอนนี้ถ้าไม่มีค่า จะยิงใหม่เองด้านล่าง
+        if (window.__ldsCfgDone && window.__ldsRemote) return window.__ldsRemote;
         const LS_URL = `${__fsBase}/settings/loading_screen?key=${__FS_KEY}`;
         const LS_KEY = window.__LDS_KEY || 'taxi_loading_screen_v1';
         // อัปเดตเฉพาะฟิลด์ที่มีมาจริง — ห้ามล้างค่าเดิมทิ้งเพราะได้ข้อมูลไม่ครบ
@@ -5266,6 +5328,20 @@
         bits.push(p.allowRemove ? 'ถอด PIN เองได้' : 'ถอด PIN เองไม่ได้');
         return bits.join(' · ');
     };
+    // ==================== 🔠 (20 ก.ย. 69 · ผู้ใช้สั่ง) “ขนาดตัวอักษรเริ่มต้น” ต่อตำแหน่ง (แอดมินกำหนด) ====================
+    //  คำสั่งผู้ใช้: “ให้แอดมินกำหนดค่าขนาดตัวอักษรเริ่มต้นของแต่ละยศได้ (เช่น VIP เริ่ม 110%)
+    //               โดย user ยังปรับต่อได้เอง และมีปุ่มคืนค่าเริ่มต้นของยศนั้น”
+    //  ที่เก็บ: settings/roles → <role>.fontScaleDefault (คีย์ชุดเดียวกับสิทธิ์/PIN ⇒ snapshot ตัวเดิมพาเข้ามา = ไม่มี listener เพิ่ม ไม่กินโควตา)
+    //  ⚠️ เป็น “ค่าเริ่มต้นของตำแหน่ง” ไม่ใช่ค่าของคน — ค่าของคนอยู่ที่ users/<uid>.fontScale (+ fontScaleOwn)
+    //  ⛔ ห้ามเขียนทับค่าที่ผู้ใช้ตั้งเอง (own) — ผู้ใช้ชนะค่าเริ่มต้นของยศเสมอเมื่อตั้งเองแล้ว
+    window.ROLE_FONT_DEFAULT = 100;
+    window.roleFontMin = () => (typeof window.FONT_SCALE_MIN === 'number' ? window.FONT_SCALE_MIN : 85);
+    window.roleFontMax = () => (typeof window.FONT_SCALE_MAX === 'number' ? window.FONT_SCALE_MAX : 135);
+    window.normalizeRoleFont = (v) => { const n = parseInt(v, 10); if (isNaN(n)) return window.ROLE_FONT_DEFAULT; return Math.min(window.roleFontMax(), Math.max(window.roleFontMin(), n)); };
+    window.roleFontDefault = (role) => window.normalizeRoleFont(((window.globalPermissions || {})[role] || {}).fontScaleDefault);
+    window.myRoleFontDefault = () => window.roleFontDefault(window.myRoleKey());
+    // 📝 สรุปเป็นข้อความสั้น (ใช้ทั้งหน้าตั้งค่าสิทธิ์ของแอดมิน และแถวขนาดตัวอักษรของผู้ใช้)
+    window.roleFontText = (v) => { const s = window.normalizeRoleFont(v); return (s === window.ROLE_FONT_DEFAULT) ? 'ค่าเดิมของแอป (100%)' : (s + '%'); };
     // ✏️ ตัวช่วย: ใครมีสิทธิ์ “แก้ข้อความ/ชื่อเมนูในแอป” (เดิมเป็นแอดมินเท่านั้น — ตอนนี้มอบสิทธิ์ให้ตำแหน่งอื่นได้)
     window.canEditAppTexts = () => window.isAdminNow() || !!(window.currentUserPerms && window.currentUserPerms().canEditAppTexts);
     // 🗺️ ตัวช่วย: ใครมีสิทธิ์ “ตั้งค่าแผนที่นำทาง Mini Map” (ช่วงการเลื่อนของจุด / ความเร็วการไล่ทัน) — เดิมเป็นของแอดมินเท่านั้น
@@ -6576,18 +6652,33 @@
         const plainMsg = isToll ? '🛣️ ขึ้นทางด่วน' : '🚗 เลี่ยงทางด่วน';
         let toldDiff = false;
         
-        if(destLoc) {
-            let startLat, startLon;
-            if (lastPos) {
-                startLat = lastPos.lat;
-                startLon = lastPos.lon;
-            } else if (window.__testUserPos && typeof window.__testUserPos.lat === 'number') {
-                // 🧪 test hook — preview/เทสต์ที่ GPS ถูกบล็อก (ตั้ง window.__testUserPos แทน fix สด)
-                startLat = window.__testUserPos.lat; startLon = window.__testUserPos.lon;
-            }
-            
-            if (startLat && startLon) {
-                let route = await window.fetchRouteFromTomTom(destLoc.lat, destLoc.lon, startLat, startLon);
+        // 🧭 (20 ก.ย. 69 · ผู้ใช้แจ้งบั๊กจริง) “เส้นทางไม่มีทางด่วน แต่กดปุ่มขึ้นทางด่วน แล้วขึ้นข้อความ ‘🛣️ ขึ้นทางด่วน’ เฉย ๆ ทั้งที่เส้นทางไม่เปลี่ยน”
+        //    ⛔ ต้นเหตุเดิม: ตอนนั้นยังไม่มีพิกัด GPS (lastPos = null) และไม่มี __testUserPos ⇒ ข้ามการขอเส้นทางทั้งก้อน
+        //       แล้วไหลไปสู่ `if (!toldDiff) showToast(plainMsg)` ท้ายฟังก์ชัน ⇒ บอกว่า “ขึ้นทางด่วน” ทั้งที่ยังไม่ได้ยืนยันอะไรเลย
+        //    ✅ แก้ 2 ชั้น: ① หาต้นทางสำรองจาก “เส้นทางที่จดไว้ของเที่ยวนี้” (`__pendingRouteStart`) ได้ด้วย ② ขอเส้นทางไม่ได้ = **ยกเลิกการสลับ** + บอกความจริง
+        const pStart = window.__pendingRouteStart || {};
+        let startLat = null, startLon = null;
+        if (lastPos && typeof lastPos.lat === 'number') { startLat = lastPos.lat; startLon = lastPos.lon; }
+        else if (window.__testUserPos && typeof window.__testUserPos.lat === 'number') {
+            // 🧪 test hook — preview/เทสต์ที่ GPS ถูกบล็อก (ตั้ง window.__testUserPos แทน fix สด)
+            startLat = window.__testUserPos.lat; startLon = window.__testUserPos.lon;
+        } else if (typeof pStart.sLat === 'number' && typeof pStart.sLon === 'number') {
+            startLat = pStart.sLat; startLon = pStart.sLon;   // ① ต้นทางของเส้นทางที่ใช้อยู่จริง (มีตลอดเที่ยวที่เริ่มจากหน้าสรุป)
+        }
+        const destLL = (destLoc && typeof destLoc.lat === 'number') ? destLoc
+                     : (typeof pStart.dLat === 'number' && typeof pStart.dLon === 'number') ? { lat: pStart.dLat, lon: pStart.dLon, name: pStart.name || '' }
+                     : null;
+        // ↩️ ยกเลิกการสลับ: คืนโหมดเดิม + ดึงป้าย/ราคาบนจอให้ตรงกับเส้นทางที่ยังใช้อยู่
+        const revertTollSwitch = () => {
+            applyTollModeState(!isToll, false, true);
+            try { window.updateTollDisplay(); } catch (e) {}
+            if (window.syncFareTollBtn) window.syncFareTollBtn();
+            if (window.updateFareTollBtnText) window.updateFareTollBtnText();
+        };
+
+        if (destLL && startLat !== null && startLon !== null) {
+            {   // ← บล็อกนี้กันตัวแปล `route` ไม่ให้รั่วออกไปนอก if (โครงเดิมของโค้ดชุดนี้)
+                let route = await window.fetchRouteFromTomTom(destLL.lat, destLL.lon, startLat, startLon);
                 if (route) {
                     currentTrueRemainKm = route.km;
                     currentTrueRemainSec = route.sec;
@@ -6612,8 +6703,13 @@
                             toldDiff = true;
                         } else {
                             // ขึ้นทางด่วนแล้วเส้นทางนี้ไม่มีทางด่วนจริง → บอกว่าไม่มี + ดีดกลับเป็น "เลี่ยงทางด่วน" (เฉพาะเส้นทางนี้)
-                            window.showNoTollToast();
                             window.enforceTollModeVsRoute(false);
+                            revertTollSwitch();   // 🛡 กันกรณี destLoc ว่าง (ต้นทางมาจาก __pendingRouteStart) — enforceTollModeVsRoute จะไม่ทำงาน
+                            window.showNoTollToast();
+                            // 🔴 (20 ก.ย. 69 · บั๊กจริงที่ผู้ใช้เจอ) เดิมไม่ได้ตั้ง toldDiff ⇒ บรรทัดท้ายฟังก์ชัน
+                            //    `if (!toldDiff) showToast('🛣️ ขึ้นทางด่วน')` ทับข้อความ “ไม่มีทางด่วน” ทันที
+                            //    ⇒ ผู้ใช้เห็น “ขึ้นทางด่วน” ทั้งที่เส้นทางนี้ไม่มีทางด่วนเลย (โหมดถูกดีดกลับแล้วก็จริง แต่ข้อความหลอก)
+                            toldDiff = true;
                         }
                     } else if (diffSub) {
                         window.showToast('🚗 เลี่ยงทางด่วน', false, null, false, null, diffSub);
@@ -6630,8 +6726,19 @@
                     // 🛣️ อัปเดตป้ายค่าทางด่วนบนจอให้ตรงกับเส้นทางใหม่ทันที (ช่องราคา + แบนเนอร์) — เดิมอัปเดตไม่ครบตอนสลับกลางเที่ยว
                     if (window.syncFareTollBtn) window.syncFareTollBtn();
                     if (window.updateFareTollBtnText) window.updateFareTollBtnText();
+                } else {
+                    // 🚫 ขอเส้นทางใหม่ไม่ได้ (โควตา/เน็ต/API) ⇒ ยกเลิกการสลับ — ห้ามค้างโหมด “ขึ้นทางด่วน” ทั้งที่เส้นทางเดิมไม่มีทางด่วน
+                    revertTollSwitch();
+                    window.showToast('คำนวณเส้นทางใหม่ไม่ได้ (โควตา/เน็ต) — ยังใช้เส้นทางเดิม', true);
+                    toldDiff = true;
                 }
             }
+        } else if (isToll) {
+            // 🚫 ไม่มีจุดหมาย/ต้นทางให้ขอเส้นทางใหม่ได้ ⇒ ยกเลิกการสลับ + บอกความจริง
+            //    (เดิมบอก “🛣️ ขึ้นทางด่วน” เฉย ๆ ทั้งที่เส้นทางไม่เปลี่ยน — ผู้ใช้แจ้ง 20 ก.ย. 69)
+            revertTollSwitch();
+            window.showToast(!destLL ? 'ยังไม่มีเส้นทางให้ยืนยันทางด่วน — ยังใช้เส้นทางเดิม' : 'ยังไม่ได้พิกัด GPS — ขอเส้นทางใหม่เพื่อขึ้นทางด่วนไม่ได้ (ยังใช้เส้นทางเดิม)', true);
+            toldDiff = true;
         }
         // ไม่มีจุดหมาย/ขอเส้นทางไม่ได้ → แจ้งแบบสั้นเหมือนเดิม (ไม่มีตัวเลขให้เทียบ)
         if (!toldDiff) { window.showToast(plainMsg); }
@@ -9691,7 +9798,9 @@
         }
         return Math.round(km) + ' กิโล';          // ไกลมาก = ปัดเป็นจำนวนเต็ม
     };
-    window.showToast = (msg, isError = false, imgUrl = null, gold = false, onClick = null, subtitle = null) => {
+    //  🔔 (20 ก.ย. 69 · ผู้ใช้สั่ง) เพิ่มพารามิเตอร์ที่ 7 `actionLabel` = ป้ายบนปุ่มในกล่อง toast
+    //     (เดิมมีแค่ onClick ⇒ ตอนนี้มีปุ่มให้กดเห็นชัด “แตะทั้งกล่อง” ยังทำงานเหมือนเดิม)
+    window.showToast = (msg, isError = false, imgUrl = null, gold = false, onClick = null, subtitle = null, actionLabel = null) => {
         // 🔧 ข้อความ/ไอคอน/วินาทีที่แอดมินแก้ไว้ (Firestore settings/toast_messages) — ค้นจาก registry (exact หรือ prefix สำหรับข้อความที่มีตัวแปรต่อท้าย)
         let overrideIcon = null;
         window.__toastSec = null; // reset วินาทีของ toast นี้ก่อน — จะถูกเซ็ตใหม่ใน loop ด้านล่างถ้ามี override ระบุวินาที
@@ -9718,6 +9827,7 @@
         document.getElementById('toastMsg').innerText = msg;
         if (sub) { sub.innerText = subtitle || ''; sub.style.display = subtitle ? 'block' : 'none'; } // บรรทัดที่ 2 (คำอธิบายเล็ก) — ถ้าไม่มีก็ซ่อน
         toast.classList.toggle('toast-gold', !!gold);
+        toast.classList.remove('toast-hold');   // 🔁 ล้างสถานะโหมด “ค้างไว้” ของกล่องก่อนหน้า — ตัดสินใหม่ด้านล่าง
         if (imgUrl && imgUrl.length > 10) { img.src = imgUrl; img.style.display = 'block'; icon.style.display = 'none'; } 
         else {
             img.style.display = 'none'; icon.style.display = 'block';
@@ -9727,37 +9837,67 @@
             else if (isError) iconText = 'error';
             else iconText = 'notifications_active';
             icon.innerText = iconText; icon.style.color = iconColor;
-            // อีโมจิ (มีอักขระนอก ASCII) → ใช้ฟอนต์ปกติตัวใหญ่แทนไอคอน material
-            if (/[^\x00-\x7F]/.test(iconText)) { icon.style.fontFamily = 'inherit'; icon.style.fontSize = '34px'; }
-            else { icon.style.fontFamily = ''; icon.style.fontSize = ''; }
+            // อีโมจิ (มีอักขระนอก ASCII) → ใช้ฟอนต์ปกติแทนไอคอน material (ขนาดเท่าไอคอนในการ์ด)
+            if (/[^\x00-\x7F]/.test(iconText)) { icon.style.fontFamily = 'inherit'; icon.style.fontSize = '24px'; }
+            else { icon.style.fontFamily = ''; icon.style.fontSize = '19px'; }
         }
-        toast.style.borderColor = gold ? '#f1c40f' : (isError ? 'var(--accent-red)' : 'rgba(241,196,15,0.45)'); toast.style.display = 'flex';
-        // ✂️ ย่อ font อัตโนมัติให้ข้อความอยู่บรรทัดเดียวเสมอ (เริ่ม 17px เท่ากันทุก toast — ยาวเกินกล่องถึงจะเล็กลง) — ต้องรันหลัง display:flex ถึงวัดความกว้างได้
-        try {
-            const m = document.getElementById('toastMsg');
-            if (m) {
-                m.style.fontSize = '17px';
-                for (let tries = 0; tries < 12; tries++) {
-                    if (m.scrollWidth <= m.clientWidth + 2) break;
-                    const fs = Math.max(11, 17 - (tries + 1)); if (fs < 11) break;
-                    m.style.fontSize = fs + 'px';
-                }
+        toast.style.display = 'flex';
+        // 🎨 สีขอบบอกประเภท: แดง = ผิดพลาด · ทอง = ปกติ/กลับจากเบื้องหลัง (ไม่เรืองแสงจัด อ่านง่ายกว่าเดิม)
+        toast.style.borderColor = isError ? 'rgba(239,68,68,0.65)' : (gold ? '#f1c40f' : 'rgba(241,196,15,0.45)');
+        // ==================== ⏱️ เวลา + ปุ่ม ====================
+        //  ลำดับความสำคัญ: ① วินาทีที่แอดมินตั้งเฉพาะข้อความ (registry → window.__toastSec)
+        //                  ② วินาทีที่ “ผู้ใช้” ตั้งเองใน ตั้งค่าการใช้งาน › ตั้งค่าทั่วไป (ค่าเริ่มต้น 3 วิ · ปรับทีละ 1 วิ)
+        //                  ③ สวิตช์ “ค้างไว้จนกดปิดเอง” = ไม่ตั้งเวลาเลย
+        const hasTap = typeof onClick === 'function';
+        const hold = (window.userToastHold === true);
+        const userSec = (typeof window.__toastUserSec === 'function') ? window.__toastUserSec() : 3;
+        let showMs = (window.__toastSec && window.__toastSec > 0) ? Math.round(window.__toastSec * 1000) : Math.round(userSec * 1000);
+        if (hasTap && showMs < 6000) showMs = 6000;   // ⚠️ toast ที่มีปุ่มให้กด = ต้องมีเวลาให้กดอย่างน้อย 6 วิ
+        const foot = document.getElementById('toastFoot');
+        const actBtn = document.getElementById('toastActionBtn');
+        const dismissBtn = document.getElementById('toastDismissBtn');
+        const closeX = document.getElementById('toastCloseBtn');
+        const stopTimer = () => { if (window.__toastHideTimer) { clearTimeout(window.__toastHideTimer); window.__toastHideTimer = null; } };
+        const hide = () => {
+            stopTimer();
+            try {
+                toast.style.display = 'none';
+                toast.classList.remove('toast-gold');
+                toast.classList.remove('show-foot');
+                toast.classList.remove('toast-hold');
+                toast.style.cursor = 'default';
+                toast.onclick = null;
+                if (actBtn) actBtn.onclick = null;
+            } catch (e) {}
+        };
+        window.__toastHideNow = hide;   // ปุ่ม ✕ / ปุ่มในการ์ด เรียกตัวเดียวกัน (ที่เดียวของความจริง)
+        toast.classList.toggle('show-foot', hasTap && !!foot);
+        if (actBtn) {
+            actBtn.innerText = actionLabel || 'ตกลง';
+            actBtn.onclick = hasTap ? (ev) => { try { ev.stopPropagation(); } catch (e) {} hide(); try { onClick(); } catch (e) {} } : null;
+        }
+        if (dismissBtn) dismissBtn.onclick = (ev) => { try { ev.stopPropagation(); } catch (e) {} hide(); };
+        if (closeX) closeX.onclick = (ev) => { try { ev.stopPropagation(); } catch (e) {} hide(); };
+        // แตะตัวการ์ดเองก็ยังทำงานเหมือนเดิม (โค้ด/ชุดทดสอบเดิมเรียกแบบนี้) — แต่ตัวการ์ดเป็น pointer-events:none
+        toast.onclick = hasTap ? onClick : null;
+        toast.style.cursor = hasTap ? 'pointer' : 'default';
+        // ⏳ แถบนับถอยหลัง 100% → 0 ตามเวลาจริง (โหมด “ค้างไว้” = ซ่อนแถบ)
+        const barFill = document.getElementById('toastBarFill');
+        if (barFill) {
+            barFill.style.transition = 'none';
+            barFill.style.width = '100%';
+            if (hold) { barFill.style.transition = 'none'; toast.classList.add('toast-hold'); }
+            else {
+                void barFill.offsetWidth;   // บังคับ reflow ให้ transition เริ่มใหม่ทุกครั้ง (toast ซ้อนกันถี่ ๆ)
+                barFill.style.transition = 'width ' + showMs + 'ms linear';
+                barFill.style.width = '0%';
             }
-        } catch (e) {}
+        } else if (hold) { toast.classList.add('toast-hold'); }
         if (gold && navigator.vibrate && window.userVibrateGold !== false) { try { navigator.vibrate([60, 40, 60]); } catch(e) {} } // สั่นเบา ๆ (เฉพาะ toast ทอง) — ปิดได้ในหน้าโปรไฟล์ (บางคนไม่อยากให้สั่นตอนขับ)
-        if (window.__toastHideTimer) clearTimeout(window.__toastHideTimer);
         // 🔊 เสียงติ๊งสั้น ๆ ทุกครั้งที่ toast เด้ง — ให้คนขับรู้ตัวแม้ไม่มองจอ (ปิดได้ในหน้าโปรไฟล์ → userToastSound = false)
         if (window.playToastTing && window.userToastSound !== false) { try { window.playToastTing(); } catch(e) {} }
-        // ⏱️ เวลาแสดงผล: default 1.5 วิ ทุก toast — แอดมินตั้งวินาทีเฉพาะตัวได้ (window.__toastSec) — toast ที่กดได้ (มี onClick) ถ้าไม่ตั้งค่าให้ 3.5 วิ เผื่อแตะทัน
-        const hasTap = typeof onClick === 'function';
-        let showMs = window.__toastSec && window.__toastSec > 0 ? Math.round(window.__toastSec * 1000) : (hasTap ? 3500 : 1500);
-        window.__toastHideTimer = setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('toast-gold'); toast.style.cursor = 'default'; toast.onclick = null; }, showMs);
-        // แตะ toast ที่ส่ง onClick มา (เช่น toast "ไม่มีทางด่วน" = สลับกลับเลี่ยงทางด่วน) → ผูก handler ให้
-        toast.onclick = null; toast.style.cursor = 'default';
-        if (hasTap) {
-            toast.onclick = onClick;
-            toast.style.cursor = 'pointer';
-        }
+        stopTimer();
+        if (!hold) window.__toastHideTimer = setTimeout(hide, showMs);   // hold = ค้างไว้จนกดปิด (ผู้ใช้สั่ง 20 ก.ย. 69)
     };
 
     // 🔧 Registry ข้อความแจ้งเตือน (toast) ที่แอดมินแก้ได้ — key = ข้อความต้นฉบับ, value = { text (ข้อความใหม่/ว่าง=เดิม), icon (ชื่อไอคอน material หรืออีโมจิ) }
@@ -14459,6 +14599,9 @@
                 // เลือก "ขึ้นทางด่วน" ในหน้าสรุปแล้วเส้นทางไม่มีทางด่วนจริง → แจ้งว่าไม่มี + ดีดกลับเป็น "เลี่ยงทางด่วน"
                 if (toll) window.enforceTollModeVsRoute(true);
             } else {
+                // 🚫 ขอเส้นทางใหม่ไม่ได้ ⇒ ยกเลิกการสลับ (คืนโหมดเดิม) แล้วค่อยบอกความจริง — อย่าค้างโหมดขึ้นทางด่วนบนเส้นทางเลี่ยง
+                applyTollModeState(!toll, false, true);
+                try { window.updateTollDisplay(); } catch (e) {}
                 window.showToast('คำนวณเส้นทางใหม่ไม่ได้ (โควตา/เน็ต) — ยังใช้เส้นทางเดิม', true);
                 toldDiff = true;
             }
@@ -17663,7 +17806,24 @@
     window.lsCanManage = () => (window.isAdminNow() || !!(window.currentUserPerms && window.currentUserPerms().canManageLoadingScreen));
     // 🖱️ แถบเลื่อนในลิสต์ค้นหา = สิทธิ์ของตัวเอง
     window.sbCanManage = () => (window.isAdminNow() || !!(window.currentUserPerms && window.currentUserPerms().canManageScrollbar));
-    window.lsCurrentImage = () => (window.__lsDraft.image === null) ? window.__lsSaved.image : window.__lsDraft.image;
+    // 🖼️ รูปที่ “กล่องพรีวิว/ทดลองดู” ใช้ — ลำดับ: ① เลือกใหม่รอบนี้ → ② ค่าที่บันทึกไว้ → ③ **ค่าที่จอโหลดใช้จริง** (`__ldsCfg`)
+    //   ⚠️ ทำไมต้องมีข้อ ③ (20 ก.ย. 69 · ผู้ใช้แจ้ง “รูปที่เลือกไปไม่แสดงในกล่อง”):
+    //      ตัวพรีวิวเดิมอ่านแค่ draft/แคชในเครื่อง ⇒ เครื่องที่แคชเขียนไม่ได้ (หรือรอบนั้นอ่านค่าจากเซิร์ฟเวอร์)
+    //      ทำให้ **จอโหลดมีรูปอยู่จริง แต่ในกล่องขึ้น “ยังไม่มีรูป”** — ขัดกันเอง ⇒ ตอนนี้อ่านจากเอนจินจอโหลดเป็นทางสุดท้าย
+    window.__lsImageSource = () => {
+        if (window.__lsDraft && window.__lsDraft.image !== null) return 'draft';      // เลือกใหม่ (รวมเคสเจตนาลบรูป = '')
+        if (window.__lsSaved && String(window.__lsSaved.image || '').length > 20) return 'saved';
+        let live = '';
+        try { live = String((window.__ldsCfg && window.__ldsCfg.image) || ''); } catch (e) { live = ''; }
+        return live.length > 20 ? 'live' : 'none';
+    };
+    window.lsCurrentImage = () => {
+        const kind = window.__lsImageSource();
+        if (kind === 'draft') return String((window.__lsDraft && window.__lsDraft.image) || '');
+        if (kind === 'saved') return String((window.__lsSaved && window.__lsSaved.image) || '');
+        if (kind === 'live') { try { return String((window.__ldsCfg && window.__ldsCfg.image) || ''); } catch (e) {} }
+        return '';
+    };
 
     /* ↔️ เลื่อนรูปซ้าย–ขวา — รูปแนวกว้างถูกครอปด้วย object-fit:cover จึงเลือกได้ว่าจะโชว์ส่วนไหน
        ค่านี้อยู่ในคอนฟิกร่วม (settings/loading_screen) → บันทึกแล้วทุกคนเห็นมุมมองเดียวกัน */
@@ -17742,16 +17902,42 @@
         if (hint) {
             if (img && img.length > 20) {
                 const kb = Math.round(img.length * 0.75 / 1024);
-                hint.textContent = 'รูปปัจจุบัน ' + kb.toLocaleString() + ' KB (ระบบย่อให้พอดีกรอบอัตโนมัติ)';
+                const kind = window.__lsImageSource();
+                hint.textContent = 'รูปปัจจุบัน ' + kb.toLocaleString() + ' KB (ระบบย่อให้พอดีกรอบอัตโนมัติ)'
+                    + (kind === 'live' ? ' · ⚠️ รูปนี้คือค่าที่ “จอโหลดใช้อยู่จริง” — กด “บันทึก” เพื่อยืนยัน' : '')
+                    + (kind === 'draft' ? ' · ยังไม่ได้บันทึก — กด “บันทึก” เพื่อใช้กับทุกคน' : '');
             } else { hint.textContent = 'ยังไม่มีรูปที่บันทึกไว้ — ใช้พื้นสำเร็จรูปของแอป'; }
         }
+        const srcLabel = { draft: 'รูปที่เลือกในรอบนี้ (ยังไม่บันทึก)', saved: 'ค่าที่บันทึกไว้ (แคช/เซิร์ฟเวอร์)', live: 'ค่าที่จอโหลดใช้จริง (จากเอนจินจอโหลด)', none: 'ยังไม่มีรูป' }[window.__lsImageSource()] || '—';
+        window.__lsPreviewSourceLabel = srcLabel;
         try { window.lsApplyFocus(); } catch (e) {}
         try { if (window.lsRenderDiag) setTimeout(window.lsRenderDiag, 60); } catch (e) {}
     };
 
+    // 🔁 (20 ก.ย. 69) ค่าจอโหลดมาถึงทีหลัง (จากเซิร์ฟเวอร์) → ให้กล่องพรีวิวอัปเดตตามทันที
+    //    ไม่ต้องปิด/เปิดหน้าต่างใหม่ ⇒ “สิ่งที่เห็นในกล่อง = สิ่งที่จอโหลดใช้จริง” เสมอ
+    if (!window.__lsApplyHook) {
+        window.__lsApplyHook = 1;
+        const __lsApplyOrig = window.__ldsApply;
+        if (typeof __lsApplyOrig === 'function') {
+            window.__ldsApply = function (cfg) {
+                try { __lsApplyOrig(cfg); } catch (e) {}
+                try {
+                    // ⚠️ ตัวพรีวิวถูก “ย้ายโหนด” เข้าแท็บของหน้าต่าง “หน้าตาและข้อความแอป”
+                    //    ⇒ ตรวจว่า “กล่องพรีวิวถูกวาดอยู่จริงไหม” (getClientRects) ไม่ใช่ดูว่าหน้าต่างเดิมเปิดไหม
+                    const wrap = document.getElementById('lsDemoWrap');
+                    const visible = !!(wrap && wrap.getClientRects && wrap.getClientRects().length);
+                    if (visible && typeof window.lsRenderPreview === 'function') window.lsRenderPreview();
+                } catch (e) {}
+            };
+        }
+    }
+
     window.openLoadingScreenModal = async () => {
         if (!window.lsCanManage()) return window.showToast('คุณไม่มีสิทธิ์ตั้งค่าหน้าจอโหลด', true);
-        window.__lsDraft = { image: null };
+        // 🔁 (20 ก.ย. 69) ห้ามล้าง “รูปที่เลือกไว้แต่ยังไม่ได้บันทึก” ตอนเปิดหน้าต่างซ้ำ
+        //    เดิมล้างทุกครั้ง ⇒ อัปโหลดรูป → กด “ทดลองดู” (ปิด/เปิดหน้าต่าง) แล้วรูปที่เลือกหายจากกล่อง ⇒ ผู้ใช้เห็นเป็น “รูปไม่ขึ้น”
+        if (!window.__lsDraft || typeof window.__lsDraft !== 'object') window.__lsDraft = { image: null };
         const fxOf = (s) => (s && typeof s.focusX === 'number' && isFinite(s.focusX)) ? window.lsFocusClamp(s.focusX) : 50;
         try {
             const s = JSON.parse(localStorage.getItem(window.__LDS_KEY || 'taxi_loading_screen_v1') || '{}');
@@ -17862,6 +18048,7 @@
         const pvOk = !!(pv && pv.naturalWidth > 0);
         const lines = [];
         lines.push('ค่าที่บันทึกล่าสุด: ' + (window.__lsSaved.image ? Math.round(window.__lsSaved.image.length * 0.75 / 1024) + ' KB' : 'ไม่มีรูป'));
+        lines.push('ที่มาของรูปในกล่องพรีวิว: ' + (window.__lsPreviewSourceLabel || '—'));
         lines.push('แคชในเครื่อง: ' + (cacheOk ? 'มี ✅' : 'ไม่มี') + (st.cacheWriteError ? ' ⚠️ ' + st.cacheWriteError : ''));
         lines.push('เซิร์ฟเวอร์: ' + (st.remoteOk === true ? 'อ่านได้ ✅' : (st.remoteOk === false ? 'อ่านไม่ได้ (ใช้แคชในเครื่องแทน)' : '—')));
         lines.push('ตอนนี้จอโหลดใช้รูปจาก: ' + srcLabel);
@@ -18350,7 +18537,7 @@
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = '677e307c7c';
+    const APP_WEB_VERSION = 'cdf17f222e';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -18926,6 +19113,28 @@
         ['2026-09-20', '🔠 ปรับ “ขนาดตัวอักษร” ได้เองจากเมนูตั้งค่าการใช้งาน › ตั้งค่าทั่วไป (แถบเลื่อน 85–135%)'],
         ['2026-09-20', '👁 ลากแถบ = ตัวอักษรใหญ่ขึ้นทั้งแอปทันที (หัวข้อ · คำอธิบาย · ปุ่ม · ตัวเลขบนจอมิเตอร์)'],
         ['2026-09-20', '🧑🦱 ทุกตำแหน่งปรับได้เอง (ไม่ต้องขอสิทธิ์) · จำต่อบัญชี ใช้ทุกเครื่อง · มีปุ่มคืนค่า 100%'],
+        ['2026-09-20', '🔔 ข้อความแจ้งเตือน (toast) ดีไซน์ใหม่ — การ์ดบนสุดของจอ · หัวข้อ + คำอธิบาย + ปุ่ม ✕'],
+        ['2026-09-20', '⏱️ ตั้งเวลาที่ข้อความค้างบนจอเองได้ (ค่าเริ่มต้น 3 วิ · ปุ่ม − / + ทีละ 1 วิ · 1–20 วิ)'],
+        ['2026-09-20', '📌 สวิตช์ “ค้างไว้จนกดปิดเอง” = ต้องกด ✕ ปิดเท่านั้น (อยู่ในเมนูตั้งค่าทั่วไป)'],
+        ['2026-09-20', '🧪 ชุดทดสอบออฟไลน์ 14 สถานการณ์ วัดเวลาจริง/ตำแหน่งจริงของ toast'],
+        ['2026-09-20', '🛣️ แก้บั๊ก: เส้นทางไม่มีทางด่วน แต่กดขึ้นทางด่วนแล้วขึ้นข้อความ “ขึ้นทางด่วน” หลอก'],
+        ['2026-09-20', '🚫 ขอเส้นทางใหม่ไม่ได้ (เน็ต/โควตา) = ยกเลิกการสลับ + บอกความจริง (ไม่หลอกว่าขึ้นแล้ว)'],
+        ['2026-09-20', '🧭 ปุ่มเลี่ยง/ขึ้นทางด่วนไม่ต้องรอ GPS แล้ว — ใช้ต้นทางจากเส้นทางที่จดไว้ต่อได้'],
+        ['2026-09-20', '🔠 “ขนาดตัวอักษร” ยกเป็นหัวข้อในตั้งค่าทั่วไป — สไลด์บาร์ + ปุ่ม − / + ขยับสไลด์ตาม'],
+        ['2026-09-20', '🔒 ขนาดตัวอักษรแยกต่อบัญชีจริง — คนอื่นล็อกอินเครื่องเดิมไม่ได้ค่าของเรา'],
+        ['2026-09-20', '🔠 แอดมินกำหนด “ขนาดตัวอักษรเริ่มต้น” รายยศได้ (เช่น VIP เริ่ม 110%)'],
+        ['2026-09-20', '🙋 ผู้ใช้ยังปรับต่อเองได้เสมอ — ค่าที่ปรับเองแล้วไม่ถูกค่าเริ่มต้นของยศทับ'],
+        ['2026-09-20', '↺ ปุ่มกลายเป็น “คืนค่าเริ่มต้นของยศ” — กลับไปตามที่แอดมินตั้ง ไม่ใช่ 100% ตายตัว'],
+        ['2026-09-20', '🧪 ชุดทดสอบออฟไลน์ของค่าเริ่มต้นรายยศ + ปุ่มคืนค่า (17 สถานการณ์)'],
+        ['2026-09-20', '🔓 ปุ่ม “ปลดล็อกด้วยเครื่อง” ใช้บนมือถือ (APK) ได้แล้ว — เด้งหน้าลายนิ้วมือ/ใบหน้า'],
+        ['2026-09-20', '🧩 APK ใช้หน้าปลดล็อกของระบบ (ไม่พึ่ง WebAuthn ที่ WebView ไม่รองรับ)'],
+        ['2026-09-20', '🗣️ ปลดล็อกไม่สำเร็จ = ข้อความไทยทุกกรณี (ไม่โชว์รหัสดิบ error-13)'],
+        ['2026-09-20', '🔎 ด่านก่อน push: ตรวจคลาส/ค่าคงที่ Android กับ android.jar จริง'],
+        ['2026-09-20', '🧪 ชุดทดสอบออฟไลน์ “ปลดล็อกด้วยเครื่อง” 15 สถานการณ์'],
+        ['2026-09-20', '🖼️ หน้าจอโหลด: กล่องพรีวิวโชว์รูปเดียวกับที่จอโหลดใช้จริง (เดิมขึ้น “ยังไม่มีรูป”)'],
+        ['2026-09-20', '🔁 รูปที่เลือกแต่ยังไม่บันทึกไม่หายเมื่อเปิดหน้าต่างซ้ำ (เช่นหลังปิด “ทดลองดู”)'],
+        ['2026-09-20', '📶 อ่านค่าจอโหลดไม่ได้ → ยิงใหม่เอง (เดิมคืนค่าว่างทันทีจนกล่องพรีวิวว่าง)'],
+        ['2026-09-20', '⛔ เอา “🚕 TAXI METER” ออกจากจอโหลดตามที่ขอ'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -19238,7 +19447,7 @@
                 try {
                     const cacheKey = 'taxi_user_cache_' + (loggedInUserId || localStorage.getItem('taxi_user_id') || '');
                     const toCache = {};
-                    ['username','role','displayName','phoneNumber','photoURL','qrCodeURL','taxiType','tollwayMode','companyName','plateNo','killIdleCapMin','vibrateGold','toastSound','navVoice','autoResume','autoFullscreen','fontScale','extraPerms','menuOrder','themeMode','oledMode','googleUid','googleEmail','authProvider','authLinked','setupDoneAt','usernameChangedAt','usernameChanges'].forEach(k => {
+                    ['username','role','displayName','phoneNumber','photoURL','qrCodeURL','taxiType','tollwayMode','companyName','plateNo','killIdleCapMin','vibrateGold','toastSound','navVoice','autoResume','autoFullscreen','fontScale','fontScaleOwn','toastSec','toastHold','extraPerms','menuOrder','themeMode','oledMode','googleUid','googleEmail','authProvider','authLinked','setupDoneAt','usernameChangedAt','usernameChanges'].forEach(k => {
                         if (data[k] !== undefined) toCache[k] = data[k];
                     });
                     // 🔑 "บัญชีนี้มีรหัสผ่านไหม" ต้องรู้ได้ทันทีตอนเปิดแอป (ไม่เก็บแฮชลงเครื่อง)
@@ -19401,10 +19610,26 @@
             // 🔠 (20 ก.ย. 69 · ผู้ใช้สั่ง) “ขนาดตัวอักษร” — ทุกยศปรับเองได้ (ไม่ผูกสิทธิ์)
             //   กติกา: เอกสารบัญชีมีค่า = ใช้ค่านั้น (ข้ามเครื่อง) · ไม่มี = คงค่าที่จำไว้ในเครื่องนี้ (อย่าล้างค่าผู้ใช้)
             const __fsDoc = parseInt(data.fontScale, 10);
-            window.userFontScale = window.__fsClamp(isNaN(__fsDoc) ? window.__fsLoadLocal() : __fsDoc);
-            window.__fsLastSaved = window.userFontScale;   // ค่าที่โหลดมาจริง = ค่าตั้งต้น (ไม่เขียนซ้ำโดยไม่จำเป็น)
+            const __fsHasDoc = !isNaN(__fsDoc);
+            // 🔠 (20 ก.ย. 69) ลำดับใหม่: ① ค่าที่ผู้ใช้ตั้งเอง (fontScaleOwn) ② ค่าเริ่มต้นของยศ (แอดมินกำหนด) ③ ค่าเดิมในเครื่อง (บัญชีเดียวกัน + ตั้งเองไว้)
+            //   · เอกสารเก่าที่มี fontScale แต่ไม่มีธง fontScaleOwn = ถือว่า “ตั้งเองแล้ว” (อย่ารีเซ็ตค่าของผู้ใช้เดิม)
+            const __fsOwnDoc = (data.fontScaleOwn === undefined) ? __fsHasDoc : (data.fontScaleOwn === true);
+            let __fsValNow, __fsOwnNow;
+            if (__fsOwnDoc && __fsHasDoc) { __fsValNow = __fsDoc; __fsOwnNow = true; }
+            else if (data.fontScaleOwn === false) { __fsValNow = window.myRoleFontDefault(); __fsOwnNow = false; }   // 🔠 ธงปิดชัดเจน = ตามค่าเริ่มต้นของยศ (ข้ามค่าที่ค้างในเครื่อง)
+            else { __fsValNow = window.__fsEffectiveFor(loggedInUserId); __fsOwnNow = (window.__fsOwnerUid() === String(loggedInUserId) && window.__fsOwnLocal()); }
+            window.userFontScale = window.__fsClamp(__fsValNow);
+            window.userFontScaleOwn = __fsOwnNow;
+            window.__fsLastSaved = window.userFontScale + '|' + (window.userFontScaleOwn ? '1' : '0');   // ค่าที่โหลดมาจริง = ค่าตั้งต้น (ไม่เขียนซ้ำโดยไม่จำเป็น)
             try { window.applyFontScale(window.userFontScale); } catch (e) {}
-            try { localStorage.setItem(window.__fsKey, String(window.userFontScale)); } catch (e) {}
+            try { localStorage.setItem(window.__fsKey, String(window.userFontScale)); window.__fsMarkOwner(loggedInUserId); window.__fsMarkOwn(window.userFontScaleOwn); } catch (e) {}
+            // ⏱️ (20 ก.ย. 69 · ผู้ใช้สั่ง) “เวลาแจ้งเตือน (toast)” — ทุกยศปรับเองได้ (ไม่ผูกสิทธิ์)
+            //   กติกาเดียวกับขนาดตัวอักษร: เอกสารมีค่า = ใช้ค่านั้น (ข้ามเครื่อง) · ไม่มี = คงค่าที่จำไว้ในเครื่องนี้
+            if (window.__toastSecClamp) window.userToastSec = window.__toastSecClamp(data.toastSec === undefined ? window.__toastTimeLoadLocal().sec : data.toastSec);
+            window.userToastHold = (data.toastHold === undefined) ? window.__toastTimeLoadLocal().hold : (data.toastHold === true);
+            window.__ttLastSaved = JSON.stringify({ toastSec: window.__toastUserSec(), toastHold: window.userToastHold === true });
+            try { window.applyToastTime(window.userToastSec, window.userToastHold); } catch (e) {}
+            try { localStorage.setItem(window.__toastTimeKey, JSON.stringify({ sec: window.userToastSec, hold: window.userToastHold === true })); } catch (e) {}
             // 🔒 ค่า 'สั่น toast ทอง' และ 'เต็มจออัตโนมัติ' ที่แอดมินตั้งให้พนักงานเป็นค่าบังคับ — เฉพาะแอดมินเท่านั้นที่แก้ได้ (ปิดช่อง + แสดงคำเตือน)
             // 🔐 สิทธิ์ชุดที่ 2: ใครแก้ “ค่าที่ระบบบังคับ” ได้ — เดิม = แอดมินเท่านั้น ตอนนี้ตั้งได้รายตำแหน่ง (ค่าเริ่มต้น: Manager ได้)
             const canEditManagedSettings = window.canEditManagedSettings ? window.canEditManagedSettings() : (currentUserRole === 'Admin');
@@ -19867,8 +20092,9 @@
             const devAllowed = window.canUseDeviceUnlock ? window.canUseDeviceUnlock() : true;
             if (dev) { dev.style.display = devAllowed ? 'flex' : 'none'; dev.innerHTML = '<span class="material-symbols-outlined" style="font-size: 19px;">fingerprint</span> ' + (devOn ? 'ยกเลิกปลดล็อกด้วยเครื่อง' : 'ลงทะเบียนปลดล็อกด้วยเครื่อง'); }
             if (dh) dh.innerHTML = !window.devUnlockSupported()
-                ? '⚠️ เครื่องนี้/ที่อยู่นี้ยังใช้ไม่ได้ — WebAuthn ต้องเป็น https ที่เป็น “ชื่อโดเมน” (ที่อยู่แบบ IP เช่น 127.0.0.1 จะถูกปฏิเสธ) ⇒ เปิดผ่านตัวจริง เช่น https://baby4bot.github.io/taxi/'
-                : (devOn ? '✅ เครื่องนี้ลงทะเบียนแล้ว — ตอนแก้ข้อมูลสำคัญแตะ “ปลดล็อกด้วยเครื่อง” แทนการพิมพ์ PIN ได้ (ตัวเลขเครื่องไม่เข้าแอปเลย)' : 'ใช้เป็นทางเลือกของ PIN — ลงทะเบียนต่อเครื่อง · ตัวเลข/ใบหน้าไม่เข้าแอป');
+                ? ('⚠️ ' + (window.devUnlockWhy() || 'เครื่องนี้/ที่อยู่นี้ยังใช้ไม่ได้'))
+                : (devOn ? '✅ เครื่องนี้ลงทะเบียนแล้ว — ตอนแก้ข้อมูลสำคัญแตะ “ปลดล็อกด้วยเครื่อง” แทนการพิมพ์ PIN ได้ (ตัวเลขเครื่องไม่เข้าแอปเลย)'
+                    : (window.devUnlockNative() ? 'ใช้ลายนิ้วมือ/ใบหน้า/รหัสเครื่องของเครื่องนี้ยืนยันแทน PIN ได้ — ลงทะเบียนต่อเครื่อง · ตัวเลข/ใบหน้าไม่เข้าแอป' : 'ใช้เป็นทางเลือกของ PIN — ลงทะเบียนต่อเครื่อง · ตัวเลข/ใบหน้าไม่เข้าแอป'));
         };
         paint();
         if (loggedInUserId && !window.pinCacheGet(loggedInUserId)) { const h = await window.pinFetchHash(); if (h) paint(); }
@@ -19956,7 +20182,10 @@
         if (btn) { btn.disabled = true; btn.innerHTML = 'กำลังรอเครื่องยืนยัน...'; }
         try {
             const ok = await window.devUnlockPrompt();
-            if (!ok) throw new Error('ปลดล็อกด้วยเครื่องไม่สำเร็จ — ลองใหม่หรือใช้ Google');
+            if (!ok) {
+                const why = window.__devUnlockErrText(window.__devUnlockLastErr || '');
+                throw new Error(why ? ('ปลดล็อกด้วยเครื่องไม่สำเร็จ: ' + why) : 'ปลดล็อกด้วยเครื่องไม่สำเร็จ — ลองใหม่หรือใช้ Google');
+            }
             window.__pinOwnerOkUntil = Date.now() + 5 * 60 * 1000;
             const e = document.getElementById('pinSetupErr'); if (e) { e.style.display = 'none'; }
             const hint = document.getElementById('pinOwnerAltHint'); if (hint) hint.innerHTML = '✅ ยืนยันด้วยเครื่องนี้แล้ว — กรอก PIN ใหม่ 2 ช่องด้านล่างได้เลย';
@@ -20211,11 +20440,71 @@
     const DEVUNLOCK_KEY = 'taxi_devunlock_v1';
     window.devUnlockRead = () => { try { const m = JSON.parse(localStorage.getItem(DEVUNLOCK_KEY) || '{}'); return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {}; } catch (e) { return {}; } };
     window.devUnlockWrite = (m) => { try { localStorage.setItem(DEVUNLOCK_KEY, JSON.stringify(m || {})); } catch (e) {} };
-    window.devUnlockHas = (uid) => !!(uid && window.devUnlockRead()[uid] && window.devUnlockRead()[uid].id);
+    window.devUnlockHas = (uid) => {
+        if (!uid) return false;
+        // 🔓 (20 ก.ย. 69) บน APK ให้ถาม “ที่เก็บของแอป” เป็นหลัก (ฝั่งเว็บอย่างเดียวอาจค้างเก่า)
+        const nat = window.devUnlockNative();
+        if (nat) { try { if (nat.deviceUnlockHas(String(uid)) === true) return true; } catch (e) {} }
+        return !!(window.devUnlockRead()[uid] && window.devUnlockRead()[uid].id);
+    };
+    // 🔓 (20 ก.ย. 69 · ผู้ใช้แจ้ง “ปุ่มลงทะเบียนปลดล็อกด้วยลายนิ้วมือใช้ผ่านโทรศัพท์ไม่ได้”)
+    //   สาเหตุจริง: WebAuthn (navigator.credentials) **ใช้ไม่ได้ใน Android WebView** (Okta/Duo ยืนยันตรงกัน)
+    //   ⇒ ใน APK ปุ่มนี้จึงขึ้น “เครื่องนี้/ที่อยู่นี้ยังใช้ไม่ได้” ทุกครั้ง · ใน Chrome มือถือยังใช้ได้
+    //   ✅ แก้: ถ้ามีสะพาน TaxiNative.hasNativeDeviceUnlock → ใช้ “หน้าปลดล็อกของระบบ” (DeviceUnlock.java) แทน WebAuthn
+    window.devUnlockNative = () => {
+        try {
+            const t = window.TaxiNative;
+            if (!t || typeof t.hasNativeDeviceUnlock !== 'function') return null;
+            return t.hasNativeDeviceUnlock() ? t : null;
+        } catch (e) { return null; }
+    };
+    window.devUnlockNativeAvailable = () => { const n = window.devUnlockNative(); if (!n) return false; try { return n.deviceUnlockAvailable() === true; } catch (e) { return false; } };
+    // 🧪 คิวรอผลจากชั้นแอป (ทดสอบออฟไลน์ได้: เรียก window.__onNativeDeviceUnlock เอง)
+    window.__devUnlockPending = {};
+    window.__onNativeDeviceUnlock = (reqId, ok, credId, err) => {
+        const key = String(reqId == null ? '' : reqId);
+        const p = window.__devUnlockPending[key];
+        if (!p) return false;
+        delete window.__devUnlockPending[key];
+        p({ ok: ok === true, id: String(credId || ''), err: (err == null ? '' : String(err)) });
+        return true;
+    };
+    // 📮 เรียกเมธอดของสะพานแบบมีคำตอบกลับ (enroll/auth) — หมดเวลา 120 วิ กันค้าง
+    window.devUnlockNativeAsk = (fn, uid, timeoutMs) => new Promise((resolve) => {
+        const nat = window.devUnlockNative();
+        if (!nat || typeof nat[fn] !== 'function') return resolve({ ok: false, id: '', err: 'no-bridge' });
+        const reqId = 'du' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        let done = false;
+        const finish = (r) => { if (done) return; done = true; try { delete window.__devUnlockPending[reqId]; } catch (e) {} resolve(r); };
+        window.__devUnlockPending[reqId] = finish;
+        setTimeout(() => finish({ ok: false, id: '', err: 'timeout' }), Math.max(1000, parseInt(timeoutMs, 10) || 120000));
+        try { nat[fn](String(uid || ''), reqId); } catch (e) { finish({ ok: false, id: '', err: 'bridge-error' }); }
+    });
+    // 🗣️ แปลง “คีย์สั้น ๆ” จากชั้นแอป (DeviceUnlock.java) เป็นข้อความไทยที่คนอ่านรู้เรื่อง
+    //    (เดิมโชว์รหัสดิบเช่น error-13 ⇒ ผู้ใช้ไม่รู้ว่าต้องทำอะไรต่อ)
+    window.__devUnlockErrText = (err) => {
+        const k = String(err == null ? '' : err);
+        if (!k) return '';
+        if (k === 'canceled') return 'ถูกยกเลิก หรือยังไม่ได้ยืนยันตัวตนบนเครื่อง';
+        if (k === 'locked') return 'ยืนยันผิดหลายครั้งเกินไป — เครื่องล็อกชั่วคราว รอสักครู่แล้วลองใหม่ (หรือใช้ PIN/รหัสผ่านแทน)';
+        if (k === 'unavailable') return 'เครื่องนี้ยังไม่มีลายนิ้วมือ/ใบหน้า หรือยังไม่ได้ตั้งรหัสล็อกจอ — ตั้งรหัสล็อกจอก่อนแล้วลองใหม่';
+        if (k === 'busy') return 'กำลังเปิดหน้าปลดล็อกอยู่ — รอสักครู่แล้วลองใหม่';
+        if (k === 'no-keyguard') return 'เครื่องนี้ยังไม่ได้ตั้งรหัส/รูปแบบ/PIN ของจอ — ตั้งก่อนแล้วลองใหม่';
+        if (k === 'not-enrolled') return 'เครื่องนี้ยังไม่ได้ลงทะเบียนปลดล็อก — กด “ลงทะเบียนปลดล็อกด้วยเครื่อง” ก่อน';
+        if (k === 'timeout') return 'หมดเวลารอการยืนยันจากเครื่อง — ลองใหม่';
+        if (k === 'no-bridge' || k === 'bridge-error') return 'แอปตอบกลับผิดพลาด — ปิดแอปแล้วเปิดใหม่';
+        if (k === 'no-user') return 'ยังไม่ได้เข้าสู่ระบบ';
+        if (k === 'unsupported') return (window.devUnlockWhy() || 'เครื่องนี้/ที่อยู่นี้ยังใช้ไม่ได้');
+        if (k.indexOf('error:') === 0) return 'แอปเรียกหน้าปลดล็อกไม่สำเร็จ (' + k.slice(6) + ') — ลองใหม่หรือใช้ PIN แทน';
+        if (k.indexOf('error-') === 0) return 'ระบบปฏิเสธการยืนยัน (รหัส ' + k.slice(6) + ') — ลองใหม่ หรือใช้ PIN/รหัสผ่านแทน';
+        return k;
+    };
     //  ⚠️ WebAuthn รับเฉพาะ “ชื่อโดเมน” — ที่อยู่แบบ IP (127.0.0.1) จะถูกปฏิเสธ (invalid domain)
     //     ⇒ ใช้ได้จริงบน https://baby4bot.github.io/taxi/ (หรือ localhost ก็ได้ แต่ IP ไม่ได้)
     window.devUnlockSupported = () => {
         try {
+            // 🔓 มีสะพานแอป (APK) = ใช้หน้าปลดล็อกของระบบได้เสมอ ไม่ต้องพึ่ง WebAuthn
+            if (window.devUnlockNative()) return window.devUnlockNativeAvailable();
             const host = String(location.hostname || '');
             const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
             const secure = (location.protocol === 'https:' || host === 'localhost');
@@ -20223,36 +20512,105 @@
             return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create && navigator.credentials.get);
         } catch (e) { return false; }
     };
+    // ❓ ทำไม “ใช้ไม่ได้” — ใช้บอกผู้ใช้ให้ตรงจุด (และบอกว่าเขากำลังใช้ผ่านแอปหรือเบราว์เซอร์)
+    window.devUnlockWhy = () => {
+        if (window.devUnlockSupported()) return '';
+        try {
+            const nat = window.devUnlockNative();
+            if (nat && !window.devUnlockNativeAvailable()) return 'เครื่องนี้ยังไม่มีลายนิ้วมือ/ใบหน้า และยังไม่ได้ตั้งรหัสล็อกจอ — ตั้งรหัสล็อกจอก่อนแล้วลองใหม่';
+            if (window.TaxiNative && typeof window.TaxiNative.hasNativeDeviceUnlock !== 'function') return 'แอป (APK) รุ่นที่ติดตั้งยังไม่มีฟีเจอร์นี้ — กด “อัปเดตแอป” ให้เป็นรุ่นใหม่ก่อน แล้วปุ่มนี้จะใช้ได้';
+            if (window.TaxiNative) return 'แอปนี้ยังใช้ไม่ได้บนเครื่องนี้ — ลองอัปเดตแอปเป็นรุ่นใหม่';
+            const host = String(location.hostname || '');
+            if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return 'ที่อยู่นี้เป็น IP — ต้องเปิดผ่านโดเมน https (เช่น baby4bot.github.io/taxi) จึงใช้ลายนิ้วมือได้';
+            if (location.protocol !== 'https:' && host !== 'localhost') return 'ที่อยู่นี้ไม่ใช่ https — ต้องเปิดผ่าน https จึงใช้ลายนิ้วมือได้';
+            return 'เบราว์เซอร์ตัวนี้ในแอปยังไม่รองรับ — เปิดผ่าน Chrome จะใช้ลายนิ้วมือได้';
+        } catch (e) { return 'เครื่องนี้ใช้ไม่ได้'; }
+    };
     window.__bufToB64u = (buf) => { const b = new Uint8Array(buf); let s = ''; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
     window.__b64uToBuf = (str) => { const s = String(str || '').replace(/-/g, '+').replace(/_/g, '/'); const bin = atob(s + '==='.slice((s.length + 3) % 4)); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; };
+    // 🔓 แกนจริงของ “ปลดล็อกด้วยเครื่อง” — แยกออกมาเป็นฟังก์ชันที่ “รับ uid ตรง ๆ”
+    //    ทำไม: ① ให้ชุดทดสอบออฟไลน์เรียกได้โดยไม่ต้องล็อกอินจริง ② มีทางเดียวต่อการกระทำ (ไม่มีโค้ดซ้ำ)
+    //    · enroll = ลงทะเบียนเครื่องนี้ให้บัญชีนั้น (คืน {ok, id, err})
+    //    · verify = เปิดหน้าปลดล็อกของระบบ/เบราว์เซอร์เพื่อยืนยันตัวตน
+    //    · remove = ยกเลิกการลงทะเบียน (ลบทั้งฝั่งแอปและที่จำไว้ในเว็บ)
+    window.devUnlockCore = {
+        async enroll(uid) {
+            if (!uid) return { ok: false, id: '', err: 'no-user' };
+            if (!window.devUnlockSupported()) return { ok: false, id: '', err: 'unsupported', why: window.devUnlockWhy() };
+            // ทางที่ 1: สะพานแอป (APK) — หน้าปลดล็อกของระบบ (WebAuthn ใช้ใน WebView ไม่ได้)
+            if (window.devUnlockNative()) {
+                const r = await window.devUnlockNativeAsk('deviceUnlockEnroll', uid, 120000);
+                if (r.ok) { const m = window.devUnlockRead(); m[uid] = { id: r.id || 'native', at: Date.now(), via: 'native' }; window.devUnlockWrite(m); }
+                window.__devUnlockLastErr = (r.ok === true) ? '' : (r.err || 'error');
+                return { ok: r.ok === true, id: r.id || '', err: r.err || '' };
+            }
+            // ทางที่ 2: เบราว์เซอร์/PWA — WebAuthn (ใช้ได้บน Chrome มือถือ)
+            try {
+                const rpName = (function () { try { return (window.myCurrentDisplayName || window.myCurrentUsername || 'ผู้ใช้'); } catch (e) { return 'ผู้ใช้'; } })();
+                const cred = await navigator.credentials.create({ publicKey: {
+                    challenge: crypto.getRandomValues(new Uint8Array(32)),
+                    rp: { name: 'Taxi Meter' },
+                    user: { id: new TextEncoder().encode(String(uid)), name: rpName, displayName: rpName },
+                    pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+                    authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
+                    timeout: 60000, attestation: 'none'
+                } });
+                if (!cred || !cred.rawId) throw new Error('ลงทะเบียนไม่สำเร็จ');
+                const id = window.__bufToB64u(cred.rawId);
+                const m = window.devUnlockRead(); m[uid] = { id: id, at: Date.now(), via: 'webauthn' };
+                window.devUnlockWrite(m);
+                return { ok: true, id: id, err: '' };
+            } catch (e) {
+                const why = (e && e.name === 'NotAllowedError') ? 'ถูกยกเลิกหรือไม่ได้ยืนยันตัวตนบนเครื่อง' : ((e && e.message) || 'ไม่ทราบสาเหตุ');
+                return { ok: false, id: '', err: why };
+            }
+        },
+        async verify(uid) {
+            if (!uid) return false;
+            if (!window.devUnlockSupported()) return false;
+            // ทางที่ 1: สะพานแอป (APK) — ถามแอปว่าลงทะเบียนไว้จริงไหม แล้วเปิดหน้าปลดล็อกของระบบ
+            if (window.devUnlockNative()) {
+                if (!window.devUnlockHas(uid)) { window.__devUnlockLastErr = 'not-enrolled'; return false; }
+                const r = await window.devUnlockNativeAsk('deviceUnlockAuth', uid, 120000);
+                window.__devUnlockLastErr = (r.ok === true) ? '' : (r.err || 'error');
+                return r.ok === true;
+            }
+            const rec = window.devUnlockRead()[uid];
+            if (!rec || !rec.id) return false;
+            try {
+                const asrt = await navigator.credentials.get({ publicKey: {
+                    challenge: crypto.getRandomValues(new Uint8Array(32)), timeout: 60000, userVerification: 'required',
+                    allowCredentials: [{ type: 'public-key', id: window.__b64uToBuf(rec.id), transports: ['internal'] }]
+                } });
+                if (!asrt || !asrt.rawId) return false;
+                return window.__bufToB64u(asrt.rawId) === rec.id;
+            } catch (e) { return false; }
+        },
+        remove(uid) {
+            if (!uid) return false;
+            const nat = window.devUnlockNative();
+            // ⛔ ต้องลบที่เก็บฝั่งแอปด้วย ไม่งั้นปุ่มจะยังขึ้นว่า “ลงทะเบียนแล้ว”
+            if (nat) { try { nat.deviceUnlockRemove(String(uid)); } catch (e) {} }
+            const m = window.devUnlockRead(); delete m[uid]; window.devUnlockWrite(m);
+            return true;
+        }
+    };
     window.devUnlockRegister = async () => {
         if (!loggedInUserId) return window.showToast('ยังไม่ได้เข้าสู่ระบบ', true);
-        if (!window.devUnlockSupported()) return window.showToast('ที่อยู่นี้ใช้ไม่ได้ — ต้องเปิดผ่านโดเมน https (เช่น baby4bot.github.io/taxi) และเครื่องต้องมีหน้าปลดล็อก', true);
-        try {
-            const rpName = (function () { try { return (window.myCurrentDisplayName || window.myCurrentUsername || 'ผู้ใช้'); } catch (e) { return 'ผู้ใช้'; } })();
-            const cred = await navigator.credentials.create({ publicKey: {
-                challenge: crypto.getRandomValues(new Uint8Array(32)),
-                rp: { name: 'Taxi Meter' },
-                user: { id: new TextEncoder().encode(String(loggedInUserId)), name: rpName, displayName: rpName },
-                pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
-                authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
-                timeout: 60000, attestation: 'none'
-            } });
-            if (!cred || !cred.rawId) throw new Error('ลงทะเบียนไม่สำเร็จ');
-            const m = window.devUnlockRead();
-            m[loggedInUserId] = { id: window.__bufToB64u(cred.rawId), at: Date.now() };
-            window.devUnlockWrite(m);
-            window.pinRefreshCard();
-            window.showToast('ลงทะเบียนแล้ว — ครั้งถัดไปแตะ “ปลดล็อกด้วยเครื่อง” ได้เลย');
-        } catch (e) {
-            const why = (e && e.name === 'NotAllowedError') ? 'ถูกยกเลิกหรือไม่ได้ยืนยันตัวตนบนเครื่อง' : ((e && e.message) || 'ไม่ทราบสาเหตุ');
-            window.showToast('ลงทะเบียนไม่สำเร็จ: ' + why, true);
+        const r = await window.devUnlockCore.enroll(loggedInUserId);
+        if (!r.ok) {
+            // 🗣️ แปลคีย์สั้น ๆ เป็นข้อความไทย (ไม่โชว์รหัสดิบอย่าง error-13 อีก)
+            const why = (r.err === 'unsupported') ? (r.why || window.__devUnlockErrText('unsupported'))
+                : (window.__devUnlockErrText(r.err) || r.err || 'ไม่ทราบสาเหตุ');
+            return window.showToast('ลงทะเบียนไม่สำเร็จ: ' + why, true);
         }
+        window.pinRefreshCard();
+        window.showToast('ลงทะเบียนแล้ว — ครั้งถัดไปแตะ “ปลดล็อกด้วยเครื่อง” ได้เลย');
     };
     window.devUnlockRemove = async () => {
         const ok = await window.showCustomConfirm('ยกเลิกการปลดล็อกด้วยเครื่อง?', 'หลังจากนี้จะต้องใช้ PIN หรือรหัสผ่านเท่านั้น', 'warning', 'ยกเลิก');
         if (!ok) return;
-        const m = window.devUnlockRead(); delete m[loggedInUserId]; window.devUnlockWrite(m);
+        window.devUnlockCore.remove(loggedInUserId);
         window.pinRefreshCard();
         window.showToast('ยกเลิกการปลดล็อกด้วยเครื่องแล้ว');
     };
@@ -20260,20 +20618,7 @@
         if (!(window.canUseDeviceUnlock ? window.canUseDeviceUnlock() : true)) { window.showToast('ตำแหน่งของคุณยังไม่ได้สิทธิ์ “ปลดล็อกด้วยเครื่อง”', true); return; }
         return window.devUnlockHas(loggedInUserId) ? window.devUnlockRemove() : window.devUnlockRegister();
     };
-    window.devUnlockPrompt = async () => {
-        if (!loggedInUserId) return false;
-        const rec = window.devUnlockRead()[loggedInUserId];
-        if (!rec || !rec.id) return false;
-        if (!window.devUnlockSupported()) return false;
-        try {
-            const asrt = await navigator.credentials.get({ publicKey: {
-                challenge: crypto.getRandomValues(new Uint8Array(32)), timeout: 60000, userVerification: 'required',
-                allowCredentials: [{ type: 'public-key', id: window.__b64uToBuf(rec.id), transports: ['internal'] }]
-            } });
-            if (!asrt || !asrt.rawId) return false;
-            return window.__bufToB64u(asrt.rawId) === rec.id;
-        } catch (e) { return false; }
-    };
+    window.devUnlockPrompt = () => window.devUnlockCore.verify(loggedInUserId);
 
     // 🚫 กันล็อกอินซ้อน (1 บัญชี 1 เครื่อง ยกเว้น Admin): โทเคน session ต่อการล็อกอิน
     // เก็บ sessionId ไว้ในผู้ใช้ (Firestore) + localStorage เครื่องนี้ — ถ้าเครื่องอื่นล็อกอิน/ล็อกเอาต์ด้วยบัญชีเดียวกัน sessionId จะเปลี่ยน → เครื่องนี้โดนไล่ออกอัตโนมัติ
@@ -21570,6 +21915,47 @@
     window.FONT_SCALE_STEP = 5;
     window.FONT_SCALE_DEFAULT = 100;
     window.__fsKey = 'taxi_font_scale_v1';
+    // 🔗 (20 ก.ย. 69 · ผู้ใช้ย้ำ) “ปรับแยกของใครของมัน แต่ละ user แยกกัน ไม่มาเกี่ยวข้องกัน”
+    //    ปัญหาเดิม: ค่าในเครื่อง (`taxi_font_scale_v1`) เป็นของทั้งเครื่อง ⇒ เมื่อบัญชีที่ยังไม่เคยตั้งค่าล็อกอินเข้ามา
+    //    ระบบเคยใช้ค่าที่จำไว้ต่อ = **เห็นขนาดฟอนต์ของคนก่อนหน้า** (ดูเหมือนค่าของกัน)
+    //    ✅ แก้: จำ “เจ้าของค่า” ไว้ด้วย (`taxi_font_scale_uid_v1`)
+    //       · เอกสารบัญชีมีค่า = ใช้ของบัญชีนั้นเสมอ (ข้ามเครื่องได้)
+    //       · เอกสารไม่มีค่า → ใช้ค่าในเครื่องได้เฉพาะเมื่อเป็นของบัญชีเดียวกัน (กัน เคส่ออฟไลน์/บันทึกไม่ขึ้น)
+    //       · เจ้าของไม่ตรง = กลับค่าเริ่มต้น 100% ⇒ แยกกันจริง
+    window.__fsKeyUid = 'taxi_font_scale_uid_v1';
+    window.__fsOwnerUid = () => { try { return localStorage.getItem(window.__fsKeyUid) || ''; } catch (e) { return ''; } };
+    window.__fsMarkOwner = (uid) => { try { localStorage.setItem(window.__fsKeyUid, String(uid || '')); } catch (e) {} };
+    // 🔠 (20 ก.ย. 69 · ผู้ใช้สั่ง) “ค่าเริ่มต้นรายยศ” — แอดมินกำหนด (ดู window.roleFontDefault ที่เมนูตั้งค่าสิทธิ์)
+    //   คำสั่งผู้ใช้: “ให้แอดมินกำหนดค่าขนาดตัวอักษรเริ่มต้นของแต่ละยศได้ (เช่น VIP เริ่ม 110%)
+    //                โดย user ยังปรับต่อได้เอง และมีปุ่มคืนค่าเริ่มต้นของยศนั้น”
+    //   ลำดับความสำคัญ: ① ค่าที่ผู้ใช้ “ตั้งเอง” (own) ② ค่าเริ่มต้นของยศที่แอดมินตั้ง ③ ค่าเดิมในเครื่อง (เฉพาะบัญชีเดียวกัน + ตั้งเองไว้)
+    //   ⛔ ค่าเริ่มต้นของยศห้ามทับค่าที่ผู้ใช้ตั้งเอง — ผู้ใช้ชนะเสมอถ้าตั้งเองแล้ว
+    window.__fsOwnKey = 'taxi_font_scale_own_v1';
+    window.__fsOwnLocal = () => { try { return localStorage.getItem(window.__fsOwnKey) === '1'; } catch (e) { return false; } };
+    window.__fsMarkOwn = (v) => { try { localStorage.setItem(window.__fsOwnKey, v ? '1' : '0'); } catch (e) {} };
+    window.__fsFallbackFor = (uid) => (uid && window.__fsOwnerUid() === String(uid)) ? window.__fsLoadLocal() : window.FONT_SCALE_DEFAULT;
+    // 🎯 ค่าที่ควรได้จริงเมื่อเอกสารบัญชี “ไม่มีค่า fontScale”: ตั้งเองไว้ในเครื่อง (บัญชีเดียวกัน) → ไม่มี = ค่าเริ่มต้นของยศ
+    window.__fsEffectiveFor = (uid) => {
+        const roleDef = (typeof window.myRoleFontDefault === 'function') ? window.myRoleFontDefault() : window.FONT_SCALE_DEFAULT;
+        if (uid && window.__fsOwnerUid() === String(uid) && window.__fsOwnLocal()) return window.__fsLoadLocal();
+        return roleDef;
+    };
+    // 🧰 (20 ก.ย. 69) ตัวช่วย: อัปเดต “แคชเอกสารบัญชีในเครื่อง” ให้ตรงกับสิ่งที่เพิ่งบันทึก
+    //   ทำไมต้องมี: `__applyUserDocUI` เขียนแคช `taxi_user_cache_<uid>` และมีเสนทางที่แอป “อ่านแคชมาใช้ซ้ำ” ตอน Firestore มีปญหา
+    //   ⇒ ถ้าไม่แก้แคชตาม ค่าที่ผู้ใช้เพิ่งรีเซ็ต/ตั้งใหม่จะถูกค่าเก่าในแคชทับกลับ (พบของจริงตอนทดสอบ: รีเซ็ตกลับ 110 แล้วเด้งเป็น 125 ใน ~1 วิ)
+    window.__userCachePatch = (patch) => {
+        try {
+            // ใช้ “สูตรเดียวกับ” __applyUserDocUI (loggedInUserId → ค่าที่จำในเครื่อง) ⇒ ได้คีย์เดียวกันเสมอ
+            const uid = (typeof loggedInUserId === 'string' && loggedInUserId) ? loggedInUserId : (localStorage.getItem('taxi_user_id') || '');
+            const k = 'taxi_user_cache_' + uid;
+            const raw = localStorage.getItem(k); if (!raw) return false;
+            const o = JSON.parse(raw); if (!o || typeof o !== 'object') return false;
+            Object.keys(patch || {}).forEach(x => { o[x] = patch[x]; });
+            o.__cachedAt = Date.now();
+            localStorage.setItem(k, JSON.stringify(o));
+            return true;
+        } catch (e) { return false; }
+    };
     // 🧪 กติกาล้วน (ทดสอบออฟไลน์ได้ใน tests/font-scale-offline.html)
     window.__fsClamp = (v) => {
         const n = parseInt(v, 10);
@@ -21579,6 +21965,15 @@
     window.__fsLoadLocal = () => {
         try { const raw = localStorage.getItem(window.__fsKey); return (raw === null) ? window.FONT_SCALE_DEFAULT : window.__fsClamp(raw); }
         catch (e) { return window.FONT_SCALE_DEFAULT; }
+    };
+    // 🔠 ปุ่ม “คืนค่าเริ่มต้นของยศ” — เทา (กดไม่ได้) เมื่อค่าปัจจุบัน = ค่าเริ่มต้นของยศ และผู้ใช้ยังไม่ได้ตั้งเอง (กติกาเดียวกันทั้งแอป)
+    window.fontScaleRoleDefault = () => { try { return (typeof window.myRoleFontDefault === 'function') ? window.myRoleFontDefault() : window.FONT_SCALE_DEFAULT; } catch (e) { return window.FONT_SCALE_DEFAULT; } };
+    window.syncFontScaleResetBtn = () => {
+        const rst = document.getElementById('fontScaleReset');
+        // 🧷 ค่าปัจจุบัน = ค่าเริ่มต้นของยศ = ไม่มีอะไรให้คืน (ปุ่มเทา กติกาเดียวกันทั้งแอป)
+        if (rst) rst.disabled = (window.userFontScale === window.fontScaleRoleDefault());
+        const h = document.getElementById('fontScaleHint');
+        if (h) { const d = window.fontScaleRoleDefault(); h.innerText = (d === window.FONT_SCALE_DEFAULT) ? 'ค่าเริ่มต้นของตำแหน่งนี้: 100% (ขนาดเดิมของแอป)' : ('ค่าเริ่มต้นของตำแหน่งนี้: ' + d + '%'); }
     };
     // 🎨 จุดเดียวของความจริง: ใช้ค่ากับทั้งแอป + ซิงก์หน้าตาแถบเลื่อน/ป้าย/CSS
     window.applyFontScale = (v) => {
@@ -21593,8 +21988,7 @@
         if (lbl && lbl.__fsTxt !== s + '%') { lbl.__fsTxt = s + '%'; lbl.innerText = s + '%'; }
         const rng = document.getElementById('fontScaleRange');
         if (rng && String(rng.value) !== String(s)) rng.value = String(s);
-        const rst = document.getElementById('fontScaleReset');
-        if (rst) rst.disabled = (s === window.FONT_SCALE_DEFAULT);   // 🧷 ไม่มีการเปลี่ยนแปลง = ปุ่มคืนค่าเทากดไม่ได้ (กติกาเดียวกับทั้งแอป)
+        if (typeof window.syncFontScaleResetBtn === 'function') window.syncFontScaleResetBtn();   // 🧷 ยังไม่เปลี่ยนจากค่าเริ่มต้นของยศ = ปุ่มคืนค่าเทากดไม่ได้
         return s;
     };
     // ✋ ลากดูสด ๆ (oninput) — ยังไม่เขียน Firestore
@@ -21616,13 +22010,17 @@
     window.__fsSaveNow = async () => {
         try { clearTimeout(window.__fsSaveTimer); } catch (e) {}
         const s = window.__fsClamp(window.userFontScale);
-        try { localStorage.setItem(window.__fsKey, String(s)); } catch (e) {}
+        const own = (window.userFontScaleOwn === true);   // 🔠 ตั้งเอง (own) = ค่าของผู้ใช้ชนะค่าเริ่มต้นของยศเสมอ
+        try { localStorage.setItem(window.__fsKey, String(s)); window.__fsMarkOwn(own); } catch (e) {}
+        if (loggedInUserId) window.__fsMarkOwner(loggedInUserId);   // 🔗 จำว่าค่าในเครื่องนี้เป็นของบัญชีไหน (แยกค่ากันจริง)
+        try { window.__userCachePatch({ fontScale: s, fontScaleOwn: own }); } catch (e) {}   // 🧰 กันแคชเก่าในเครื่องทับค่าที่เพิ่งบันทึก
         window.__fsSavedFlash();
         // 🧪 โหมดทดสอบ/โหมดไม่เขียน DB = หยุดตรงนี้ (ไม่ยิง Firestore เลย)
         if (!loggedInUserId || window.__testNoDbWrites) return s;
-        if (window.__fsLastSaved === s) return s;
-        const patch = { fontScale: s };
-        window.__fsLastSaved = s;
+        const __fsKeyNow = s + '|' + (own ? '1' : '0');
+        if (window.__fsLastSaved === __fsKeyNow) return s;
+        const patch = { fontScale: s, fontScaleOwn: own };   // 🔠 ส่งธง “ตั้งเอง” ไปด้วย ⇒ เครื่องอื่นรู้ว่าต้องใช้ค่าของผู้ใช้ต่อ ไม่ใช่ค่าเริ่มต้นของยศ
+        window.__fsLastSaved = __fsKeyNow;
         try {
             if (typeof window.__fsTimeout === 'function') await window.__fsTimeout(updateDoc(doc(db, 'users', loggedInUserId), patch), 4000);
             else await updateDoc(doc(db, 'users', loggedInUserId), patch);
@@ -21632,24 +22030,128 @@
         return s;
     };
     // 💾 ปล่อยนิ้วบนแถบเลื่อน / กดปุ่ม − + → บันทึกแบบรวบการลาก
-    window.fontScaleCommit = (v) => { const s = window.applyFontScale(v); window.__fsSaveSoon(); return s; };
+    window.fontScaleCommit = (v) => { window.userFontScaleOwn = true; const s = window.applyFontScale(v); window.__fsSaveSoon(); return s; };
     window.bumpFontScale = (delta) => {
         const n = parseInt(delta, 10);
         const step = (n < 0 ? -1 : 1) * (Math.abs(n) || window.FONT_SCALE_STEP);
-        const next = window.__fsClamp((parseInt(window.userFontScale, 10) || window.FONT_SCALE_DEFAULT) + step);
+        const next = window.__fsClamp((parseInt(window.userFontScale, 10) || window.fontScaleRoleDefault()) + step);
+        window.userFontScaleOwn = true;   // กดปุ่มเอง = ตั้งเอง (ไม่กลับไปตามค่าเริ่มต้นของยศอีก)
         window.applyFontScale(next);
         try { window.playSound(step > 0 ? 'plus' : 'minus'); } catch (e) {}
         window.__fsSaveSoon();
         return next;
     };
+    // 🔠 (20 ก.ย. 69) “คืนค่าเริ่มต้นของยศ” — คืนกลับเป็นค่าเริ่มต้นที่แอดมินตั้งให้ยศนี้ (ไม่ใช่ 100% ตายตัว) + เลิกเป็นค่า “ตั้งเอง”
     window.fontScaleReset = () => {
-        window.applyFontScale(window.FONT_SCALE_DEFAULT);
+        const d = window.fontScaleRoleDefault();
+        window.userFontScaleOwn = false;
+        window.applyFontScale(d);
+        try { window.__fsMarkOwn(false); } catch (e) {}
         try { window.playSound('minus'); } catch (e) {}
         window.__fsSaveNow();
-        return window.FONT_SCALE_DEFAULT;
+        return d;
     };
     // 🚀 ใช้ค่าที่จำไว้ในเครื่องทันทีตั้งแต่บูต (ครอบหน้าล็อกอินด้วย — ก่อนรู้ว่าเป็นบัญชีใคร)
-    try { window.userFontScale = window.__fsLoadLocal(); window.applyFontScale(window.userFontScale); } catch (e) { window.userFontScale = window.FONT_SCALE_DEFAULT; }
+    try { window.userFontScale = window.__fsLoadLocal(); window.userFontScaleOwn = window.__fsOwnLocal(); window.applyFontScale(window.userFontScale); } catch (e) { window.userFontScale = window.FONT_SCALE_DEFAULT; window.userFontScaleOwn = false; }
+
+    // ==================== ⏱️ (20 ก.ย. 69 · ผู้ใช้สั่ง) “เวลาที่ข้อความแจ้งเตือนค้างบนจอ” + สวิตช์ “ค้างไว้จนกดปิด” ====================
+    //  คำสั่งผู้ใช้: “แบบเดิมที่มีการกำหนดเวลา ค่า default ของเวลาทั้งหมดอยากให้อยู่ที่ 3 วินาที
+    //               แล้วก็สามารถปรับเพิ่มได้ด้วยการกดปุ่มบวก ปุ่มลบทีละวินาที
+    //               รวมถึงให้มีสวิตช์อันหนึ่งไว้ประมาณว่ามันจะไม่ปิดเอง — เปิดค้างไว้ตลอดจนกว่าจะกดปิดเอง”
+    //  ลำดับความสำคัญของเวลา: ① ค่าเฉพาะข้อความที่แอดมินตั้ง (registry `sec`) ② ค่าของผู้ใช้ (ค่านี้) ③ โหมดค้างไว้ = ไม่ตั้งเวลา
+    //  เก็บค่า: localStorage `taxi_toast_time_v1` (ใช้ทันทีตอนบูต) + ฟิลด์ `toastSec`/`toastHold` ในเอกสารบัญชี (ข้ามเครื่อง)
+    //  ⛔ โหมดค้างไว้ห้ามทำให้ toast ที่มีปุ่ม “ค้างตลอดกาลโดยไม่มีทางปิด” — ต้องมีปุ่ม ✕ เสมอ (อยู่ใน HTML แล้ว)
+    window.TOAST_SEC_MIN = 1;
+    window.TOAST_SEC_MAX = 20;
+    window.TOAST_SEC_DEFAULT = 3;
+    window.__toastTimeKey = 'taxi_toast_time_v1';
+    window.userToastSec = window.TOAST_SEC_DEFAULT;
+    window.userToastHold = false;
+    window.__toastSecClamp = (v) => {
+        const n = parseInt(v, 10);
+        if (isNaN(n)) return window.TOAST_SEC_DEFAULT;
+        return Math.min(window.TOAST_SEC_MAX, Math.max(window.TOAST_SEC_MIN, n));
+    };
+    window.__toastUserSec = () => window.__toastSecClamp(window.userToastSec);
+    window.__toastTimeLoadLocal = () => {
+        try {
+            const raw = JSON.parse(localStorage.getItem(window.__toastTimeKey) || '{}');
+            // ยืดหยุ่นทั้ง 2 รูปแบบคีย์: {sec,hold} (ที่เราเขียน) และ {toastSec,toastHold} (ชุดเดียวกับฟิลด์ในเอกสาร)
+            const rawSec = (raw.sec === undefined) ? raw.toastSec : raw.sec;
+            const rawHold = (raw.hold === undefined) ? raw.toastHold : raw.hold;
+            return { sec: window.__toastSecClamp(rawSec === undefined ? window.TOAST_SEC_DEFAULT : rawSec), hold: rawHold === true };
+        } catch (e) { return { sec: window.TOAST_SEC_DEFAULT, hold: false }; }
+    };
+    // 🎨 จุดเดียวของความจริง: ตั้งค่า + ซิงก์หน้าตาแถวในหน้าตั้งค่า (ไม่เด้ง toast ตอนตั้งค่า — ลากไปมากวนสายตา)
+    window.applyToastTime = (sec, hold) => {
+        window.userToastSec = window.__toastSecClamp(sec === undefined ? window.userToastSec : sec);
+        if (hold !== undefined && hold !== null) window.userToastHold = (hold === true);
+        const lbl = document.getElementById('toastSecVal');
+        const txt = window.userToastHold ? 'ค้างไว้จนกดปิด' : (window.userToastSec + ' วินาที');
+        if (lbl && lbl.__ttTxt !== txt) { lbl.__ttTxt = txt; lbl.innerText = txt; }
+        const sw = document.getElementById('editToastHold');
+        if (sw && sw.checked !== window.userToastHold) sw.checked = window.userToastHold;
+        const rst = document.getElementById('toastTimeReset');
+        if (rst) rst.disabled = (window.userToastSec === window.TOAST_SEC_DEFAULT && !window.userToastHold);
+        const minus = document.getElementById('toastSecMinus');
+        const plus = document.getElementById('toastSecPlus');
+        if (minus) minus.disabled = (window.userToastSec <= window.TOAST_SEC_MIN);
+        if (plus) plus.disabled = (window.userToastSec >= window.TOAST_SEC_MAX);
+        return window.userToastSec;
+    };
+    window.__ttSavedFlash = () => {
+        const el = document.getElementById('toastTimeSaved');
+        if (!el) return;
+        el.style.display = 'block';
+        try { clearTimeout(window.__ttNoteTimer); } catch (e) {}
+        window.__ttNoteTimer = setTimeout(() => { try { el.style.display = 'none'; } catch (e) {} }, 1800);
+    };
+    window.__ttSaveTimer = null;
+    window.__ttLastSaved = null;
+    window.__ttSaveSoon = () => {
+        try { clearTimeout(window.__ttSaveTimer); } catch (e) {}
+        window.__ttSaveTimer = setTimeout(() => { window.__ttSaveNow(); }, 900);
+    };
+    window.__ttSaveNow = async () => {
+        try { clearTimeout(window.__ttSaveTimer); } catch (e) {}
+        const patch = { toastSec: window.__toastUserSec(), toastHold: window.userToastHold === true };
+        // ⚠️ 2 รูปคนละแบบโดยเจตนา: ในเครื่องเก็บ {sec, hold} (รูปที่ __toastTimeLoadLocal อ่าน) · Firestore เก็บ {toastSec, toastHold} (รูปฟิลด์ในเอกสารบัญชี)
+        try { localStorage.setItem(window.__toastTimeKey, JSON.stringify({ sec: patch.toastSec, hold: patch.toastHold })); } catch (e) {}
+        window.__ttSavedFlash();
+        if (!loggedInUserId || window.__testNoDbWrites) return patch;              // โหมดทดสอบ = ไม่แตะ Firestore
+        if (window.__ttLastSaved === JSON.stringify(patch)) return patch;          // ค่าเดิม = ไม่เขียนซ้ำ
+        window.__ttLastSaved = JSON.stringify(patch);
+        try {
+            if (typeof window.__fsTimeout === 'function') await window.__fsTimeout(updateDoc(doc(db, 'users', loggedInUserId), patch), 4000);
+            else await updateDoc(doc(db, 'users', loggedInUserId), patch);
+        } catch (e) {
+            try { if (typeof window.__fsRestPatch === 'function') await window.__fsRestPatch(loggedInUserId, patch); } catch (e2) {}
+        }
+        return patch;
+    };
+    window.bumpToastSec = (delta) => {
+        const n = parseInt(delta, 10);
+        const step = (n < 0 ? -1 : 1) * (Math.abs(n) || 1);
+        const next = window.__toastSecClamp(window.__toastUserSec() + step);
+        window.applyToastTime(next);
+        try { window.playSound(step > 0 ? 'plus' : 'minus'); } catch (e) {}
+        window.__ttSaveSoon();
+        return next;
+    };
+    window.toastTimeCommit = (sec, hold) => { window.applyToastTime(sec, hold); window.__ttSaveSoon(); return window.userToastSec; };
+    window.toastTimeReset = () => {
+        window.applyToastTime(window.TOAST_SEC_DEFAULT, false);
+        try { window.playSound('minus'); } catch (e) {}
+        window.__ttSaveNow();
+        return window.TOAST_SEC_DEFAULT;
+    };
+    // ▶️ เด้ง toast ตัวอย่าง (“ลองดูของจริง” — เห็นเวลา/ปุ่ม/แถบนับถอยหลังตามที่ตั้งไว้ทันที)
+    window.toastDemo = () => {
+        const s = window.__toastUserSec();
+        return window.showToast('ข้อความตัวอย่าง — หน้าตาแบบใหม่', false, null, false, null,
+            window.userToastHold ? 'โหมด “ค้างไว้จนกดปิด” — ต้องกด ✕ เองถึงจะหาย' : ('จะหายเองใน ' + s + ' วินาที · กด ✕ เพื่อปิดก่อนได้'));
+    };
+    try { const __tt = window.__toastTimeLoadLocal(); window.userToastSec = __tt.sec; window.userToastHold = __tt.hold; } catch (e) {}
 
     // 🧭 กติกาล้วน (ทดสอบออฟไลน์ได้ใน tests/speed-zone-offline.html) — ตัดสินโซนจาก “กิโลบนเส้นทาง” + ช่วงทางด่วนของเที่ยวนี้
     //    ช่วงทางด่วนของแต่ละด่าน = [startKm, endKm] (มาจากข้อมูลเส้นทางจริง ไม่กินโควตาเพิ่ม)
@@ -22095,6 +22597,9 @@
         //    (insertBefore ย้ายโหนดให้เอง ⇒ เครื่องที่เมานต์ไปแล้วก็ซ่อมตัวเองเมื่อเปิดหน้าตั้งค่าทั่วไป)
         const fsz = document.getElementById('fontScaleRow');
         if (fsz && box && fsz.previousElementSibling !== box) host.insertBefore(fsz, box.nextSibling);
+        // ⏱️ (20 ก.ย. 69) “เวลาแจ้งเตือน (toast)” = บล็อกที่ 4 (ต่อจากขนาดตัวอักษร) ทุกยศ
+        const ttm = document.getElementById('toastTimeRow');
+        if (ttm && fsz && fsz.nextElementSibling !== ttm) host.insertBefore(ttm, fsz.nextSibling);
         return host.firstChild === warn;
     };
     window.__fillGeneralSettingsControls = () => {
@@ -22114,6 +22619,8 @@
         if (afSel) afSel.checked = window.userAutoFs !== false;          // 📺 เต็มจออัตโนมัติ
         // 🔠 (20 ก.ย. 69) ขนาดตัวอักษร — ตัวแถบเลื่อน/ป้าย% ต้องตรงกับค่าจริงทุกครั้งที่เปิดหน้าตั้งค่าทั่วไป
         try { window.applyFontScale(window.userFontScale); } catch (e) {}
+        // ⏱️ (20 ก.ย. 69) เวลาแจ้งเตือน — ป้ายวินาที/สวิตช์ค้างไว้/สถานะปุ่ม ต้องตรงกับค่าจริงทุกครั้งที่เปิด
+        try { window.applyToastTime(window.userToastSec, window.userToastHold); } catch (e) {}
         const mf = document.getElementById('editManualFs');
         if (mf) mf.checked = !!(document.fullscreenElement || document.webkitFullscreenElement);
         // 🚀 (18 ก.ย. 69) ลิมิตความเร็ว + สวิตช์เตือนเมื่อเกิน (ค่าเริ่มต้น เปิด · 80 กม./ชม.)
@@ -22193,7 +22700,11 @@
             try { window.__spdResetEpisode(); } catch (e) {}
             // 🔠 (20 ก.ย. 69) ขนาดตัวอักษร — บันทึกกับปุ่ม “บันทึกข้อมูล” ด้วย (ปกติบันทึกอัตโนมัติอยู่แล้วตอนปล่อยแถบเลื่อน)
             const fszEl = document.getElementById('fontScaleRange');
-            if (fszEl) { payload.fontScale = window.__fsClamp(fszEl.value); window.userFontScale = payload.fontScale; window.__fsLastSaved = payload.fontScale; }
+            if (fszEl) { payload.fontScale = window.__fsClamp(fszEl.value); payload.fontScaleOwn = (window.userFontScaleOwn === true); window.userFontScale = payload.fontScale; window.__fsLastSaved = payload.fontScale + '|' + (payload.fontScaleOwn ? '1' : '0'); }
+            // ⏱️ (20 ก.ย. 69) เวลาแจ้งเตือน — บันทึกกับปุ่ม “บันทึกข้อมูล” ด้วย (ปกติบันทึกอัตโนมัติอยู่แล้วตอนกดปุ่ม − / + หรือสลับสวิตช์)
+            payload.toastSec = window.__toastUserSec(); window.userToastSec = payload.toastSec;
+            payload.toastHold = window.userToastHold === true;
+            window.__ttLastSaved = JSON.stringify({ toastSec: payload.toastSec, toastHold: payload.toastHold });
             const kaEl = document.getElementById('editKeepAwake');
             if (kaEl) {
                 payload.keepAwake = kaEl.checked; window.userKeepAwake = kaEl.checked;
@@ -23225,13 +23736,13 @@
     window.openRoleSettingsModal = (tab) => {
         const canP = window.roleHubCanPerms(), canF = window.roleHubCanFrames();
         if (!canP && !canF) return window.showToast("ตั้งค่าสิทธิ์ได้เฉพาะตำแหน่งแอดมินเท่านั้น", true);
-        if (canP) { window.fillRoleSelects(); window.syncRoleManageBtns(); window.renderPermList(); window.renderRoleFrameSelect(); window.renderLogSettings(); window.renderPinPolicy(); window.captureRolePermBaseline(); window.updateSavePermBtn(); }
+        if (canP) { window.fillRoleSelects(); window.syncRoleManageBtns(); window.renderPermList(); window.renderRoleFrameSelect(); window.renderLogSettings(); window.renderPinPolicy(); window.renderRoleFont(); window.captureRolePermBaseline(); window.updateSavePermBtn(); }
         window.roleHubMountFrames();
         if (canF) { try { window.afFillRoleSelect(); window.afFillUserSelect(); window.renderAvatarFrameGallery(); } catch (e) {} }
         window.toggleModal('roleSettingsModal', true);
         window.roleHubTab(tab || (canP ? 'perms' : 'frames'));
     };
-    window.loadRolePermissionsToUI = () => { window.syncRoleManageBtns(); window.renderPermList(); window.renderRoleFrameSelect(); window.renderPinPolicy(); window.captureRolePermBaseline(); window.updateSavePermBtn(); };
+    window.loadRolePermissionsToUI = () => { window.syncRoleManageBtns(); window.renderPermList(); window.renderRoleFrameSelect(); window.renderPinPolicy(); window.renderRoleFont(); window.captureRolePermBaseline(); window.updateSavePermBtn(); };
     // 🎨 กรอบอวตารประจำยศ (อยู่ในเมนู “ตั้งค่าสิทธิ์” ตามที่ผู้ใช้ขอ 17 ก.ย. 69) — ค่าเดียวกันกับหน้าต่าง “กรอบอวตาร” (settings/roles → avatarFrame)
     window.renderRoleFrameSelect = () => {
         const s = document.getElementById('roleFrameSelect'); if (!s) return;
@@ -23356,6 +23867,94 @@
         window.updateSavePermBtn();
     };
 
+    // 🔠 (20 ก.ย. 69 · ผู้ใช้สั่ง) กล่อง “ขนาดตัวอักษรเริ่มต้นของตำแหน่ง” ในเมนูตั้งค่าสิทธิ์
+    //   แอดมินกำหนดค่าเริ่มต้นของแต่ละยศ (เช่น VIP เริ่ม 110%) · ผู้ใช้ยังปรับต่อเองได้ใน “ตั้งค่าทั่วไป › ขนาดตัวอักษร”
+    //   ⛔ ห้ามทับค่าที่ผู้ใช้ตั้งเองแล้ว (own) — ผู้ใช้ชนะค่าเริ่มต้นของยศเสมอ · เก็บที่ settings/roles → <role>.fontScaleDefault
+    window.renderRoleFont = () => {
+        const box = document.getElementById('roleFontRows'); if (!box) return;
+        const role = ((document.getElementById('settingRoleSelect') || {}).value) || 'User';
+        const v = window.roleFontDefault(role);
+        window.__roleFontUI = v;
+        box.innerHTML =
+            '<div style="display:flex; align-items:center; gap:10px;">' +
+                '<button type="button" class="spd-step-btn is-sm" onclick="window.bumpRoleFont(-5)" aria-label="ลดค่าเริ่มต้นลง 5%">−</button>' +
+                '<div style="flex:1; min-width:0;">' +
+                    '<div id="roleFontVal" data-v="' + v + '" style="font-size:26px; font-weight:800; color:#fff; line-height:1.1; text-align:center;">' + v + '%</div>' +
+                    '<input type="range" id="roleFontRange" class="fs-range" min="' + window.roleFontMin() + '" max="' + window.roleFontMax() + '" step="' + (window.FONT_SCALE_STEP || 5) + '" value="' + v + '" oninput="window.onRoleFontSlide(this.value)" aria-label="ขนาดตัวอักษรเริ่มต้นของตำแหน่ง (%)">' +
+                '</div>' +
+                '<button type="button" class="spd-step-btn is-sm" onclick="window.bumpRoleFont(5)" aria-label="เพิ่มค่าเริ่มต้นขึ้น 5%">+</button>' +
+            '</div>' +
+            '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:9px;">' +
+                '<span style="font-size:11px; color:var(--text-dim);">ช่วง ' + window.roleFontMin() + '–' + window.roleFontMax() + '% · 100% = ขนาดเดิมของแอป</span>' +
+                '<button type="button" id="roleFontResetBtn" onclick="window.resetRoleFont()" class="manual-timer-btn" style="padding:7px 12px; font-size:12.5px; gap:4px;" disabled><span class="material-symbols-outlined" style="font-size:17px;">restart_alt</span> คืนค่า 100%</button>' +
+            '</div>' +
+            '<div id="roleFontSummary" style="font-size:11px; color:#9aa3b5; line-height:1.6; text-align:left; margin-top:8px;"></div>';
+        window.updateRoleFontUI();
+    };
+    window.updateRoleFontUI = () => {
+        try {
+            const role = ((document.getElementById('settingRoleSelect') || {}).value) || 'User';
+            const lab = (typeof window.roleLabelShort === 'function') ? window.roleLabelShort(role) : role;
+            const v = (typeof window.__roleFontUI === 'number') ? window.__roleFontUI : window.roleFontDefault(role);
+            const s = document.getElementById('roleFontSummary');
+            if (s) {
+                const txt = (v === window.ROLE_FONT_DEFAULT)
+                    ? 'มีผลกับตำแหน่ง <b>' + lab + '</b> — ตอนนี้ใช้ค่าเดิมของแอป (100%) · เปลี่ยนแล้วกด “บันทึกสิทธิ์” ด้านล่าง'
+                    : 'มีผลกับตำแหน่ง <b>' + lab + '</b> — คนที่ยังไม่เคยตั้งเองจะเริ่มที่ <b>' + v + '%</b> · คนที่ปรับเองไว้แล้วยังได้ค่าของตัวเอง · คืนค่าได้ที่ “ตั้งค่าทั่วไป › ขนาดตัวอักษร”';
+                if (s.innerHTML !== txt) s.innerHTML = txt;
+            }
+            const rst = document.getElementById('roleFontResetBtn');
+            if (rst) rst.disabled = (v === window.ROLE_FONT_DEFAULT);
+        } catch (e) {}
+        if (typeof window.updateSavePermBtn === 'function') window.updateSavePermBtn();
+    };
+    // 📖 อ่านค่าจากกล่อง (กล่องยังไม่ถูกวาด = คืนค่าที่ใช้อยู่จริง — กันเขียนทับด้วยค่าเพี้ยน)
+    window.readRoleFontFromUI = () => {
+        const rng = document.getElementById('roleFontRange');
+        if (!rng) { const role = ((document.getElementById('settingRoleSelect') || {}).value) || 'User'; return window.roleFontDefault(role); }
+        return window.normalizeRoleFont(rng.value);
+    };
+    window.bumpRoleFont = (delta) => {
+        const n = parseInt(delta, 10);
+        const step = (n < 0 ? -1 : 1) * (Math.abs(n) || window.FONT_SCALE_STEP || 5);
+        const role = ((document.getElementById('settingRoleSelect') || {}).value) || 'User';
+        const cur = (typeof window.__roleFontUI === 'number') ? window.__roleFontUI : window.roleFontDefault(role);
+        const next = window.normalizeRoleFont(cur + step);
+        window.__roleFontUI = next;
+        const val = document.getElementById('roleFontVal'); if (val) { val.dataset.v = String(next); val.innerText = next + '%'; }
+        const rng = document.getElementById('roleFontRange'); if (rng && String(rng.value) !== String(next)) rng.value = String(next);
+        try { window.playSound(step > 0 ? 'plus' : 'minus'); } catch (e) {}
+        window.updateRoleFontUI();
+        return next;
+    };
+    window.onRoleFontSlide = (v) => {
+        const s = window.normalizeRoleFont(v);
+        window.__roleFontUI = s;
+        const val = document.getElementById('roleFontVal'); if (val) { val.dataset.v = String(s); val.innerText = s + '%'; }
+        const rng = document.getElementById('roleFontRange'); if (rng && String(rng.value) !== String(s)) rng.value = String(s);   // กันป้าย/แถบไม่ตรงกัน (เรียกจากโค้ด/ค่าถูก clamp)
+        window.updateRoleFontUI();
+        return s;
+    };
+    window.resetRoleFont = () => {
+        window.__roleFontUI = window.ROLE_FONT_DEFAULT;
+        const val = document.getElementById('roleFontVal'); if (val) { val.dataset.v = '100'; val.innerText = '100%'; }
+        const rng = document.getElementById('roleFontRange'); if (rng) rng.value = '100';
+        try { window.playSound('minus'); } catch (e) {}
+        window.updateRoleFontUI();
+        return window.ROLE_FONT_DEFAULT;
+    };
+    // 🔁 แอดมินแก้ค่าเริ่มต้นของยศตัวเอง → คนที่ยังไม่เคยตั้งเองเห็นผลทันที (คนที่ตั้งเองแล้วไม่ถูกทับ)
+    window.applyMyRoleFontDefault = (role) => {
+        try {
+            if (!role || role !== window.myRoleKey()) return false;
+            if (window.userFontScaleOwn === true) return false;
+            const d = window.myRoleFontDefault();
+            window.applyFontScale(d);
+            try { localStorage.setItem(window.__fsKey, String(d)); window.__fsMarkOwn(false); } catch (e) {}
+            return true;
+        } catch (e) { return false; }
+    };
+
     window.savePermConfigOrder = async () => {
         if (!window.isAdminNow()) return window.showToast('ตั้งค่าสิทธิ์ได้เฉพาะตำแหน่งแอดมินเท่านั้น', true);
         // 🔐 ลำดับ/รายการสิทธิ์ทั้งระบบ (ซิงก์ทุกเครื่อง) → ขอยืนยันรหัสผ่านก่อน
@@ -23371,6 +23970,7 @@
         const base = { perms: {}, logFlags: {}, frame: ((document.getElementById('roleFrameSelect') || {}).value) || 'auto' };
         window.currentPermConfig.forEach(p => { const el = document.getElementById(p.id); if (el) base.perms[p.id] = !!el.checked; });
         base.pin = window.readPinPolicyFromUI(); // 🔑 นโยบาย PIN ก็นับเป็น “สิ่งที่ยังไม่บันทึก” ด้วย
+        base.roleFont = window.readRoleFontFromUI(); // 🔠 ค่าเริ่มต้นขนาดตัวอักษรของยศ ก็นับเป็น “สิ่งที่ยังไม่บันทึก” ด้วย
         const cfg = window.__appConfig || { logFlags: {} };
         base.logFlags = Object.assign({}, LOG_FLAG_DEFAULTS, (cfg.logFlags || {}));
         rolePermBaseline = base;
@@ -23380,6 +23980,7 @@
         for (const p of window.currentPermConfig) { const el = document.getElementById(p.id); if (el && !!el.checked !== !!rolePermBaseline.perms[p.id]) return true; }
         const frameEl = document.getElementById('roleFrameSelect'); if (frameEl && frameEl.value !== (rolePermBaseline.frame || 'auto')) return true; // 🎨 กรอบอวตารเปลี่ยนก็ถือว่า “ยังไม่บันทึก”
         { const __pn = window.readPinPolicyFromUI(); const __pb = window.normalizePinPolicy(rolePermBaseline.pin); if (__pn.requirePin !== __pb.requirePin || __pn.allowRemove !== __pb.allowRemove || __pn.minAgeDays !== __pb.minAgeDays || __pn.warnDays !== __pb.warnDays) return true; }
+        { const __fn = window.readRoleFontFromUI(); const __fb = window.normalizeRoleFont(rolePermBaseline.roleFont); if (__fn !== __fb) return true; }   // 🔠 ขนาดตัวอักษรเริ่มต้นของยศเปลี่ยน = ยังไม่บันทึก
         const cfg = window.__appConfig || { logFlags: {} };
         const flags = Object.assign({}, LOG_FLAG_DEFAULTS, (cfg.logFlags || {}));
         for (const k of Object.keys(rolePermBaseline.logFlags)) { if (!!flags[k] !== !!rolePermBaseline.logFlags[k]) return true; }
@@ -23408,7 +24009,9 @@
         newPerms.avatarFrame = frameEl ? (frameEl.value || 'auto') : (window.afRoleFrame(role) || 'auto');
         // 🔑 (18 ก.ย. 69) นโยบาย PIN ของตำแหน่งนี้ — ต้องส่งไปพร้อมบันทึกเสมอ ไม่งั้นตั้งไว้แล้วหายเงียบ ๆ
         newPerms.pinPolicy = window.readPinPolicyFromUI();
-        try { await setDoc(doc(db, "settings", "roles"), { [role]: newPerms }, { merge: true }); window.captureRolePermBaseline(); try { if (!window.globalPermissions) window.globalPermissions = {}; window.globalPermissions[role] = Object.assign({}, window.globalPermissions[role] || {}, newPerms); } catch (e) {} try { window.applyAvatarFrame(currentUserRole, loggedInUserId); if (typeof window.afFillRoleSelect === 'function') window.afFillRoleSelect(); } catch (e) {} window.showToast(`บันทึกสิทธิ์สำหรับ ${role} สำเร็จ — อยู่หน้าเดิมต่อได้เลย`); } catch(e) { window.showToast("บันทึกล้มเหลว", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์`; window.updateSavePermBtn(); }
+        // 🔠 (20 ก.ย. 69) ค่าเริ่มต้นขนาดตัวอักษรของตำแหน่ง — ส่งไปพร้อมบันทึกเสมอเช่นกัน (ไม่งั้นตั้งไว้แล้วหาย)
+        newPerms.fontScaleDefault = window.readRoleFontFromUI();
+        try { await setDoc(doc(db, "settings", "roles"), { [role]: newPerms }, { merge: true }); window.captureRolePermBaseline(); try { if (!window.globalPermissions) window.globalPermissions = {}; window.globalPermissions[role] = Object.assign({}, window.globalPermissions[role] || {}, newPerms); } catch (e) {} try { window.applyMyRoleFontDefault(role); } catch (e) {} try { window.applyAvatarFrame(currentUserRole, loggedInUserId); if (typeof window.afFillRoleSelect === 'function') window.afFillRoleSelect(); } catch (e) {} window.showToast(`บันทึกสิทธิ์สำหรับ ${role} สำเร็จ — อยู่หน้าเดิมต่อได้เลย`); } catch(e) { window.showToast("บันทึกล้มเหลว", true); } finally { btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 20px;">save</span> บันทึกสิทธิ์`; window.updateSavePermBtn(); }
     };
 
     window.quickBanToggle = async (uid, isBan, userName) => {
