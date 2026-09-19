@@ -290,6 +290,20 @@ $stamp = (Get-Date).ToString('yyyy-MM-dd HH:mm')
 $body = @("pre-push gate - $stamp", "today: $today  bullets: $todayCount  baseline: $baseCount  new: $newCount", "") + $script:lines + @("", "--- today's bullets ---") + @($todayNotes)
 [System.IO.File]::WriteAllLines($report, $body, (New-Object System.Text.UTF8Encoding($false)))
 
+# --- desktop notification (owner asked 2026-09-20: "notify me when the work is done") ---
+# This gate takes minutes to run, so the owner should not have to watch it.
+# notify-done.ps1 is ASCII-only and reads all Thai text from UTF-8 files.
+try {
+  $notifier = Join-Path $PSScriptRoot 'notify-done.ps1'
+  if (Test-Path $notifier) {
+    if ($script:fail) {
+      & $notifier -Kind fail -Message "pre-push gate: $($script:fail) problem(s) - see tests/pre-push-report.txt" | Out-Null
+    } else {
+      & $notifier -Kind done -Message 'pre-push gate: safe to push' | Out-Null
+    }
+  }
+} catch {}
+
 Say ''
 if ($script:fail) {
   Say "RESULT: $($script:fail) problem(s) - DO NOT PUSH until this is clean"

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — back/ESC บนจอมิเตอร์ใหญ่ = ย่อแอป (ไม่โผล่ “หน้าที่ 2”)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: back/ESC บนจอมิเตอร์ใหญ่ = “ย่อแอป” (ไม่โผล่หน้าแรกที่มีการ์ดมิเตอร์)</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · ตัดเน็ตทั้งหมด
+        <br><b>สิ่งที่ผู้ใช้แจ้ง (20 ก.ย. 69):</b> *“กดเริ่มมิเตอร์/ค้นหาเส้นทางมาแล้วขึ้นป๊อปอัพใหญ่ ๆ — พอกดย้อนกลับ (back)
+        หรือกด ESC จากเบราว์เซอร์ มันจะออกมาหน้านี้ตลอดเลย (หน้าแรกที่มีการ์ดมิเตอร์) หน้าที่ 2 ฉันไม่ต้องการเห็นเลย”*
+        <br><b>สาเหตุจริง:</b> <code>__closeLayer()</code> / <code>__escCloseTop()</code> เรียก
+        <code>toggleModal('trackerZoomOverlay', false)</code> ตรง ๆ ⇒ ข้ามด่าน <code>tryCloseTrackerZoom()</code>
+        ที่กันไว้ตอนมิเตอร์เดิน → ปิดจอมิเตอร์ใหญ่ได้ทั้งที่เที่ยวยังไม่จบ
+        <br><b>กติกาใหม่:</b> ระหว่างเที่ยวเดินอยู่ (มี <code>isManualRunning</code>)
+        ① <b>back/ESC = ย่อแอป</b>: แอป Android เรียก <code>TaxiNative.minimizeApp()</code> (moveTaskToBack) ·
+        เบราว์เซอร์ย่อไม่ได้ ⇒ <b>คงจอมิเตอร์ไว้</b> + ข้อความสั้น ๆ (ไม่มีทางไปโผล่หน้าแรก)
+        ② ยังไม่เริ่มเที่ยว = back/ESC ปิดจอได้เหมือนเดิม (พฤติกรรมเดิมต้องไม่พัง)
+        ③ ระหว่างเที่ยว <b>หน้าแรกไม่แสดงการ์ดมิเตอร์ใบเล็ก</b> (<code>body.trip-running</code>) แม้มีโค้ดอื่นเขียน inline display ทับ
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/tz-back-minimize-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (8 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const CACHE_KEYS = ['taxi_active_trip_v1'];
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+    // ============================ สตับ: ตัดเน็ตทั้งหมด ============================
+    let stubsInstalled = false;
+    let blocked = 0;
+    let minCalls = 0;          // นับการเรียก TaxiNative.minimizeApp()
+    let toasts = [];           // ข้อความ toast ที่แอปสั่งแสดง
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        cw.__testNoDbWrites = true;
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) {
+                cw.__net.blockedFetch++; cw.__net.lastUrl = u; blocked++;
+                return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u));
+            }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (m, u) {
+                if (/^https?:\/\//i.test(u) && u.indexOf(cw.location.origin) !== 0 && u.indexOf('127.0.0.1') < 0) { cw.__net.blockedXhr++; blocked++; x.__blocked = true; return; }
+                return open.apply(null, arguments);
+            };
+            const send = x.send.bind(x);
+            x.send = function () {
+                if (x.__blocked) { try { x.readyState = 4; x.dispatchEvent(new cw.Event('error')); } catch (e) {} return; }
+                return send.apply(null, arguments);
+            };
+            return x;
+        };
+        try {
+            cw.navigator.geolocation.getCurrentPosition = (ok, err) => { try { if (err) err({ code: 2, message: 'offline-test' }); } catch (e) {} };
+            cw.navigator.geolocation.watchPosition = () => 1;
+            cw.navigator.geolocation.clearWatch = () => {};
+        } catch (e) {}
+        // 🔊 ดักข้อความ toast (ไม่ให้ขึ้นจริงรบกวนการวัด)
+        try {
+            const realToast = cw.showToast;
+            cw.showToast = function (msg) { toasts.push(String(msg)); try { if (typeof realToast === 'function') return; } catch (e) {} };
+        } catch (e) {}
+        // 📱 จำลองชั้น Android (APK) — นับการสั่งย่อแอป
+        setNativeMinimize(true);
+        stubsInstalled = true;
+    }
+    function setNativeMinimize(on) {
+        const cw = w();
+        if (on) {
+            cw.TaxiNative = { minimizeApp: function () { minCalls++; } };
+        } else {
+            try { delete cw.TaxiNative; } catch (e) { cw.TaxiNative = undefined; }
+        }
+    }
+
+    async function waitForNoLoader(ms) {
+        const cw = w();
+        const lim = ms || 12000, t0 = Date.now();
+        while (Date.now() - t0 < lim) {
+            const loader = cw.document.getElementById('appLoader');
+            if (!loader || cw.getComputedStyle(loader).display === 'none') return true;
+            await wait(150);
+        }
+        return false;
+    }
+
+    // 🍔 ปิดเมนูแฮมเบอร์เกอร์ให้สนิท — ตอนบูตใหม่ ๆ ตัวเมนูยังมี display ≠ none อยู่
+    //    ทำให้ __escCloseTop() ตัดสินว่า “เมนูเปิดอยู่” แล้วปิดเมนูแทนที่จะย่อแอป (เป็นเรื่องของจังหวะเพิ่งบูต ไม่ใช่บั๊กแอป)
+    function closeSideMenu() {
+        const cw = w();
+        try { if (typeof cw.toggleSideMenu === 'function') cw.toggleSideMenu(false); } catch (e) {}
+        try { const m = cw.document.getElementById('sideMenuOverlay'); if (m) { m.style.display = 'none'; m.style.opacity = '0'; } } catch (e) {}
+    }
+
+    async function closeAllModals() {
+        const cw = w();
+        try {
+            Array.from(cw.document.querySelectorAll('.modal-overlay,.custom-confirm-overlay')).forEach((m) => {
+                try { if (typeof cw.toggleModal === 'function') cw.toggleModal(m.id, false); } catch (e) {}
+                try { m.style.display = 'none'; } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    async function loadApp() {
+        const loaded = new Promise(r => frame.addEventListener('load', r, { once: true }));
+        frame.src = '../index.html?fsNowrite=1';
+        await Promise.race([loaded, wait(30000).then(() => { throw new Error('iframe โหลดไม่ทัน (30 วิ)'); })]);
+        const t0 = Date.now();
+        while (Date.now() - t0 < 30000) {
+            const cw = w();
+            if (cw && typeof cw.__escCloseTop === 'function' && typeof cw.__closeLayer === 'function'
+                && typeof cw.toggleModal === 'function' && typeof cw.startMeterAndTracking === 'function'
+                && typeof cw.stopTracking === 'function' && typeof cw.__tzZoomBackShouldMinimize === 'function') {
+                installStubs();
+                await wait(200);
+                try { CACHE_KEYS.forEach(k => cw.localStorage.removeItem(k)); } catch (e) {}
+                await closeAllModals();
+                closeSideMenu();
+                await waitForNoLoader(12000);
+                closeSideMenu();
+                await wait(200);
+                return;
+            }
+            await wait(80);
+        }
+        throw new Error('แอปโหลดไม่ทันใน 30 วิ (ขาดฟังก์ชันที่ต้องใช้)');
+    }
+
+    // ============================ เครื่องมือทดสอบ ============================
+    const el = (id) => w().document.getElementById(id);
+    const hidden = (id) => { const e = el(id); if (!e) return true; return w().getComputedStyle(e).display === 'none'; };
+    const running = (v) => { if (v === undefined) return !!w().isManualRunning; w().isManualRunning = !!v; };
+    const openZoom = () => { closeSideMenu(); w().toggleModal('trackerZoomOverlay', true); };
+    const pressEsc = () => {
+        const cw = w();
+        const ev = new cw.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+        cw.document.dispatchEvent(ev);
+    };
+    // 🔎 ดักจับเส้นทาง ESC จริง — เก็บว่า __escCloseTop() ปิดอะไร และตอนนั้นมีชั้นอะไรเปิดอยู่บ้าง
+    function spyEsc() {
+        const cw = w();
+        const real = cw.__escCloseTop;
+        const log = [];
+        cw.__escCloseTop = function () {
+            const layers = (typeof cw.__visibleLayers === 'function') ? cw.__visibleLayers().map(l => l.id) : [];
+            let out = '';
+            try { out = real.apply(this, arguments) || ''; } finally { log.push('ปิด: "' + out + '" · ชั้นที่เปิด: [' + layers.join(', ') + ']'); }
+            return out;
+        };
+        return { log: log, restore: () => { cw.__escCloseTop = real; } };
+    }
+
+    // ============================ รัน 1 สถานการณ์ ============================
+    async function runScenario(name, fn) {
+        const row = document.createElement('li');
+        row.innerHTML = '<span class="st">⏳</span> ' + name;
+        resultsEl.appendChild(row);
+        try {
+            const out = await Promise.race([fn(), wait(30000).then(() => { throw new Error('สถานการณ์ timeout 30 วิ'); })]);
+            row.classList.add('pass');
+            row.innerHTML = '<span class="st">✅ ผ่าน</span> ' + name + '\n<span class="detail">' + (out || '') + '</span>';
+            passCount++;
+        } catch (e) {
+            row.classList.add('fail');
+            row.innerHTML = '<span class="st">❌ ไม่ผ่าน</span> ' + name + '\n<span class="detail">' + ((e && e.message) ? e.message : e) + '</span>';
+            failCount++;
+            failures.push(name + ' → ' + ((e && e.message) ? e.message : e));
+        }
+    }
+
+    // ============================ ชุดสถานการณ์ ============================
+    async function runAll() {
+        const cw = w();
+        passCount = 0; failCount = 0; failures.length = 0;
+        resultsEl.innerHTML = '';
+        toasts = []; minCalls = 0;
+        running(false);
+        setNativeMinimize(true);
+        await closeAllModals();
+
+        await runScenario('S1 · ESC ตอนมิเตอร์เดิน → จอมิเตอร์ใหญ่ต้อง “ไม่ปิด” + สั่งย่อแอป 1 ครั้ง', async () => {
+            running(true);
+            const before = minCalls;
+            openZoom();
+            await wait(60);
+            assert(!hidden('trackerZoomOverlay'), 'จอมิเตอร์ใหญ่ไม่ได้เปิดตอนเตรียมทดสอบ');
+            const spy = spyEsc();
+            pressEsc();
+            await wait(120);
+            spy.restore();
+            const trace = spy.log.join(' | ') || '(ไม่มีชั้นไหนตอบสนอง ESC) · ชั้นที่เปิด: [' + cw.__visibleLayers().map(l => l.id).join(', ') + ']';
+            assert(!hidden('trackerZoomOverlay'), 'ESC ปิดจอมิเตอร์ใหญ่ทั้งที่มิเตอร์ยังเดิน (ผู้ใช้จะไปโผล่ “หน้าที่ 2”) — ' + trace);
+            assert(minCalls === before + 1, 'ไม่ได้สั่ง TaxiNative.minimizeApp() (เรียก ' + (minCalls - before) + ' ครั้ง) — ' + trace);
+            running(false); await closeAllModals();
+            return 'จอมิเตอร์ใหญ่ยังอยู่ (display ≠ none) · minimizeApp ถูกเรียก ' + (minCalls - before) + ' ครั้ง';
+        });
+
+        await runScenario('S2 · ESC ตอน “ยังไม่เริ่มเที่ยว” → ต้องปิดจอได้ตามเดิม (พฤติกรรมเดิมไม่พัง)', async () => {
+            running(false);
+            const before = minCalls;
+            openZoom();
+            await wait(60);
+            assert(!hidden('trackerZoomOverlay'), 'จอมิเตอร์ใหญ่ไม่ได้เปิดตอนเตรียมทดสอบ');
+            pressEsc();
+            await wait(140);
+            assert(hidden('trackerZoomOverlay'), 'ยังไม่เริ่มเที่ยว แต่ ESC ปิดจอไม่ได้ (ของเดิมต้องปิดได้)');
+            assert(minCalls === before, 'ยังไม่เริ่มเที่ยวแต่สั่งย่อแอป ' + (minCalls - before) + ' ครั้ง');
+            return 'ESC ปิดจอตามปกติ · ไม่สั่งย่อแอปเลย';
+        });
+
+        await runScenario('S3 · เบราว์เซอร์ (ไม่มี minimizeApp) → คงจอมิเตอร์ไว้ + แจ้งสั้น ๆ ครั้งเดียว', async () => {
+            running(true);
+            setNativeMinimize(false);
+            const t0 = toasts.length;
+            openZoom();
+            await wait(60);
+            pressEsc();
+            await wait(120);
+            pressEsc();          // กดซ้ำเร็ว ๆ — ต้องไม่สแปมข้อความ
+            await wait(120);
+            const shown = !hidden('trackerZoomOverlay');
+            const added = toasts.length - t0;
+            setNativeMinimize(true);
+            assert(shown, 'เบราว์เซอร์: ESC ปิดจอมิเตอร์ใหญ่ (จะไปโผล่หน้าแรก = “หน้าที่ 2”)');
+            assert(added >= 1, 'ไม่มีข้อความอธิบายให้ผู้ใช้เลย');
+            assert(added <= 1, 'กด ESC 2 ครั้งแล้วข้อความขึ้น ' + added + ' ครั้ง (ต้องกันสแปม)');
+            running(false); await closeAllModals();
+            return 'จอมิเตอร์คงอยู่ · ข้อความขึ้น ' + added + ' ครั้ง (ไม่สแปม)';
+        });
+
+        await runScenario('S4 · ปุ่ม back ของ Android (popstate → __closeLayer) ตอนมิเตอร์เดิน → ย่อแอป', async () => {
+            running(true);
+            const before = minCalls;
+            openZoom();
+            await wait(60);
+            cw.__closeLayer('trackerZoomOverlay');
+            await wait(120);
+            assert(!hidden('trackerZoomOverlay'), '__closeLayer ปิดจอมิเตอร์ใหญ่ตอนมิเตอร์เดิน');
+            assert(minCalls === before + 1, 'ไม่ได้สั่ง minimizeApp (เรียก ' + (minCalls - before) + ' ครั้ง)');
+            return 'back 1 ครั้ง → ย่อแอป · จอมิเตอร์ไม่ถูกปิด';
+        });
+
+        await runScenario('S5 · __closeLayer ตอนยังไม่เริ่มเที่ยว → ปิดจอจริงเหมือนเดิม', async () => {
+            running(false);
+            const before = minCalls;
+            openZoom();
+            await wait(60);
+            const r = cw.__closeLayer('trackerZoomOverlay');
+            await wait(140);
+            assert(hidden('trackerZoomOverlay'), 'ยังไม่เริ่มเที่ยว แต่ __closeLayer ปิดจอไม่ได้ (return ' + r + ')');
+            assert(minCalls === before, 'ยังไม่เริ่มเที่ยวแต่สั่งย่อแอป');
+            return 'return "' + r + '" · ปิดจอจริง · ไม่สั่งย่อแอป';
+        });
+
+        await runScenario('S6 · แตะฉากหลัง (tryCloseTrackerZoom) ตอนมิเตอร์เดิน → ต้องไม่ปิด', async () => {
+            running(true);
+            openZoom();
+            await wait(60);
+            cw.tryCloseTrackerZoom();
+            await wait(120);
+            assert(!hidden('trackerZoomOverlay'), 'แตะฉากหลังแล้วจอมิเตอร์ใหญ่ปิด (ควรปิดได้เฉพาะตอนไม่ได้จับเที่ยว)');
+            running(false); await closeAllModals();
+            return 'แตะฉากหลัง → จอมิเตอร์ไม่ปิด (เหมือนเดิม)';
+        });
+
+        await runScenario('S7 · ระหว่างเที่ยว หน้าแรกต้องไม่แสดงการ์ดมิเตอร์ใบเล็ก (แม้มีโค้ดเขียน inline ทับ)', async () => {
+            running(false);
+            await closeAllModals();
+            await cw.startMeterAndTracking();
+            await wait(160);
+            const bodyCls = cw.document.body.classList.contains('trip-running');
+            assert(bodyCls, 'ไม่ได้ติดคลาส trip-running บน <body> ตอนเริ่มเที่ยว');
+            assert(hidden('liveTracker'), 'การ์ดมิเตอร์ใบเล็กยังโชว์อยู่ตอนมิเตอร์เดิน (นี่คือ “หน้าที่ 2”)');
+            // 🛡 ทนการเขียน inline display:block จากโค้ดอื่น
+            try { el('liveTracker').style.display = 'block'; } catch (e) {}
+            await wait(60);
+            const stillHidden = hidden('liveTracker');
+            try { el('liveTracker').style.display = 'none'; } catch (e) {}
+            assert(stillHidden, 'เขียน inline display:block แล้วการ์ดโผล่กลับมา (คลาส trip-running ไม่ได้บังคับซ่อนจริง)');
+            return 'trip-running = true · การ์ดซ่อนจริงทั้งตอนปกติและตอนถูกเขียน inline display:block ทับ';
+        });
+
+        await runScenario('S8 · จบเที่ยว → คลาส trip-running ถูกถอดออก (หน้าแรกกลับมาทำงานได้ตามเดิม)', async () => {
+            cw.stopTracking();
+            await wait(200);
+            assert(!cw.document.body.classList.contains('trip-running'), 'จบเที่ยวแล้วยังติดคลาส trip-running อยู่');
+            try { el('liveTracker').style.display = 'block'; } catch (e) {}
+            await wait(60);
+            const shownNow = !hidden('liveTracker');
+            try { el('liveTracker').style.display = 'none'; } catch (e) {}
+            assert(shownNow, 'จบเที่ยวแล้วยังบังคับซ่อนการ์ดอยู่ (คลาสไม่ถูกถอด)');
+            return 'ถอดคลาสแล้ว · การ์ดแสดงผลได้ตามเดิม (ไม่มีตัวบังคับซ่อนค้าง)';
+        });
+
+        // คืนสภาพเดิม
+        running(false);
+        await closeAllModals();
+        try { el('liveTracker').style.display = 'none'; } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        const btnRun = document.getElementById('runBtn');
+        btnRun.disabled = true; btnRun.textContent = '⏳ กำลังรัน...';
+        try {
+            if (!stubsInstalled) await loadApp();
+            await runAll();
+            offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งหมดในชุดทดสอบ (บล็อกคำขอออกนอกเครื่อง ' + blocked + ' ครั้ง)';
+        } catch (e) {
+            summaryEl.innerHTML = '<span style="color:var(--red)">ตั้งชุดทดสอบไม่สำเร็จ: ' + (e && e.message ? e.message : e) + '</span>';
+        } finally {
+            const total = passCount + failCount;
+            summaryEl.innerHTML = failCount === 0
+                ? '<span style="color:var(--green)">✅ ผ่านทั้งหมด ' + total + ' / ' + total + ' สถานการณ์</span>'
+                : '<span style="color:var(--red)">❌ ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + ' — ' + failures.join(' | ') + '</span>';
+            btnRun.disabled = false; btnRun.textContent = '🔄 รันการทดสอบใหม่ (8 สถานการณ์)';
+        }
+    });
+
+    window.addEventListener('load', () => { document.getElementById('runBtn').click(); });
+})();
+</script>
+</body>
+</html>

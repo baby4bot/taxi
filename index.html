@@ -375,6 +375,23 @@
         .app-switch input:disabled + .app-slider::before { background: #cbd5e1; }
         .app-switch input:focus-visible + .app-slider { box-shadow: 0 0 0 3px rgba(241,196,15,0.35); }
 
+        /* 🔠 (20 ก.ย. 69 · ผู้ใช้สั่ง) แถบเลื่อน “ขนาดตัวอักษร” — ปุ่มจับใหญ่ กดง่าย (ทุกยศใช้ได้ ไม่ผูกสิทธิ์)
+           ทำไมใช้ input[type=range]: ผู้ใช้ขอ “แถบสกรอลล์เลื่อน เลื่อนไปทางขวาก็ใหญ่ขึ้น” ⇒ ลากปรับสดได้ (oninput) ไม่ต้องพิมพ์ตัวเลข
+           ⚠️ ต้องกันสไตล์ global ของ input (height 55px) — ตัวนี้เป็น range ไม่ถูก selector นั้นจับ แต่ยังต้องตั้ง appearance เองให้ปุ่มจับโผล่ */
+        .fs-range { -webkit-appearance: none; appearance: none; width: 100%; height: 30px; margin: 2px 0 0; background: transparent; cursor: pointer; touch-action: manipulation; }
+        .fs-range::-webkit-slider-runnable-track { height: 9px; border-radius: 99px; background: linear-gradient(90deg, #7c3aed, #a855f7, #22d3ee); border: 1px solid rgba(255,255,255,0.14); }
+        .fs-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 26px; height: 26px; margin-top: -9px; border-radius: 50%; background: #ffffff; border: 3px solid #a855f7; box-shadow: 0 2px 8px rgba(0,0,0,0.55); }
+        .fs-range::-moz-range-track { height: 9px; border-radius: 99px; background: linear-gradient(90deg, #7c3aed, #a855f7, #22d3ee); border: 1px solid rgba(255,255,255,0.14); }
+        .fs-range::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%; background: #ffffff; border: 3px solid #a855f7; box-shadow: 0 2px 8px rgba(0,0,0,0.55); }
+        .fs-range:focus { outline: none; }
+        .fs-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(168,85,247,0.35); }
+        .fs-range:disabled { opacity: 0.5; cursor: not-allowed; }
+        html.light .fs-range::-webkit-slider-thumb, html.light .fs-range::-moz-range-thumb { border-color: #7c3aed; }
+        /* 🔄 ปุ่ม “คืนค่า 100%” ของแถวขนาดตัวอักษร — ใช้กติกาเดียวกับปุ่มรีเซ็ตทั้งแอป:
+           มีการเปลี่ยนแปลง = แดง กดได้ · ยังไม่เปลี่ยน = เทา กดไม่ได้ (ผู้ใช้สั่งไว้ 19 ก.ย. 69) */
+        #fontScaleReset { background: rgba(239,68,68,0.92) !important; color: #fff !important; border: 1px solid rgba(220,38,38,0.95); box-shadow: 0 1px 0 rgba(0,0,0,0.3) inset, 0 4px 14px rgba(239,68,68,0.25); }
+        #fontScaleReset:disabled { background: rgba(255,255,255,0.07) !important; color: rgba(255,255,255,0.38) !important; border-color: rgba(255,255,255,0.10) !important; box-shadow: none !important; cursor: not-allowed; }
+
         .dropdown-box { position: absolute; background: rgba(30, 32, 45, 0.95); width: 100%; z-index: 1000; border-radius: 20px; max-height: 320px; overflow-y: auto; display: none; margin-top: 10px; border: 1px solid var(--border-glass); box-shadow: 0 15px 40px rgba(0,0,0,0.8); -ms-overflow-style: none; scrollbar-width: none; }
         .dropdown-box::-webkit-scrollbar { display: none; }
         .history-header { padding: 15px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border-glass); display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--neon-green); position: sticky; top: 0; z-index: 10; }
@@ -403,6 +420,10 @@
 
         .live-tracker-box { flex-shrink: 0; display: none; cursor: pointer; background: #1a1a1a; border: 1px solid #444; border-radius: 16px; padding: 15px; margin-top: var(--space-section); text-align: center; transition: 0.3s; animation: fadeIn 0.5s ease; }
         .live-tracker-box:active { transform: scale(0.98); }
+        /* 🚕 (20 ก.ย. 69) ผู้ใช้สั่ง “ตัดหน้าที่ 2 ออก” — ระหว่างเที่ยวเดินอยู่ หน้าแรกจะไม่แสดงการ์ดมิเตอร์ใบเล็ก
+           (การ์ดนี้ซ้ำกับจอมิเตอร์ใหญ่ทุกบรรทัด: เวลา · รถติด · ค่าโดยสาร · ปุ่มจบเที่ยว)
+           ⛔ ใช้คลาสบน <body> + !important ⇒ กันโค้ดอื่น/สไตล์ inline สั่ง display:block กลับมาได้เด็ดขาด */
+        body.trip-running .live-tracker-box { display: none !important; }
         .tracker-stats { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
         .highlight { color: var(--neon-green); font-weight: 600; text-shadow: 0 0 5px var(--glow-green); }
         
@@ -2794,13 +2815,16 @@
     <div class="custom-confirm-box" style="max-width: 390px; padding: 26px 18px; border-radius: 26px; position: relative;">
         <button class="btn-close-floating" style="top: 14px; right: 14px; transform: none;" onclick="window.closeRoutePreview()" title="ปิด (ยังไม่เริ่ม)"><span class="material-symbols-outlined">close</span></button>
         <h3 class="custom-confirm-title" style="font-size: 19px; margin-bottom: 4px;">📍 สรุปเส้นทาง</h3>
-        <div style="font-size: 12.5px; color: var(--text-dim); margin-bottom: 14px;">ตรวจสอบข้อมูลก่อนเริ่ม — มิเตอร์ยังไม่เดิน</div>
+        <!-- 📐 (20 ก.ย. 69 · ผู้ใช้แจ้ง “ระยะห่างไม่เท่ากัน — ปุ่มมิเตอร์ควรขึ้นข้างบนอีกนิด”) ⇒ ตั้งจังหวะแนวตั้งของหน้าต่างนี้
+             ให้เท่ากันทั้งใบ = var(--space-section) (12px) ทุกบล็อก · เฉพาะ “ป้ายชื่อแถว” (เลือกเส้นทาง) ที่ติดกับปุ่ม (7px)
+             ⛔ ห้ามใส่เลข px ตายตัวใหม่ในหน้าต่างนี้ — วัดจากพรีวิวจริง: subtitle/dest/stats/ปุ่ม/การ์ดค่าโดยสาร/ปุ่มเริ่ม = 12px เท่ากันหมด -->
+        <div style="font-size: 12.5px; color: var(--text-dim); margin-bottom: var(--space-section);">ตรวจสอบข้อมูลก่อนเริ่ม — มิเตอร์ยังไม่เดิน</div>
 
-        <div id="rpDestName" style="font-size: 14.5px; font-weight: 600; color: white; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 10px 12px; margin-bottom: 12px; word-break: break-word; text-align: left;"></div>
+        <div id="rpDestName" style="font-size: 14.5px; font-weight: 600; color: white; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 10px 12px; margin-bottom: var(--space-section); word-break: break-word; text-align: left;"></div>
 
-        <div id="rpOriginWarn" style="display:none; background: rgba(255,152,0,0.10); border:1px solid rgba(255,152,0,0.4); color:#ffb74d; border-radius:12px; padding:8px 11px; font-size:12px; margin-bottom:12px; text-align:left;">⚠️ ใช้ตำแหน่งโดยประมาณ (GPS ใช้ไม่ได้) — ระยะทาง/เวลา/ราคาอาจคลาดเคลื่อน เปิด GPS เพื่อความแม่นยำ</div>
+        <div id="rpOriginWarn" style="display:none; background: rgba(255,152,0,0.10); border:1px solid rgba(255,152,0,0.4); color:#ffb74d; border-radius:12px; padding:8px 11px; font-size:12px; margin-bottom: var(--space-section); text-align:left;">⚠️ ใช้ตำแหน่งโดยประมาณ (GPS ใช้ไม่ได้) — ระยะทาง/เวลา/ราคาอาจคลาดเคลื่อน เปิด GPS เพื่อความแม่นยำ</div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: var(--space-section);">
             <div style="background: rgba(0,0,0,0.28); border-radius: 13px; padding: 9px 4px; border: 1px solid rgba(255,255,255,0.05);">
                 <div style="font-size:10.5px; color: var(--text-dim); margin-bottom: 2px;">ระยะทาง</div>
                 <div style="font-size:16px; font-weight:700; color: var(--neon-green); white-space: nowrap;"><span id="rpKm">0</span><span style="font-size:11px;"> กม.</span></div>
@@ -2816,7 +2840,7 @@
         </div>
 
         <div style="font-size:12px; color: var(--text-dim); margin-bottom: 7px; text-align:left;">เลือกเส้นทาง</div>
-        <div style="display:flex; gap:10px; margin-bottom: 10px;">
+        <div style="display:flex; gap:10px; margin-bottom: var(--space-section);">
             <button id="rpBtnAvoid" class="small-toll-btn active" style="flex:1; width:auto; height:46px; border-radius:14px; gap:6px;" onclick="window.previewSetToll(false)" title="เลี่ยงทางด่วน">
                 <span class="material-symbols-outlined" style="font-size:20px;">route</span>
                 <span style="font-size:12.5px; font-weight:600;">เลี่ยงทางด่วน</span>
@@ -2827,9 +2851,9 @@
             </button>
         </div>
 
-        <div id="rpTollRow" style="display:none; background: rgba(255,152,0,0.10); border:1px solid rgba(255,152,0,0.4); color:#ffb74d; border-radius:12px; padding:7px 10px; font-size:12.5px; margin-bottom:10px;"></div>
+        <div id="rpTollRow" style="display:none; background: rgba(255,152,0,0.10); border:1px solid rgba(255,152,0,0.4); color:#ffb74d; border-radius:12px; padding:7px 10px; font-size:12.5px; margin-bottom: var(--space-section);"></div>
 
-        <div style="background: linear-gradient(135deg, rgba(46,204,113,0.12), rgba(46,204,113,0.02)); border: 1px solid rgba(46,204,113,0.28); border-radius: 15px; padding: 11px 12px; margin-bottom: 16px; display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <div style="background: linear-gradient(135deg, rgba(46,204,113,0.12), rgba(46,204,113,0.02)); border: 1px solid rgba(46,204,113,0.28); border-radius: 15px; padding: 11px 12px; margin-bottom: var(--space-section); display:flex; align-items:center; justify-content:space-between; gap:8px;">
             <div style="text-align:left; min-width:0;">
                 <div style="font-size:11.5px; color:var(--text-dim);">ค่าโดยสารโดยประมาณ (มิเตอร์)</div>
                 <div style="font-size:11px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="rpFareDetail">--</div>
@@ -2837,7 +2861,8 @@
             <div id="rpFareTotal" style="font-size:24px; font-weight:700; color:white; white-space:nowrap;">0 ฿</div>
         </div>
 
-        <div id="rpTrafficRow" style="display:none; background: rgba(56,189,248,0.10); border:1px solid rgba(56,189,248,0.35); color:#7dd3fc; border-radius:12px; padding:7px 10px; font-size:12.5px; margin:-8px 0 14px; text-align:left;"></div>
+        <!-- แถวการจราจร (โชว์เฉพาะทางด่วน) — เว้นเท่าบล็อกอื่น: -12 บน (ชิดการ์ดค่าโดยสาร) / +12 ล่าง -->
+        <div id="rpTrafficRow" style="display:none; background: rgba(56,189,248,0.10); border:1px solid rgba(56,189,248,0.35); color:#7dd3fc; border-radius:12px; padding:7px 10px; font-size:12.5px; margin: calc(var(--space-section) * -1) 0 var(--space-section); text-align:left;"></div>
 
         <div class="custom-confirm-actions">
             <button class="btn-cc-cancel" onclick="window.closeRoutePreview()" title="ปิดหน้าต่างนี้ ยังไม่เริ่มมิเตอร์">ดูอย่างเดียว</button>
@@ -3368,6 +3393,28 @@
                 </div>
                 <label style="text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px; cursor:pointer;"><span style="flex:1; font-size:14px;">สลับลิมิตตามโซนอัตโนมัติ<span style="display:block; font-size:11px; color:var(--text-dim); font-weight:400; margin-top:3px;">รถเข้าช่วงทางด่วน = ใช้ลิมิตทางด่วนทันที · ออกมาแล้วกลับไปใช้ลิมิตในเมืองเอง (ปิด = ใช้ลิมิตในเมืองค่าเดียวตลอด)</span></span><span class="app-switch" style="flex-shrink:0; margin:0;"><input type="checkbox" id="editSpeedZoneAuto" onchange="window.__spdSyncUi&&window.__spdSyncUi()" checked><span class="app-slider"></span></span></label>
                 <div style="font-size:11px; color:var(--text-dim); text-align:left; margin-top:8px; line-height:1.55;">กด − / + ปรับทีละ <b>5</b> · ใช้ได้ 20–200 กม./ชม. (เช่น 100 ในเมือง · 120 บนทางด่วน) · ตัวเลขความเร็วบนจอมิเตอร์จะเปลี่ยนเป็นสีแดงเมื่อเกินลิมิตของโซนนั้น · สลับโซนแล้วเริ่มนับรอบเตือนใหม่ให้</div>
+            </div>
+            <!-- 🔠 (20 ก.ย. 69 · ผู้ใช้สั่ง) “ขนาดตัวอักษร” — แถบเลื่อน ปรับได้ทุกยศ (ไม่ผูกกับสิทธิ์)
+                 คำสั่งผู้ใช้: “ฟอนต์บางส่วนมันเล็ก ... อยากให้มีแถบสกรอลล์เลื่อน เลื่อนไปทางขวาก็ใหญ่ขึ้น ปรับไปเรื่อย ๆ
+                              แล้วก็เมนูให้อยู่ในเมนูตั้งค่า ทุกยูสเซอร์จัดการได้ ไม่ว่าจะล็อกอินด้วยยศไหน”
+                 ทำงานอย่างไร: ลาก = เห็นผลสดทั้งแอป (window.applyFontScale) · ปล่อยนิ้ว = บันทึกต่อบัญชี (debounce 900 มิลลิวินาที)
+                 ⛔ ห้ามย้ายแถวนี้ไปหน้า “ตั้งค่าโปรไฟล์” — ผู้ใช้สั่งชัดว่าต้องอยู่ในเมนูตั้งค่าการใช้งาน › ตั้งค่าทั่วไป -->
+            <div id="fontScaleRow" style="text-align:left; margin-bottom:var(--space-field); background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.30); border-radius:14px; padding:12px 14px;">
+                <div style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; color:#d8b4fe; margin-bottom:4px;"><span class="material-symbols-outlined" style="font-size:18px;">format_size</span> ขนาดตัวอักษร <span style="font-size:11px; color:var(--text-dim); font-weight:400;">(ทุกตำแหน่งปรับได้เอง)</span><span id="fontScaleSaved" style="display:none; margin-left:auto; font-size:11px; color:#7bed9f; font-weight:700;">บันทึกแล้ว ✓</span></div>
+                <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">เลื่อนไปทางขวา = ตัวอักษรใหญ่ขึ้นทั้งแอป (หัวข้อ · คำอธิบาย · ปุ่ม · ตัวเลขบนจอมิเตอร์) · ใช้กับ <b>บัญชีนี้ทุกเครื่อง</b> · ช่วง 85–135%</div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button type="button" class="spd-step-btn is-sm" onclick="window.bumpFontScale(-5)" aria-label="ลดขนาดตัวอักษรลง 5%">−</button>
+                    <div style="flex:1; min-width:0;">
+                        <div id="fontScaleVal" style="font-size:26px; font-weight:800; color:#fff; line-height:1.1; text-align:center;">100%</div>
+                        <input type="range" id="fontScaleRange" class="fs-range" min="85" max="135" step="5" value="100" oninput="window.fontScalePreview(this.value)" onchange="window.fontScaleCommit(this.value)" aria-label="ขนาดตัวอักษร (%)">
+                    </div>
+                    <button type="button" class="spd-step-btn is-sm" onclick="window.bumpFontScale(5)" aria-label="เพิ่มขนาดตัวอักษรขึ้น 5%">+</button>
+                </div>
+                <div id="fontScaleDemo" style="margin-top:10px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:9px 11px;">
+                    <div style="font-size:15px; font-weight:700; color:#fff;">หัวข้อตัวอย่าง — ค่าโดยสารโดยประมาณ</div>
+                    <div style="font-size:11.5px; color:var(--text-dim); margin-top:3px; line-height:1.55;">คำอธิบายตัวอย่าง — ลากแถบแล้วดูว่าพออ่านตอนขับไหม</div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:9px; font-size:11px; color:var(--text-dim);"><span>ค่าเริ่มต้น 100% = ขนาดเดิมของแอป</span><button type="button" id="fontScaleReset" onclick="window.fontScaleReset()" class="manual-timer-btn" style="padding:7px 12px; font-size:12.5px; gap:4px;" disabled><span class="material-symbols-outlined" style="font-size:17px;">restart_alt</span> คืนค่า 100%</button></div>
             </div>
             <!-- 🔐 (19 ก.ย. 69) ยศที่แอดมินติ๊กออกจากสิทธิ์ “แจ้งเตือนความเร็วเกินกำหนด” → ซ่อนสวิตช์ + กล่องลิมิต แล้วขึ้นข้อความนี้แทน -->
             <div id="speedPermHint" style="display:none; font-size:12px; color:var(--neon-yellow); background:rgba(241,196,15,0.10); border:1px solid rgba(241,196,15,0.35); border-radius:10px; padding:8px 12px; margin-bottom:var(--space-field); text-align:left;">🔒 <b>แจ้งเตือนความเร็วเกินกำหนด</b> ถูกปิดไว้สำหรับตำแหน่งของคุณ — ติดต่อผู้ดูแลระบบถ้าต้องการใช้</div>
@@ -9475,6 +9522,37 @@
     };
     window.__layerCount = () => window.__visibleLayers().length;
     // ปิด "หนึ่งชั้น" — ใช้ทางเดียวกับที่ผู้ใช้กดเอง เพื่อให้สถานะภายในถูกล้างครบ (ไม่ใช่ซ่อนดื้อ ๆ)
+    // 🚕 (20 ก.ย. 69) “กด back/ESC จากจอมิเตอร์ใหญ่ = ย่อแอป” (ไม่ปิดจอ!)
+    //   🐞 ที่ผู้ใช้เจอ: กดย้อนกลับ/ESC จากจอมิเตอร์ใหญ่ แล้วไปโผล่ “หน้าแรกที่มีการ์ดมิเตอร์” ทุกครั้ง
+    //      ต้นเหตุ: __closeLayer/__escCloseTop เรียก toggleModal('trackerZoomOverlay', false) ตรง ๆ
+    //      ⇒ ข้ามด่าน tryCloseTrackerZoom() ที่กันไว้ตอนมิเตอร์เดิน
+    //   ⇒ ต่อไป “ปิดจอมิเตอร์ใหญ่ด้วย back/ESC ตอนมิเตอร์เดิน” = ย่อแอปอย่างเดียว
+    //     ① แอป Android (APK): เรียก TaxiNative.minimizeApp() → moveTaskToBack(true) = ย่อจริง (มิเตอร์/GPS เดินต่อ)
+    //     ② เบราว์เซอร์/คอมพิวเตอร: ย่อแท็บไม่ได้ ⇒ “คงจอมิเตอร์ไว้” (ไม่ไปโผล่หน้าแรก) + บอกสั้น ๆ ครั้งเดียวใน 10 วิ
+    window.__tzZoomMinimize = () => {
+        try {
+            const C = window.TaxiNative;
+            if (C && typeof C.minimizeApp === 'function') { C.minimizeApp(); return 'native'; }
+        } catch (e) {}
+        try {
+            const now = Date.now();
+            if (now - (window.__tzMinToastAt || 0) > 10000) {
+                window.__tzMinToastAt = now;
+                window.showToast('เบราว์เซอร์ย่อแอปไม่ได้ — มิเตอร์ยังเดินต่อ', false);
+            }
+        } catch (e) {}
+        return 'keep';
+    };
+    // ควร “ย่อ” แทน “ปิดชั้น” หรือไม่ — ใช้ร่วมกันทั้ง back (popstate) และ ESC
+    window.__tzZoomBackShouldMinimize = (id) => {
+        try {
+            if (id !== 'trackerZoomOverlay') return false;
+            if (!window.isManualRunning) return false;      // ยังไม่เริ่มเที่ยว = ปิดจอได้ตามปกติ
+            const ov = document.getElementById('trackerZoomOverlay');
+            if (!ov || getComputedStyle(ov).display === 'none') return false;
+            return true;
+        } catch (e) { return false; }
+    };
     window.__closeLayer = (id) => {
         try {
             if (!id) return '';
@@ -9482,6 +9560,8 @@
             if (id === 'pinPad') { window.pinPadClose(); return id; }
             if (id === 'sideMenuOverlay') { window.toggleSideMenu(false); return id; }
             if (id === 'qrZoomOverlay') { const q = document.getElementById(id); if (q) q.style.display = 'none'; return id; }
+            // 🚕 (20 ก.ย. 69) ปุ่ม back ของ Android ปิดชั้นบนสุด ⇒ ถ้าเป็นจอมิเตอร์ใหญ่+มิเตอร์เดิน = ย่อแอป ไม่ปิดจอ
+            if (window.__tzZoomBackShouldMinimize(id)) { window.__tzZoomMinimize(); return id; }
             // 🛡 จด “ผู้ใช้กดปิดจอมิเตอร์ใหญ่เอง” → กันตัวเปิดอัตโนมัติ (ดู startTripFromPreview) ดึงกลับมา
             if (id === 'trackerZoomOverlay') { window.__tzZoomUserClosedAt = Date.now(); }
             const el = document.getElementById(id);
@@ -15392,7 +15472,11 @@
         window.syncFareTollBtn();
         if (window.surchargeList.length > 0) $('surchargeDetails').style.display = 'flex';
         
-        $('liveTracker').style.display = 'block'; 
+        // 🚕 (20 ก.ย. 69) ผู้ใช้สั่ง “ตัดหน้าที่ 2 ออก” ⇒ ระหว่างเที่ยวเดินอยู่ หน้าแรกไม่โชว์การ์ดมิเตอร์ใบเล็กอีก
+        //   (ข้อมูลทุกบรรทัดอยู่บนจอมิเตอร์ใหญ่แล้ว · กลับเข้าแอป/แตะปุ่มมินิแมพ = เปิดจอมิเตอร์ใหญ่ได้เหมือนเดิม)
+        //   ใช้คลาสบน <body> เพื่อให้ CSS บังคับซ่อนจริง แม้มีโค้ดอื่นเขียน inline display ทับในภายหลัง
+        try { document.body.classList.add('trip-running'); } catch (e) {}
+        try { $('liveTracker').style.display = 'none'; } catch (e) {}
 
         if (seed) {
             // ⏯️ เริ่มต่อจากเที่ยวที่บันทึกไว้ (แอปปิด/รีเฟรชกระทันหัน): คงเวลาเริ่ม กม. เวลาจอด ค่าทางด่วน เดิมไว้
@@ -16957,6 +17041,7 @@
     
     window.stopTracking = () => { 
         try { window.nativeSync(false); } catch (e) {}   // 📱 จบเที่ยว = หยุดเก็บพิกัดฉากหลัง
+        try { document.body.classList.remove('trip-running'); } catch (e) {} // 🚕 จบเที่ยว = คืนสภาพหน้าแรก (ดู startMeterAndTracking)
         releaseWakeLock(); 
         window.stopSilentAudio(); 
         window.hideMap(); // Hide map when tracking stops
@@ -18261,11 +18346,11 @@
     const chgTodayBuildStamp = () => chgTodayStr() + chgBuildSuffix();
     // ✅ อัปเดต APP_BUILD หลังจากฟังก์ชันถูกประกาศเสร็จ (แก้ Temporal Dead Zone — อ้างก่อนประกาศ)
     try { APP_BUILD = chgTodayBuildStamp(); const bs = document.getElementById('buildStamp'); if (bs) bs.textContent = 'รุ่น ' + APP_BUILD; } catch(e) {}
-    const APP_RELEASE_DATE = '2026-09-19'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
+    const APP_RELEASE_DATE = '2026-09-20'; // วันที่โค้ดรอบนี้ถูก push (อัปเดตทุกครั้งที่ปล่อยงานใหม่ — static โดย dev)
     // 🔄 เวอร์ชันเว็บที่กำลังรัน — แอปใช้เทียบกับ version.json เพื่อรู้ว่ามีของใหม่รออยู่ไหม
     //    ⛔ ห้ามแก้ค่านี้ด้วยมือ: สคริปต์ `tests/stamp-web-version.ps1` เป็นคนเขียน (รันก่อน push ทุกครั้ง)
     //    ด่านตรวจ tests/pre-push.ps1 จะล้มถ้าไฟล์นี้กับ version.json ไม่ตรงกัน
-    const APP_WEB_VERSION = 'dff65afaa6';
+    const APP_WEB_VERSION = '677e307c7c';
     try { window.APP_WEB_VERSION = APP_WEB_VERSION; } catch (e) {}
     //    ⚠️ ต้องอัปเดตทุกวันที่ปล่อยงาน — ถ้าปล่อยข้ามวันโดยไม่แก้ เครื่องใหม่ (ไม่มี plan ที่) จะตรึง bullet ไปวันที่เก่า
     //       แล้วไปต่อท้ายการ์ดวันนั้น = วันหายแบบเดิม (ดู .freebuff/run.md → ตัวช่วยข้ามวันอัตโนมัติ)
@@ -18833,6 +18918,14 @@
         ['2026-09-19', '🔍 ชิป “ลิมิต 80” ใหญ่ขึ้นเท่าตัว + จัดกลางการ์ดความเร็ว ไม่ลอยชิดข้างบน'],
         ['2026-09-19', '🔀 บล็อกลิมิตความเร็วใน “ตั้งค่าทั่วไป” อยู่บนสุดเหมือนกันทุกยศแล้ว'],
         ['2026-09-19', '🛠 เครื่องที่ลำดับเก่าค้างอยู่ = ซ่อมเองทันทีที่เปิดหน้าตั้งค่าทั่วไป'],
+        // ---------- 20 ก.ย. 2569 ----------
+        ['2026-09-20', '🚕 กด back/ESC จากจอมิเตอร์ใหญ่ = ย่อแอป — ไม่ปิดจอไปโผล่หน้าแรกอีก'],
+        ['2026-09-20', '📱 ย่อจริงในแอป Android · เบราว์เซอร์ย่อไม่ได้ = คงจอมิเตอร์ไว้แล้วบอกสั้น ๆ'],
+        ['2026-09-20', '🚫 ระหว่างเที่ยว หน้าแรกไม่โชว์การ์ดมิเตอร์ใบเล็กที่ซ้ำกับจอใหญ่อีก'],
+        ['2026-09-20', '🧪 ชุดทดสอบออฟไลน์ 8 สถานการณ์ กัน ESC/back ปิดจอมิเตอร์กลางเที่ยว'],
+        ['2026-09-20', '🔠 ปรับ “ขนาดตัวอักษร” ได้เองจากเมนูตั้งค่าการใช้งาน › ตั้งค่าทั่วไป (แถบเลื่อน 85–135%)'],
+        ['2026-09-20', '👁 ลากแถบ = ตัวอักษรใหญ่ขึ้นทั้งแอปทันที (หัวข้อ · คำอธิบาย · ปุ่ม · ตัวเลขบนจอมิเตอร์)'],
+        ['2026-09-20', '🧑🦱 ทุกตำแหน่งปรับได้เอง (ไม่ต้องขอสิทธิ์) · จำต่อบัญชี ใช้ทุกเครื่อง · มีปุ่มคืนค่า 100%'],
     ];
     // เลขเวอร์ชัน + สีของการ์ดวันเก่า (ใช้ประกอบเป็น CHANGELOG_SEED) — วันล่าสุดอยู่ใน APP_RELEASE_DATE
     const CHG_SEED_META = {
@@ -18850,6 +18943,8 @@
         '2026-09-16': { v: '1.2.16', color: 0 },
         '2026-09-17': { v: '1.2.17', color: 0 },
         '2026-09-18': { v: '1.2.18', color: 0 },
+        // 🗓 (20 ก.ย. 69) 19 ก.ย. กลายเป็น “วันเก่า” แล้ว (ปล่อยรอบใหม่ 20 ก.ย.) ⇒ ต้องมีเลขเวอร์ชัน/สีของตัวเอง
+        '2026-09-19': { v: '1.2.19', color: 1 },
         // ⛔ ห้ามใส่ “วันของ APP_RELEASE_DATE” ที่นี่ — แอปสร้างการ์ดของวันปัจจุบันเอง (ใส่แล้วการ์ดจะซ้ำ)
     };
     const chgShort = (t) => String(t == null ? '' : t).trim();
@@ -19143,7 +19238,7 @@
                 try {
                     const cacheKey = 'taxi_user_cache_' + (loggedInUserId || localStorage.getItem('taxi_user_id') || '');
                     const toCache = {};
-                    ['username','role','displayName','phoneNumber','photoURL','qrCodeURL','taxiType','tollwayMode','companyName','plateNo','killIdleCapMin','vibrateGold','toastSound','navVoice','autoResume','autoFullscreen','extraPerms','menuOrder','themeMode','oledMode','googleUid','googleEmail','authProvider','authLinked','setupDoneAt','usernameChangedAt','usernameChanges'].forEach(k => {
+                    ['username','role','displayName','phoneNumber','photoURL','qrCodeURL','taxiType','tollwayMode','companyName','plateNo','killIdleCapMin','vibrateGold','toastSound','navVoice','autoResume','autoFullscreen','fontScale','extraPerms','menuOrder','themeMode','oledMode','googleUid','googleEmail','authProvider','authLinked','setupDoneAt','usernameChangedAt','usernameChanges'].forEach(k => {
                         if (data[k] !== undefined) toCache[k] = data[k];
                     });
                     // 🔑 "บัญชีนี้มีรหัสผ่านไหม" ต้องรู้ได้ทันทีตอนเปิดแอป (ไม่เก็บแฮชลงเครื่อง)
@@ -19303,6 +19398,13 @@
             window.userAutoFs = data.autoFullscreen !== false;
             const autoFsSel = document.getElementById('editAutoFs');
             if (autoFsSel) autoFsSel.checked = window.userAutoFs;
+            // 🔠 (20 ก.ย. 69 · ผู้ใช้สั่ง) “ขนาดตัวอักษร” — ทุกยศปรับเองได้ (ไม่ผูกสิทธิ์)
+            //   กติกา: เอกสารบัญชีมีค่า = ใช้ค่านั้น (ข้ามเครื่อง) · ไม่มี = คงค่าที่จำไว้ในเครื่องนี้ (อย่าล้างค่าผู้ใช้)
+            const __fsDoc = parseInt(data.fontScale, 10);
+            window.userFontScale = window.__fsClamp(isNaN(__fsDoc) ? window.__fsLoadLocal() : __fsDoc);
+            window.__fsLastSaved = window.userFontScale;   // ค่าที่โหลดมาจริง = ค่าตั้งต้น (ไม่เขียนซ้ำโดยไม่จำเป็น)
+            try { window.applyFontScale(window.userFontScale); } catch (e) {}
+            try { localStorage.setItem(window.__fsKey, String(window.userFontScale)); } catch (e) {}
             // 🔒 ค่า 'สั่น toast ทอง' และ 'เต็มจออัตโนมัติ' ที่แอดมินตั้งให้พนักงานเป็นค่าบังคับ — เฉพาะแอดมินเท่านั้นที่แก้ได้ (ปิดช่อง + แสดงคำเตือน)
             // 🔐 สิทธิ์ชุดที่ 2: ใครแก้ “ค่าที่ระบบบังคับ” ได้ — เดิม = แอดมินเท่านั้น ตอนนี้ตั้งได้รายตำแหน่ง (ค่าเริ่มต้น: Manager ได้)
             const canEditManagedSettings = window.canEditManagedSettings ? window.canEditManagedSettings() : (currentUserRole === 'Admin');
@@ -20067,6 +20169,9 @@
         os.forEach((el, i) => { const k = zOf(el) * 1000 + i; if (k > best) { best = k; top = el; } });
         // เมนูแฮมเบอร์เกอร์อยู่ชั้นบนสุดของตัวเอง (z 9000+) — ถ้าเปิดค้างไว้ให้ปิดก่อนหน้าต่าง
         if (menuOpen && (!top || zOf(menu) > zOf(top))) { try { window.toggleSideMenu(false); } catch (e) {} return 'sideMenu'; }
+        // 🚕 (20 ก.ย. 69) ESC บนจอมิเตอร์ใหญ่ (มิเตอร์เดินอยู่) = ย่อแอป — ห้ามปิดจอ (ดู __tzZoomMinimize)
+        //   ⛔ วาง “หลัง” การตัดสินเมนูแฮมเบอร์เกอร์ ⇒ เมนูที่เปิดอยู่บนสุดยังปิดด้วย ESC ได้ตามเดิม
+        if (top && window.__tzZoomBackShouldMinimize(top.id)) { window.__tzZoomMinimize(); return top.id; }
         if (!top) return '';
         if (top.id === 'loginOverlay' || top.id === 'welcomeSetupModal') return ''; // หน้าจอที่ต้องกรอกให้จบ — ห้ามปิดด้วย ESC
         // ปิดแบบ “เหมือนกดปุ่มกากบาทของหน้าต่างนั้นจริง ๆ” → ใช้ปุ่มปิด/ปุ่มยกเลิกของกล่องเอง
@@ -21449,6 +21554,103 @@
     if (typeof window.userSpeedTollKmh !== 'number' || isNaN(window.userSpeedTollKmh)) window.userSpeedTollKmh = window.SPD_TOLL_DEFAULT;
     if (typeof window.userSpeedZoneAuto === 'undefined') window.userSpeedZoneAuto = true;
     if (typeof window.userSpeedWarn === 'undefined') window.userSpeedWarn = true;
+
+    // ==================== 🔠 (20 ก.ย. 69 · ผู้ใช้สั่ง) “ขนาดตัวอักษร” — ปรับได้ทุกยศ ====================
+    //  คำสั่งผู้ใช้: “ตอนนี้ฟอนต์บางอย่างมันเล็ก ... อยากให้มีการปรับขนาดฟอนต์เหมือนเป็นแถบสกรอลล์เลื่อน
+    //               เลื่อนไปทางขวาก็ใหญ่ขึ้นมาอีกนิด ปรับไปเรื่อย ๆ แล้วก็เมนูให้อยู่ในเมนูตั้งค่า
+    //               ทุกยูสเซอร์สามารถจัดการปรับขนาดฟอนต์ได้ ไม่ว่าจะล็อกอินด้วยยศไหน”
+    //  ทำไมใช้ zoom ที่รากเอกสาร: แอปนี้กำหนด font-size เป็น px ตรง ๆ หลายพันจุด (แก้ทีละจุดไม่ไหว)
+    //    zoom = ย่อ/ขยายทั้งเอกสารแบบเดียวกับ “ซูมหน้าเว็บ” ของเบราว์เซอร์ ⇒ หัวข้อ/คำอธิบาย/ปุ่ม/ตัวเลข โตพร้อมกันแบบสัดส่วน
+    //    และที่สำคัญ: layout viewport หดตาม ⇒ ไม่เกิดการเลื่อนแนวนอน (วัดจริงในพรีวิว: 135% แล้ว scrollWidth 444 < ความกว้างจอ 450)
+    //    ⚠️ 100% = ต้อง “ถอด zoom ออก” ไม่ใช่ตั้ง 1 (ไม่งั้นทับค่าอื่นที่อาจตั้งไว้)
+    //  เก็บค่า 2 ที่: localStorage `taxi_font_scale_v1` (ใช้ทันทีตั้งแต่หน้าล็อกอินก่อนรู้ว่าใครล็อกอิน) + ฟิลด์ `fontScale` ในเอกสารบัญชี (ข้ามเครื่อง)
+    //  ⛔ ห้ามเขียน Firestore ทุกครั้งที่ลาก — รวมด้วย debounce 900 มิลลิวินาที (บทเรียน: กดรัว ๆ = เปลืองโควตา)
+    window.FONT_SCALE_MIN = 85;
+    window.FONT_SCALE_MAX = 135;
+    window.FONT_SCALE_STEP = 5;
+    window.FONT_SCALE_DEFAULT = 100;
+    window.__fsKey = 'taxi_font_scale_v1';
+    // 🧪 กติกาล้วน (ทดสอบออฟไลน์ได้ใน tests/font-scale-offline.html)
+    window.__fsClamp = (v) => {
+        const n = parseInt(v, 10);
+        if (isNaN(n)) return window.FONT_SCALE_DEFAULT;
+        return Math.min(window.FONT_SCALE_MAX, Math.max(window.FONT_SCALE_MIN, n));
+    };
+    window.__fsLoadLocal = () => {
+        try { const raw = localStorage.getItem(window.__fsKey); return (raw === null) ? window.FONT_SCALE_DEFAULT : window.__fsClamp(raw); }
+        catch (e) { return window.FONT_SCALE_DEFAULT; }
+    };
+    // 🎨 จุดเดียวของความจริง: ใช้ค่ากับทั้งแอป + ซิงก์หน้าตาแถบเลื่อน/ป้าย/CSS
+    window.applyFontScale = (v) => {
+        const s = window.__fsClamp(v);
+        window.userFontScale = s;
+        try {
+            const root = document.documentElement;
+            if (s === window.FONT_SCALE_DEFAULT) root.style.removeProperty('zoom'); else root.style.zoom = String(s / 100);
+            root.setAttribute('data-font-scale', String(s));
+        } catch (e) {}
+        const lbl = document.getElementById('fontScaleVal');
+        if (lbl && lbl.__fsTxt !== s + '%') { lbl.__fsTxt = s + '%'; lbl.innerText = s + '%'; }
+        const rng = document.getElementById('fontScaleRange');
+        if (rng && String(rng.value) !== String(s)) rng.value = String(s);
+        const rst = document.getElementById('fontScaleReset');
+        if (rst) rst.disabled = (s === window.FONT_SCALE_DEFAULT);   // 🧷 ไม่มีการเปลี่ยนแปลง = ปุ่มคืนค่าเทากดไม่ได้ (กติกาเดียวกับทั้งแอป)
+        return s;
+    };
+    // ✋ ลากดูสด ๆ (oninput) — ยังไม่เขียน Firestore
+    window.fontScalePreview = (v) => window.applyFontScale(v);
+    window.__fsSaveTimer = null;
+    window.__fsNoteTimer = null;
+    window.__fsLastSaved = null;
+    window.__fsSavedFlash = () => {
+        const el = document.getElementById('fontScaleSaved');
+        if (!el) return;
+        el.style.display = 'block';
+        try { clearTimeout(window.__fsNoteTimer); } catch (e) {}
+        window.__fsNoteTimer = setTimeout(() => { try { el.style.display = 'none'; } catch (e) {} }, 1800);
+    };
+    window.__fsSaveSoon = () => {
+        try { clearTimeout(window.__fsSaveTimer); } catch (e) {}
+        window.__fsSaveTimer = setTimeout(() => { window.__fsSaveNow(); }, 900);
+    };
+    window.__fsSaveNow = async () => {
+        try { clearTimeout(window.__fsSaveTimer); } catch (e) {}
+        const s = window.__fsClamp(window.userFontScale);
+        try { localStorage.setItem(window.__fsKey, String(s)); } catch (e) {}
+        window.__fsSavedFlash();
+        // 🧪 โหมดทดสอบ/โหมดไม่เขียน DB = หยุดตรงนี้ (ไม่ยิง Firestore เลย)
+        if (!loggedInUserId || window.__testNoDbWrites) return s;
+        if (window.__fsLastSaved === s) return s;
+        const patch = { fontScale: s };
+        window.__fsLastSaved = s;
+        try {
+            if (typeof window.__fsTimeout === 'function') await window.__fsTimeout(updateDoc(doc(db, 'users', loggedInUserId), patch), 4000);
+            else await updateDoc(doc(db, 'users', loggedInUserId), patch);
+        } catch (e) {
+            try { if (typeof window.__fsRestPatch === 'function') await window.__fsRestPatch(loggedInUserId, patch); } catch (e2) {}
+        }
+        return s;
+    };
+    // 💾 ปล่อยนิ้วบนแถบเลื่อน / กดปุ่ม − + → บันทึกแบบรวบการลาก
+    window.fontScaleCommit = (v) => { const s = window.applyFontScale(v); window.__fsSaveSoon(); return s; };
+    window.bumpFontScale = (delta) => {
+        const n = parseInt(delta, 10);
+        const step = (n < 0 ? -1 : 1) * (Math.abs(n) || window.FONT_SCALE_STEP);
+        const next = window.__fsClamp((parseInt(window.userFontScale, 10) || window.FONT_SCALE_DEFAULT) + step);
+        window.applyFontScale(next);
+        try { window.playSound(step > 0 ? 'plus' : 'minus'); } catch (e) {}
+        window.__fsSaveSoon();
+        return next;
+    };
+    window.fontScaleReset = () => {
+        window.applyFontScale(window.FONT_SCALE_DEFAULT);
+        try { window.playSound('minus'); } catch (e) {}
+        window.__fsSaveNow();
+        return window.FONT_SCALE_DEFAULT;
+    };
+    // 🚀 ใช้ค่าที่จำไว้ในเครื่องทันทีตั้งแต่บูต (ครอบหน้าล็อกอินด้วย — ก่อนรู้ว่าเป็นบัญชีใคร)
+    try { window.userFontScale = window.__fsLoadLocal(); window.applyFontScale(window.userFontScale); } catch (e) { window.userFontScale = window.FONT_SCALE_DEFAULT; }
+
     // 🧭 กติกาล้วน (ทดสอบออฟไลน์ได้ใน tests/speed-zone-offline.html) — ตัดสินโซนจาก “กิโลบนเส้นทาง” + ช่วงทางด่วนของเที่ยวนี้
     //    ช่วงทางด่วนของแต่ละด่าน = [startKm, endKm] (มาจากข้อมูลเส้นทางจริง ไม่กินโควตาเพิ่ม)
     window.SPD_ZONE_TOL_KM = 0.05;   // เผื่อ 50 ม. ก่อน/หลังด่าน — กันสลับไป-กลับตอน GPS แกว่งริมหัวด่าน
@@ -21889,6 +22091,10 @@
         if (box && box.parentElement !== host) host.insertBefore(box, warn.nextSibling);
         if (host.firstChild !== warn) host.insertBefore(warn, host.firstChild);      // ขยับขึ้นบนสุดเสมอ
         if (box && warn.nextSibling !== box) host.insertBefore(box, warn.nextSibling);
+        // 🔠 (20 ก.ย. 69) “ขนาดตัวอักษร” = บล็อกที่ 3 จากบนสุดเสมอ ⇒ หาง่ายทุกยศ ไม่ต้องเลื่อนหาท้ายแท็บ
+        //    (insertBefore ย้ายโหนดให้เอง ⇒ เครื่องที่เมานต์ไปแล้วก็ซ่อมตัวเองเมื่อเปิดหน้าตั้งค่าทั่วไป)
+        const fsz = document.getElementById('fontScaleRow');
+        if (fsz && box && fsz.previousElementSibling !== box) host.insertBefore(fsz, box.nextSibling);
         return host.firstChild === warn;
     };
     window.__fillGeneralSettingsControls = () => {
@@ -21906,6 +22112,8 @@
         if (arSel) arSel.checked = window.userAutoResume !== false;      // ⚡ เริ่มต่อเที่ยวค้างอัตโนมัติ
         const afSel = document.getElementById('editAutoFs');
         if (afSel) afSel.checked = window.userAutoFs !== false;          // 📺 เต็มจออัตโนมัติ
+        // 🔠 (20 ก.ย. 69) ขนาดตัวอักษร — ตัวแถบเลื่อน/ป้าย% ต้องตรงกับค่าจริงทุกครั้งที่เปิดหน้าตั้งค่าทั่วไป
+        try { window.applyFontScale(window.userFontScale); } catch (e) {}
         const mf = document.getElementById('editManualFs');
         if (mf) mf.checked = !!(document.fullscreenElement || document.webkitFullscreenElement);
         // 🚀 (18 ก.ย. 69) ลิมิตความเร็ว + สวิตช์เตือนเมื่อเกิน (ค่าเริ่มต้น เปิด · 80 กม./ชม.)
@@ -21983,6 +22191,9 @@
             window.userSpeedWarn = spdFields.speedWarn;
             window.userSpeedZoneAuto = spdFields.speedZoneAuto;
             try { window.__spdResetEpisode(); } catch (e) {}
+            // 🔠 (20 ก.ย. 69) ขนาดตัวอักษร — บันทึกกับปุ่ม “บันทึกข้อมูล” ด้วย (ปกติบันทึกอัตโนมัติอยู่แล้วตอนปล่อยแถบเลื่อน)
+            const fszEl = document.getElementById('fontScaleRange');
+            if (fszEl) { payload.fontScale = window.__fsClamp(fszEl.value); window.userFontScale = payload.fontScale; window.__fsLastSaved = payload.fontScale; }
             const kaEl = document.getElementById('editKeepAwake');
             if (kaEl) {
                 payload.keepAwake = kaEl.checked; window.userKeepAwake = kaEl.checked;

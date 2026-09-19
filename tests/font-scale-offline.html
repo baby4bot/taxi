@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ทดสอบออฟไลน์ — แถบเลื่อน “ขนาดตัวอักษร” (85–135% ทุกยศ)</title>
+<style>
+    :root { --bg: #0d1117; --card: #161b26; --line: rgba(255,255,255,0.09); --green: #2ecc71; --red: #ff5b5b; --gold: #facc15; --sky: #7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #e6e9f0; font-family: "Segoe UI", Tahoma, Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .note { font-size: 13px; color: #9aa3b5; margin: 0 0 14px; line-height: 1.65; max-width: 980px; }
+    code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 5px; }
+    button { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
+    #summary { margin: 14px 0 6px; font-size: 15px; font-weight: 700; }
+    #offline { font-size: 12.5px; color: var(--gold); margin-bottom: 12px; }
+    ol#results { list-style: none; padding: 0; margin: 0; max-width: 980px; }
+    ol#results li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; line-height: 1.55; }
+    ol#results li.pass { border-left: 4px solid var(--green); }
+    ol#results li.fail { border-left: 4px solid var(--red); }
+    .st { font-weight: 700; }
+    .detail { color: #9aa3b5; font-size: 12.5px; white-space: pre-wrap; }
+    li.fail .detail { color: #ffb3b3; }
+    #stage { margin-top: 16px; }
+    #stage .cap { font-size: 12.5px; color: #9aa3b5; margin-bottom: 6px; }
+    iframe { width: 412px; height: 800px; border: 1px solid var(--line); border-radius: 12px; background: #000; }
+</style>
+</head>
+<body>
+    <h1>🧪 ชุดทดสอบออฟไลน์: แถบเลื่อน “ขนาดตัวอักษร”</h1>
+    <p class="note">
+        โหลดแอปจริง (<code>../index.html?fsNowrite=1</code>) ใน iframe · <b>ตัดเน็ตทั้งหมด</b> · ไม่เขียน Firestore
+        <br><b>คำสั่งผู้ใช้ 20 ก.ย. 69:</b> *“ฟอนต์บางส่วนมันเล็ก ... อยากให้มีแถบสกรอลล์เลื่อน เลื่อนไปทางขวาก็ใหญ่ขึ้น
+        ปรับไปเรื่อย ๆ แล้วก็เมนูให้อยู่ในเมนูตั้งค่า ทุก user จัดการปรับได้ ไม่ว่าจะล็อกอินด้วยยศไหน”*
+        <br>⇒ ต้องพิสูจน์: ① ค่าถูกจำกัดช่วง 85–135 (ค่าขยะ/ค่าว่าง → 100) ② ลากแล้ว <b>ตัวอักษรโตจริง</b> เป็นสัดส่วน
+        ③ 100% = ถอด zoom ออกเป๊ะ ④ ไม่เกิดการเลื่อนแนวนอน ⑤ ปุ่ม − / + ทีละ 5 และไม่เกินช่วง
+        ⑥ ปล่อยนิ้ว = บันทึกอัตโนมัติ (debounce) ลงเครื่อง ⑦ ปุ่ม “คืนค่า 100%” เทาเมื่อยังไม่เปลี่ยน · แดงเมื่อเปลี่ยน
+        ⑧ อยู่ในเมนูตั้งค่าการใช้งาน › ตั้งค่าทั่วไป (บล็อกที่ 3 จากบน) และ <b>ไม่มีด่านสิทธิ์</b> (ทุกยศใช้ได้)
+        ⑨ ไม่มีช่องติ๊กดิบในแถวนี้ (ใช้แถบเลื่อนเท่านั้น) ⑩ ไม่ยิงคำขอออกเน็ต/ไม่เขียน Firestore
+        <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
+        <code>http://127.0.0.1:58911/tests/font-scale-offline.html</code>
+    </p>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (13 สถานการณ์)</button>
+    <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
+    <div id="summary"></div>
+    <ol id="results"></ol>
+    <div id="stage">
+        <div class="cap">🖥️ จอจำลองของแอปที่ใช้ทดสอบ (412 × 800 — ต้องมองเห็น ไม่ใช่ display:none)</div>
+        <iframe id="appFrame" src="about:blank"></iframe>
+    </div>
+
+<script>
+(function () {
+    const frame = document.getElementById('appFrame');
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const offlineEl = document.getElementById('offline');
+    let passCount = 0, failCount = 0;
+    const failures = [];
+
+    const w = () => frame.contentWindow;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    function assert(cond, msg) { if (!cond) throw new Error(msg); }
+    const near = (a, b, tol) => Math.abs(a - b) <= tol;
+
+    // ============================ สตับ: ตัดเน็ตทั้งหมด ============================
+    let stubsInstalled = false;
+    function installStubs() {
+        const cw = w();
+        if (stubsInstalled) return;
+        stubsInstalled = true;
+        cw.__testNoDbWrites = true;                       // ห้ามเขียน Firestore (แอปอ่านธงนี้ตอนบันทึก)
+        cw.__net = { blockedFetch: 0, blockedXhr: 0, lastUrl: '' };
+        const nativeFetch = cw.fetch ? cw.fetch.bind(cw) : null;
+        cw.fetch = function (url, opts) {
+            const u = String((url && url.url) ? url.url : url);
+            const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+            if (!isLocal) { cw.__net.blockedFetch++; cw.__net.lastUrl = u; return Promise.reject(new Error('offline-test: บล็อกคำขอออกเน็ต → ' + u)); }
+            return nativeFetch ? nativeFetch(url, opts) : Promise.reject(new Error('no fetch'));
+        };
+        const NativeXHR = cw.XMLHttpRequest;
+        cw.XMLHttpRequest = function () {
+            const x = new NativeXHR();
+            const open = x.open.bind(x);
+            x.open = function (method, url) {
+                const u = String(url);
+                const isLocal = u.indexOf('http') !== 0 || u.indexOf(cw.location.origin) === 0 || u.indexOf('127.0.0.1') >= 0 || u.indexOf('localhost') >= 0;
+                if (!isLocal) { cw.__net.blockedXhr++; cw.__net.lastUrl = u; x.send = function () {}; return; }
+                return open.apply(null, arguments);
+            };
+            return x;
+        };
+        // 🎵 นับเสียงตอบรับ (ปุ่ม − + / คืนค่า) โดยไม่ต้องมี audio จริง
+        cw.__sounds = [];
+        try { cw.playSound = function (type) { cw.__sounds.push(String(type)); }; } catch (e) {}
+    }
+
+    async function bootApp(force) {
+        stubsInstalled = false;
+        if (force || frame.src === 'about:blank') {
+            frame.src = '../index.html?fsNowrite=1&fsFontTest=1&t=' + Date.now();
+        }
+        const t0 = Date.now();
+        while (Date.now() - t0 < 220000) {
+            await wait(700);
+            try {
+                const cw = w();
+                installStubs();
+                if (cw && typeof cw.applyFontScale === 'function' && cw.document.getElementById('mainApp') && cw.document.getElementById('mainApp').style.display === 'flex') {
+                    await wait(600);
+                    return true;
+                }
+            } catch (e) { /* ระหว่างโหลดข้ามโดเมนชั่วคราว */ }
+        }
+        throw new Error('แอปไม่บูตภายในเวลาที่กำหนด (220 วิ)');
+    }
+
+    function log(name, ok, detail) {
+        const li = document.createElement('li');
+        li.className = ok ? 'pass' : 'fail';
+        li.innerHTML = '<span class="st">' + (ok ? '✅ ผ่าน' : '❌ ไม่ผ่าน') + ' — ' + name + '</span>' + (detail ? '<div class="detail">' + detail + '</div>' : '');
+        resultsEl.appendChild(li);
+        if (ok) passCount++; else { failCount++; failures.push(name + (detail ? ' :: ' + detail : '')); }
+        summaryEl.textContent = 'สรุป: ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount;
+        return ok;
+    }
+
+    const T = async (name, fn) => {
+        try { const r = await fn(); log(name, true, typeof r === 'string' ? r : ''); return true; }
+        catch (e) { log(name, false, e && e.message ? e.message : String(e)); return false; }
+    };
+
+    // วัดความกว้างจริงของข้อความอ้างอิง (ใช้หัวเรื่องกลางจอ) — ต้องได้สัดส่วนเท่ากับ %
+    function probeSize(cw) {
+        const el = cw.document.querySelector('.header-center h2') || cw.document.querySelector('h2');
+        if (!el) throw new Error('ไม่พบข้อความอ้างอิง (.header-center h2)');
+        return el.getBoundingClientRect().width;
+    }
+
+    async function run() {
+        resultsEl.innerHTML = '';
+        passCount = 0; failCount = 0; failures.length = 0;
+        summaryEl.textContent = '';
+        offlineEl.textContent = 'สถานะเน็ต: กำลังบูตแอปในโหมดออฟไลน์ (ตัดเน็ตทั้งหมด)…';
+        document.getElementById('runBtn').disabled = true;
+        try {
+            await bootApp(true);
+        } catch (e) {
+            log('บูตแอปใน iframe', false, e.message);
+            document.getElementById('runBtn').disabled = false;
+            return;
+        }
+        const cw = w();
+        offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตแล้ว (ไม่มีการเขียน Firestore · คำขอออกเน็ตถูกบล็อก ' + cw.__net.blockedFetch + ')';
+
+        // ---------- S1: กติกาล้วนของ __fsClamp ----------
+        await T('S1 · __fsClamp จำกัดช่วง 85–135 · ค่าขยะเป็น 100', () => {
+            const c = cw.__fsClamp;
+            assert(c(60) === 85, 'ค่าต่ำกว่า 85 ต้องถูกดันขึ้นเป็น 85 (ได้ ' + c(60) + ')');
+            assert(c(200) === 135, 'ค่าสูงกว่า 135 ต้องถูกดันลงเป็น 135 (ได้ ' + c(200) + ')');
+            assert(c(110) === 110, 'ค่าปกติต้องคงเดิม');
+            assert(c('85') === 85, 'สตริงตัวเลขต้องอ่านได้');
+            assert(c('abc') === 100, 'ค่าขยะต้องเป็น 100 (ได้ ' + c('abc') + ')');
+            assert(c(null) === 100 && c(undefined) === 100, 'ไม่มีค่า = 100');
+            return '60→85 · 200→135 · 110→110 · "abc"→100';
+        });
+
+        // ---------- S2: ค่าที่จำในเครื่อง ----------
+        await T('S2 · อ่านค่าที่จำในเครื่อง + กันค่าเสียหายใน localStorage', () => {
+            const key = cw.__fsKey;
+            assert(typeof key === 'string' && key.length > 0, 'ต้องมีคีย์เก็บในเครื่อง');
+            cw.localStorage.removeItem(key);
+            assert(cw.__fsLoadLocal() === 100, 'ไม่เคยตั้งค่า = 100');
+            cw.localStorage.setItem(key, '999');
+            assert(cw.__fsLoadLocal() === 135, 'ค่าเสียหาย 999 ต้องถูกจำกัดเป็น 135 (ได้ ' + cw.__fsLoadLocal() + ')');
+            cw.localStorage.setItem(key, 'ไม่ใช่ตัวเลข');
+            assert(cw.__fsLoadLocal() === 100, 'ค่าที่อ่านไม่ได้ = 100');
+            cw.localStorage.removeItem(key);
+            return 'คีย์ ' + key + ' · 999→135';
+        });
+
+        // ---------- S3: ใช้ค่ากับทั้งแอป ----------
+        await T('S3 · applyFontScale ตั้ง zoom + ป้าย% + แถบเลื่อนตรงกัน', () => {
+            const s = cw.applyFontScale(125);
+            assert(s === 125, 'คืนค่า 125');
+            assert(cw.document.documentElement.style.zoom === '1.25', 'รากเอกสารต้องมี zoom 1.25 (ได้ ' + cw.document.documentElement.style.zoom + ')');
+            assert(cw.document.documentElement.getAttribute('data-font-scale') === '125', 'ต้องมี data-font-scale=125');
+            assert(cw.document.getElementById('fontScaleVal').textContent === '125%', 'ป้าย% ต้องเป็น 125%');
+            assert(String(cw.document.getElementById('fontScaleRange').value) === '125', 'แถบเลื่อนต้องตามไปที่ 125');
+            assert(cw.document.getElementById('fontScaleReset').disabled === false, 'เปลี่ยนแล้วปุ่มคืนค่าต้องกดได้');
+            return 'zoom=1.25 · ป้าย 125% · ปุ่มคืนค่ากดได้';
+        });
+
+        // ---------- S4: ตัวอักษรโตจริงเป็นสัดส่วน ----------
+        await T('S4 · ตัวอักษรโตจริงตามสัดส่วน (วัดขนาดบนจอ)', () => {
+            cw.applyFontScale(100);
+            const base = probeSize(cw);
+            cw.applyFontScale(125);
+            const at125 = probeSize(cw);
+            cw.applyFontScale(135);
+            const at135 = probeSize(cw);
+            const r125 = at125 / base, r135 = at135 / base;
+            assert(near(r125, 1.25, 0.03), '125% ต้องโตเป็น 1.25 เท่า (ได้ ' + r125.toFixed(3) + ')');
+            assert(near(r135, 1.35, 0.03), '135% ต้องโตเป็น 1.35 เท่า (ได้ ' + r135.toFixed(3) + ')');
+            cw.applyFontScale(100);
+            return 'ความกว้าง ' + base.toFixed(1) + ' → ' + at125.toFixed(1) + ' (×' + r125.toFixed(2) + ') · ' + at135.toFixed(1) + ' (×' + r135.toFixed(2) + ')';
+        });
+
+        // ---------- S5: 100% = ถอด zoom ออกเป๊ะ ----------
+        await T('S5 · 100% = ถอด zoom ออก (ไม่ทับค่าอื่น) + ปุ่มคืนค่าเป็นเทา', () => {
+            cw.applyFontScale(115);
+            assert(cw.document.documentElement.style.zoom === '1.15', 'ก่อนหน้าต้องเป็น 1.15');
+            cw.applyFontScale(100);
+            assert(cw.document.documentElement.style.zoom === '', '100% ต้องไม่มี zoom ค้างอยู่ (ได้ "' + cw.document.documentElement.style.zoom + '")');
+            assert(cw.document.documentElement.getAttribute('data-font-scale') === '100', 'data-font-scale ต้องกลับเป็น 100');
+            assert(cw.document.getElementById('fontScaleReset').disabled === true, 'ยังไม่เปลี่ยน = ปุ่มคืนค่าต้องกดไม่ได้');
+            return 'zoom ถูกถอดออกทั้งหมด · ปุ่มคืนค่าเทา';
+        });
+
+        // ---------- S6: ไม่เกิดการเลื่อนแนวนอน ----------
+        await T('S6 · ไม่เกิดการเลื่อนแนวนอนที่ 100/125/135', () => {
+            const probe = [100, 125, 135].map((s) => {
+                cw.applyFontScale(s);
+                return { s: s, sw: cw.document.documentElement.scrollWidth, iw: cw.innerWidth };
+            });
+            cw.applyFontScale(100);
+            probe.forEach((p) => assert(p.sw <= p.iw + 1, p.s + '% ล้นแนวนอน (scrollWidth ' + p.sw + ' > ' + p.iw + ')'));
+            return probe.map(p => p.s + '%: ' + p.sw + '≤' + p.iw).join(' · ');
+        });
+
+        // ---------- S7: ปุ่ม − / + ทีละ 5 ----------
+        await T('S7 · ปุ่ม − / + ปรับทีละ 5 และมีเสียงตอบรับ', () => {
+            cw.applyFontScale(100);
+            cw.__sounds.length = 0;
+            const up = cw.bumpFontScale(5);
+            assert(up === 105, 'กด + ต้องได้ 105 (ได้ ' + up + ')');
+            const down = cw.bumpFontScale(-5);
+            assert(down === 100, 'กด − ต้องกลับ 100 (ได้ ' + down + ')');
+            assert(cw.__sounds.length === 2, 'ต้องมีเสียงตอบรับ 2 ครั้ง (ได้ ' + cw.__sounds.length + ')');
+            return '+ → ' + up + ' · − → ' + down + ' · เสียง ' + cw.__sounds.join(',');
+        });
+
+        // ---------- S8: ชนเพดาน/พื้น ----------
+        await T('S8 · ชนเพดาน 135 / พื้น 85 แล้วไม่ไปต่อ', () => {
+            cw.applyFontScale(135);
+            const over = cw.bumpFontScale(5);
+            assert(over === 135, 'เกิน 135 ต้องค้างที่ 135 (ได้ ' + over + ')');
+            cw.applyFontScale(85);
+            const under = cw.bumpFontScale(-5);
+            assert(under === 85, 'ต่ำกว่า 85 ต้องค้างที่ 85 (ได้ ' + under + ')');
+            return '135+5 = 135 · 85−5 = 85';
+        });
+
+        // ---------- S9: ลาก = เห็นผลสด (ยังไม่เขียน DB) ----------
+        await T('S9 · ลากดูสด ๆ (oninput) เห็นผลทันทีทั้งแอป', () => {
+            cw.applyFontScale(100);
+            const rng = cw.document.getElementById('fontScaleRange');
+            rng.value = '130';
+            rng.dispatchEvent(new cw.Event('input', { bubbles: true }));
+            assert(cw.userFontScale === 130, 'ลากแล้วค่าต้องเป็น 130 ทันที (ได้ ' + cw.userFontScale + ')');
+            assert(cw.document.documentElement.style.zoom === '1.3', 'ต้องเห็นผลสด ๆ ด้วย (ได้ ' + cw.document.documentElement.style.zoom + ')');
+            assert(cw.document.getElementById('fontScaleVal').textContent === '130%', 'ป้าย% ต้องอัปเดตขณะลาก');
+            return 'ลาก 130 → zoom 1.3 · ป้าย 130%';
+        });
+
+        // ---------- S10: ปล่อยนิ้ว = บันทึกอัตโนมัติ (debounce) ----------
+        await T('S10 · ปล่อยนิ้วแล้วบันทึกอัตโนมัติ (ไม่กดบันทึกทีละครั้ง)', async () => {
+            const rng = cw.document.getElementById('fontScaleRange');
+            cw.applyFontScale(100);
+            await wait(1400);                              // เคลียร์คิวบันทึกเก่า
+            rng.value = '115';
+            rng.dispatchEvent(new cw.Event('change', { bubbles: true }));
+            const early = cw.localStorage.getItem(cw.__fsKey);
+            await wait(1500);
+            const later = cw.localStorage.getItem(cw.__fsKey);
+            assert(later === '115', 'ต้องจำค่า 115 ลงเครื่องหลังปล่อยนิ้ว (ได้ ' + later + ')');
+            assert(cw.document.getElementById('fontScaleSaved').style.display === 'block', 'ต้องขึ้นข้อความ “บันทึกแล้ว ✓” ให้เห็น');
+            return 'จำค่าในเครื่อง = ' + later + ' · ตอนนิ้วเพิ่งปล่อย = ' + (early === null ? '(ยังไม่เขียน)' : early) + ' → เป็นการบันทึกรวบ (debounce)';
+        });
+
+        // ---------- S10b: เส้นทางบันทึกจริงต่อสายไว้ + โหมดทดสอบไม่แตะ Firestore ----------
+        await T('S10b · เส้นทางบันทึกต่อสายจริง · โหมดทดสอบไม่แตะ Firestore เลย', async () => {
+            let fsWrites = 0;
+            const origTimeout = cw.__fsTimeout;
+            cw.__fsTimeout = function () { fsWrites++; return origTimeout.apply(this, arguments); };
+            try {
+                cw.__testNoDbWrites = true;
+                cw.applyFontScale(110);
+                await cw.__fsSaveNow();
+                assert(fsWrites === 0, 'โหมดทดสอบ (__testNoDbWrites) ต้องไม่แตะ Firestore เลย (เรียก ' + fsWrites + ' ครั้ง)');
+                const hasUser = !!cw.localStorage.getItem('taxi_user_id');
+                if (!hasUser) return 'โหมดทดสอบไม่แตะ Firestore ✔ · เครื่องนี้ยังไม่ล็อกอินจึงข้ามการตรวจเส้นทางเขียนจริง';
+                cw.__testNoDbWrites = false;
+                cw.applyFontScale(120);
+                await cw.__fsSaveNow();
+                assert(fsWrites >= 1, 'ค่าฟอนต์ที่เปลี่ยนต้องถูกส่งไปบันทึกกับบัญชีจริง (เรียก __fsTimeout ' + fsWrites + ' ครั้ง)');
+                return 'โหมดทดสอบ 0 ครั้ง · โหมดจริง ' + fsWrites + ' ครั้ง (ผ่าน __fsTimeout = ที่เดียวของหน้าตั้งค่าทั่วไป)';
+            } finally {
+                cw.__testNoDbWrites = true;                // คืนค่ากันการทดสอบถัดไปยิง Firestore จริง
+                cw.__fsTimeout = origTimeout;
+                cw.applyFontScale(100);
+            }
+        });
+
+        // ---------- S11: คืนค่า 100% ----------
+        await T('S11 · ปุ่ม “คืนค่า 100%” กลับค่าเดิมครบทุกจุด', async () => {
+            cw.applyFontScale(130);
+            cw.__sounds.length = 0;
+            const back = cw.fontScaleReset();
+            await wait(1500);
+            assert(back === 100, 'คืนค่าแล้วต้องได้ 100 (ได้ ' + back + ')');
+            assert(cw.document.documentElement.style.zoom === '', 'zoom ต้องถูกถอดออก');
+            assert(cw.document.getElementById('fontScaleRange').value === '100', 'แถบเลื่อนต้องกลับ 100');
+            assert(cw.document.getElementById('fontScaleReset').disabled === true, 'กลับค่าเดิมแล้วปุ่มคืนค่าต้องเทา (กดไม่ได้)');
+            assert(cw.localStorage.getItem(cw.__fsKey) === '100', 'ต้องบันทึก 100 ลงเครื่อง');
+            return 'zoom ถอดออก · แถบ 100 · ปุ่มเทา · เครื่องจำ 100';
+        });
+
+        // ---------- S12: ตำแหน่งเมนู + ไม่มีด่านสิทธิ์ + ไม่มีช่องติ๊กดิบ ----------
+        await T('S12 · อยู่ “ตั้งค่าการใช้งาน › ตั้งค่าทั่วไป” เป็นบล็อกที่ 3 · ไม่มีด่านสิทธิ์ · ใช้แถบเลื่อนเท่านั้น', () => {
+            cw.openGeneralSettingsModal('general');
+            const row = cw.document.getElementById('fontScaleRow');
+            assert(!!row, 'ต้องมีแถว #fontScaleRow');
+            const host = cw.document.getElementById('genSettingsBody');
+            assert(row.parentElement === host, 'แถวต้องถูกย้ายเข้า #genSettingsBody แล้ว');
+            const names = [...host.children].slice(0, 3).map(el => el.id);
+            assert(names[2] === 'fontScaleRow', 'ต้องเป็นบล็อกที่ 3 จากบนสุด (ได้ ' + names.join(' → ') + ')');
+            assert(row.offsetParent !== null, 'ต้องมองเห็นได้ (ไม่ใช่ display:none)');
+            assert(typeof cw.canUseFontScale === 'undefined', 'ต้องไม่มีด่านสิทธิ์ของฟอนต์ (ทุกยศใช้ได้เหมือนกัน)');
+            const range = cw.document.getElementById('fontScaleRange');
+            assert(range.min === '85' && range.max === '135' && range.step === '5', 'แถบเลื่อนต้องเป็น 85–135 ทีละ 5 (ได้ ' + range.min + '-' + range.max + '/' + range.step + ')');
+            assert(range.classList.contains('fs-range'), 'ต้องเป็นแถบเลื่อนสไตล์แอป (.fs-range)');
+            const rawChecks = row.querySelectorAll('input[type="checkbox"]');
+            assert(rawChecks.length === 0, 'แถวนี้ต้องไม่มีช่องติ๊กเลย (กติกา “ห้ามมีช่องติ๊กดิบ”)');
+            const btns = [...row.querySelectorAll('button')].map(b => b.id || b.textContent.trim().slice(0, 12));
+            return 'บล็อกที่ 3 (' + names.join(' → ') + ') · ปุ่ม: ' + btns.join(' , ');
+        });
+
+        document.getElementById('runBtn').disabled = false;
+        offlineEl.textContent = 'สถานะเน็ต: ตัดเน็ตทั้งชุด · คำขอออกเน็ตที่ถูกบล็อก = ' + w().__net.blockedFetch + ' · เขียน Firestore = ปิด (fsNowrite + __testNoDbWrites)';
+        summaryEl.textContent = 'สรุป: ผ่าน ' + passCount + ' · ไม่ผ่าน ' + failCount + (failCount ? '  → ' + failures.join(' | ') : '  ✅ ผ่านครบทุกสถานการณ์');
+        try { window.__fontScaleResult = { pass: passCount, fail: failCount, failures: failures.slice() }; } catch (e) {}
+    }
+
+    document.getElementById('runBtn').addEventListener('click', run);
+    window.addEventListener('load', () => { setTimeout(run, 50); });
+})();
+</script>
+</body>
+</html>

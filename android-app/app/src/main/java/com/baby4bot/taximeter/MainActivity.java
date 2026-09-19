@@ -720,6 +720,21 @@ public class MainActivity extends Activity {
             });
         }
 
+        /**
+         * ย่อแอปไปอยู่เบื้องหลัง (เหมือนกดปุ่ม Home) — ไม่ปิดแอป ไม่หยุดมิเตอร์/จีพีเอส
+         * ใช้เมื่อผู้ใช้กด “ย้อนกลับ” หรือ ESC บนจอมิเตอร์ใหญ่ (ฝั่งเว็บเรียก TaxiNative.minimizeApp())
+         * ⇒ แทนพฤติกรรมเดิมที่ปิดจอมิเตอร์แล้วไปโผล่หน้าแรกซึ่งซ้ำซ้อนกับจอมิเตอร์ใหญ่
+         */
+        @JavascriptInterface
+        public void minimizeApp() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    moveTaskToBack(true);
+                }
+            });
+        }
+
         @JavascriptInterface
         public boolean hasLocationPermission() {
             return hasFineLocation();

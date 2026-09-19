@@ -34,10 +34,12 @@
         <br>① <b>“กดเริ่มมิเตอร์แล้วไปโผล่หน้าแรกแบบย่อ”</b> — ต้นเหตุคือ <code>history.back()</code> ที่ยิงตอนสแต็กชั้นว่าง
         แล้วเปิดกล่องใหม่ทับในคลิกเดียวกัน → <code>popstate</code> ที่ย้อนกลับมาถูกอ่านว่า “ผู้ใช้กด back” ⇒ ปิดจอมิเตอร์ใหญ่ทันที
         <br>② <b>“แอดมินมีสิทธิ์แต่มองไม่เห็นมินิแมพ ต้องรีเฟรชก่อน”</b> — เริ่มเที่ยว/รีเฟรชเคยตัดสินคนละทาง + สิทธิ์ที่มาถึงช้าไม่มีใครคืนแผนที่ให้
+        <br>③ <b>อัปเดตกติกา 20 ก.ย. 69 (ผู้ใช้สั่ง):</b> *“กดย้อนกลับ/ESC จากป๊อปอัพใหญ่แล้วมันออกมาหน้าแรก (หน้าที่ 2) ทุกครั้ง — ไม่ต้องการเห็น”*
+        ⇒ ระหว่างเที่ยวเดินอยู่ <code>back</code> = <b>ย่อแอป</b> (<code>TaxiNative.minimizeApp()</code>) · <b>ไม่ปิดจอมิเตอร์ใหญ่</b> (ดู S3)
         <br><b>วิธีรัน:</b> <code>powershell -NoProfile -ExecutionPolicy Bypass -File tests/serve-tests.ps1</code> → เปิด
         <code>http://127.0.0.1:58911/tests/start-flow-offline.html</code>
     </p>
-    <button id="runBtn">🔄 รันการทดสอบใหม่ (13 สถานการณ์)</button>
+    <button id="runBtn">🔄 รันการทดสอบใหม่ (14 สถานการณ์)</button>
     <button id="dbgBtn" class="alt">🔎 ดูสถานะแอปสด ๆ</button>
     <div id="offline">สถานะเน็ต: ยังไม่เริ่ม</div>
     <div id="summary"></div>
@@ -240,20 +242,68 @@
             return 'ทั้ง 3 รอบอยู่ที่จอมิเตอร์ใหญ่: ' + res.join(' · ');
         });
 
-        await runScenario('S3 · กด back 1 ครั้ง = ปิดจอมิเตอร์ใหญ่ทีละชั้น (มิเตอร์ยังเดิน ไม่หลุดแอป)', async () => {
+        await runScenario('S3 · กด back ตอนมิเตอร์เดิน = “ย่อแอป” (จอมิเตอร์ใหญ่ไม่ปิด) · ตอนจบเที่ยว = ปิดจอได้ตามเดิม', async () => {
             const cw = w();
+            let minCalls = 0;
+            cw.TaxiNative = { minimizeApp: function () { minCalls++; } };   // 📱 จำลองชั้น Android (APK)
             armRoute();
             await wait(220);
             cw.startTripFromPreview();
             await wait(600);
             assert(overlayShown(), 'จอมิเตอร์ใหญ่ต้องเปิดก่อนทดสอบ back');
             const before = (cw.__visibleLayers ? cw.__visibleLayers().length : -1);
+            // ⛔ กติกาเดิม 18–19 ก.ย. 69: “back ปิดจอมิเตอร์ใหญ่ทีละชั้น” — ถูกแทนที่แล้ว (ดูหัวชุดทดสอบ ③)
             cw.history.back();
-            await wait(420);
-            assert(!overlayShown(), 'กด back 1 ครั้งแล้วจอมิเตอร์ใหญ่ควรปิด');
+            await wait(480);
+            assert(overlayShown(), 'กด back ตอนมิเตอร์เดินแล้วจอมิเตอร์ใหญ่ปิด (จะไปโผล่หน้าแรก = “หน้าที่ 2”)');
+            assert(minCalls >= 1, 'ไม่ได้สั่ง TaxiNative.minimizeApp() เลย (เรียก ' + minCalls + ' ครั้ง)');
             assert(!!cw.isManualRunning, 'กด back แล้วมิเตอร์ต้องยังเดินอยู่ (ไม่ใช่จบเที่ยว/หลุดแอป)');
-            assert((cw.__backStack || []).length === 0, 'หลังปิดชั้นสุดท้าย สแต็กกันประวัติต้องว่าง (p: ' + JSON.stringify(cw.__backStack) + ')');
-            return 'ชั้นก่อน back = ' + before + ' → หลัง back = 0 · overlay=ปิด · มิเตอร์ยังเดิน';
+            assert((cw.__backStack || []).length > 0, 'สแต็กกันประวัติต้องยังค้างไว้ (มิเตอร์ยังเดิน) — p: ' + JSON.stringify(cw.__backStack));
+            const afterBack = { min: minCalls, layers: (cw.__visibleLayers ? cw.__visibleLayers().length : -1) };
+            // ② จบเที่ยว/ยังไม่เริ่ม → ปิดจอได้เหมือนเดิม (พฤติกรรมเดิมต้องไม่พัง)
+            cw.isManualRunning = false;
+            const closed = cw.__closeLayer('trackerZoomOverlay');
+            await wait(220);
+            assert(!overlayShown(), 'ตอนไม่ได้จับเที่ยวแต่ปิดจอมิเตอร์ใหญ่ไม่ได้ (return ' + closed + ')');
+            assert(minCalls === afterBack.min, 'ตอนไม่ได้จับเที่ยวแต่สั่งย่อแอปอีก ' + (minCalls - afterBack.min) + ' ครั้ง');
+            delete cw.TaxiNative;
+            await resetTrip();
+            return 'มิเตอร์เดิน: ชั้นก่อน back = ' + before + ' → จอยังเปิด (' + afterBack.layers + ' ชั้น) · minimizeApp ' + minCalls + ' ครั้ง'
+                + ' | จบเที่ยว: __closeLayer ปิดจอจริง (return "' + closed + '") · ไม่ย่อซ้ำ';
+        });
+
+        await runScenario('S3b · หน้าสรุปเส้นทาง: ระยะห่างแนวตั้ง “เท่ากันทุกบล็อก” (ปุ่ม “เริ่มมิเตอร์” ไม่ลอยต่ำ)', async () => {
+            const cw = w();
+            armRoute();
+            await wait(260);
+            cw.toggleModal('routePreviewModal', true);
+            await wait(240);
+            const box = cw.document.querySelector('#routePreviewModal .custom-confirm-box');
+            assert(box, 'ไม่พบหน้าต่างสรุปเส้นทาง');
+            const rootCs = cw.getComputedStyle(cw.document.documentElement);
+            const expected = Math.round(parseFloat(String(rootCs.getPropertyValue('--space-section') || '').replace('px', '')) * 10) / 10;
+            assert(expected > 0, 'อ่านค่า --space-section ไม่ได้ (ได้ “' + rootCs.getPropertyValue('--space-section') + '”)');
+            const kids = Array.from(box.children).filter((el) => cw.getComputedStyle(el).display !== 'none'
+                && !el.classList.contains('btn-close-floating') && !el.classList.contains('custom-confirm-title'));
+            const all = [];
+            let prev = null;
+            kids.forEach((el) => {
+                const r = el.getBoundingClientRect();
+                if (prev) { all.push({ el: (el.id || String(el.className || '').slice(0, 18) || el.tagName), gap: Math.round((r.top - prev.bottom) * 10) / 10 }); }
+                prev = r;
+            });
+            // ช่องว่างระดับ “ระหว่างบล็อก” = มากกว่า 8px (ข้าม “ป้ายชื่อแถว” ที่ต้องติดกับปุ่ม)
+            const blocks = all.filter((g) => g.gap > 8);
+            const uniq = Array.from(new Set(blocks.map((g) => g.gap)));
+            assert(uniq.length === 1, 'ระยะห่างไม่เท่ากัน: ' + all.map((g) => g.el + '=' + g.gap).join(' · '));
+            assert(uniq[0] === expected, 'ระยะห่างควรเท่ากับ --space-section (' + expected + 'px) แต่ได้ ' + uniq[0] + 'px');
+            // ปุ่ม “เริ่มมิเตอร์”: ช่องว่างจาก “การ์ดค่าโดยสาร” ต้องไม่มากกว่าบล็อกอื่น (เคสที่ผู้ใช้แจ้ง = ลอยต่ำ)
+            const actionsIdx = all.findIndex((g) => String(g.el).indexOf('custom-confirm-actions') === 0);
+            assert(actionsIdx >= 0, 'หาแถวปุ่ม “เริ่มมิเตอร์” ไม่เจอ');
+            const beforeActions = all[actionsIdx].gap;
+            assert(beforeActions <= expected + 0.5, 'ช่องว่างเหนือปุ่มเริ่มมิเตอร์ (' + beforeActions + 'px) มากกว่าบล็อกอื่น (' + expected + 'px)');
+            cw.toggleModal('routePreviewModal', false);
+            return 'บล็อกที่วัดได้: ' + blocks.map((g) => g.el + '=' + g.gap).join(' · ') + ' (ทั้งหมด = ' + expected + 'px · ป้ายชื่อแถว 7px ไม่นับ)';
         });
 
         await runScenario('S4 · มีสิทธิ์มินิแมพ → เริ่มนำทางแล้ว “ยุบไว้ก่อน” เห็นแค่ปุ่มให้กดเปิดเอง', async () => {
